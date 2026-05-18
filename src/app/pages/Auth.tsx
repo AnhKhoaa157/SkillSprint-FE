@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { RegistrationSuccessModal } from "../components/RegistrationSuccessModal";
 import { BrandLogo } from "../components/BrandLogo";
-import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens } from "../../api/authService";
+import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens, getPostLoginPath } from "../../api/authService";
 
 /* ─── Tokens ─── */
 const F   = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -84,8 +84,17 @@ const TESTIMONIAL = {
    LEFT PANEL
 ═══════════════════════════════════════════ */
 function LeftPanel() {
+  const aiImage = ((import.meta as any).env?.VITE_LEFT_PANEL_IMAGE as string | undefined) || "/assets/left-ai-3.svg";
+
   return (
-    <div className="w-[40%] bg-gradient-to-br from-[#0B1220] via-[#0F1E35] to-[#131929] flex flex-col px-16 py-12 relative overflow-hidden flex-shrink-0">
+    <div
+      className="w-[40%] flex flex-col px-16 py-12 relative overflow-hidden flex-shrink-0"
+      style={{
+        backgroundImage: `linear-gradient(180deg, rgba(11,18,32,0.86), rgba(3,7,18,0.6)), url(${aiImage})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
       {/* Subtle glow effects */}
       <div className="absolute -top-20 -right-16 w-56 h-56 rounded-full bg-gradient-to-b from-orange-500/15 to-transparent opacity-50 pointer-events-none blur-3xl"/>
       <div className="absolute -bottom-10 -left-10 w-52 h-52 rounded-full bg-gradient-to-t from-indigo-500/12 to-transparent opacity-50 pointer-events-none blur-3xl"/>
@@ -507,6 +516,7 @@ export default function Auth() {
   const [authError, setAuthError] = useState("");
   const [challengeSession, setChallengeSession] = useState("");
   const [challengeRole, setChallengeRole] = useState<string | null>(null);
+  // removed local overlay; destination layout will display loader
   /* form state */
   const [name,     setName]     = useState("");
   const [email,    setEmail]    = useState("");
@@ -522,63 +532,53 @@ export default function Auth() {
   }, [location.search]);
 
   const handleSubmit = async () => {
-    if (isSignup) {
-      const normalizedEmail = email.trim().toLowerCase();
-
-      if (!name.trim() || !normalizedEmail || !password) {
-        setAuthError("Vui lòng nhập họ tên, email và mật khẩu.");
-        return;
-      }
-
-      setIsSubmitting(true);
-      setAuthError("");
-
-      try {
-        await register(name.trim(), normalizedEmail, password);
-        setShowConfirm(true);
-      } catch (submitError) {
-        setAuthError(submitError instanceof Error ? submitError.message : "Không thể tạo tài khoản.");
-      } finally {
-        setIsSubmitting(false);
-      }
-      return;
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (!normalizedEmail || !password) {
-      setAuthError("Vui lòng nhập email và mật khẩu.");
-      return;
-    }
-
     setIsSubmitting(true);
     setAuthError("");
 
     try {
-      const result = await login(normalizedEmail, password);
+      const normalizedEmail = email.trim().toLowerCase();
 
-      if (result.status === "new-password-required") {
-        setChallengeSession(result.session);
-        setChallengeRole(result.role);
-        setShowNewPassword(true);
+      if (isSignup) {
+        if (!name.trim() || !normalizedEmail || !password) {
+          setAuthError("Vui lòng nhập họ tên, email và mật khẩu.");
+          return;
+        }
+
+        try {
+          await register(name.trim(), normalizedEmail, password);
+          setShowConfirm(true);
+          setShowSuccess(false);
+        } catch (e) {
+          setAuthError(e instanceof Error ? e.message : "Không thể tạo tài khoản.");
+        }
+
         return;
       }
 
-      if (isAdminRole(result.tokens.role)) {
-        setAuthError("Tài khoản quản trị không thể đăng nhập ở cổng Learner. Vui lòng dùng cổng Admin.");
+      // Signin flow
+      if (!normalizedEmail || !password) {
+        setAuthError("Vui lòng nhập email và mật khẩu.");
         return;
       }
 
-      storeAuthTokens(result.tokens);
-      navigate("/app");
-    } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : "Đăng nhập thất bại.";
-      // If account not confirmed, open the confirm-register modal
-      if (typeof message === "string" && (message.includes("chưa xác thực") || message.includes("xác thực"))) {
-        setShowConfirm(true);
-        setAuthError("");
-      } else {
-        setAuthError(message);
+      try {
+        const result = await login(normalizedEmail, password);
+
+        if (result.status === "authenticated") {
+          // store tokens and navigate immediately; dashboard will show loader
+          storeAuthTokens(result.tokens);
+          const to = getPostLoginPath(result.tokens.role);
+          // navigate to a dedicated loading page which will forward to the final target
+          navigate(`/loading`, { replace: true, state: { to } });
+        } else if (result.status === "new-password-required") {
+          setChallengeSession(result.session);
+          setChallengeRole(result.role);
+          setShowNewPassword(true);
+        }
+      } catch (e) {
+        setAuthError(e instanceof Error ? e.message : "Đăng nhập thất bại.");
+        // ensure user sees the error area
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } finally {
       setIsSubmitting(false);
@@ -590,6 +590,7 @@ export default function Auth() {
       minHeight:"100vh", display:"flex",
       fontFamily:F, background:"#FFFFFF",
     }}>
+      {/* Navigates immediately to app; loader displayed by dashboard layout when needed */}
       {/* ── Left dark panel ── */}
       <LeftPanel/>
 

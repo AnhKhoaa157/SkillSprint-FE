@@ -1,3 +1,4 @@
+import React from "react";
 import { createBrowserRouter } from "react-router";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
@@ -10,10 +11,20 @@ import Auth from "./pages/Auth";
 import Contact from "./pages/Contact";
 import Onboarding from "./pages/Onboarding";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminLayout from "./layouts/AdminLayout";
+import AdminHealth from "./pages/AdminHealth";
 import AdminAuth from "./pages/AdminAuth";
+import AdminUsers from "./pages/AdminUsers";
+import AdminUserDetail from "./pages/AdminUserDetail";
 import PostUpgradeDashboard from "./pages/PostUpgrade";
 import FeaturesLanding from "./pages/Features";
+import PricingPage from "./pages/PricingPage";
 import MockInterview from "./pages/MockInterview";
+import RequireAuth from "./components/RequireAuth";
+import Loading from "./pages/Loading";
+
+// Wrapper created without JSX to keep this file .ts-compatible
+const ProtectedLayout = () => React.createElement(RequireAuth, null, React.createElement(DashboardLayout, null));
 
 import SyllabusInput from "./pages/SyllabusInput";
 import StudyCalendar from "./pages/StudyCalendar";
@@ -31,18 +42,29 @@ export const router = createBrowserRouter([
   { path: "/",              Component: Landing },
   { path: "/about",         Component: About },
   { path: "/features",      Component: FeaturesLanding },
+  { path: "/pricing",       Component: PricingPage },
   { path: "/auth",          Component: Auth },
+  { path: "/loading",       Component: Loading },
   { path: "/contact",       Component: Contact },
   { path: "/onboarding",    Component: Onboarding },
   { path: "/admin-login",   Component: AdminAuth },
-  { path: "/admin",         Component: AdminDashboard },
+  {
+    path: "/admin",
+    Component: AdminLayout,
+    children: [
+      { index: true, Component: AdminDashboard },
+      { path: "users", Component: AdminUsers },
+      { path: "users/:id", Component: AdminUserDetail },
+      { path: "health", Component: AdminHealth },
+    ],
+  },
   { path: "/learning",      Component: LearningEcosystem },
   { path: "/learning/course", Component: CoursePlayer },
   { path: "/quiz-review",   Component: QuizReviewFlow },
   { path: "/quiz-review/result", Component: QuizResult },
   {
     path: "/app",
-    Component: DashboardLayout,
+    Component: ProtectedLayout,
     children: [
       { index: true,            Component: Dashboard },
       { path: "syllabus",       Component: SyllabusInput },

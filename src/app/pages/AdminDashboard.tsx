@@ -12,6 +12,9 @@ import {
   ChevronDown, Search, AlertTriangle, Command, X, ChevronRight,
 } from "lucide-react";
 import { Link } from "react-router";
+import AdminHealth from "./AdminHealth";
+import healthService from "../../api/healthService";
+import adminUserService from "../../api/adminUserService";
 
 const ACCENT = "#FF6B00";
 const ACCENT_DEEP = "#EA580C";
@@ -191,21 +194,20 @@ function UnitEconBar(props: any) {
 }
 
 /* ─────────────────────────────────────────────────────────
-   Sidebar nav — EXACTLY 3 items per the prompt
+  Sidebar nav config
 ───────────────────────────────────────────────────────── */
-const NAV_ITEMS = [
-  { id: "users",      label: "Người học & Nhóm học", icon: Users     },
-  { id: "financials", label: "Tài chính",           icon: TrendingUp },
-  { id: "b2b",        label: "Đối tác B2B",         icon: Building2  },
-];
+import { ADMIN_NAV } from "../config/nav";
+const NAV_ITEMS = ADMIN_NAV;
 
 /* ─────────────────────────────────────────────────────────
    ── USERS & COHORTS view ──
 ───────────────────────────────────────────────────────── */
-function UsersView() {
+function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown' | 'up' | 'down'; lastHealthPayload: any }) {
   const [search, setSearch] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<(typeof STUDENTS)[number] | null>(null);
   const [alerts, setAlerts] = useState([...ADMIN_ALERTS]);
+  
+  
   const totalActive   = STUDENTS.length;
   const avgCompletion = Math.round(STUDENTS.reduce((s, st) => s + st.progress, 0) / totalActive);
   const premiumLicenses = STUDENTS.filter(s => s.plan === "Premium").length;
@@ -214,6 +216,8 @@ function UsersView() {
     s.cohort.toLowerCase().includes(search.toLowerCase()) ||
     s.roadmap.toLowerCase().includes(search.toLowerCase())
   );
+
+  
 
   const cohortHeatmap = useMemo(() => {
     const grouped = STUDENTS.reduce((acc, student) => {
@@ -241,6 +245,7 @@ function UsersView() {
     });
   }, []);
 
+
   const alertStyle = (level: (typeof ADMIN_ALERTS)[number]["level"]) => {
     if (level === "critical") {
       return { bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)", text: "#B91C1C", tag: "Nghiêm trọng" };
@@ -253,7 +258,6 @@ function UsersView() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-
       {/* ── ALERT CENTER ── */}
       <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
         <div className="flex items-center justify-between mb-3">
@@ -261,7 +265,48 @@ function UsersView() {
             <AlertTriangle size={15} color={ACCENT} />
             <p style={{ fontWeight: 700, fontSize: "0.86rem", color: "#111827" }}>Trung tâm cảnh báo ưu tiên</p>
           </div>
-          <span style={{ fontSize: "11px", color: "#9CA3AF" }}>{alerts.length} cảnh báo</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2" style={{ alignItems: 'center' }}>
+              <div
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 999,
+                  background: healthStatus === 'up' ? '#22c55e' : healthStatus === 'down' ? '#ef4444' : '#94A3B8',
+                  boxShadow: healthStatus === 'up' ? '0 0 6px #22c55e' : healthStatus === 'down' ? '0 0 6px #ef4444' : 'none',
+                  animation: healthStatus === 'up' || healthStatus === 'down' ? 'pulse 1800ms infinite' : 'none',
+                }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 700 }}>
+                  {healthStatus === 'up' ? 'Ổn định' : healthStatus === 'down' ? 'Sự cố' : 'Đang kiểm tra'}
+                </span>
+                {lastHealthPayload?.timestamp && (
+                  <span style={{ fontSize: '10px', color: '#9CA3AF' }}>
+                    Cập nhật: {new Date(lastHealthPayload.timestamp).toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+              <style>{`@keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.6; } 100% { transform: scale(1); opacity: 1; } }`}</style>
+            </div>
+            <span style={{ fontSize: "11px", color: "#9CA3AF" }}>{alerts.length} cảnh báo</span>
+          </div>
+        </div>
+
+          
+
+        {/* Health indicator (sidebar) */}
+        <div className="px-5 py-3" style={{ borderBottom: "1px solid rgba(148,163,184,0.06)", borderLeft: healthStatus === 'down' ? '4px solid rgba(239,68,68,0.06)' : undefined }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 9, height: 9, borderRadius: 999, background: healthStatus === 'up' ? '#22c55e' : healthStatus === 'down' ? '#ef4444' : '#94A3B8', boxShadow: healthStatus === 'up' ? '0 0 6px #22c55e' : healthStatus === 'down' ? '0 0 6px #ef4444' : 'none', animation: healthStatus === 'up' || healthStatus === 'down' ? 'statusPulse 1800ms infinite' : 'none' }} />
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</div>
+              {lastHealthPayload?.timestamp && (
+                <div style={{ fontSize: '11px', color: '#64748B' }}>Cập nhật: {new Date(lastHealthPayload.timestamp).toLocaleTimeString()}</div>
+              )}
+            </div>
+            <div className="sr-only" aria-live="polite">{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</div>
+          </div>
         </div>
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
           {alerts.map((alert) => {
@@ -847,15 +892,101 @@ function B2BView() {
    Main Admin Dashboard
 ───────────────────────────────────────────────────────── */
 export default function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState<"users" | "financials" | "b2b">("users");
+  const USER_MANAGEMENT_NAV_MODE: "item" | "dropdown" = (globalThis as any).__ADMIN_USER_MGMT_NAV_MODE__ === "item" ? "item" : "dropdown";
+  const [activeNav, setActiveNav] = useState<"users" | "financials" | "b2b" | "users-management">("users");
   const [timeRange, setTimeRange] = useState("90d");
   const [lastSync, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
+  const [showHealthPanel, setShowHealthPanel] = useState(false);
+  const [showMgmtMain, setShowMgmtMain] = useState(false);
+  const [mgmtUsers, setMgmtUsers] = useState<any[]>([]);
+  const [mgmtPage, setMgmtPage] = useState(0);
+  const [mgmtSize] = useState(10);
+  const [mgmtTotal, setMgmtTotal] = useState(0);
+  const [mgmtLoading, setMgmtLoading] = useState(false);
+  const [mgmtSelected, setMgmtSelected] = useState<any | null>(null);
+  const [mgmtSearch, setMgmtSearch] = useState("");
+  const [mgmtStatusDraft, setMgmtStatusDraft] = useState("");
+  const [mgmtRolesDraft, setMgmtRolesDraft] = useState("");
+  const [mgmtMessage, setMgmtMessage] = useState("");
+  const navItems = useMemo(
+    () => USER_MANAGEMENT_NAV_MODE === "item"
+      ? [...NAV_ITEMS, { id: "users-management", label: "Quản lý người dùng", icon: ShieldCheck }]
+      : NAV_ITEMS,
+    [USER_MANAGEMENT_NAV_MODE],
+  );
+
+  async function loadMgmt(page = 0, searchTerm = mgmtSearch) {
+    setMgmtLoading(true);
+    try {
+      console.log('[AdminDashboard] loadMgmt called', { page, searchTerm });
+      const data = await adminUserService.getAdminUsers(searchTerm.trim() || undefined, page, mgmtSize);
+      console.log('[AdminDashboard] API response data:', data);
+      console.log('[AdminDashboard] data.content:', data.content, 'data.totalElements:', data.totalElements);
+      setMgmtUsers(data.content || []);
+      setMgmtTotal(data.totalElements || (data.content?.length ?? 0));
+      setMgmtPage(page);
+      setMgmtMessage("");
+    } catch (e) {
+      console.error(e);
+      setMgmtMessage((e as Error).message || 'Không tải được danh sách admin users');
+    } finally {
+      setMgmtLoading(false);
+    }
+  }
+
+  async function openMgmtDetail(userId: string) {
+    console.log("[AdminDashboard] openMgmtDetail called with userId:", userId);
+    setMgmtLoading(true);
+    try {
+      const detail = await adminUserService.getAdminUser(userId);
+      setMgmtSelected(detail);
+      setMgmtStatusDraft(detail.status || "ACTIVE");
+      setMgmtRolesDraft(detail.role || "");
+    } catch (e) {
+      console.error(e);
+      setMgmtMessage((e as Error).message || 'Không tải được chi tiết người dùng');
+    } finally { setMgmtLoading(false); }
+  }
+
+  async function saveMgmtStatus(userId: string, status: string) {
+    setMgmtLoading(true);
+    try {
+      const updated = await adminUserService.updateUserStatus(userId, { status });
+      await loadMgmt(mgmtPage, mgmtSearch);
+      setMgmtSelected(updated);
+      setMgmtStatusDraft(updated.status || status);
+      setMgmtMessage('Cập nhật trạng thái thành công');
+    } catch (e) { setMgmtMessage((e as Error).message || 'Lỗi cập nhật trạng thái'); }
+    finally { setMgmtLoading(false); }
+  }
+
+  async function saveMgmtRoles(userId: string, roles: string[]) {
+    setMgmtLoading(true);
+    try {
+      const updated = await adminUserService.updateUserRole(userId, { roles });
+      await loadMgmt(mgmtPage, mgmtSearch);
+      setMgmtSelected(updated);
+      setMgmtRolesDraft(updated.role || roles.join(", "));
+      setMgmtMessage('Cập nhật vai trò thành công');
+    } catch (e) { setMgmtMessage((e as Error).message || 'Lỗi cập nhật vai trò'); }
+    finally { setMgmtLoading(false); }
+  }
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [usersNavOpen, setUsersNavOpen] = useState(false);
+
+  const openUserManagement = async () => {
+    await loadMgmt(0, mgmtSearch);
+    setShowMgmtMain(true);
+    setActiveNav(USER_MANAGEMENT_NAV_MODE === "item" ? "users-management" : "users");
+    setUsersNavOpen(true);
+  };
 
   const headerLabels: Record<string, { title: string; sub: string }> = {
     users:      { title: "Người học & Nhóm học",  sub: "Tiến độ người học · Phân tích skill gap" },
+    "users-management": { title: "Quản lý người dùng", sub: "Quản lý người dùng và phân quyền" },
     financials: { title: "Tài chính",            sub: "Chỉ số doanh thu · Unit economics" },
     b2b:        { title: "Đối tác B2B",          sub: "Tài khoản trường · Sức khỏe đối tác" },
   };
@@ -911,6 +1042,7 @@ export default function AdminDashboard() {
 
   const commandActions = [
     { id: "goto-users", label: "Đi tới Người học & Nhóm học", keywords: "users students cohorts", action: () => setActiveNav("users") },
+    { id: "goto-users-management", label: "Mở Quản lý người dùng", keywords: "quản lý người dùng phân quyền", action: () => openUserManagement() },
     { id: "goto-financials", label: "Đi tới Tài chính", keywords: "finance revenue mrr", action: () => setActiveNav("financials") },
     { id: "goto-b2b", label: "Đi tới Đối tác B2B", keywords: "b2b partners campus", action: () => setActiveNav("b2b") },
     { id: "export", label: "Xuất dữ liệu màn hình hiện tại", keywords: "export csv download", action: handleExport },
@@ -950,6 +1082,37 @@ export default function AdminDashboard() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  // Health subscription for admin sidebar
+  const [healthStatus, setHealthStatus] = useState<'unknown' | 'up' | 'down'>('unknown');
+  const [lastHealthPayload, setLastHealthPayload] = useState<any>(null);
+  useEffect(() => {
+    const off = healthService.subscribeHealth((s: any) => setHealthStatus(s));
+    healthService.probeHealth().then((p) => setLastHealthPayload(p)).catch(() => {});
+    return () => off();
+  }, []);
+
+  // Listen for external toggle (profile dropdown -> open management)
+  useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        const page = e?.detail?.page ?? 0;
+        loadMgmt(page, mgmtSearch);
+        setShowMgmtMain(true);
+        setActiveNav(USER_MANAGEMENT_NAV_MODE === "item" ? "users-management" : "users");
+      } catch (err) {
+        console.error('openAdminUserMgmt handler error', err);
+      }
+    };
+    window.addEventListener('openAdminUserMgmt', handler as EventListener);
+    return () => window.removeEventListener('openAdminUserMgmt', handler as EventListener);
+  }, [mgmtSearch, USER_MANAGEMENT_NAV_MODE]);
+
+  useEffect(() => {
+    if ((activeNav === 'users' || activeNav === 'users-management') && showMgmtMain) {
+      loadMgmt(0, mgmtSearch);
+    }
+  }, [activeNav, showMgmtMain, mgmtSearch]);
+
   return (
     <div
       className="flex h-screen overflow-hidden"
@@ -957,6 +1120,8 @@ export default function AdminDashboard() {
     >
       <style>{`
         @keyframes statusPulse { 0%,100%{opacity:1;}50%{opacity:0.4;} }
+        @keyframes slideInFromRight { from { transform: translateX(8px) translateY(-6px); opacity: 0; } to { transform: translateX(0) translateY(0); opacity: 1; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 2px; }
@@ -987,34 +1152,94 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        {/* Nav — exactly 3 items */}
+        {/* Health quick link in sidebar (open inline panel) */}
+        <div className="px-4 pb-3">
+          <button onClick={() => setShowHealthPanel(true)} className="flex items-center gap-3 px-3 py-2 rounded-xl"
+            style={{ background: "#FFFFFF", border: "1px solid rgba(226,232,240,0.6)", color: "#374151" }}>
+            <div style={{ width: 10, height: 10, borderRadius: 999, background: healthStatus === 'up' ? '#22c55e' : healthStatus === 'down' ? '#ef4444' : '#94A3B8', boxShadow: healthStatus === 'up' ? '0 0 6px #22c55e' : healthStatus === 'down' ? '0 0 6px #ef4444' : 'none' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+              <span style={{ fontSize: '13px', fontWeight: 700 }}>{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</span>
+              {lastHealthPayload?.timestamp && (
+                <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Cập nhật: {new Date(lastHealthPayload.timestamp).toLocaleTimeString()}</span>
+              )}
+            </div>
+          </button>
+        </div>
+
+        {/* Nav */}
         <nav className="flex-1 px-3 space-y-0.5">
-          {NAV_ITEMS.map(item => {
+          {navItems.map(item => {
             const isActive = activeNav === item.id;
+            const isUsers = item.id === "users";
             return (
-              <button
-                key={item.id}
-                onClick={() => setActiveNav(item.id as any)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 text-left"
-                style={{
-                  background: isActive ? ACCENT_SOFT : "transparent",
-                  border: isActive ? `1px solid ${ACCENT_BORDER}` : "1px solid transparent",
-                  color: isActive ? "#9A3412" : "#334155",
-                  fontWeight: isActive ? 600 : 400,
-                }}
-                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(148,163,184,0.10)"; e.currentTarget.style.color = "#0F172A"; } }}
-                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#334155"; } }}
-              >
-                <item.icon size={15} style={{ color: isActive ? "#C2410C" : "#64748B", flexShrink: 0 }} />
-                {item.label}
-                {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full"
-                    style={{ background: "#C2410C" }} />
+              <div key={item.id}>
+                <button
+                  onClick={() => {
+                    if (item.id === "users-management") {
+                      openUserManagement();
+                      return;
+                    }
+                    setActiveNav(item.id as any);
+                    if (item.id === "financials" || item.id === "b2b") {
+                      setShowMgmtMain(false);
+                      setUsersNavOpen(false);
+                    }
+                    if (isUsers && USER_MANAGEMENT_NAV_MODE === "dropdown") {
+                      setUsersNavOpen((prev) => !prev);
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 text-left"
+                  style={{
+                    background: isActive ? ACCENT_SOFT : "transparent",
+                    border: isActive ? `1px solid ${ACCENT_BORDER}` : "1px solid transparent",
+                    color: isActive ? "#9A3412" : "#334155",
+                    fontWeight: isActive ? 600 : 400,
+                  }}
+                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(148,163,184,0.10)"; e.currentTarget.style.color = "#0F172A"; } }}
+                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#334155"; } }}
+                >
+                  <item.icon size={15} style={{ color: isActive ? "#C2410C" : "#64748B", flexShrink: 0 }} />
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                  {isUsers && USER_MANAGEMENT_NAV_MODE === "dropdown" && (
+                    <ChevronDown
+                      size={14}
+                      style={{
+                        color: "#64748B",
+                        transform: usersNavOpen ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 160ms ease",
+                      }}
+                    />
+                  )}
+                  {isActive && (
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#C2410C" }} />
+                  )}
+                </button>
+                {isUsers && USER_MANAGEMENT_NAV_MODE === "dropdown" && usersNavOpen && (
+                  <button
+                    id="users-management"
+                    data-id="users management"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openUserManagement();
+                    }}
+                    className="w-full text-left px-9 py-2 rounded-lg text-xs"
+                    style={{
+                      marginTop: 4,
+                      color: showMgmtMain ? "#9A3412" : "#6B7280",
+                      background: showMgmtMain ? "rgba(255,107,0,0.08)" : "transparent",
+                      border: showMgmtMain ? "1px solid rgba(255,107,0,0.2)" : "1px solid transparent",
+                      fontWeight: showMgmtMain ? 700 : 500,
+                    }}
+                  >
+                    Quản lý người dùng
+                  </button>
                 )}
-              </button>
+              </div>
             );
           })}
         </nav>
+
+        {/* Direct management link removed — moved to user dropdown */}
 
         {/* Bottom */}
         <div className="px-3 pb-4 pt-3 space-y-2" style={{ borderTop: "1px solid rgba(148,163,184,0.18)" }}>
@@ -1030,23 +1255,45 @@ export default function AdminDashboard() {
       {/* ── MAIN ── */}
       <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
 
-        {/* ── TOP HEADER ── */}
+        {/* Top header: title, quick actions, and Health link */}
         <header
           className="flex items-center justify-between px-8 h-14 shrink-0"
-          style={{ borderBottom: "1px solid #E5E7EB", background: "rgba(255,255,255,0.95)", backdropFilter: "blur(16px)" }}
+          style={{ borderBottom: "1px solid #E5E7EB", background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)" }}
         >
-          <div>
-            <h1 style={{ fontWeight: 700, fontSize: "0.95rem", letterSpacing: "-0.02em", color: "#111827" }}>
-              {current.title}
-            </h1>
-            <p style={{ color: "#9CA3AF", fontSize: "11px" }}>{current.sub}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div>
+              <h1 style={{ fontWeight: 700, fontSize: "0.95rem", letterSpacing: "-0.02em", color: "#111827" }}>{current.title}</h1>
+              <p style={{ color: "#9CA3AF", fontSize: "11px" }}>{current.sub}</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            {/* Time range */}
-            <div className="hidden xl:flex items-center rounded-xl overflow-hidden"
-              style={{ border: "1px solid #E5E7EB" }}>
-              {["30d","60d","90d"].map(r => (
+            {/* Health summary button - open inline health panel (no redirect) */}
+            <button
+              onClick={() => setShowHealthPanel(true)}
+              className="hidden md:inline-flex items-center gap-3 px-3 py-1.5 rounded-xl text-sm"
+              style={{
+                background: "#FFFFFF",
+                border: healthStatus === 'down' ? '1px solid rgba(239,68,68,0.18)' : '1px solid #E5E7EB',
+                color: "#374151",
+                boxShadow: healthStatus === 'down' ? '0 6px 20px rgba(239,68,68,0.06)' : undefined,
+                animation: healthStatus === 'down' ? 'statusPulse 1600ms infinite' : undefined,
+              }}
+              title={lastHealthPayload?.timestamp ? `Cập nhật: ${new Date(lastHealthPayload.timestamp).toLocaleString()}` : "Trạng thái hệ thống"}
+            >
+              <div style={{ width: 10, height: 10, borderRadius: 999, background: healthStatus === 'up' ? '#22c55e' : healthStatus === 'down' ? '#ef4444' : '#94A3B8', boxShadow: healthStatus === 'up' ? '0 0 6px #22c55e' : healthStatus === 'down' ? '0 0 6px #ef4444' : 'none' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                <span style={{ fontSize: '12px', fontWeight: 700 }}>
+                  {healthStatus === 'up' ? 'Ổn định' : healthStatus === 'down' ? 'Sự cố' : 'Đang kiểm tra'}
+                </span>
+                {lastHealthPayload?.timestamp && (
+                  <span style={{ fontSize: '10px', color: '#9CA3AF' }}>{new Date(lastHealthPayload.timestamp).toLocaleTimeString()}</span>
+                )}
+              </div>
+              <div className="sr-only" aria-live="polite">{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</div>
+            </button>
+            <div className="hidden xl:flex items-center rounded-xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
+              {['30d','60d','90d'].map(r => (
                 <button key={r} onClick={() => setTimeRange(r)}
                   className="px-3 py-1.5 text-xs transition-all"
                   style={{
@@ -1076,14 +1323,6 @@ export default function AdminDashboard() {
               Gửi báo cáo
             </button>
 
-            <button className="relative p-2 rounded-xl transition-all"
-              style={{ color: "#6B7280", border: "1px solid #E5E7EB" }}
-              onMouseEnter={e => { e.currentTarget.style.color = "#111827"; e.currentTarget.style.background = "#F3F4F6"; }}
-              onMouseLeave={e => { e.currentTarget.style.color = "#6B7280"; e.currentTarget.style.background = "transparent"; }}>
-              <Bell size={15} />
-              <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />
-            </button>
-
             <button
               onClick={() => setCommandOpen(true)}
               className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all"
@@ -1093,23 +1332,26 @@ export default function AdminDashboard() {
               Lệnh nhanh
               <span className="px-1.5 py-0.5 rounded" style={{ background: "#F3F4F6", color: "#9CA3AF", fontSize: "10px" }}>/</span>
             </button>
+
+            {/* User menu (hover) */}
+            <div style={{ position: 'relative' }} onMouseEnter={() => setUserMenuOpen(true)} onMouseLeave={() => setUserMenuOpen(false)}>
+              <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm" style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+                <div style={{ width: 28, height: 28, borderRadius: 999, background: 'linear-gradient(135deg,#FF6B00,#FF9A3D)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>A</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>Quản trị</span>
+                  <span style={{ fontSize: '10px', color: '#9CA3AF' }}>Admin</span>
+                </div>
+              </button>
+              {userMenuOpen && (
+                <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 220, background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 8px 24px rgba(2,6,23,0.12)', padding: 8, zIndex: 60 }}>
+                  <Link to="/admin-login" className="w-full text-left px-3 py-2 rounded" style={{ display: 'block', color: '#EF4444' }}>← Đăng xuất</Link>
+                </div>
+              )}
+            </div>
           </div>
         </header>
-
-        <div className="px-8 py-2.5 flex items-center justify-between" style={{ background: "#FFF7ED", borderBottom: "1px solid #FED7AA" }}>
-          <p style={{ fontSize: "11px", color: "#9A3412" }}>
-            Khung thời gian: <strong>{timeRange}</strong> · Đồng bộ lần cuối: <strong>{lastSync.toLocaleTimeString("vi-VN")}</strong>
-          </p>
-          <button
-            onClick={handleSync}
-            className="text-xs px-3 py-1 rounded-lg transition-all"
-            style={{ color: "#9A3412", border: "1px solid #FDBA74", background: "#FFEDD5" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#FED7AA"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFEDD5"; }}
-          >
-            Đồng bộ ngay
-          </button>
-        </div>
 
         {/* ── SCROLLABLE CONTENT ── */}
         <div className="flex-1 overflow-y-auto p-7">
@@ -1118,11 +1360,244 @@ export default function AdminDashboard() {
               {actionMessage}
             </div>
           )}
-          {activeNav === "users"      && <UsersView />}
+          {(activeNav === "users" || activeNav === "users-management") && (
+            (showMgmtMain || activeNav === "users-management") ? (
+              <div>
+                <div className="space-y-4">
+                  {mgmtMessage && (
+                    <div className="px-4 py-2 rounded-xl text-sm" style={{ background: "#FFF7ED", border: "1px solid #FDBA74", color: "#9A3412" }}>
+                      {mgmtMessage}
+                    </div>
+                  )}
+
+                  <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#FFF7ED 100%)", border: "1px solid #FDE68A" }}>
+                    <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+                      <div>
+                        <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0F172A" }}>Quản lý người dùng</h2>
+                        <p style={{ margin: "4px 0 0", color: "#64748B", fontSize: "0.88rem" }}>Theo dõi người dùng, cập nhật trạng thái và phân quyền nhanh.</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-3 py-1 rounded-full text-xs" style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#334155" }}>Tổng: {mgmtTotal}</span>
+                        <span className="px-3 py-1 rounded-full text-xs" style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#334155" }}>Trang: {mgmtPage + 1}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                    <div className="xl:col-span-2 rounded-2xl" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", overflow: "hidden" }}>
+                      <div className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3" style={{ borderBottom: "1px solid #F1F5F9" }}>
+                        <div className="relative w-full md:max-w-md">
+                          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
+                          <input
+                            value={mgmtSearch}
+                            onChange={(event) => setMgmtSearch(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                loadMgmt(0, mgmtSearch);
+                              }
+                            }}
+                            placeholder="Tìm theo email hoặc tên"
+                            className="w-full"
+                            style={{ height: 38, padding: "0 12px 0 34px", borderRadius: 10, border: "1px solid #E2E8F0", fontSize: "0.86rem" }}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => loadMgmt(0, mgmtSearch)}
+                            className="px-3 py-2 rounded-lg text-xs font-semibold"
+                            style={{ background: "#111827", color: "#FFFFFF" }}
+                          >
+                            Tìm
+                          </button>
+                          <button
+                            onClick={() => {
+                              setMgmtSearch("");
+                              loadMgmt(0, "");
+                            }}
+                            className="px-3 py-2 rounded-lg text-xs font-semibold"
+                            style={{ background: "#FFFFFF", color: "#334155", border: "1px solid #E2E8F0" }}
+                          >
+                            Xóa lọc
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr style={{ background: "#FAFAFA", textAlign: "left", color: "#64748B", fontSize: "0.78rem" }}>
+                              <th style={{ padding: "12px 14px" }}>Người dùng</th>
+                              <th style={{ padding: "12px 14px" }}>Vai trò</th>
+                              <th style={{ padding: "12px 14px" }}>Trạng thái</th>
+                              <th style={{ padding: "12px 14px" }}>Cập nhật</th>
+                              <th style={{ padding: "12px 14px" }}>Hành động</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {!mgmtLoading && mgmtUsers.length === 0 && (
+                              <tr>
+                                <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#94A3B8" }}>
+                                  Không có người dùng phù hợp.
+                                </td>
+                              </tr>
+                            )}
+                            {mgmtUsers.map((user) => {
+                              const status = String(user.status || "UNKNOWN").toUpperCase();
+                              const badge = status === "ACTIVE"
+                                ? { bg: "rgba(34,197,94,0.10)", text: "#15803D", border: "rgba(34,197,94,0.28)" }
+                                : status === "LOCKED"
+                                  ? { bg: "rgba(239,68,68,0.10)", text: "#B91C1C", border: "rgba(239,68,68,0.28)" }
+                                  : { bg: "rgba(245,158,11,0.10)", text: "#B45309", border: "rgba(245,158,11,0.28)" };
+                              return (
+                                <tr key={user.id} style={{ borderTop: "1px solid #F1F5F9", background: mgmtSelected?.id === user.id ? "#FFF7ED" : "#FFFFFF" }}>
+                                  <td style={{ padding: "12px 14px" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                      <div style={{ width: 34, height: 34, borderRadius: 999, background: "#FFE7D1", color: "#C2410C", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>
+                                        {(user.fullName || user.email || "?").charAt(0).toUpperCase()}
+                                      </div>
+                                      <div>
+                                        <div style={{ fontWeight: 700, color: "#0F172A", fontSize: "0.84rem" }}>{user.fullName || "Chưa cập nhật tên"}</div>
+                                        <div style={{ color: "#64748B", fontSize: "0.78rem" }}>{user.email}</div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: "12px 14px", color: "#334155", fontSize: "0.82rem" }}>{user.role || "USER"}</td>
+                                  <td style={{ padding: "12px 14px" }}>
+                                    <span className="px-2 py-1 rounded-full text-[11px] font-semibold" style={{ background: badge.bg, color: badge.text, border: `1px solid ${badge.border}` }}>{status}</span>
+                                  </td>
+                                  <td style={{ padding: "12px 14px", color: "#64748B", fontSize: "0.78rem" }}>{user.updatedAt ? new Date(user.updatedAt).toLocaleString() : "-"}</td>
+                                  <td style={{ padding: "12px 14px" }}>
+                                    <button
+                                      onClick={() => openMgmtDetail(user.id)}
+                                      className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                                      style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#0F172A" }}
+                                    >
+                                      Chi tiết
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="px-4 py-3 flex items-center justify-between" style={{ borderTop: "1px solid #F1F5F9" }}>
+                        <span style={{ fontSize: "0.8rem", color: "#64748B" }}>Hiển thị {mgmtUsers.length} / {mgmtTotal}</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => loadMgmt(Math.max(0, mgmtPage - 1), mgmtSearch)}
+                            disabled={mgmtPage === 0 || mgmtLoading}
+                            className="px-3 py-1.5 rounded-lg text-xs"
+                            style={{ border: "1px solid #E2E8F0", background: "#fff", color: "#334155", opacity: mgmtPage === 0 || mgmtLoading ? 0.5 : 1 }}
+                          >
+                            Prev
+                          </button>
+                          <button
+                            onClick={() => loadMgmt(mgmtPage + 1, mgmtSearch)}
+                            disabled={mgmtUsers.length < mgmtSize || mgmtLoading}
+                            className="px-3 py-1.5 rounded-lg text-xs"
+                            style={{ border: "1px solid #E2E8F0", background: "#fff", color: "#334155", opacity: mgmtUsers.length < mgmtSize || mgmtLoading ? 0.5 : 1 }}
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+                      <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: "#0F172A" }}>Chi tiết & cập nhật</h3>
+                      {!mgmtSelected ? (
+                        <p style={{ marginTop: 12, fontSize: "0.82rem", color: "#94A3B8" }}>Chọn một người dùng từ bảng để xem chi tiết.</p>
+                      ) : (
+                        <div className="space-y-3 mt-3">
+                          <div className="rounded-xl p-3" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+                            <p style={{ margin: 0, fontWeight: 700, fontSize: "0.85rem", color: "#0F172A" }}>{mgmtSelected.fullName || "Chưa cập nhật tên"}</p>
+                            <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "#64748B" }}>{mgmtSelected.email}</p>
+                            <p style={{ margin: "6px 0 0", fontSize: "0.74rem", color: "#94A3B8" }}>ID: {mgmtSelected.id}</p>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 700 }}>Trạng thái</label>
+                            <select
+                              value={mgmtStatusDraft}
+                              onChange={(event) => setMgmtStatusDraft(event.target.value)}
+                              style={{ width: "100%", marginTop: 6, height: 36, borderRadius: 8, border: "1px solid #E2E8F0", padding: "0 10px", fontSize: "0.82rem" }}
+                            >
+                              <option value="ACTIVE">ACTIVE</option>
+                              <option value="INACTIVE">INACTIVE</option>
+                              <option value="LOCKED">LOCKED</option>
+                            </select>
+                            <button
+                              onClick={() => saveMgmtStatus(mgmtSelected.id, mgmtStatusDraft)}
+                              disabled={!mgmtStatusDraft || mgmtLoading}
+                              className="mt-2 w-full px-3 py-2 rounded-lg text-xs font-semibold"
+                              style={{ background: "#111827", color: "#fff", opacity: !mgmtStatusDraft || mgmtLoading ? 0.5 : 1 }}
+                            >
+                              Lưu trạng thái
+                            </button>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 700 }}>Vai trò (phân tách bằng dấu phẩy)</label>
+                            <input
+                              value={mgmtRolesDraft}
+                              onChange={(event) => setMgmtRolesDraft(event.target.value)}
+                              placeholder="ADMIN, MODERATOR"
+                              style={{ width: "100%", marginTop: 6, height: 36, borderRadius: 8, border: "1px solid #E2E8F0", padding: "0 10px", fontSize: "0.82rem" }}
+                            />
+                            <button
+                              onClick={() => saveMgmtRoles(mgmtSelected.id, mgmtRolesDraft.split(",").map((entry) => entry.trim()).filter(Boolean))}
+                              disabled={!mgmtRolesDraft.trim() || mgmtLoading}
+                              className="mt-2 w-full px-3 py-2 rounded-lg text-xs font-semibold"
+                              style={{ background: "#EA580C", color: "#fff", opacity: !mgmtRolesDraft.trim() || mgmtLoading ? 0.5 : 1 }}
+                            >
+                              Lưu vai trò
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <UsersView healthStatus={healthStatus} lastHealthPayload={lastHealthPayload} />
+            )
+          )}
           {activeNav === "financials" && <FinancialsView />}
           {activeNav === "b2b"        && <B2BView />}
         </div>
       </main>
+
+      
+
+      {showHealthPanel && (
+        <div
+          className="fixed z-40"
+          style={{
+            left: 'calc(224px + 12px)',
+            top: 64,
+            width: 'min(720px, calc(100vw - 260px))',
+            maxWidth: 720,
+            maxHeight: 'calc(100vh - 80px)',
+            overflow: 'visible',
+            animation: 'slideInFromRight 220ms ease',
+            boxShadow: '0 30px 60px rgba(15,23,42,0.12)',
+            borderRadius: 12,
+            backgroundClip: 'padding-box',
+          }}
+        >
+          <div style={{ padding: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <button onClick={() => setShowHealthPanel(false)} className="rounded p-1" style={{ background: '#ffffffaa', border: '1px solid #E5E7EB' }} aria-label="Close health panel"><X size={16} /></button>
+            </div>
+            <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 12, padding: 12, overflow: 'hidden' }}>
+              <AdminHealth />
+            </div>
+          </div>
+        </div>
+      )}
 
       {commandOpen && (
         <div

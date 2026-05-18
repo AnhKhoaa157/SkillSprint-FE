@@ -112,21 +112,18 @@ function SectionHeading({ title }: { title:string }) {
    ACCOUNT TAB
 ═══════════════════════════════════════════════ */
 function AccountTab({ profile }: { profile: UserProfileViewModel }) {
-  const [firstName,  setFirstName]  = useState(profile.firstName);
-  const [lastName,   setLastName]   = useState(profile.lastName);
+  const [fullName,   setFullName]   = useState(profile.fullName);
   const [email,      setEmail]      = useState(profile.email);
   const [university, setUniversity] = useState("FPT University");
   const [major,      setMajor]      = useState("Software Engineering");
-  const [year,       setYear]       = useState("Year 3");
-  const [gpa,        setGpa]        = useState("3.4");
+  
   const [saved,      setSaved]      = useState(false);
   const [deleteModal,setDeleteModal]= useState(false);
 
   useEffect(() => {
-    setFirstName(profile.firstName);
-    setLastName(profile.lastName);
+    setFullName(profile.fullName);
     setEmail(profile.email);
-  }, [profile.firstName, profile.lastName, profile.email]);
+  }, [profile.fullName, profile.email]);
 
   const handleSave = () => {
     setSaved(true);
@@ -143,9 +140,8 @@ function AccountTab({ profile }: { profile: UserProfileViewModel }) {
       {/* Personal Information */}
       <div style={{ marginBottom:"28px" }}>
         <SectionHeading title="Personal Information"/>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px", marginBottom:"14px" }}>
-          <Input label="First Name"  value={firstName} onChange={setFirstName} placeholder="First name"/>
-          <Input label="Last Name"   value={lastName}  onChange={setLastName}  placeholder="Last name"/>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:"14px", marginBottom:"14px" }}>
+          <Input label="Full Name" value={fullName} onChange={setFullName} placeholder="Full name"/>
         </div>
         <Input label="Email Address" value={email} onChange={setEmail}
           type="email" placeholder="student@gmail.com"
@@ -155,15 +151,10 @@ function AccountTab({ profile }: { profile: UserProfileViewModel }) {
       {/* University Details */}
       <div style={{ marginBottom:"28px" }}>
         <SectionHeading title="University Details"/>
-        <div style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
-          <Select label="University" value={university} onChange={setUniversity} options={UNIVERSITIES}/>
-          <Input  label="Major"      value={major}      onChange={setMajor}      placeholder="e.g. Software Engineering"/>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px" }}>
-            <Select label="Academic Year" value={year} onChange={setYear}
-              options={["Year 1","Year 2","Year 3","Year 4","Graduated"]}/>
-            <Input  label="GPA"           value={gpa}  onChange={setGpa} placeholder="e.g. 3.4" type="text"/>
+          <div style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
+            <Select label="University" value={university} onChange={setUniversity} options={UNIVERSITIES}/>
+            <Input  label="Major"      value={major}      onChange={setMajor}      placeholder="e.g. Software Engineering"/>
           </div>
-        </div>
       </div>
 
       {/* Danger Zone */}

@@ -286,23 +286,28 @@ export function getStoredUserProfile(): StoredUserProfile | null {
 }
 
 async function requestJson<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (networkError) {
+    throw new Error("Không thể kết nối tới máy chủ đăng nhập. Hãy chắc BE đang chạy và không có lỗi mạng.");
+  }
 
   const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
 
   if (!response.ok) {
-    const message = payload?.message || "Không thể kết nối tới máy chủ đăng nhập.";
+    const message = payload?.message || `Máy chủ trả lỗi: ${response.status}`;
     throw new Error(message);
   }
 
   if (!payload) {
-    throw new Error("Phản hồi đăng nhập không hợp lệ.");
+    throw new Error("Phản hồi đăng nhập không hợp lệ từ máy chủ.");
   }
 
   return payload;

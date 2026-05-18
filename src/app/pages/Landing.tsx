@@ -681,7 +681,7 @@ function Footer() {
     "Sản phẩm": [
       { label: "Trang chủ", to: "/" },
       { label: "Tính năng", to: "/features" },
-      { label: "Bảng giá", to: "/#pricing" },
+      { label: "Bảng giá", to: "/pricing" },
       { label: "Bắt đầu miễn phí", to: "/auth?mode=register" },
       { label: "Đăng nhập", to: "/auth?mode=login" },
     ],

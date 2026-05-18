@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, NavLink, useLocation, Link, useNavigate } from "react-router";
 import {
   LayoutDashboard, Map, Mic, Settings,
@@ -6,9 +6,12 @@ import {
   Calendar, CheckSquare, BarChart2, Trophy, UploadCloud, Sparkles,
   AlertTriangle, CalendarClock, BookOpenCheck, CheckCircle2,
 } from "lucide-react";
+import { APP_NAV } from "../config/nav";
 import { motion, AnimatePresence } from "motion/react";
 import { PricingModal } from "../components/PricingModal";
 import { ReferralModal } from "../components/ReferralModal";
+import { BrandLogo } from "../components/BrandLogo";
+import { getStoredUserProfile } from "../../api/authService";
 
 /* ─── Sidebar Design Tokens ─── */
 const F      = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -27,19 +30,7 @@ const T2     = "#6B7280";
 const T3     = "#9CA3AF";
 const BDR    = "#E5E7EB";
 
-const NAV = [
-  { path:"/app",                label:"Trung tâm điều khiển", icon:LayoutDashboard, end:true },
-  { path:"/app/syllabus",       label:"Nhập syllabus",        icon:UploadCloud },
-  { path:"/app/roadmap",        label:"Lộ trình AI",          icon:Map },
-  { path:"/app/workspaces",     label:"Workspaces",          icon:BookOpenCheck },
-  { path:"/app/calendar",       label:"Lịch học",             icon:Calendar },
-  { path:"/app/matrix",         label:"Ma trận công việc",    icon:CheckSquare },
-  { path:"/app/analytics",      label:"Phân tích",            icon:BarChart2 },
-  { path:"/app/leaderboard",    label:"Bảng xếp hạng",        icon:Trophy },
-  { path:"/app/mock-interview", label:"Phỏng vấn thử",        icon:Mic },
-  { path:"/app/learning",       label:"Trung tâm học tập ✦",  icon:Sparkles },
-  { path:"/app/profile",        label:"Cài đặt",              icon:Settings },
-];
+const NAV = APP_NAV;
 
 const CRUMBS: Record<string,string> = {
   "/app":"Trung tâm điều khiển",
@@ -63,13 +54,21 @@ export default function DashboardLayout() {
   const [pricingOpen, setPricingOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
   const [notifOpen, setNotifOpen]     = useState(false);
+  const [profile, setProfile] = useState<{ fullName?: string; role?: string } | null>(null);
   const navigate = useNavigate();
   const loc   = useLocation();
+  const showAuthLoader = (loc.state as any)?.showLoadingFromAuth ?? false;
   let crumb = CRUMBS[loc.pathname] ?? "Trung tâm điều khiển";
   if (loc.pathname.startsWith("/app/workspaces")) {
     if (loc.pathname === "/app/workspaces") crumb = CRUMBS["/app/workspaces"];
     else crumb = "Workspace";
   }
+
+  useEffect(() => {
+    const p = getStoredUserProfile();
+    if (p) setProfile({ fullName: p.fullName, role: p.role ?? undefined });
+    // previously subscribed to shared health — removed per request (indicator only in footer)
+  }, []);
 
   return (
     <div style={{
@@ -227,13 +226,13 @@ export default function DashboardLayout() {
                 background:"linear-gradient(135deg,#FF6B00,#FF9A3D)",
                 display:"flex",alignItems:"center",justifyContent:"center",
               }}>
-                <span style={{fontSize:"11px",fontWeight:800,color:"#fff"}}>A</span>
+                <span style={{fontSize:"11px",fontWeight:800,color:"#fff"}}>{(profile?.fullName || "?").charAt(0).toUpperCase()}</span>
               </div>
               <div style={{flex:1,minWidth:0}}>
                 <p style={{fontSize:"0.78rem",fontWeight:600,color:"#FFFFFF",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                  Nguyễn Văn A
+                  {profile?.fullName || "---"}
                 </p>
-                <p style={{fontSize:"9.5px",color:STXT}}>Free Tier</p>
+                <p style={{fontSize:"9.5px",color:STXT}}>{profile?.role ? profile.role : "Free Tier"}</p>
               </div>
             </div>
           </Link>
@@ -258,6 +257,7 @@ export default function DashboardLayout() {
               <span style={{color:T3,fontSize:"0.78rem",fontFamily:F}}>SkillSprint</span>
               <ChevronRight size={11} color={T3}/>
               <span style={{color:T1,fontSize:"0.8rem",fontFamily:F,fontWeight:700}}>{crumb}</span>
+              {/* health indicator removed from header; footer shows status */}
             </nav>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
@@ -449,6 +449,20 @@ export default function DashboardLayout() {
             <Outlet/>
           </div>
         </div>
+
+        {/* Loader requested from Auth during immediate navigation */}
+        <AnimatePresence>
+          {showAuthLoader && (
+            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+              style={{position:"fixed",top:10,left:0,right:0,height:6,zIndex:120,display:'flex',overflow:'hidden',alignItems:'center',justifyContent:'center'}}>
+              <div style={{position:'relative',width:'100%',height:'100%',overflow:'hidden'}}>
+                <div style={{position:'absolute',left:0,top:0,bottom:0,width:'100%',transform:'translateX(-100%)',background:'linear-gradient(90deg, rgba(255,107,0,0.12), #FF6B00)',animation:'slidebar 700ms cubic-bezier(.22,1,.36,1) forwards'}} />
+                <div style={{position:'absolute',left:0,top:0,bottom:0,width:'25%',transform:'translateX(-120%)',pointerEvents:'none',background:'linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06), rgba(255,255,255,0.18))',animation:'shimmerbar 800ms linear forwards'}} />
+              </div>
+              <style>{`@keyframes slidebar { from { transform: translateX(-100%); } to { transform: translateX(0%); } } @keyframes shimmerbar { from { transform: translateX(-120%); } to { transform: translateX(120%); } }`}</style>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       <PricingModal

@@ -51,7 +51,7 @@ export function PublicNavbar() {
               onMouseEnter={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.color = "#0F172A"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#475569"; }}
             >Tính năng</Link>
-            <Link to="/features" className="px-4 py-1.5 rounded-full transition-all duration-200 text-[14px] text-left"
+            <Link to="/pricing" className="px-4 py-1.5 rounded-full transition-all duration-200 text-[14px] text-left"
               style={{ color: "#475569" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.color = "#0F172A"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#475569"; }}
@@ -107,21 +107,23 @@ export function PublicNavbar() {
             {[
               { to: "/about", label: "Giới thiệu" },
               { to: "/features", label: "Tính năng" },
-              { to: "/features", label: "Gói dịch vụ" },
+              { to: "/pricing", label: "Gói dịch vụ" },
               { to: "/contact", label: "Liên hệ" },
               { to: "/auth?mode=login", label: "Đăng nhập" },
             ].map(({ to, label }) => (
-              <Link
-                key={label}
-                to={to}
-                className="block px-4 py-2.5 rounded-xl text-sm transition-colors"
-                style={{ color: "#475569" }}
-                onClick={() => setIsMenuOpen(false)}
-                onMouseEnter={e => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.color = "#0F172A"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#475569"; }}
-              >
-                {label}
-              </Link>
+              (
+                <Link
+                  key={label}
+                  to={to!}
+                  className="block px-4 py-2.5 rounded-xl text-sm transition-colors"
+                  style={{ color: "#475569" }}
+                  onClick={() => setIsMenuOpen(false)}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.color = "#0F172A"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#475569"; }}
+                >
+                  {label}
+                </Link>
+              )
             ))}
             <Link
               to="/auth?mode=register"
