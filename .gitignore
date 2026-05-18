@@ -1,10 +1,11 @@
 # Dependencies
 node_modules/
 
-# Build output
+# Build output (TypeScript / Frontend)
 dist/
 build/
 coverage/
+*.tsbuildinfo
 
 # Environment files
 .env
@@ -26,5 +27,7 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Optional local artifacts
+# Local Artifacts & Custom files
+FE_agents.agent.md
+FE_agents.md
 *.postman_collection.json
