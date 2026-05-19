@@ -12,6 +12,7 @@ import { PricingModal } from "../components/PricingModal";
 import { ReferralModal } from "../components/ReferralModal";
 import { BrandLogo } from "../components/BrandLogo";
 import { getStoredUserProfile } from "../../api/authService";
+import meService from "../../api/meService";
 
 /* ─── Sidebar Design Tokens ─── */
 const F      = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -65,8 +66,32 @@ export default function DashboardLayout() {
   }
 
   useEffect(() => {
-    const p = getStoredUserProfile();
-    if (p) setProfile({ fullName: p.fullName, role: p.role ?? undefined });
+    let mounted = true;
+
+    const syncProfile = async () => {
+      try {
+        const me = await meService.getMe();
+        if (!mounted) return;
+        setProfile({ fullName: me.fullName, role: me.roles?.includes("ADMIN") ? "ADMIN" : "LEARNER" });
+      } catch {
+        const p = getStoredUserProfile();
+        if (!mounted) return;
+        if (p) setProfile({ fullName: p.fullName, role: p.role ?? undefined });
+      }
+    };
+
+    syncProfile();
+
+    const handleProfileUpdated = () => {
+      syncProfile();
+    };
+
+    window.addEventListener("skillSprint:profile-updated", handleProfileUpdated);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener("skillSprint:profile-updated", handleProfileUpdated);
+    };
     // previously subscribed to shared health — removed per request (indicator only in footer)
   }, []);
 

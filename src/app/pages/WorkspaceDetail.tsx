@@ -1,3 +1,6 @@
+import OnboardingModal from "../components/OnboardingModal.tsx";
+import useOnboardingProfile from "../hooks/useOnboardingProfile";
+import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ArrowLeft, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle } from "lucide-react";
@@ -24,6 +27,8 @@ function toWorkspaceCode(rawId?: string) {
 export default function WorkspaceDetail(){
   const { id } = useParams();
   const navigate = useNavigate();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const onboarding = useOnboardingProfile(id);
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [results, setResults] = useState<any | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -42,6 +47,17 @@ export default function WorkspaceDetail(){
     // clear results when entering different workspace
     setResults(null);
     setFiles([]);
+    // fetch onboarding profile; open modal if none
+    (async ()=>{
+      if(!id) return;
+      try{
+        const p = await onboarding.fetchOnboardingProfile();
+        if (!p) setShowOnboarding(true);
+      }catch(err:any){
+        console.error('Failed to load onboarding profile', err);
+        toast.error('Không thể tải cài đặt lộ trình (server lỗi)');
+      }
+    })();
     try {
       const raw = localStorage.getItem("skillSprint.workspaces");
       if (raw) {
@@ -109,7 +125,7 @@ export default function WorkspaceDetail(){
               <BookOpenCheck size={14} /> Không gian tài liệu AI
             </div>
             <h2 style={{ margin:0, fontSize:"1.12rem", fontWeight:900, color:T1, letterSpacing:"-0.02em" }}>{workspaceName}</h2>
-            <p style={{ margin:"4px 0 0", color:"#6B7280", fontSize:"0.86rem" }}>Mã không gian: {workspaceCode} · Kho lưu trữ tài liệu và kết quả AI theo không gian làm việc</p>
+            <p style={{ margin:"4px 0 0", color:"#6B7280", fontSize:"0.86rem" }}>ID: {workspaceCode} · Kho lưu trữ tài liệu và kết quả AI theo không gian làm việc</p>
           </div>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", justifyContent:"flex-end" }}>
@@ -257,6 +273,9 @@ export default function WorkspaceDetail(){
               <p style={{ margin:"6px 0 0", color:"#6B7280", fontSize:"0.86rem", lineHeight:1.6 }}>
                 Tải lên tài liệu để hệ thống tự đọc, phân tích, sinh chương/chủ đề, lộ trình và nhiệm vụ.
               </p>
+              <div style={{ marginTop:12, display:"flex", gap:8 }}>
+                <button onClick={()=>setShowOnboarding(true)} style={{ padding:"8px 12px", borderRadius:10, border:`1px solid ${BDR}`, background: "#FFF7ED", color: "#C2410C", fontWeight:800 }}>Cài đặt lộ trình</button>
+              </div>
             </div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
@@ -370,6 +389,11 @@ export default function WorkspaceDetail(){
           </div>
         </section>
       </div>
+      <OnboardingModal
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        workspaceId={id ?? ""}
+      />
     </div>
   );
 }

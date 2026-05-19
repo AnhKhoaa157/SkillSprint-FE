@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { motion } from "motion/react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -78,65 +78,65 @@ function Sparkline({ data, color, width = 80, height = 28 }: { data: number[]; c
 ───────────────────────────────────────────────────────── */
 // Student cohort data for "Users & Cohorts" view
 const STUDENTS = [
-  { id: 1, name: "Nguyễn Văn A",   cohort: "FPT K21",   roadmap: "Frontend Dev", progress: 72, skillGap: 28, streak: 12, plan: "Premium", status: "on-track" },
-  { id: 2, name: "Trần Thị B",     cohort: "FPT K21",   roadmap: "Backend Dev",  progress: 58, skillGap: 42, streak: 5,  plan: "Premium", status: "at-risk" },
-  { id: 3, name: "Lê Văn C",       cohort: "VNU K20",   roadmap: "Data Science", progress: 91, skillGap: 9,  streak: 21, plan: "Premium", status: "excellent" },
-  { id: 4, name: "Phạm Thị D",     cohort: "HUST K22",  roadmap: "UI/UX Design", progress: 44, skillGap: 56, streak: 2,  plan: "Free",    status: "at-risk" },
-  { id: 5, name: "Hoàng Minh E",   cohort: "RMIT 2024", roadmap: "Frontend Dev", progress: 83, skillGap: 17, streak: 18, plan: "Premium", status: "excellent" },
-  { id: 6, name: "Vũ Thị F",       cohort: "VNU K20",   roadmap: "DevOps",       progress: 37, skillGap: 63, streak: 0,  plan: "Free",    status: "stalled" },
-  { id: 7, name: "Đặng Văn G",     cohort: "FPT K21",   roadmap: "Backend Dev",  progress: 66, skillGap: 34, streak: 8,  plan: "Premium", status: "on-track" },
-  { id: 8, name: "Bùi Thị H",      cohort: "HCMUT K23", roadmap: "Frontend Dev", progress: 19, skillGap: 81, streak: 1,  plan: "Free",    status: "stalled" },
-  { id: 9, name: "Ngô Văn I",      cohort: "HUST K22",  roadmap: "Data Science", progress: 77, skillGap: 23, streak: 14, plan: "Premium", status: "on-track" },
-  { id: 10, name: "Đinh Thị J",    cohort: "RMIT 2024", roadmap: "UI/UX Design", progress: 94, skillGap: 6,  streak: 30, plan: "Premium", status: "excellent" },
+  { id: 1, name: "Nguyễn Văn A", cohort: "FPT K21", roadmap: "Frontend Dev", progress: 72, skillGap: 28, streak: 12, plan: "Premium", status: "on-track" },
+  { id: 2, name: "Trần Thị B", cohort: "FPT K21", roadmap: "Backend Dev", progress: 58, skillGap: 42, streak: 5, plan: "Premium", status: "at-risk" },
+  { id: 3, name: "Lê Văn C", cohort: "VNU K20", roadmap: "Data Science", progress: 91, skillGap: 9, streak: 21, plan: "Premium", status: "excellent" },
+  { id: 4, name: "Phạm Thị D", cohort: "HUST K22", roadmap: "UI/UX Design", progress: 44, skillGap: 56, streak: 2, plan: "Free", status: "at-risk" },
+  { id: 5, name: "Hoàng Minh E", cohort: "RMIT 2024", roadmap: "Frontend Dev", progress: 83, skillGap: 17, streak: 18, plan: "Premium", status: "excellent" },
+  { id: 6, name: "Vũ Thị F", cohort: "VNU K20", roadmap: "DevOps", progress: 37, skillGap: 63, streak: 0, plan: "Free", status: "stalled" },
+  { id: 7, name: "Đặng Văn G", cohort: "FPT K21", roadmap: "Backend Dev", progress: 66, skillGap: 34, streak: 8, plan: "Premium", status: "on-track" },
+  { id: 8, name: "Bùi Thị H", cohort: "HCMUT K23", roadmap: "Frontend Dev", progress: 19, skillGap: 81, streak: 1, plan: "Free", status: "stalled" },
+  { id: 9, name: "Ngô Văn I", cohort: "HUST K22", roadmap: "Data Science", progress: 77, skillGap: 23, streak: 14, plan: "Premium", status: "on-track" },
+  { id: 10, name: "Đinh Thị J", cohort: "RMIT 2024", roadmap: "UI/UX Design", progress: 94, skillGap: 6, streak: 30, plan: "Premium", status: "excellent" },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  excellent: { label: "Xuất sắc",  bg: "rgba(34,197,94,0.08)",   text: "#22c55e", border: "rgba(34,197,94,0.25)"  },
-  "on-track":{ label: "Đúng tiến độ",   bg: "rgba(6,182,212,0.08)",   text: "#06b6d4", border: "rgba(6,182,212,0.25)"  },
-  "at-risk":  { label: "Cần chú ý",    bg: "rgba(245,158,11,0.08)",  text: "#f59e0b", border: "rgba(245,158,11,0.25)" },
-  stalled:    { label: "Chững lại",    bg: "rgba(239,68,68,0.08)",   text: "#ef4444", border: "rgba(239,68,68,0.25)"  },
+  excellent: { label: "Xuất sắc", bg: "rgba(34,197,94,0.08)", text: "#22c55e", border: "rgba(34,197,94,0.25)" },
+  "on-track": { label: "Đúng tiến độ", bg: "rgba(6,182,212,0.08)", text: "#06b6d4", border: "rgba(6,182,212,0.25)" },
+  "at-risk": { label: "Cần chú ý", bg: "rgba(245,158,11,0.08)", text: "#f59e0b", border: "rgba(245,158,11,0.25)" },
+  stalled: { label: "Chững lại", bg: "rgba(239,68,68,0.08)", text: "#ef4444", border: "rgba(239,68,68,0.25)" },
 };
 
 const USER_GROWTH_DATA = [
-  { week: "W1",  total: 148,  organic: 90,  paid: 38,  referral: 20 },
-  { week: "W2",  total: 290,  organic: 170, paid: 75,  referral: 45 },
-  { week: "W3",  total: 440,  organic: 255, paid: 110, referral: 75 },
-  { week: "W4",  total: 620,  organic: 350, paid: 160, referral: 110 },
-  { week: "W5",  total: 810,  organic: 450, paid: 210, referral: 150 },
-  { week: "W6",  total: 1020, organic: 560, paid: 265, referral: 195 },
-  { week: "W7",  total: 1230, organic: 665, paid: 310, referral: 255 },
-  { week: "W8",  total: 1410, organic: 760, paid: 345, referral: 305 },
-  { week: "W9",  total: 1560, organic: 830, paid: 368, referral: 362 },
+  { week: "W1", total: 148, organic: 90, paid: 38, referral: 20 },
+  { week: "W2", total: 290, organic: 170, paid: 75, referral: 45 },
+  { week: "W3", total: 440, organic: 255, paid: 110, referral: 75 },
+  { week: "W4", total: 620, organic: 350, paid: 160, referral: 110 },
+  { week: "W5", total: 810, organic: 450, paid: 210, referral: 150 },
+  { week: "W6", total: 1020, organic: 560, paid: 265, referral: 195 },
+  { week: "W7", total: 1230, organic: 665, paid: 310, referral: 255 },
+  { week: "W8", total: 1410, organic: 760, paid: 345, referral: 305 },
+  { week: "W9", total: 1560, organic: 830, paid: 368, referral: 362 },
   { week: "W10", total: 1680, organic: 883, paid: 378, referral: 419 },
   { week: "W11", total: 1760, organic: 915, paid: 382, referral: 463 },
   { week: "W12", total: 1840, organic: 940, paid: 385, referral: 515 },
 ];
 
 const CAMPUS_DATA = [
-  { name: "FPT University", users: 500, mrr: 12500000, plan: "Campus Pro",   status: "Ổn định",     trend: "+18%", health: "green" },
-  { name: "VNU-HCM",        users: 310, mrr: 7750000,  plan: "Campus Basic", status: "Đang hoạt động", trend: "+11%", health: "green" },
-  { name: "HUST",           users: 200, mrr: 5000000,  plan: "Campus Basic", status: "Đang hoạt động", trend: "+9%",  health: "green" },
-  { name: "RMIT Vietnam",   users: 120, mrr: 3000000,  plan: "Campus Pilot", status: "Tăng trưởng",   trend: "+34%", health: "cyan"  },
-  { name: "UEH",            users: 85,  mrr: 2125000,  plan: "Dùng thử",     status: "Dùng thử",      trend: "+5%",  health: "amber" },
-  { name: "HCMUT",          users: 45,  mrr: 0,        plan: "Tiềm năng",    status: "Tiềm năng",     trend: "—",    health: "gray"  },
+  { name: "FPT University", users: 500, mrr: 12500000, plan: "Campus Pro", status: "Ổn định", trend: "+18%", health: "green" },
+  { name: "VNU-HCM", users: 310, mrr: 7750000, plan: "Campus Basic", status: "Đang hoạt động", trend: "+11%", health: "green" },
+  { name: "HUST", users: 200, mrr: 5000000, plan: "Campus Basic", status: "Đang hoạt động", trend: "+9%", health: "green" },
+  { name: "RMIT Vietnam", users: 120, mrr: 3000000, plan: "Campus Pilot", status: "Tăng trưởng", trend: "+34%", health: "cyan" },
+  { name: "UEH", users: 85, mrr: 2125000, plan: "Dùng thử", status: "Dùng thử", trend: "+5%", health: "amber" },
+  { name: "HCMUT", users: 45, mrr: 0, plan: "Tiềm năng", status: "Tiềm năng", trend: "—", health: "gray" },
 ];
 
 const HEALTH_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  green: { bg: "rgba(34,197,94,0.08)",   text: "#16a34a", border: "rgba(34,197,94,0.2)"  },
-  cyan:  { bg: "rgba(6,182,212,0.08)",   text: "#0891b2", border: "rgba(6,182,212,0.2)"  },
-  amber: { bg: "rgba(245,158,11,0.08)",  text: "#d97706", border: "rgba(245,158,11,0.2)" },
-  gray:  { bg: "#F3F4F6", text: "#9CA3AF", border: "#E5E7EB" },
+  green: { bg: "rgba(34,197,94,0.08)", text: "#16a34a", border: "rgba(34,197,94,0.2)" },
+  cyan: { bg: "rgba(6,182,212,0.08)", text: "#0891b2", border: "rgba(6,182,212,0.2)" },
+  amber: { bg: "rgba(245,158,11,0.08)", text: "#d97706", border: "rgba(245,158,11,0.2)" },
+  gray: { bg: "#F3F4F6", text: "#9CA3AF", border: "#E5E7EB" },
 };
 
 const KPI_DATA = [
-  { id: "activation", label: "Tỷ lệ kích hoạt", value: "48%",  target: ">45%", passing: true, delta: "+3.2%", color: "#FF6B00", icon: Activity,   sparkline: [38,40,41,42,43,45,46,47,48] },
-  { id: "retention",  label: "Giữ chân tuần 4", value: "42%", target: ">35%", passing: true, delta: "+4.5%", color: "#FB923C", icon: Repeat,     sparkline: [32,33,34,36,37,38,40,41,42] },
-  { id: "conversion", label: "Chuyển đổi trả phí",  value: "7.2%",target: ">5%",  passing: true, delta: "+1.1%", color: "#F97316", icon: TrendingUp,  sparkline: [4.8,5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.2] },
-  { id: "arpa",       label: "Doanh thu bình quân", value: "51K ₫",target: "Tối đa", passing: true, delta: "+12%",  color: "#EA580C", icon: DollarSign, sparkline: [44,45,46,47,48,49.5,50,50.5,51] },
+  { id: "activation", label: "Tỷ lệ kích hoạt", value: "48%", target: ">45%", passing: true, delta: "+3.2%", color: "#FF6B00", icon: Activity, sparkline: [38, 40, 41, 42, 43, 45, 46, 47, 48] },
+  { id: "retention", label: "Giữ chân tuần 4", value: "42%", target: ">35%", passing: true, delta: "+4.5%", color: "#FB923C", icon: Repeat, sparkline: [32, 33, 34, 36, 37, 38, 40, 41, 42] },
+  { id: "conversion", label: "Chuyển đổi trả phí", value: "7.2%", target: ">5%", passing: true, delta: "+1.1%", color: "#F97316", icon: TrendingUp, sparkline: [4.8, 5.2, 5.5, 5.8, 6.1, 6.4, 6.7, 7.0, 7.2] },
+  { id: "arpa", label: "Doanh thu bình quân", value: "51K ₫", target: "Tối đa", passing: true, delta: "+12%", color: "#EA580C", icon: DollarSign, sparkline: [44, 45, 46, 47, 48, 49.5, 50, 50.5, 51] },
 ];
 
 const UNIT_ECON_DATA = [
-  { label: "CAC", value: 40000,  fill: "#475569" },
+  { label: "CAC", value: 40000, fill: "#475569" },
   { label: "LTV", value: 408000, fill: "#FF6B00" },
 ];
 
@@ -206,9 +206,9 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
   const [search, setSearch] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<(typeof STUDENTS)[number] | null>(null);
   const [alerts, setAlerts] = useState([...ADMIN_ALERTS]);
-  
-  
-  const totalActive   = STUDENTS.length;
+
+
+  const totalActive = STUDENTS.length;
   const avgCompletion = Math.round(STUDENTS.reduce((s, st) => s + st.progress, 0) / totalActive);
   const premiumLicenses = STUDENTS.filter(s => s.plan === "Premium").length;
   const filtered = STUDENTS.filter(s =>
@@ -217,7 +217,7 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
     s.roadmap.toLowerCase().includes(search.toLowerCase())
   );
 
-  
+
 
   const cohortHeatmap = useMemo(() => {
     const grouped = STUDENTS.reduce((acc, student) => {
@@ -293,7 +293,7 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
           </div>
         </div>
 
-          
+
 
         {/* Health indicator (sidebar) */}
         <div className="px-5 py-3" style={{ borderBottom: "1px solid rgba(148,163,184,0.06)", borderLeft: healthStatus === 'down' ? '4px solid rgba(239,68,68,0.06)' : undefined }}>
@@ -342,7 +342,7 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
             value: totalActive.toString(),
             sub: "Trên toàn bộ cohort",
             color: "#06b6d4",
-            sparkline: [55,60,65,70,80,90,100,110,120,130,140,totalActive],
+            sparkline: [55, 60, 65, 70, 80, 90, 100, 110, 120, 130, 140, totalActive],
           },
           {
             icon: BookOpen,
@@ -350,15 +350,15 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
             value: `${avgCompletion}%`,
             sub: "Gộp toàn bộ lộ trình",
             color: "#a78bfa",
-            sparkline: [52,55,58,59,60,61,62,63,64,65,66,avgCompletion],
+            sparkline: [52, 55, 58, 59, 60, 61, 62, 63, 64, 65, 66, avgCompletion],
           },
           {
             icon: Award,
             label: "Gói Premium đang dùng",
             value: `${premiumLicenses}/${totalActive}`,
-            sub: `${Math.round((premiumLicenses/totalActive)*100)}% tỷ lệ sử dụng`,
+            sub: `${Math.round((premiumLicenses / totalActive) * 100)}% tỷ lệ sử dụng`,
             color: "#f59e0b",
-            sparkline: [3,4,4,5,5,6,6,6,7,7,7,premiumLicenses],
+            sparkline: [3, 4, 4, 5, 5, 6, 6, 6, 7, 7, 7, premiumLicenses],
           },
         ].map((card, i) => (
           <motion.div
@@ -469,7 +469,7 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
               onMouseEnter={e => { e.currentTarget.style.color = "#111827"; e.currentTarget.style.background = "#F3F4F6"; }}
               onMouseLeave={e => { e.currentTarget.style.color = "#6B7280"; e.currentTarget.style.background = "#F9FAFB"; }}
             >
-                <Download size={12} /> Xuất dữ liệu
+              <Download size={12} /> Xuất dữ liệu
             </button>
           </div>
         </div>
@@ -483,7 +483,7 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
           }}>
           {["Người học", "Cohort", "Lộ trình", "Tiến độ", "Skill Gap", "Chuỗi học", "Trạng thái"].map(col => (
             <div key={col} className="flex items-center gap-1" style={{ color: "#9CA3AF", fontSize: "0.68rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              {col} {["Tiến độ","Skill Gap"].includes(col) && <ChevronDown size={10} />}
+              {col} {["Tiến độ", "Skill Gap"].includes(col) && <ChevronDown size={10} />}
             </div>
           ))}
         </div>
@@ -513,7 +513,7 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white"
                     style={{
-                      background: `linear-gradient(135deg, ${["#0ea5e9","#a78bfa","#22c55e","#f59e0b","#ef4444","#06b6d4"][i % 6]}, ${["#6366f1","#ec4899","#059669","#d97706","#dc2626","#0891b2"][i % 6]})`,
+                      background: `linear-gradient(135deg, ${["#0ea5e9", "#a78bfa", "#22c55e", "#f59e0b", "#ef4444", "#06b6d4"][i % 6]}, ${["#6366f1", "#ec4899", "#059669", "#d97706", "#dc2626", "#0891b2"][i % 6]})`,
                     }}
                   >
                     {student.name.charAt(0)}
@@ -730,9 +730,9 @@ function FinancialsView() {
                 <BarChart data={[{ label: "CAC", value: 40000, name: "CAC" }, { label: "LTV", value: 408000, name: "LTV" }]} margin={{ top: 10, right: 20, left: 10, bottom: 5 }} barCategoryGap="50%">
                   <CartesianGrid key="grid" strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
                   <XAxis key="x" dataKey="label" stroke="#E5E7EB" tick={{ fill: "#6B7280", fontSize: 12, fontWeight: 600 }} />
-                  <YAxis key="y" stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}K`} />
+                  <YAxis key="y" stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
                   <Tooltip key="tooltip" content={<CustomTooltip />} />
-                  <Bar key="bar" dataKey="value" name="value" shape={<UnitEconBar />} radius={[6,6,0,0]}>
+                  <Bar key="bar" dataKey="value" name="value" shape={<UnitEconBar />} radius={[6, 6, 0, 0]}>
                     {UNIT_ECON_DATA.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
@@ -763,7 +763,7 @@ function FinancialsView() {
                   <YAxis key="y" stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
                   <Tooltip key="tooltip" content={<CustomTooltip />} />
                   <Legend key="legend" wrapperStyle={{ fontSize: "11px", paddingTop: "10px", color: "#6B7280" }} />
-                  <Area key="total" type="monotone" dataKey="total"   name="Tổng"   stroke="#06b6d4" strokeWidth={2}   fill="#06b6d4" fillOpacity={0.1} />
+                  <Area key="total" type="monotone" dataKey="total" name="Tổng" stroke="#06b6d4" strokeWidth={2} fill="#06b6d4" fillOpacity={0.1} />
                   <Area key="organic" type="monotone" dataKey="organic" name="Tự nhiên" stroke="#22c55e" strokeWidth={1.5} fill="#22c55e" fillOpacity={0.08} />
                   <Area key="referral" type="monotone" dataKey="referral" name="Giới thiệu" stroke="#a78bfa" strokeWidth={1.5} fill="#a78bfa" fillOpacity={0.08} strokeDasharray="4 2" />
                 </AreaChart>
@@ -777,10 +777,10 @@ function FinancialsView() {
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="grid grid-cols-2 gap-3">
             {[
-              { label: "MRR tổng",         value: `${(totalMRR/1000000).toFixed(1)}M ₫`, color: "#22c55e", sub: "↑ 24% so với tháng trước" },
-              { label: "Campus đang hoạt động", value: `${CAMPUS_DATA.filter(c=>c.health!=="gray").length}`,   color: "#06b6d4", sub: "1 campus đang dùng thử" },
-              { label: "Phiên học trung bình", value: "47 phút",                                           color: "#FF6B00", sub: "Trên mỗi người học/ngày" },
-              { label: "Điểm NPS",        value: "72",                                                  color: "#d97706", sub: "Mức hài lòng rất tốt" },
+              { label: "MRR tổng", value: `${(totalMRR / 1000000).toFixed(1)}M ₫`, color: "#22c55e", sub: "↑ 24% so với tháng trước" },
+              { label: "Campus đang hoạt động", value: `${CAMPUS_DATA.filter(c => c.health !== "gray").length}`, color: "#06b6d4", sub: "1 campus đang dùng thử" },
+              { label: "Phiên học trung bình", value: "47 phút", color: "#FF6B00", sub: "Trên mỗi người học/ngày" },
+              { label: "Điểm NPS", value: "72", color: "#d97706", sub: "Mức hài lòng rất tốt" },
             ].map(s => (
               <div key={s.label} className="rounded-xl p-4"
                 style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
@@ -806,10 +806,10 @@ function B2BView() {
       {/* Partner summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Đối tác đang hoạt động", value: "5",        color: "#22c55e", icon: Building2  },
-          { label: "Tổng người dùng B2B",   value: "1,260",    color: "#06b6d4", icon: Users      },
-          { label: "MRR từ B2B",            value: "30.4M ₫",  color: "#f59e0b", icon: DollarSign },
-          { label: "Điểm sức khỏe TB",      value: "87/100",   color: "#a78bfa", icon: ShieldCheck },
+          { label: "Đối tác đang hoạt động", value: "5", color: "#22c55e", icon: Building2 },
+          { label: "Tổng người dùng B2B", value: "1,260", color: "#06b6d4", icon: Users },
+          { label: "MRR từ B2B", value: "30.4M ₫", color: "#f59e0b", icon: DollarSign },
+          { label: "Điểm sức khỏe TB", value: "87/100", color: "#a78bfa", icon: ShieldCheck },
         ].map((card, i) => (
           <motion.div key={card.label}
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
@@ -863,14 +863,14 @@ function B2BView() {
             >
               <div className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white"
-                  style={{ background: `linear-gradient(135deg, ${["#0ea5e9","#22c55e","#a78bfa","#f59e0b","#ef4444","#6366f1"][i % 6]}, ${["#6366f1","#16a34a","#FF6B00","#d97706","#dc2626","#4f46e5"][i % 6]})` }}>
+                  style={{ background: `linear-gradient(135deg, ${["#0ea5e9", "#22c55e", "#a78bfa", "#f59e0b", "#ef4444", "#6366f1"][i % 6]}, ${["#6366f1", "#16a34a", "#FF6B00", "#d97706", "#dc2626", "#4f46e5"][i % 6]})` }}>
                   {c.name.charAt(0)}
                 </div>
                 <span style={{ fontWeight: 600, fontSize: "0.85rem", color: "#111827" }}>{c.name}</span>
               </div>
               <span style={{ color: "#374151", fontSize: "0.82rem", fontWeight: 600 }}>{c.users.toLocaleString()}</span>
               <span style={{ color: "#16a34a", fontSize: "0.82rem", fontWeight: 600 }}>
-                {c.mrr > 0 ? `${(c.mrr/1000000).toFixed(1)}M ₫` : "—"}
+                {c.mrr > 0 ? `${(c.mrr / 1000000).toFixed(1)}M ₫` : "—"}
               </span>
               <span style={{ color: "#6B7280", fontSize: "0.78rem" }}>{c.plan}</span>
               <span style={{ color: c.trend.startsWith("+") ? "#16a34a" : "#9CA3AF", fontSize: "0.82rem", fontWeight: 600 }}>
@@ -897,6 +897,7 @@ export default function AdminDashboard() {
   const [timeRange, setTimeRange] = useState("90d");
   const [lastSync, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
+  const [currentUser, setCurrentUser] = useState<{ fullName?: string; roles?: string[]; avatarUrl?: string } | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [showHealthPanel, setShowHealthPanel] = useState(false);
@@ -975,6 +976,16 @@ export default function AdminDashboard() {
     finally { setMgmtLoading(false); }
   }
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, []);
   const [usersNavOpen, setUsersNavOpen] = useState(false);
 
   const openUserManagement = async () => {
@@ -985,24 +996,34 @@ export default function AdminDashboard() {
   };
 
   const headerLabels: Record<string, { title: string; sub: string }> = {
-    users:      { title: "Người học & Nhóm học",  sub: "Tiến độ người học · Phân tích skill gap" },
+    users: { title: "Người học & Nhóm học", sub: "Tiến độ người học · Phân tích skill gap" },
     "users-management": { title: "Quản lý người dùng", sub: "Quản lý người dùng và phân quyền" },
-    financials: { title: "Tài chính",            sub: "Chỉ số doanh thu · Unit economics" },
-    b2b:        { title: "Đối tác B2B",          sub: "Tài khoản trường · Sức khỏe đối tác" },
+    financials: { title: "Tài chính", sub: "Chỉ số doanh thu · Unit economics" },
+    b2b: { title: "Đối tác B2B", sub: "Tài khoản trường · Sức khỏe đối tác" },
   };
   const current = headerLabels[activeNav];
 
+  useEffect(() => {
+    let mounted = true;
+    import('../../api/meService').then(mod => mod.getMe().then((me: any) => {
+      if (!mounted) return;
+      setCurrentUser(me);
+    }).catch(() => { }));
+    return () => { mounted = false; };
+  }, []);
+
   const handleExport = () => {
     if (activeNav === "users") {
-      downloadCsv("admin-users-cohorts.csv", STUDENTS.map((student) => ({
-        name: student.name,
-        cohort: student.cohort,
-        roadmap: student.roadmap,
-        progress: student.progress,
-        skillGap: student.skillGap,
-        streak: student.streak,
-        plan: student.plan,
-        status: student.status,
+      const source = mgmtUsers && mgmtUsers.length ? mgmtUsers : STUDENTS;
+      downloadCsv("admin-users-cohorts.csv", (source as any[]).map((student) => ({
+        name: student.fullName || student.name || student.email,
+        cohort: student.cohort || student.campus || "-",
+        roadmap: student.roadmap || "-",
+        progress: student.progress ?? 0,
+        skillGap: student.skillGap ?? 0,
+        streak: student.streak ?? 0,
+        plan: student.plan ?? "-",
+        status: student.status ?? "-",
       })));
       setActionMessage("Đã xuất dữ liệu Người học & Nhóm học.");
       return;
@@ -1087,7 +1108,7 @@ export default function AdminDashboard() {
   const [lastHealthPayload, setLastHealthPayload] = useState<any>(null);
   useEffect(() => {
     const off = healthService.subscribeHealth((s: any) => setHealthStatus(s));
-    healthService.probeHealth().then((p) => setLastHealthPayload(p)).catch(() => {});
+    healthService.probeHealth().then((p) => setLastHealthPayload(p)).catch(() => { });
     return () => off();
   }, []);
 
@@ -1293,7 +1314,7 @@ export default function AdminDashboard() {
               <div className="sr-only" aria-live="polite">{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</div>
             </button>
             <div className="hidden xl:flex items-center rounded-xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
-              {['30d','60d','90d'].map(r => (
+              {['30d', '60d', '90d'].map(r => (
                 <button key={r} onClick={() => setTimeRange(r)}
                   className="px-3 py-1.5 text-xs transition-all"
                   style={{
@@ -1334,10 +1355,16 @@ export default function AdminDashboard() {
             </button>
 
             {/* User menu (hover) */}
-            <div style={{ position: 'relative' }} onMouseEnter={() => setUserMenuOpen(true)} onMouseLeave={() => setUserMenuOpen(false)}>
-              <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm" style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+            <div ref={userMenuRef} style={{ position: 'relative' }}>
+              <button
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm"
+                style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}
+                onClick={() => setUserMenuOpen(v => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setUserMenuOpen(v => !v); } }}
+                aria-expanded={userMenuOpen}
+              >
                 <div style={{ width: 28, height: 28, borderRadius: 999, background: 'linear-gradient(135deg,#FF6B00,#FF9A3D)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>A</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>{(currentUser?.fullName || "A").charAt(0).toUpperCase()}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>Quản trị</span>
@@ -1346,6 +1373,8 @@ export default function AdminDashboard() {
               </button>
               {userMenuOpen && (
                 <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 220, background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 8px 24px rgba(2,6,23,0.12)', padding: 8, zIndex: 60 }}>
+                  <Link to="/admin/profile" className="w-full text-left px-3 py-2 rounded" style={{ display: 'block', color: '#111827', fontWeight: 700 }}>Hồ sơ</Link>
+                  <div style={{ height: 1, background: '#F1F5F9', margin: '6px 0' }} />
                   <Link to="/admin-login" className="w-full text-left px-3 py-2 rounded" style={{ display: 'block', color: '#EF4444' }}>← Đăng xuất</Link>
                 </div>
               )}
@@ -1539,20 +1568,33 @@ export default function AdminDashboard() {
                           </div>
 
                           <div>
-                            <label style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 700 }}>Vai trò (phân tách bằng dấu phẩy)</label>
-                            <input
+                            <label style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 700 }}>Vai trò</label>
+                            <label style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 700 }}>Vai trò</label>
+                            <select
                               value={mgmtRolesDraft}
                               onChange={(event) => setMgmtRolesDraft(event.target.value)}
-                              placeholder="ADMIN, MODERATOR"
                               style={{ width: "100%", marginTop: 6, height: 36, borderRadius: 8, border: "1px solid #E2E8F0", padding: "0 10px", fontSize: "0.82rem" }}
-                            />
+                            >
+                              <option value="">-- Chọn vai trò --</option>
+                              <option value="ADMIN">Admin</option>
+                              <option value="LEARNER">Learner</option>
+                            </select>
                             <button
-                              onClick={() => saveMgmtRoles(mgmtSelected.id, mgmtRolesDraft.split(",").map((entry) => entry.trim()).filter(Boolean))}
+                              onClick={() => {
+                                // Đảm bảo chỉ gửi mảng có giá trị
+                                const rolesToUpdate = mgmtRolesDraft.trim() ? [mgmtRolesDraft.trim()] : [];
+                                saveMgmtRoles(mgmtSelected.id, rolesToUpdate);
+                              }}
                               disabled={!mgmtRolesDraft.trim() || mgmtLoading}
                               className="mt-2 w-full px-3 py-2 rounded-lg text-xs font-semibold"
-                              style={{ background: "#EA580C", color: "#fff", opacity: !mgmtRolesDraft.trim() || mgmtLoading ? 0.5 : 1 }}
+                              style={{
+                                background: "#EA580C",
+                                color: "#fff",
+                                opacity: (!mgmtRolesDraft.trim() || mgmtLoading) ? 0.5 : 1,
+                                cursor: (!mgmtRolesDraft.trim() || mgmtLoading) ? "not-allowed" : "pointer"
+                              }}
                             >
-                              Lưu vai trò
+                              {mgmtLoading ? "Đang lưu..." : "Lưu vai trò"}
                             </button>
                           </div>
                         </div>
@@ -1566,11 +1608,11 @@ export default function AdminDashboard() {
             )
           )}
           {activeNav === "financials" && <FinancialsView />}
-          {activeNav === "b2b"        && <B2BView />}
+          {activeNav === "b2b" && <B2BView />}
         </div>
       </main>
 
-      
+
 
       {showHealthPanel && (
         <div

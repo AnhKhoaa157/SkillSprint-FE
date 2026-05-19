@@ -16,6 +16,7 @@ import AdminHealth from "./pages/AdminHealth";
 import AdminAuth from "./pages/AdminAuth";
 import AdminUsers from "./pages/AdminUsers";
 import AdminUserDetail from "./pages/AdminUserDetail";
+import AdminProfile from "./pages/AdminProfile";
 import PostUpgradeDashboard from "./pages/PostUpgrade";
 import FeaturesLanding from "./pages/Features";
 import PricingPage from "./pages/PricingPage";
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
     Component: AdminLayout,
     children: [
       { index: true, Component: AdminDashboard },
+      { path: "profile", Component: AdminProfile },
       { path: "users", Component: AdminUsers },
       { path: "users/:id", Component: AdminUserDetail },
       { path: "health", Component: AdminHealth },

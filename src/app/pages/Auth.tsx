@@ -565,6 +565,11 @@ export default function Auth() {
         const result = await login(normalizedEmail, password);
 
         if (result.status === "authenticated") {
+          if (isAdminRole(result.tokens.role)) {
+            setAuthError("Tài khoản quản trị không thể đăng nhập ở cổng Learner. Vui lòng dùng cổng Admin.");
+            return;
+          }
+
           // store tokens and navigate immediately; dashboard will show loader
           storeAuthTokens(result.tokens);
           const to = getPostLoginPath(result.tokens.role);

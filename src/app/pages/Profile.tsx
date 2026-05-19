@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   User, Award, Crown, Bell, Shield, Zap, LogOut,
-  ChevronDown, AlertTriangle, Check, Trash2, Gift, CalendarClock,
+  ChevronDown, AlertTriangle, Check, Trash2, Gift, CalendarClock, Loader2, MailCheck, BadgeCheck,
+  Copy, Eye, EyeOff,
 } from "lucide-react";
 import { useNavigate } from "react-router";
-import { clearAuthTokens, getStoredUserProfile } from "../../api/authService";
+import { toast } from "sonner";
+import { clearAuthTokens, getStoredUserProfile, type StoredUserProfile } from "../../api/authService";
+import meService, { type MeResponse } from "../../api/meService";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -30,12 +33,81 @@ const TABS = [
 ];
 
 type UserProfileViewModel = {
+  userId: string;
   email: string;
+  emailVerified: boolean;
   fullName: string;
   firstName: string;
   lastName: string;
+  avatarUrl: string;
+  timeZone: string;
+  status: string;
+  roles: string[];
   roleLabel: string;
 };
+
+function emptyProfile(): UserProfileViewModel {
+  return {
+    userId: "",
+    email: "",
+    emailVerified: false,
+    fullName: "Learner",
+    firstName: "",
+    lastName: "",
+    avatarUrl: "",
+    timeZone: "Asia/Ho_Chi_Minh (GMT+7)",
+    status: "-",
+    roles: [],
+    roleLabel: "Learner",
+  };
+}
+
+function mapStoredProfile(stored: StoredUserProfile): UserProfileViewModel {
+  const fallbackName = stored.fullName || [stored.firstName, stored.lastName].filter(Boolean).join(" ").trim() || "Learner";
+
+  return {
+    userId: "",
+    email: stored.email,
+    emailVerified: false,
+    fullName: fallbackName,
+    firstName: stored.firstName,
+    lastName: stored.lastName,
+    avatarUrl: "",
+    timeZone: "Asia/Ho_Chi_Minh (GMT+7)",
+    status: "-",
+    roles: stored.role ? [stored.role] : [],
+    roleLabel: stored.role === "ADMIN" ? "Admin" : "Learner",
+  };
+}
+
+function mapMeResponse(me: MeResponse): UserProfileViewModel {
+  const parts = me.fullName.trim().split(/\s+/);
+  return {
+    userId: me.userId,
+    email: me.email,
+    emailVerified: me.emailVerified,
+    fullName: me.fullName || "Learner",
+    firstName: parts[0] || "",
+    lastName: parts.slice(1).join(" "),
+    avatarUrl: me.avatarUrl || "",
+    timeZone: me.timeZone || "Asia/Ho_Chi_Minh (GMT+7)",
+    status: me.status || "-",
+    roles: me.roles || [],
+    roleLabel: me.roles?.includes("ADMIN") ? "Admin" : "Learner",
+  };
+}
+
+function compactUserId(userId: string): string {
+  if (!userId) return "-";
+
+  const numericId = Number(userId);
+  if (Number.isFinite(numericId)) {
+    return `US-${Math.abs(Math.floor(numericId)).toString(36).toUpperCase().slice(-6).padStart(6, "0")}`;
+  }
+
+  const compact = userId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  return `US-${compact.slice(-6).padStart(6, "0")}`;
+}
 
 /* ─── Input field ─── */
 function Input({
@@ -111,11 +183,13 @@ function SectionHeading({ title }: { title:string }) {
 /* ═══════════════════════════════════════════════
    ACCOUNT TAB
 ═══════════════════════════════════════════════ */
-function AccountTab({ profile }: { profile: UserProfileViewModel }) {
+function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel; onSave: (fullName: string) => Promise<void>; saving: boolean; }) {
   const [fullName,   setFullName]   = useState(profile.fullName);
   const [email,      setEmail]      = useState(profile.email);
   const [university, setUniversity] = useState("FPT University");
   const [major,      setMajor]      = useState("Software Engineering");
+  const [timeZone,   setTimeZone]   = useState(profile.timeZone || "Asia/Ho_Chi_Minh (GMT+7)");
+  const [showUserId, setShowUserId] = useState(false);
   
   const [saved,      setSaved]      = useState(false);
   const [deleteModal,setDeleteModal]= useState(false);
@@ -123,11 +197,30 @@ function AccountTab({ profile }: { profile: UserProfileViewModel }) {
   useEffect(() => {
     setFullName(profile.fullName);
     setEmail(profile.email);
+    setTimeZone(profile.timeZone || "Asia/Ho_Chi_Minh (GMT+7)");
   }, [profile.fullName, profile.email]);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(()=>setSaved(false), 2500);
+  const handleCopyUserId = async () => {
+    if (!profile.userId) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(profile.userId);
+      toast.success("Đã copy User ID");
+    } catch {
+      toast.error("Không thể copy User ID");
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await onSave(fullName);
+      setSaved(true);
+      setTimeout(()=>setSaved(false), 2500);
+    } catch (err: any) {
+      toast.error(err?.message || "Không thể cập nhật profile");
+    }
   };
 
   const UNIVERSITIES = [
@@ -140,12 +233,72 @@ function AccountTab({ profile }: { profile: UserProfileViewModel }) {
       {/* Personal Information */}
       <div style={{ marginBottom:"28px" }}>
         <SectionHeading title="Personal Information"/>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3, minmax(0, 1fr))", gap:"10px", marginBottom:"14px" }}>
+          <div style={{ padding:"10px 12px", borderRadius:"10px", border:`1px solid ${BDR}`, background:"#F9FAFB" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"8px", marginBottom:"3px" }}>
+              <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F }}>User ID</p>
+              <div style={{ display:"flex", alignItems:"center", gap:"4px" }}>
+                <button
+                  type="button"
+                  onClick={handleCopyUserId}
+                  disabled={!profile.userId}
+                  title="Copy User ID"
+                  style={{
+                    width:"24px", height:"24px", borderRadius:"6px", border:`1px solid ${BDR}`,
+                    background:"#FFFFFF", color:T2, display:"flex", alignItems:"center", justifyContent:"center",
+                    cursor: profile.userId ? "pointer" : "not-allowed",
+                    opacity: profile.userId ? 1 : 0.55,
+                  }}
+                >
+                  <Copy size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowUserId(v => !v)}
+                  disabled={!profile.userId}
+                  title={showUserId ? "Ẩn User ID" : "Hiện User ID"}
+                  style={{
+                    width:"24px", height:"24px", borderRadius:"6px", border:`1px solid ${BDR}`,
+                    background:"#FFFFFF", color:T2, display:"flex", alignItems:"center", justifyContent:"center",
+                    cursor: profile.userId ? "pointer" : "not-allowed",
+                    opacity: profile.userId ? 1 : 0.55,
+                  }}
+                >
+                  {showUserId ? <EyeOff size={12} /> : <Eye size={12} />}
+                </button>
+              </div>
+            </div>
+            <p style={{ fontSize:"0.82rem", fontWeight:700, color:T1, fontFamily:F, wordBreak:"break-all" }}>
+              {!profile.userId ? "-" : showUserId ? profile.userId : compactUserId(profile.userId)}
+            </p>
+          </div>
+          <div style={{ padding:"10px 12px", borderRadius:"10px", border:`1px solid ${BDR}`, background: profile.emailVerified ? "#ECFDF5" : "#FFF7ED" }}>
+            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Email</p>
+            <p style={{ fontSize:"0.82rem", fontWeight:700, color:T1, fontFamily:F, display:"flex", alignItems:"center", gap:"6px" }}>
+              {profile.emailVerified ? <MailCheck size={13} color="#059669" /> : <AlertTriangle size={13} color="#F97316" />}
+              {profile.emailVerified ? "Verified" : "Unverified"}
+            </p>
+          </div>
+          <div style={{ padding:"10px 12px", borderRadius:"10px", border:`1px solid ${BDR}`, background:"#F9FAFB" }}>
+            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Status</p>
+            <p style={{ fontSize:"0.82rem", fontWeight:700, color:T1, fontFamily:F }}>{profile.status || "-"}</p>
+          </div>
+          <div style={{ padding:"10px 12px", borderRadius:"10px", border:`1px solid ${BDR}`, background:"#F9FAFB" }}>
+            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Role(s)</p>
+            <p style={{ fontSize:"0.82rem", fontWeight:700, color:T1, fontFamily:F }}>{profile.roles?.length ? profile.roles.join(", ") : profile.roleLabel}</p>
+          </div>
+        </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:"14px", marginBottom:"14px" }}>
           <Input label="Full Name" value={fullName} onChange={setFullName} placeholder="Full name"/>
         </div>
-        <Input label="Email Address" value={email} onChange={setEmail}
-          type="email" placeholder="student@gmail.com"
-          hint="Your email is used for login and notifications."/>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px" }}>
+          <Input label="Email Address" value={email} onChange={setEmail}
+            type="email" placeholder="student@gmail.com" disabled
+            hint="Email is managed by the backend profile."/>
+          <Input label="Time Zone" value={timeZone} onChange={setTimeZone}
+            placeholder="Asia/Ho_Chi_Minh (GMT+7)" disabled
+            hint="Read from /api/me and displayed for reference."/>
+        </div>
       </div>
 
       {/* University Details */}
@@ -192,21 +345,23 @@ function AccountTab({ profile }: { profile: UserProfileViewModel }) {
         <motion.button
           whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
           onClick={handleSave}
+          disabled={saving}
           style={{
             display:"flex", alignItems:"center", gap:"6px",
             padding:"11px 28px", borderRadius:"10px",
             background: saved
               ? "linear-gradient(135deg,#059669,#10B981)"
               : "linear-gradient(135deg,#FF6B00,#FF8C3A)",
-            color:"#fff", border:"none", cursor:"pointer",
+            color:"#fff", border:"none", cursor:saving ? "not-allowed" : "pointer",
             fontFamily:F, fontWeight:700, fontSize:"0.9rem",
             boxShadow: saved
               ? "0 4px 14px rgba(5,150,105,0.32)"
               : "0 4px 14px rgba(255,107,0,0.32)",
             transition:"background 0.3s, box-shadow 0.3s",
+            opacity: saving ? 0.75 : 1,
           }}
         >
-          {saved ? <><Check size={15}/> Saved!</> : "Save Changes"}
+          {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <><Check size={15}/> Saved!</> : "Save Changes"}
         </motion.button>
       </div>
 
@@ -767,32 +922,66 @@ function IntegrationsTab() {
 export default function Profile() {
   const navigate  = useNavigate();
   const [activeTab, setActiveTab] = useState("account");
+  const [profile, setProfile] = useState<UserProfileViewModel>(() => {
+    const storedProfile = getStoredUserProfile();
+    return storedProfile ? mapStoredProfile(storedProfile) : emptyProfile();
+  });
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const LEVEL    = 7;
   const STREAK   = 12;
-  const profile = useMemo<UserProfileViewModel>(() => {
-    const storedProfile = getStoredUserProfile();
 
-    if (!storedProfile) {
-      return {
-        email: "",
-        fullName: "Learner",
-        firstName: "",
-        lastName: "",
-        roleLabel: "Learner",
-      };
-    }
+  useEffect(() => {
+    let mounted = true;
 
-    const fallbackName = storedProfile.fullName || [storedProfile.firstName, storedProfile.lastName].filter(Boolean).join(" ").trim() || "Learner";
+    const loadProfile = async () => {
+      try {
+        const me = await meService.getMe();
+        if (!mounted) return;
+        setProfile(mapMeResponse(me));
+      } catch (error: any) {
+        if (!mounted) return;
 
-    return {
-      email: storedProfile.email,
-      fullName: fallbackName,
-      firstName: storedProfile.firstName,
-      lastName: storedProfile.lastName,
-      roleLabel: storedProfile.role === "ADMIN" ? "Admin" : "Learner",
+        if (error?.status === 401) {
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          clearAuthTokens();
+          navigate("/auth");
+          return;
+        }
+
+        toast.error(error?.message || "Không thể tải profile từ /api/me");
+      } finally {
+        if (mounted) setProfileLoading(false);
+      }
     };
-  }, []);
+
+    loadProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, [navigate]);
+
+  const handleUpdateProfile = async (fullName: string) => {
+    setSavingProfile(true);
+    try {
+      const updated = await meService.updateMe({ fullName });
+      setProfile(mapMeResponse(updated));
+      window.dispatchEvent(new Event("skillSprint:profile-updated"));
+    } catch (error: any) {
+      if (error?.status === 401) {
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        clearAuthTokens();
+        navigate("/auth");
+        return;
+      }
+
+      throw error;
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const avatarLetter = (profile.fullName.trim().charAt(0) || profile.email.charAt(0) || "U").toUpperCase();
 
@@ -812,14 +1001,22 @@ export default function Profile() {
         marginBottom:"20px",
       }}>
         {/* Avatar */}
-        <div style={{
-          width:"58px", height:"58px", borderRadius:"50%", flexShrink:0,
-          background:"linear-gradient(135deg,#FF6B00,#6366F1)",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          boxShadow:"0 4px 16px rgba(99,102,241,0.3)",
-        }}>
-          <span style={{ fontSize:"22px", fontWeight:900, color:"#fff" }}>{avatarLetter}</span>
-        </div>
+        {profile.avatarUrl ? (
+          <img
+            src={profile.avatarUrl}
+            alt={profile.fullName}
+            style={{ width:"58px", height:"58px", borderRadius:"50%", flexShrink:0, objectFit:"cover", border:`2px solid ${OGLT}` }}
+          />
+        ) : (
+          <div style={{
+            width:"58px", height:"58px", borderRadius:"50%", flexShrink:0,
+            background:"linear-gradient(135deg,#FF6B00,#6366F1)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            boxShadow:"0 4px 16px rgba(99,102,241,0.3)",
+          }}>
+            <span style={{ fontSize:"22px", fontWeight:900, color:"#fff" }}>{avatarLetter}</span>
+          </div>
+        )}
 
         <div style={{ flex:1, minWidth:0 }}>
           <h2 style={{
@@ -838,6 +1035,13 @@ export default function Profile() {
             }}>Free Plan</span>
             <span style={{
               fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
+              background: profile.emailVerified ? "#ECFDF5" : "#FFF7ED",
+              color: profile.emailVerified ? "#065F46" : "#C2410C",
+              border: `1px solid ${profile.emailVerified ? "#A7F3D0" : "#FED7AA"}`, fontWeight:700,
+              display:"inline-flex", alignItems:"center", gap:"5px",
+            }}>{profile.emailVerified ? <><BadgeCheck size={12} /> Email verified</> : <><AlertTriangle size={12} /> Email not verified</>}</span>
+            <span style={{
+              fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
               background:"#FFF9C4", color:"#92400E",
               border:"1px solid #FDE68A", fontWeight:700,
             }}>⭐ Level {LEVEL}</span>
@@ -846,6 +1050,14 @@ export default function Profile() {
               background:"#ECFDF5", color:"#065F46",
               border:"1px solid #A7F3D0", fontWeight:700,
             }}>🔥 {STREAK}-Day Streak</span>
+            {profileLoading && (
+              <span style={{
+                fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
+                background:"#EFF6FF", color:"#1D4ED8",
+                border:"1px solid #BFDBFE", fontWeight:700,
+                display:"inline-flex", alignItems:"center", gap:"5px",
+              }}><Loader2 size={12} className="animate-spin" /> Syncing profile</span>
+            )}
           </div>
         </div>
 
@@ -933,7 +1145,7 @@ export default function Profile() {
               exit={{opacity:0,y:-6}}
               transition={{duration:0.2}}
             >
-              {activeTab === "account"       && <AccountTab profile={profile}/>}
+              {activeTab === "account"       && <AccountTab profile={profile} onSave={handleUpdateProfile} saving={savingProfile}/>} 
               {activeTab === "subscription"  && <SubscriptionTab/>}
               {activeTab === "notifications" && <NotificationsTab/>}
               {activeTab === "privacy"       && <PrivacyTab/>}

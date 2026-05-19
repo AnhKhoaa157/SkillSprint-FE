@@ -2,13 +2,18 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import adminUserService, { AdminUserDetail } from "../../api/adminUserService";
 
+const ROLE_OPTIONS = [
+  { label: "Admin", value: "ADMIN" },
+  { label: "Learner", value: "LEARNER" },
+];
+
 export default function AdminUserDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState<AdminUserDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusInput, setStatusInput] = useState("");
-  const [rolesInput, setRolesInput] = useState("");
+  const [roleInput, setRoleInput] = useState("LEARNER");
 
   useEffect(() => {
     if (!id) return;
@@ -17,7 +22,7 @@ export default function AdminUserDetailPage() {
       .then((data) => {
         setUser(data);
         setStatusInput(data.status || "");
-        setRolesInput(data.role ? String(data.role) : "");
+        setRoleInput(data.role ? String(data.role).toUpperCase() : "LEARNER");
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
@@ -39,8 +44,7 @@ export default function AdminUserDetailPage() {
     if (!id) return;
     try {
       setLoading(true);
-      const roles = rolesInput.split(",").map(s => s.trim()).filter(Boolean);
-      const updated = await adminUserService.updateUserRole(id, { roles });
+      const updated = await adminUserService.updateUserRole(id, { role: roleInput });
       setUser(updated);
       alert("Cập nhật vai trò thành công");
     } catch (e: any) {
@@ -73,8 +77,12 @@ export default function AdminUserDetailPage() {
           </div>
 
           <div style={{ marginTop: 12 }}>
-            <label>Vai trò (phân tách bằng dấu phẩy)</label><br />
-            <input value={rolesInput} onChange={(e) => setRolesInput(e.target.value)} style={{ padding: 8, borderRadius: 6, border: '1px solid #E5E7EB', width: '100%' }} />
+            <label>Vai trò</label><br />
+            <select value={roleInput} onChange={(e) => setRoleInput(e.target.value)} style={{ padding: 8, borderRadius: 6, border: '1px solid #E5E7EB', width: '100%', background: '#fff' }}>
+              {ROLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
             <div style={{ marginTop: 8 }}>
               <button onClick={saveRoles} style={{ padding: '8px 12px', borderRadius: 6, background: '#FF6B00', color: '#fff', border: 'none' }}>Lưu vai trò</button>
             </div>
