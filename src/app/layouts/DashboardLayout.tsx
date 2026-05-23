@@ -1,18 +1,18 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, NavLink, useLocation, Link, useNavigate } from "react-router";
 import {
-  LayoutDashboard, Map, Mic, Settings,
+  LayoutDashboard, Map, Mic,
   Menu, X, Zap, Bell, ChevronRight, Crown, Gift,
-  Calendar, CheckSquare, BarChart2, Trophy, UploadCloud, Sparkles,
   AlertTriangle, CalendarClock, BookOpenCheck, CheckCircle2,
+  LoaderCircle,
 } from "lucide-react";
-import { APP_NAV } from "../config/nav";
+import { APP_NAV_SECTIONS } from "../config/nav";
 import { motion, AnimatePresence } from "motion/react";
 import { PricingModal } from "../components/PricingModal";
 import { ReferralModal } from "../components/ReferralModal";
 import { BrandLogo } from "../components/BrandLogo";
-import { getStoredUserProfile } from "../../api/authService";
 import meService from "../../api/meService";
+import { getStoredUserProfile } from "../../api/authService";
 
 /* ─── Sidebar Design Tokens ─── */
 const F      = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -31,8 +31,6 @@ const T2     = "#6B7280";
 const T3     = "#9CA3AF";
 const BDR    = "#E5E7EB";
 
-const NAV = APP_NAV;
-
 const CRUMBS: Record<string,string> = {
   "/app":"Trung tâm điều khiển",
   "/app/syllabus":"Nhập syllabus",
@@ -41,7 +39,6 @@ const CRUMBS: Record<string,string> = {
   "/app/matrix":"Ma trận công việc",
   "/app/analytics":"Phân tích",
   "/app/leaderboard":"Bảng xếp hạng",
-  "/app/mock-interview":"Phỏng vấn thử",
   "/app/learning":"Trung tâm học tập",
   "/app/learning/course":"Trung tâm học tập > Video bài giảng",
   "/app/quiz-review":"Trung tâm học tập > Quiz luyện tập",
@@ -55,7 +52,15 @@ export default function DashboardLayout() {
   const [pricingOpen, setPricingOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
   const [notifOpen, setNotifOpen]     = useState(false);
-  const [profile, setProfile] = useState<{ fullName?: string; role?: string } | null>(null);
+  const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarLetter: string }>(() => {
+    const stored = getStoredUserProfile();
+    const fullName = stored?.fullName || "Learner";
+    return {
+      fullName,
+      roleLabel: stored?.role === "ADMIN" ? "Admin" : "Learner",
+      avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
+    };
+  });
   const navigate = useNavigate();
   const loc   = useLocation();
   const showAuthLoader = (loc.state as any)?.showLoadingFromAuth ?? false;
@@ -68,22 +73,33 @@ export default function DashboardLayout() {
   useEffect(() => {
     let mounted = true;
 
-    const syncProfile = async () => {
+    const loadProfile = async () => {
       try {
         const me = await meService.getMe();
         if (!mounted) return;
-        setProfile({ fullName: me.fullName, role: me.roles?.includes("ADMIN") ? "ADMIN" : "LEARNER" });
+
+        const fullName = me.fullName || "Learner";
+        setProfile({
+          fullName,
+          roleLabel: me.roles?.includes("ADMIN") ? "Admin" : "Learner",
+          avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
+        });
       } catch {
-        const p = getStoredUserProfile();
         if (!mounted) return;
-        if (p) setProfile({ fullName: p.fullName, role: p.role ?? undefined });
+        const stored = getStoredUserProfile();
+        const fullName = stored?.fullName || "Learner";
+        setProfile({
+          fullName,
+          roleLabel: stored?.role === "ADMIN" ? "Admin" : "Learner",
+          avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
+        });
       }
     };
 
-    syncProfile();
+    loadProfile();
 
     const handleProfileUpdated = () => {
-      syncProfile();
+      loadProfile();
     };
 
     window.addEventListener("skillSprint:profile-updated", handleProfileUpdated);
@@ -92,7 +108,6 @@ export default function DashboardLayout() {
       mounted = false;
       window.removeEventListener("skillSprint:profile-updated", handleProfileUpdated);
     };
-    // previously subscribed to shared health — removed per request (indicator only in footer)
   }, []);
 
   return (
@@ -165,48 +180,57 @@ export default function DashboardLayout() {
           </button>
         </div>
 
-        {/* Section label */}
-        <div style={{padding:"13px 16px 8px"}}>
-          <p style={{fontSize:"9px",color:"rgba(148,163,184,0.5)",fontWeight:700,letterSpacing:"0.14em",textTransform:"uppercase"}}>
-            Danh mục
-          </p>
-        </div>
-
-        {/* Nav */}
-        <nav style={{flex:1,padding:"0 10px",overflowY:"auto",display:"flex",flexDirection:"column",gap:"4px"}}>
-          {NAV.map(item => (
-            <NavLink key={item.path} to={item.path} end={item.end}
-              className="ss-nav-link"
-              onClick={()=>setSideOpen(false)}
-              style={({isActive})=>({
-                display:"flex",alignItems:"center",gap:"9px",
-                padding:"9px 11px",borderRadius:"10px",textDecoration:"none",
-                color:isActive?STXT_A:STXT,
-                background:isActive?"linear-gradient(90deg, rgba(255,107,0,0.22) 0%, rgba(255,107,0,0.08) 100%)":"transparent",
-                borderColor:isActive?"rgba(255,107,0,0.30)":"transparent",
-                fontWeight:isActive?600:400,
-                fontSize:"0.848rem",fontFamily:F,
-                transition:"all 0.14s ease",
-                position:"relative",
-                boxShadow:isActive?"inset 2px 0 0 #FF6B00":"none",
-              })}>
-              {({isActive})=>(
-                <>
-                  <item.icon size={15} color={isActive?OG:STXT} strokeWidth={isActive?2.2:1.9}/>
-                  <span style={{flex:1}}>{item.label}</span>
-                  {isActive && (
-                    <div style={{width:"6px",height:"6px",borderRadius:"50%",background:OG,flexShrink:0}}/>
-                  )}
-                </>
-              )}
-            </NavLink>
+        {/* Navigation groups */}
+        <nav className="flex-1 overflow-y-auto px-3 py-2">
+          {APP_NAV_SECTIONS.map(section => (
+            <div key={section.label} className="mb-4 last:mb-0">
+              <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500/80">
+                {section.label}
+              </div>
+              <div className="space-y-1">
+                {section.items.map(item => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    end={item.end}
+                    onClick={() => setSideOpen(false)}
+                    className={({ isActive }) => [
+                      "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
+                      "border-l-2 border-transparent",
+                      isActive
+                        ? "border-l-orange-500 bg-gradient-to-r from-orange-500/15 to-orange-500/5 text-orange-500"
+                        : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200",
+                    ].join(" ")}
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <item.icon
+                          size={18}
+                          strokeWidth={2}
+                          className={[
+                            "shrink-0 transition-transform duration-200 group-hover:scale-105",
+                            isActive ? "text-orange-500" : "text-current",
+                          ].join(" ")}
+                        />
+                        <span className="flex-1 font-medium">{item.label}</span>
+                        {item.badge && (
+                          <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
+                            <span className="relative h-2.5 w-2.5 rounded-full bg-orange-500" />
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
         {/* Bottom */}
-        <div style={{padding:"11px 10px 16px",borderTop:`1px solid ${SBDR}`,display:"flex",flexDirection:"column",gap:"7px"}}>
-          {/* Upgrade card */}
-          <div className="ss-upgrade" onClick={()=>setPricingOpen(true)}
+        <div className="px-3 pb-4 pt-2">
+          <div className="ss-upgrade mb-2" onClick={()=>setPricingOpen(true)}
             style={{
               padding:"12px",borderRadius:"10px",cursor:"pointer",
               background:"rgba(255,107,0,0.08)",
@@ -221,11 +245,10 @@ export default function DashboardLayout() {
               <Crown size={12} color="#F59E0B"/>
             </div>
             <p style={{fontWeight:700,fontSize:"0.8rem",color:"#FFFFFF",marginBottom:"1px"}}>Nâng cấp lên Pro</p>
-            <p style={{color:STXT,fontSize:"0.7rem"}}>Mở khóa phỏng vấn thử AI và nhiều hơn</p>
+            <p style={{color:STXT,fontSize:"0.7rem"}}>Mở khóa tính năng AI và nhiều hơn</p>
           </div>
 
-          {/* Referral */}
-          <button className="ss-referral" onClick={()=>setReferralOpen(true)}
+          <button className="ss-referral mb-3" onClick={()=>setReferralOpen(true)}
             style={{
               display:"flex",alignItems:"center",gap:"7px",padding:"8px 10px",
               borderRadius:"8px",cursor:"pointer",width:"100%",
@@ -237,30 +260,19 @@ export default function DashboardLayout() {
             Mời bạn &amp; nhận Premium
           </button>
 
-          {/* User */}
-          <Link to="/app/profile" style={{textDecoration:"none"}}>
-            <div style={{
-              display:"flex",alignItems:"center",gap:"9px",
-              padding:"9px 10px",borderRadius:"8px",cursor:"pointer",
-              transition:"background 0.12s",
-            }}
-            onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.background=OGL;}}
-            onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.background="transparent";}}>
-              <div style={{
-                width:"28px",height:"28px",borderRadius:"50%",flexShrink:0,
-                background:"linear-gradient(135deg,#FF6B00,#FF9A3D)",
-                display:"flex",alignItems:"center",justifyContent:"center",
-              }}>
-                <span style={{fontSize:"11px",fontWeight:800,color:"#fff"}}>{(profile?.fullName || "?").charAt(0).toUpperCase()}</span>
+          <div className="border-t border-slate-800/60 pt-3">
+            <Link to="/app/profile" className="block rounded-xl transition hover:bg-slate-800/30" style={{ textDecoration: "none" }}>
+              <div className="flex items-center gap-3 px-3 py-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-sm font-bold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+                {profile.avatarLetter}
               </div>
-              <div style={{flex:1,minWidth:0}}>
-                <p style={{fontSize:"0.78rem",fontWeight:600,color:"#FFFFFF",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                  {profile?.fullName || "---"}
-                </p>
-                <p style={{fontSize:"9.5px",color:STXT}}>{profile?.role ? profile.role : "Free Tier"}</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-slate-200">{profile.fullName}</p>
+                <p className="text-xs text-slate-500">{profile.roleLabel}</p>
               </div>
-            </div>
-          </Link>
+              </div>
+            </Link>
+          </div>
         </div>
       </aside>
 

@@ -69,7 +69,7 @@ const FEATURES = [
   "Lộ trình học cá nhân hóa bằng AI",
   "Phân tích khoảng trống kỹ năng theo thời gian thực",
   "Tối ưu hồ sơ nghề nghiệp và xuất portfolio",
-  "Mô phỏng phỏng vấn thử bằng AI",
+  "Hỗ trợ nâng cao hồ sơ nghề nghiệp",
 ];
 
 const TESTIMONIAL = {

@@ -969,6 +969,7 @@ export default function Profile() {
       const updated = await meService.updateMe({ fullName });
       setProfile(mapMeResponse(updated));
       window.dispatchEvent(new Event("skillSprint:profile-updated"));
+      toast.success("Cập nhật thông tin cá nhân thành công");
     } catch (error: any) {
       if (error?.status === 401) {
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");

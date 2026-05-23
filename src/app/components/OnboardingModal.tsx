@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, ChevronLeft, ChevronRight, Clock3, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { fetchOnboardingProfile, upsertOnboardingProfile } from "../../api/onboardingService";
+import { fetchOnboardingProfile, upsertOnboardingProfile, type OnboardingProfileResponse } from "../../api/onboardingService";
 
 const dayOptions = [
   { label: "T2", value: "MONDAY" },
@@ -127,10 +127,12 @@ export default function OnboardingModal({
   open,
   onClose,
   workspaceId,
+  initialValues,
 }: {
   open: boolean;
   onClose: () => void;
   workspaceId: string;
+  initialValues?: OnboardingProfileResponse | null;
 }) {
   const {
     register,
@@ -166,36 +168,41 @@ export default function OnboardingModal({
 
     let alive = true;
 
+    const applyProfile = (profile?: OnboardingProfileResponse | null) => {
+      reset({
+        targetGoal: profile?.targetGoal ?? "",
+        studyHoursPerWeek: profile?.studyHoursPerWeek ?? 8,
+        targetDeadline: profile?.targetDeadline ?? "",
+        confidence: (profile?.confidence as FormValues["confidence"]) ?? "MEDIUM",
+      });
+      setSelectedDays(profile?.preferredDays ?? []);
+      setTimeSlots(profile?.preferredTimeSlots ?? []);
+      setSlotStart("");
+      setSlotEnd("");
+      setStep(0);
+    };
+
+    if (initialValues) {
+      applyProfile(initialValues);
+    }
+
     const loadProfile = async () => {
       setLoadingProfile(true);
       try {
+        if (initialValues) {
+          return;
+        }
+
         const response = await fetchOnboardingProfile(workspaceId);
         const profile = response.data;
 
         if (!alive) return;
 
-        reset({
-          targetGoal: profile?.targetGoal ?? "",
-          studyHoursPerWeek: profile?.studyHoursPerWeek ?? 8,
-          targetDeadline: profile?.targetDeadline ?? "",
-          confidence: (profile?.confidence as FormValues["confidence"]) ?? "MEDIUM",
-        });
-        setSelectedDays(profile?.preferredDays ?? []);
-        setTimeSlots(profile?.preferredTimeSlots ?? []);
-        setSlotStart("");
-        setSlotEnd("");
-        setStep(0);
+        applyProfile(profile);
       } catch (error: any) {
         if (!alive) return;
         toast.error(error?.message || "Không thể tải dữ liệu onboarding");
-        reset({
-          targetGoal: "",
-          studyHoursPerWeek: 8,
-          targetDeadline: "",
-          confidence: "MEDIUM",
-        });
-        setSelectedDays([]);
-        setTimeSlots([]);
+        applyProfile(initialValues ?? null);
       } finally {
         if (alive) setLoadingProfile(false);
       }
@@ -206,7 +213,7 @@ export default function OnboardingModal({
     return () => {
       alive = false;
     };
-  }, [open, reset, workspaceId]);
+  }, [open, reset, workspaceId, initialValues]);
 
   if (!open) return null;
 
@@ -330,7 +337,11 @@ export default function OnboardingModal({
               </div>
             </div>
           ) : (
-            <form id="onboarding-form" onSubmit={submit} className="space-y-6 pb-32">
+            <form
+              id="onboarding-form"
+              onSubmit={submit}
+              className="space-y-6 pb-32"
+            >
               {step === 0 && (
                 <section className="space-y-6">
                   <div>
@@ -510,7 +521,9 @@ export default function OnboardingModal({
             {step === 0 ? (
               <button
                 type="button"
-                onClick={goNext}
+                onClick={() => {
+                  void goNext();
+                }}
                 disabled={loadingProfile}
                 className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
               >

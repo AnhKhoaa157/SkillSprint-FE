@@ -20,7 +20,6 @@ import AdminProfile from "./pages/AdminProfile";
 import PostUpgradeDashboard from "./pages/PostUpgrade";
 import FeaturesLanding from "./pages/Features";
 import PricingPage from "./pages/PricingPage";
-import MockInterview from "./pages/MockInterview";
 import RequireAuth from "./components/RequireAuth";
 import Loading from "./pages/Loading";
 
@@ -80,7 +79,6 @@ export const router = createBrowserRouter([
       { path: "profile",        Component: Profile },
       { path: "leaderboard",    Component: Leaderboard },
       { path: "upgraded",       Component: PostUpgradeDashboard },
-      { path: "mock-interview",  Component: MockInterview },
       { path: "learning",       Component: LearningEcosystem },
       { path: "learning/course", Component: CoursePlayer },
       { path: "quiz-review",    Component: QuizReviewFlow },

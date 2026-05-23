@@ -53,13 +53,6 @@ const SHOWCASE_MODULES = [
     icon: Sparkles,
     tier: "Xây nền tảng",
   },
-  {
-    title: "Phỏng vấn mô phỏng",
-    desc: "Mô phỏng phỏng vấn để luyện phản xạ và kỹ năng trình bày.",
-    to: "/app/mock-interview",
-    icon: MessageSquare,
-    tier: "Cao cấp",
-  },
 ];
 
 const TIER_STYLE: Record<string, { bg: string; border: string; text: string }> = {
@@ -85,7 +78,6 @@ const TAG_COLORS: Record<string,[string,string]> = {
   "Học tập":    ["#FFF3EB", "#9A3412"],
   "Ôn tập":     ["#EFF6FF", "#1E40AF"],
   "Sự nghiệp":  ["#FFF3EB", "#9A3412"],
-  "Phỏng vấn":  ["#EFF6FF", "#1E40AF"],
   "Lập trình":  ["#FFF3EB", "#9A3412"],
 };
 interface Task { id:number; text:string; done:boolean; tag:string; }
@@ -93,7 +85,7 @@ const INIT_TASKS: Task[] = [
   { id:1, text:"Hoàn thành module React Hooks", done:false, tag:"Học tập"   },
   { id:2, text:"Ôn lại ghi chú System Design",   done:false, tag:"Ôn tập"    },
   { id:3, text:"Cập nhật CV với kỹ năng mới",    done:false, tag:"Sự nghiệp" },
-  { id:4, text:"Xem 2 video phỏng vấn mô phỏng", done:false, tag:"Phỏng vấn" },
+  { id:4, text:"Xem 2 video kỹ năng mềm", done:false, tag:"Sự nghiệp" },
   { id:5, text:"Đẩy repo luyện TypeScript",      done:false, tag:"Lập trình" },
 ];
 

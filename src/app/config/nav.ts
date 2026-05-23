@@ -7,11 +7,25 @@ import {
   CheckSquare,
   BarChart2,
   Trophy,
-  Settings,
   Users,
   TrendingUp,
   Building2,
 } from "lucide-react";
+
+export type NavIcon = typeof LayoutDashboard;
+
+export type AppNavItem = {
+  path: string;
+  label: string;
+  icon: NavIcon;
+  end?: boolean;
+  badge?: boolean;
+};
+
+export type AppNavSection = {
+  label: string;
+  items: AppNavItem[];
+};
 
 export const ADMIN_NAV = [
   { id: "users",      label: "Người học & Nhóm học", icon: Users     },
@@ -19,16 +33,37 @@ export const ADMIN_NAV = [
   { id: "b2b",        label: "Đối tác B2B",         icon: Building2  },
 ];
 
-export const APP_NAV = [
-  { path: "/app",                label: "Trung tâm điều khiển", icon: LayoutDashboard, end: true },
-  { path: "/app/syllabus",       label: "Nhập syllabus",        icon: UploadCloud },
-  { path: "/app/roadmap",        label: "Lộ trình AI",          icon: Sparkles },
-  { path: "/app/workspaces",     label: "Workspaces",          icon: Map },
-  { path: "/app/calendar",       label: "Lịch học",             icon: Calendar },
-  { path: "/app/matrix",         label: "Ma trận công việc",    icon: CheckSquare },
-  { path: "/app/analytics",      label: "Phân tích",            icon: BarChart2 },
-  { path: "/app/leaderboard",    label: "Bảng xếp hạng",        icon: Trophy },
-  { path: "/app/profile",        label: "Cài đặt",              icon: Settings },
+export const APP_NAV_SECTIONS: AppNavSection[] = [
+  {
+    label: "Tổng quan",
+    items: [
+      { path: "/app", label: "Trung tâm điều khiển", icon: LayoutDashboard, end: true },
+    ],
+  },
+  {
+    label: "Học tập & AI",
+    items: [
+      { path: "/app/syllabus", label: "Nhập syllabus", icon: UploadCloud },
+      { path: "/app/roadmap", label: "Lộ trình AI", icon: Sparkles },
+      { path: "/app/workspaces", label: "Workspaces", icon: Map, badge: true },
+    ],
+  },
+  {
+    label: "Quản lý hiệu suất",
+    items: [
+      { path: "/app/calendar", label: "Lịch học", icon: Calendar },
+      { path: "/app/matrix", label: "Ma trận công việc", icon: CheckSquare },
+    ],
+  },
+  {
+    label: "Hệ thống",
+    items: [
+      { path: "/app/analytics", label: "Phân tích", icon: BarChart2 },
+      { path: "/app/leaderboard", label: "Bảng xếp hạng", icon: Trophy },
+    ],
+  },
 ];
+
+export const APP_NAV = APP_NAV_SECTIONS.flatMap(section => section.items);
 
 export default { ADMIN_NAV, APP_NAV };

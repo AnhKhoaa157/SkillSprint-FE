@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import workspaceService from "../../api/workspaceService";
-import { Plus, BookOpenCheck, Sparkles, LayoutGrid, ArrowRight, X, PencilLine, Trash2, Check, AlertTriangle } from "lucide-react";
+import { Plus, Sparkles, LayoutGrid, ArrowRight, X, PencilLine, Trash2, Check, AlertTriangle, BookOpenCheck } from "lucide-react";
+import WorkspaceCard from "../components/WorkspaceCard";
 
 const F = "'Inter','Plus Jakarta Sans',sans-serif";
 const CARD = "#FFFFFF";
@@ -13,6 +14,9 @@ type WorkspaceItem = {
   name: string;
   createdAt?: string;
   description?: string | null;
+  totalDocuments?: number;
+  totalTasks?: number;
+  progress?: number;
 };
 
 export default function Workspaces() {
@@ -27,7 +31,7 @@ export default function Workspaces() {
       try {
         const res = await workspaceService.getMyWorkspaces();
         if (!mounted) return;
-        setWorkspaces(res.map(w => ({ id: w.workspaceId, name: w.name, createdAt: w.createdAt, description: w.description })));
+        setWorkspaces(res.map(w => ({ id: w.workspaceId, name: w.name, createdAt: w.createdAt, description: w.description, totalDocuments: 0, totalTasks: 0, progress: 0 })));
         } catch (err: any) {
         console.error(err);
         addNotification("error", err?.message || "Không thể tải workspaces");
@@ -63,7 +67,7 @@ export default function Workspaces() {
     (async () => {
       try {
         const created = await workspaceService.createWorkspace({ name: name.trim() });
-        setWorkspaces(p => [{ id: created.workspaceId, name: created.name, createdAt: created.createdAt, description: created.description }, ...p]);
+        setWorkspaces(p => [{ id: created.workspaceId, name: created.name, createdAt: created.createdAt, description: created.description, totalDocuments: 0, totalTasks: 0, progress: 0 }, ...p]);
         setName("");
         if (opts?.fromModal) setShowModal(false);
         navigate(`/app/workspaces`);
@@ -116,64 +120,40 @@ export default function Workspaces() {
 
   return (
     <div style={{ fontFamily: F }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+      <div className="mb-4 flex items-center justify-between gap-4">
         <div>
-          <h2 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: T1 }}>Workspaces</h2>
-          <p style={{ margin: 0, color: "#6B7280", fontSize: "0.86rem" }}>Tạo container cho mục tiêu học tập của bạn.</p>
+          <h2 className="m-0 text-[1.05rem] font-extrabold text-slate-800">Workspaces</h2>
+          <p className="m-0 text-sm text-slate-500">Tạo container cho mục tiêu học tập của bạn.</p>
         </div>
-        <div>
-          <button onClick={() => setShowModal(true)}
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10, background: "#FFEDD5", border: `1px solid ${BDR}`, cursor: "pointer" }}>
-            <Plus size={14} /> Tạo workspace
-          </button>
-        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-600 transition hover:bg-orange-100"
+        >
+          <Plus size={14} />
+          Tạo workspace
+        </button>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {loading ? (
-          <div>Đang tải workspaces...</div>
-        ) : (
-          workspaces.map(ws => (
-          <div key={ws.id} onClick={() => navigate(`/app/workspaces/${ws.id}`)}
-            style={{ background: CARD, padding: 14, borderRadius: 10, border: `1px solid ${BDR}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 10, background: "linear-gradient(135deg,#FF6B00,#FF9A3D)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
-                <BookOpenCheck size={20} />
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <h3 style={{ margin: 0, fontSize: "0.98rem", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ws.name}</h3>
-                <p style={{ margin: "6px 0 0", color: "#6B7280", fontSize: "0.82rem" }}>Tải tài liệu vào workspace này để hệ thống sinh roadmap và task.</p>
-                <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, color: "#64748B", padding: "4px 8px", borderRadius: 999, background: "#F8FAFC", border: `1px solid ${BDR}` }}>Workspace container</span>
-                  {ws.createdAt && (
-                    <span style={{ fontSize: 11, color: "#64748B", padding: "4px 8px", borderRadius: 999, background: "#F8FAFC", border: `1px solid ${BDR}` }}>
-                      {new Date(ws.createdAt).toLocaleDateString("vi-VN")}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 12 }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setEditTarget(ws); setName(ws.name); }}
-                style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${BDR}`, background: CARD, color: "#475569", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                title="Đổi tên workspace"
-              >
-                <PencilLine size={14} />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setDeleteTarget(ws); }}
-                style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid #FECACA", background: "#FEF2F2", color: "#DC2626", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                title="Xóa workspace"
-              >
-                <Trash2 size={14} />
-              </button>
-              <div style={{ color: "#9CA3AF", fontSize: "0.82rem", marginLeft: 4 }}>Open →</div>
-            </div>
-          </div>
-          ))
-        )}
-      </div>
+      {loading ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-500 shadow-sm">Đang tải workspaces...</div>
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {workspaces.map(ws => (
+            <WorkspaceCard
+              key={ws.id}
+              title={ws.name}
+              description={ws.description}
+              createdAt={ws.createdAt}
+              totalDocuments={ws.totalDocuments}
+              totalTasks={ws.totalTasks}
+              progress={ws.progress}
+              onOpen={() => navigate(`/app/workspaces/${ws.id}`)}
+              onEdit={() => { setEditTarget(ws); setName(ws.name); }}
+              onDelete={() => { setDeleteTarget(ws); }}
+            />
+          ))}
+        </div>
+      )}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.52)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 18 }}>
           <div style={{ width: 720, maxWidth: "100%", background: CARD, borderRadius: 18, overflow: "hidden", boxShadow: "0 24px 80px rgba(15,23,42,0.22)", border: `1px solid ${BDR}` }}>
