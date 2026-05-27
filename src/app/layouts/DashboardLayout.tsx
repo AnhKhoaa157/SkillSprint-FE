@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet, NavLink, useLocation, Link, useNavigate } from "react-router";
 import {
   LayoutDashboard, Map, Mic,
-  Menu, X, Zap, Bell, ChevronRight, Crown, Gift,
+  Menu, X, Zap, Bell, ChevronRight, Crown, Gift, Sparkles,
   AlertTriangle, CalendarClock, BookOpenCheck, CheckCircle2,
   LoaderCircle,
 } from "lucide-react";
@@ -12,6 +12,7 @@ import { PricingModal } from "../components/PricingModal";
 import { ReferralModal } from "../components/ReferralModal";
 import { BrandLogo } from "../components/BrandLogo";
 import meService from "../../api/meService";
+import workspaceService from "../../api/workspaceService";
 import { getStoredUserProfile } from "../../api/authService";
 
 /* ─── Sidebar Design Tokens ─── */
@@ -47,11 +48,149 @@ const CRUMBS: Record<string,string> = {
   "/app/workspaces":"Workspaces",
 };
 
+type RoadmapSidebarWorkspace = {
+  workspaceId?: unknown;
+  id?: unknown;
+  name?: unknown;
+  title?: unknown;
+  workspaceName?: unknown;
+  status?: unknown;
+  roadmapStatus?: unknown;
+  roadmapId?: unknown;
+  learningStructure?: {
+    status?: unknown;
+    roadmapStatus?: unknown;
+    chapters?: unknown[];
+    tasks?: unknown[];
+    [key: string]: unknown;
+  } | null;
+  currentRoadmap?: unknown;
+  roadmap?: unknown;
+  hasRoadmap?: unknown;
+  [key: string]: unknown;
+};
+
+type RoadmapSidebarItem = {
+  id: string;
+  name: string;
+  statusLabel: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toText(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return undefined;
+}
+
+function toBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "y"].includes(value.trim().toLowerCase());
+  }
+
+  return false;
+}
+
+function extractRoadmapCandidates(payload: unknown): RoadmapSidebarWorkspace[] {
+  if (Array.isArray(payload)) {
+    return payload.filter(isRecord) as RoadmapSidebarWorkspace[];
+  }
+
+  if (!isRecord(payload)) {
+    return [];
+  }
+
+  const candidates = [payload.data, payload.content, payload.items, payload.workspaces, payload.payload, payload.result];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate.filter(isRecord) as RoadmapSidebarWorkspace[];
+    }
+
+    if (isRecord(candidate)) {
+      const nested = extractRoadmapCandidates(candidate);
+      if (nested.length > 0) {
+        return nested;
+      }
+    }
+  }
+
+  return [];
+}
+
+function getRoadmapStatusLabel(workspace: RoadmapSidebarWorkspace): string {
+  const learningStructure = isRecord(workspace.learningStructure) ? workspace.learningStructure : null;
+  const status =
+    toText(learningStructure?.status) ??
+    toText(workspace.status) ??
+    toText(workspace.roadmapStatus) ??
+    toText((isRecord(workspace.currentRoadmap) ? workspace.currentRoadmap : null)?.status) ??
+    toText((isRecord(workspace.roadmap) ? workspace.roadmap : null)?.status);
+
+  return (status || "").toUpperCase();
+}
+
+function hasRenderableRoadmap(workspace: RoadmapSidebarWorkspace): boolean {
+  const status = getRoadmapStatusLabel(workspace);
+  const normalizedStatus = status.toUpperCase();
+  const hasRoadmapObject = isRecord(workspace.currentRoadmap) || isRecord(workspace.roadmap);
+  const hasRoadmapFlag = toBoolean(workspace.hasRoadmap);
+  const hasRoadmapId = Boolean(toText(workspace.roadmapId));
+  const learningStructure = isRecord(workspace.learningStructure) ? workspace.learningStructure : null;
+  const hasNestedStructure = Boolean(
+    (Array.isArray(learningStructure?.chapters) && learningStructure.chapters.length > 0) ||
+    (Array.isArray(learningStructure?.tasks) && learningStructure.tasks.length > 0)
+  );
+
+  return hasRoadmapObject || hasRoadmapFlag || hasRoadmapId || hasNestedStructure || ["CONFIRMED", "ACTIVE", "READY", "GENERATED", "DONE", "COMPLETED"].includes(normalizedStatus);
+}
+
+function normalizeRoadmapSidebarItem(workspace: RoadmapSidebarWorkspace, index: number): RoadmapSidebarItem | null {
+  const id =
+    toText(workspace.workspaceId) ??
+    toText(workspace.id) ??
+    toText(workspace["workspace_id"]) ??
+    `workspace-${index}`;
+
+  const name =
+    toText(workspace.name) ??
+    toText(workspace.title) ??
+    toText(workspace.workspaceName) ??
+    "Không có tên";
+
+  if (!hasRenderableRoadmap(workspace)) {
+    return null;
+  }
+
+  return {
+    id,
+    name,
+    statusLabel: getRoadmapStatusLabel(workspace) || "READY",
+  };
+}
+
 export default function DashboardLayout() {
   const [sideOpen, setSideOpen]       = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
   const [notifOpen, setNotifOpen]     = useState(false);
+  const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(true);
+  const [roadmapLoading, setRoadmapLoading] = useState(false);
+  const [roadmapWorkspaces, setRoadmapWorkspaces] = useState<RoadmapSidebarItem[]>([]);
   const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarLetter: string }>(() => {
     const stored = getStoredUserProfile();
     const fullName = stored?.fullName || "Learner";
@@ -63,12 +202,27 @@ export default function DashboardLayout() {
   });
   const navigate = useNavigate();
   const loc   = useLocation();
+  const pathname = loc.pathname.replace(/\/+$/, "") || "/";
   const showAuthLoader = (loc.state as any)?.showLoadingFromAuth ?? false;
   let crumb = CRUMBS[loc.pathname] ?? "Trung tâm điều khiển";
   if (loc.pathname.startsWith("/app/workspaces")) {
     if (loc.pathname === "/app/workspaces") crumb = CRUMBS["/app/workspaces"];
     else crumb = "Workspace";
   }
+
+  const isNavItemActive = (path: string, end?: boolean, match?: "exact" | "prefix") => {
+    const normalizedPath = path.replace(/\/+$/, "") || "/";
+
+    if (match === "prefix") {
+      return pathname === normalizedPath || pathname.startsWith(`${normalizedPath}/`);
+    }
+
+    if (end) {
+      return pathname === normalizedPath;
+    }
+
+    return pathname === normalizedPath || pathname.startsWith(`${normalizedPath}/`);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -103,6 +257,31 @@ export default function DashboardLayout() {
     };
 
     window.addEventListener("skillSprint:profile-updated", handleProfileUpdated);
+
+    const loadRoadmapWorkspaces = async () => {
+      setRoadmapLoading(true);
+      try {
+        const payload = (await workspaceService.getMyWorkspaces()) as unknown;
+        const items = extractRoadmapCandidates(payload)
+          .map((workspace, index) => normalizeRoadmapSidebarItem(workspace, index))
+          .filter((item): item is RoadmapSidebarItem => Boolean(item))
+          .sort((left, right) => left.name.localeCompare(right.name, "vi"));
+
+        if (mounted) {
+          setRoadmapWorkspaces(items);
+        }
+      } catch {
+        if (mounted) {
+          setRoadmapWorkspaces([]);
+        }
+      } finally {
+        if (mounted) {
+          setRoadmapLoading(false);
+        }
+      }
+    };
+
+    loadRoadmapWorkspaces();
 
     return () => {
       mounted = false;
@@ -188,41 +367,123 @@ export default function DashboardLayout() {
                 {section.label}
               </div>
               <div className="space-y-1">
-                {section.items.map(item => (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    end={item.end}
-                    onClick={() => setSideOpen(false)}
-                    className={({ isActive }) => [
-                      "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
-                      "border-l-2 border-transparent",
-                      isActive
-                        ? "border-l-orange-500 bg-gradient-to-r from-orange-500/15 to-orange-500/5 text-orange-500"
-                        : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200",
-                    ].join(" ")}
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <item.icon
-                          size={18}
-                          strokeWidth={2}
-                          className={[
-                            "shrink-0 transition-transform duration-200 group-hover:scale-105",
-                            isActive ? "text-orange-500" : "text-current",
-                          ].join(" ")}
+                {section.items
+                  .filter(item => !(section.label === "Học tập & AI" && item.path === "/app/roadmap"))
+                  .map(item => {
+                    const isActive = isNavItemActive(item.path, item.end, item.match);
+
+                    return (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        end={item.end}
+                        onClick={() => setSideOpen(false)}
+                        className={() => [
+                          "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
+                          "border-l-2 border-transparent",
+                          isActive
+                            ? "border-l-orange-500 bg-gradient-to-r from-orange-500/15 to-orange-500/5 text-orange-500"
+                            : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200",
+                        ].join(" ")}
+                      >
+                        <>
+                          <item.icon
+                            size={18}
+                            strokeWidth={2}
+                            className={[
+                              "shrink-0 transition-transform duration-200 group-hover:scale-105",
+                              isActive ? "text-orange-500" : "text-current",
+                            ].join(" ")}
+                          />
+                          <span className="flex-1 font-medium">{item.label}</span>
+                          {item.badge && (
+                            <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+                              <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
+                              <span className="relative h-2.5 w-2.5 rounded-full bg-orange-500" />
+                            </span>
+                          )}
+                        </>
+                      </NavLink>
+                    );
+                  })}
+
+                {section.label === "Học tập & AI" && (
+                  <div className="mt-2 rounded-2xl border border-white/10 bg-white/5 p-2">
+                    <button
+                      type="button"
+                      onClick={() => setRoadmapMenuOpen((value) => !value)}
+                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition hover:bg-white/5"
+                    >
+                      <span className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+                        <Sparkles size={16} className="text-orange-400" />
+                        Lộ trình AI theo workspace
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[11px] font-bold text-orange-300">
+                          {roadmapLoading ? "..." : roadmapWorkspaces.length}
+                        </span>
+                        <ChevronRight
+                          size={14}
+                          className={`text-slate-400 transition-transform ${roadmapMenuOpen ? "rotate-90" : ""}`}
                         />
-                        <span className="flex-1 font-medium">{item.label}</span>
-                        {item.badge && (
-                          <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
-                            <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
-                            <span className="relative h-2.5 w-2.5 rounded-full bg-orange-500" />
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </NavLink>
-                ))}
+                      </span>
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {roadmapMenuOpen ? (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-1 px-1 pb-1 pt-2">
+                            {roadmapLoading ? (
+                              Array.from({ length: 3 }).map((_, index) => (
+                                <div key={index} className="rounded-xl border border-white/5 bg-white/5 p-3">
+                                  <div className="h-3 w-24 animate-pulse rounded-full bg-white/15" />
+                                  <div className="mt-2 h-2 w-36 animate-pulse rounded-full bg-white/10" />
+                                </div>
+                              ))
+                            ) : roadmapWorkspaces.length > 0 ? (
+                              roadmapWorkspaces.map((workspace) => {
+                                const roadmapPath = `/app/workspaces/${workspace.id}/roadmap`;
+                                const isActive = pathname === roadmapPath || pathname.startsWith(`${roadmapPath}/`);
+
+                                return (
+                                  <NavLink
+                                    key={workspace.id}
+                                    to={roadmapPath}
+                                    onClick={() => setSideOpen(false)}
+                                    className={() => [
+                                      "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
+                                      "border-l-2 border-transparent",
+                                      isActive
+                                        ? "border-l-orange-500 bg-orange-500/15 text-orange-300"
+                                        : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200",
+                                    ].join(" ")}
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="truncate font-medium">{workspace.name}</div>
+                                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                                        {workspace.statusLabel || "READY"}
+                                      </div>
+                                    </div>
+                                    <ChevronRight size={14} className="shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5" />
+                                  </NavLink>
+                                );
+                              })
+                            ) : (
+                              <div className="rounded-xl border border-dashed border-white/10 bg-white/5 px-3 py-3 text-xs leading-5 text-slate-400">
+                                Chưa có workspace nào có roadmap đã xác nhận.
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      ) : null}
+                    </AnimatePresence>
+                  </div>
+                )}
               </div>
             </div>
           ))}

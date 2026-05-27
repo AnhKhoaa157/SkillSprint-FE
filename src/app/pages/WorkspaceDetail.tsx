@@ -4,8 +4,9 @@ import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import LearningStructureDisplay from "../components/LearningStructureDisplay.tsx";
-import { ArrowLeft, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle, Copy, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle, Copy, SlidersHorizontal, Check } from "lucide-react";
 import { getStoredAuthSession } from "../../api/authService";
+import roadmapService from "../../api/roadmapService";
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
 
@@ -23,7 +24,43 @@ type UploadFile = {
   materialId?: string;
 };
 
+type LearningStructureTopic = {
+  title: string;
+  summaryContent: string;
+  keyConcepts: string[];
+};
+
+type LearningStructureChapter = {
+  title: string;
+  summary: string;
+  keyConcepts: string[];
+  topics: LearningStructureTopic[];
+};
+
+type LearningStructureResponse = {
+  structureVersionId?: string;
+  status?: 'DRAFT' | 'CONFIRMED' | string;
+  chapters?: LearningStructureChapter[];
+  tasks?: unknown[];
+  [key: string]: unknown;
+};
+
+type ApiResponse<T> = {
+  data?: T;
+  [key: string]: unknown;
+};
+
 type StepStatus = 'completed' | 'active' | 'pending';
+
+type AnalysisTimeline = {
+  startedAt?: string;
+  completedAt?: string;
+  generatedAt?: string;
+  updatedAt?: string;
+  createdAt?: string;
+  finishedAt?: string;
+  [key: string]: unknown;
+};
 
 function toWorkspaceCode(rawId?: string) {
   if (!rawId) return "WS-CHUA-CO";
@@ -51,6 +88,87 @@ function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
   return headers;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function extractBackendErrorMessage(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const directMessage = value.message ?? value.error ?? value.detail ?? value.title;
+  if (typeof directMessage === 'string' && directMessage.trim()) {
+    return directMessage.trim();
+  }
+
+  const nestedSources = [value.data, value.response, value.payload, value.errorResponse];
+  for (const source of nestedSources) {
+    const message = extractBackendErrorMessage(source);
+    if (message) {
+      return message;
+    }
+  }
+
+  return null;
+}
+
+function formatDuration(ms: number | null): string {
+  if (ms === null || !Number.isFinite(ms) || ms < 0) {
+    return '0s';
+  }
+
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes <= 0) {
+    return `${seconds}s`;
+  }
+
+  return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+}
+
+function getStructureTimeline(value: unknown): number | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const candidate = isRecord(value.data)
+    ? value.data
+    : isRecord(value.learningStructure)
+      ? value.learningStructure
+      : value;
+
+  if (!isRecord(candidate)) {
+    return null;
+  }
+
+  const nestedStructure = isRecord(candidate.learningStructure) ? candidate.learningStructure : null;
+  const source = (nestedStructure ?? candidate) as AnalysisTimeline;
+
+  const startRaw = source.startedAt ?? source.generatedAt ?? source.createdAt;
+  const endRaw = source.completedAt ?? source.finishedAt ?? source.updatedAt;
+
+  if (!startRaw || !endRaw) {
+    return null;
+  }
+
+  const start = new Date(startRaw).getTime();
+  const end = new Date(endRaw).getTime();
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+    return null;
+  }
+
+  return end - start;
+}
+
 export default function WorkspaceDetail(){
   const { id } = useParams();
   const navigate = useNavigate();
@@ -60,18 +178,34 @@ export default function WorkspaceDetail(){
   const onboarding = useOnboardingProfile(id);
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(false);
-  const [results, setResults] = useState<any | null>(null);
+  const [results, setResults] = useState<ApiResponse<LearningStructureResponse> | LearningStructureResponse | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const processingIntervals = useRef<Record<string, number>>({});
   const structurePollingRef = useRef<number | null>(null);
   const structurePollingAttemptsRef = useRef(0);
+  const analysisStartedAtRef = useRef<number | null>(null);
+
+  const structureData = (results?.data ? results.data : results) as LearningStructureResponse | null;
+  const visibleChapters = Array.isArray(structureData?.chapters) ? structureData.chapters : [];
+  const rawStatus = structureData?.status || "DRAFT";
+  const normalizedStatus = String(rawStatus).toUpperCase();
+  const canCreateRoadmap = Boolean(visibleChapters.length && normalizedStatus === 'CONFIRMED');
+  const hasRoadmapAlready = Boolean(
+    (structureData as any)?.hasRoadmap ||
+    (structureData as any)?.roadmapId ||
+    (structureData as any)?.currentRoadmap ||
+    (structureData as any)?.roadmap ||
+    (results as any)?.data?.hasRoadmap ||
+    (results as any)?.data?.roadmapId ||
+    (results as any)?.roadmapId
+  );
 
   const docsCount = files.length;
   const doneDocsCount = files.filter(f => f.status === "done").length;
   const processingDocsCount = files.filter(f => f.status === "processing").length;
-  const chaptersCount = results?.chapters?.length ?? 0;
-  const tasksCount = results?.tasks?.length ?? 0;
+  const chaptersCount = visibleChapters.length;
+  const tasksCount = structureData?.tasks?.length ?? 0;
   const avgProgress = files.length ? Math.round(files.reduce((s,f)=>s+f.progress,0)/files.length) : 0;
   const pendingJobsCount = files.filter(f => f.jobStatus === 'PENDING').length;
   const processingJobsCount = files.filter(f => f.jobStatus === 'PROCESSING').length;
@@ -86,6 +220,7 @@ export default function WorkspaceDetail(){
   const readyState = results ? "Đã phân tích xong" : files.length ? "Đang xử lý" : "Chờ tải lên";
   const [workspaceName, setWorkspaceName] = useState<string>("Không gian làm việc");
   const workspaceCode = toWorkspaceCode(id);
+  const workspaceId = id ?? '';
   const uploadRequests = useRef<Record<string, XMLHttpRequest>>({});
 
   function stopStructurePolling() {
@@ -118,7 +253,7 @@ export default function WorkspaceDetail(){
       return 'pending';
     }
 
-    if (results?.chapters?.length) {
+    if (visibleChapters.length) {
       return 'completed';
     }
     if (!structureGenerationRequested) {
@@ -132,7 +267,7 @@ export default function WorkspaceDetail(){
 
   async function pollLearningStructureOnce() {
     structurePollingAttemptsRef.current += 1;
-    const found = await fetchLearningStructure();
+    const found = await fetchLearningStructure(); // This now returns LearningStructure | null
     if (found) {
       setIsGeneratingStructure(false);
       toast.success('Phân tích hoàn tất — lộ trình đã sẵn sàng', { id: 'structure-generation' });
@@ -160,16 +295,22 @@ export default function WorkspaceDetail(){
   }
 
   useEffect(()=>{
-    // clear results when entering different workspace
-    setResults(null);
     setFiles([]);
     stopStructurePolling();
     setStructureGenerationRequested(false);
     setGenerateLoading(false);
     setIsGeneratingStructure(false);
-    // fetch onboarding profile; open modal if none
+
     (async ()=>{
       if(!id) return;
+      // Fetch existing learning structure immediately on mount
+      const fetchedStructure = await fetchLearningStructure();
+      if (fetchedStructure) {
+        setStructureGenerationRequested(true);
+        setResults(fetchedStructure);
+      }
+
+      // fetch onboarding profile; open modal if none
       try{
         const p = await onboarding.fetchOnboardingProfile();
         if (!p) setIsConfigOpen(true);
@@ -316,48 +457,56 @@ export default function WorkspaceDetail(){
     toast.info('Đã ẩn file khỏi danh sách');
   }
 
-  async function fetchLearningStructure(): Promise<boolean>{
-    if (!id) return false;
+  async function fetchLearningStructure(): Promise<ApiResponse<LearningStructureResponse> | LearningStructureResponse | null>{
+    if (!id) return null;
     try{
       const headers = buildAuthHeaders(token);
       const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure`, { method: 'GET', headers });
       if (resp.status === 404) {
         setResults(null);
-        return false;
+        return null;
       }
 
       if (!resp.ok) {
         throw new Error(`Learning structure fetch failed: ${resp.status}`);
       }
 
-      const payload = await resp.json().catch(()=>null) as any;
-      const data = payload?.data || payload || null;
-      setResults(data);
-      return true;
+      const res = await resp.json().catch(()=>null) as unknown;
+      console.log("DEBUG_RAW_DETAIL_PAYLOAD:", res);
+      setResults(res as ApiResponse<LearningStructureResponse>);
+      return res as ApiResponse<LearningStructureResponse>;
     }catch(err:any){
       if (String(err?.message || '').includes('404')) {
         setResults(null);
-        return false;
+        return null;
       }
 
       console.error('Failed to fetch learning structure (non-404 error)', err);
-      return false;
+      return null;
     }
   }
 
   const [generateLoading, setGenerateLoading] = useState(false);
-  const [isConfirmed, setIsConfirmed] = useState(false); // New state for confirmation status
   const [isGeneratingStructure, setIsGeneratingStructure] = useState(false);
   const [structureGenerationRequested, setStructureGenerationRequested] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [roadmapGenerating, setRoadmapGenerating] = useState(false);
+  const [roadmapError, setRoadmapError] = useState<string | null>(null);
+  const analysisDurationMs = getStructureTimeline(results);
+  const liveAnalysisDurationMs = analysisStartedAtRef.current ? Date.now() - analysisStartedAtRef.current : null;
+  const analysisDurationLabel = analysisDurationMs !== null ? formatDuration(analysisDurationMs) : (isGeneratingStructure || generateLoading ? formatDuration(liveAnalysisDurationMs) : '0s');
+  const generating = isGeneratingStructure || generateLoading;
 
   async function handleGenerate(){
     if (!id) return;
     try{
+      // Record the analysis start time when generation begins
+      analysisStartedAtRef.current = Date.now();
+      
       // Show spinner immediately when user starts generation
       setStructureGenerationRequested(true);
       setIsGeneratingStructure(true);
       setGenerateLoading(true);
-      setIsConfirmed(false); // Reset confirmation status on new generation
       toast.loading('Bắt đầu phân tích AI...', { id: 'structure-generation' });
       const headers = buildAuthHeaders(token);
       const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure/generate`, { method: 'POST', headers });
@@ -378,12 +527,58 @@ export default function WorkspaceDetail(){
   async function handleConfirm(){
     if (!id || !results) return; // Ensure results are present before confirming
     try{
+      setConfirming(true);
       const headers = buildAuthHeaders(token);
       const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure/confirm`, { method: 'POST', headers, body: JSON.stringify({}) });
       if (!resp.ok) throw new Error('Confirm failed');
+      const confPayload = await resp.json().catch(()=>null) as ApiResponse<LearningStructureResponse> | LearningStructureResponse | null;
       toast.success('Lộ trình đã được xác nhận');
-      setIsConfirmed(true); // Disable button after successful confirmation
+      if (confPayload) {
+        setResults(confPayload);
+      }
+      setStructureGenerationRequested(true);
     }catch(err:any){ console.error('Confirm error', err); toast.error('Không thể xác nhận lộ trình'); }
+    finally { setConfirming(false); }
+  }
+
+  async function handleGenerateRoadmap(){
+    if (!id) return;
+
+    try {
+      setRoadmapGenerating(true);
+      setRoadmapError(null);
+      const generatedRoadmap = await roadmapService.generateRoadmap(id);
+      if (generatedRoadmap) {
+        setResults((prev) => {
+          const previous = isRecord(prev) ? prev : {};
+          const wrapped = isRecord((prev as any)?.data) ? (prev as any).data : null;
+
+          return {
+            ...(isRecord(prev) ? prev : {}),
+            ...(wrapped || {}),
+            data: {
+              ...((isRecord(prev) ? prev : {}) as Record<string, unknown>),
+              ...(wrapped || {}),
+              hasRoadmap: true,
+              roadmapId: generatedRoadmap.id || (generatedRoadmap as any).roadmapId || generatedRoadmap.workspaceId,
+              roadmap: generatedRoadmap,
+            },
+            hasRoadmap: true,
+            roadmapId: generatedRoadmap.id || (generatedRoadmap as any).roadmapId || generatedRoadmap.workspaceId,
+            roadmap: generatedRoadmap,
+          } as any;
+        });
+      }
+
+      navigate(`/app/workspaces/${id}/roadmap`, { state: { roadmap: generatedRoadmap } });
+    } catch (error: any) {
+      console.error('Roadmap generation error', error);
+      const backendError = extractBackendErrorMessage(error) || error?.message || 'Lỗi hệ thống ngầm (500) khi khởi tạo lộ trình.';
+      const friendlyMessage = `Yêu cầu thất bại: ${backendError}`;
+      setRoadmapError(friendlyMessage);
+    } finally {
+      setRoadmapGenerating(false);
+    }
   }
 
   const addFiles = (list: FileList | null) => {
@@ -491,31 +686,78 @@ export default function WorkspaceDetail(){
                 <span className="text-xs">{workspaceCode}</span>
                 <button className="p-1 rounded hover:bg-slate-100"><Copy className="w-4 h-4" /></button>
               </span>
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white shadow-sm text-slate-600">
+                <Clock3 className="w-4 h-4 text-orange-500" />
+                <span className="text-xs font-semibold">{analysisDurationLabel}</span>
+              </span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleGenerate}
-              disabled={doneDocsCount < 1 || generateLoading}
-              className={`inline-flex items-center gap-3 px-4 py-2 rounded-lg text-white font-semibold transition ${doneDocsCount<1 || generateLoading ? 'bg-slate-300 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600'}`}
+            <button 
+              onClick={() => setIsConfigOpen(true)} 
+              className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
             >
-              <Zap className="w-4 h-4" />
-              {generateLoading ? 'Đang phân tích...' : 'Bắt đầu Phân tích AI'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsConfigOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
               Cấu hình lộ trình
             </button>
-            <button onClick={()=>navigate('/app/workspaces')} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 hover:shadow">
-              <ArrowLeft className="w-4 h-4" /> Quay lại
+
+            {visibleChapters.length > 0 ? (
+              normalizedStatus === 'CONFIRMED' ? (
+                hasRoadmapAlready ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/app/workspaces/${id}/roadmap`)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-orange-600 animate-fade-in"
+                  >
+                    Xem Lộ trình
+                    <ArrowRight size={16} />
+                  </button>
+                ) : (
+                  <button
+                    disabled={roadmapGenerating}
+                    onClick={handleGenerateRoadmap}
+                    className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-orange-600 disabled:opacity-50 animate-fade-in"
+                  >
+                    {roadmapGenerating ? 'Đang khởi tạo lộ trình...' : '🎯 Tạo lộ trình AI'}
+                    <ArrowRight size={16} />
+                  </button>
+                )
+              ) : (
+                <button
+                  disabled={confirming}
+                  onClick={handleConfirm}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  <Check size={16} />
+                  {confirming ? "Đang lưu cấu trúc..." : "Chấp nhận lộ trình"}
+                </button>
+              )
+            ) : (
+              <button
+                disabled={generating}
+                onClick={handleGenerate}
+                className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-orange-700 disabled:opacity-50"
+              >
+                <Sparkles size={14} />
+                {generating ? "Đang xử lý AI..." : "Bắt đầu Phân tích AI"}
+              </button>
+            )}
+
+            <button 
+              type="button"
+              onClick={() => navigate('/app/workspaces')}
+              className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition flex items-center gap-1"
+            >
+              ← Quay lại
             </button>
           </div>
         </div>
+
+        {roadmapError ? (
+          <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
+            {roadmapError}
+          </div>
+        ) : null}
 
         {/* Top stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
@@ -776,20 +1018,27 @@ export default function WorkspaceDetail(){
               <div>
                 <div className="flex gap-2 mb-4">
                   <button className="px-3 py-1 rounded-md bg-orange-500 text-white text-sm font-medium">Chương có cấu trúc</button>
-                  <div className="ml-auto">
-                    <button
-                      onClick={handleConfirm}
-                      disabled={isConfirmed || !results?.chapters?.length} // Disable if confirmed or no chapters
-                      className={`px-3 py-1 rounded-md text-sm ${isConfirmed || !results?.chapters?.length ? 'bg-slate-300 text-slate-600 cursor-not-allowed' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
-                    >
-                      Xác nhận lộ trình
-                    </button>
-                  </div>
                 </div>
-                {results?.chapters && results.chapters.length > 0 ? (
-                  <LearningStructureDisplay chapters={results.chapters} />
+                {normalizedStatus === 'CONFIRMED' ? (
+                  <>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold mb-4">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Cấu trúc đã xác nhận
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/app/workspaces/${id}/roadmap`)}
+                      className="mt-4 inline-flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-orange-600 transition"
+                    >
+                      ✨ Xem lộ trình học tập chi tiết
+                    </button>
+                    <LearningStructureDisplay chapters={visibleChapters} />
+                  </>
                 ) : (
-                  <div className="rounded-md border border-slate-100 p-3 text-sm text-slate-600">Không có chương nào được tạo.</div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-semibold mb-4">
+                    <ShieldCheck className="w-4 h-4" />
+                    Cấu trúc đang chờ xác nhận
+                  </div>
                 )}
               </div>
             )}

@@ -20,6 +20,7 @@ export type AppNavItem = {
   icon: NavIcon;
   end?: boolean;
   badge?: boolean;
+  match?: "exact" | "prefix";
 };
 
 export type AppNavSection = {
@@ -45,7 +46,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     items: [
       { path: "/app/syllabus", label: "Nhập syllabus", icon: UploadCloud },
       { path: "/app/roadmap", label: "Lộ trình AI", icon: Sparkles },
-      { path: "/app/workspaces", label: "Workspaces", icon: Map, badge: true },
+      { path: "/app/workspaces", label: "Workspaces", icon: Map, badge: true, match: "prefix" },
     ],
   },
   {

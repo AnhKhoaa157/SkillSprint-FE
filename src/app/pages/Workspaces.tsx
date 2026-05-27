@@ -1,224 +1,524 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import workspaceService from "../../api/workspaceService";
-import { Plus, Sparkles, LayoutGrid, ArrowRight, X, PencilLine, Trash2, Check, AlertTriangle, BookOpenCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BookOpenCheck,
+  Check,
+  LayoutGrid,
+  PencilLine,
+  Plus,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import WorkspaceCard from "../components/WorkspaceCard";
 
-const F = "'Inter','Plus Jakarta Sans',sans-serif";
-const CARD = "#FFFFFF";
-const BDR = "#E5E7EB";
-const T1 = "#111827";
+type WorkspaceLearningStructure = {
+  status?: "DRAFT" | "CONFIRMED" | string;
+  tasks?: unknown[] | null;
+  [key: string]: unknown;
+};
+
+type WorkspaceApiItem = {
+  workspaceId?: unknown;
+  id?: unknown;
+  name?: unknown;
+  title?: unknown;
+  workspaceName?: unknown;
+  description?: unknown;
+  summary?: unknown;
+  createdAt?: unknown;
+  created_at?: unknown;
+  createdDate?: unknown;
+  updatedAt?: unknown;
+  updated_at?: unknown;
+  documentsCount?: unknown;
+  documentCount?: unknown;
+  materialsCount?: unknown;
+  tasksCount?: unknown;
+  documents?: unknown[] | null;
+  materials?: unknown[] | null;
+  uploadedMaterials?: unknown[] | null;
+  learningStructure?: WorkspaceLearningStructure | null;
+  [key: string]: unknown;
+};
 
 type WorkspaceItem = {
   id: string;
   name: string;
   createdAt?: string;
   description?: string | null;
-  totalDocuments?: number;
-  totalTasks?: number;
-  progress?: number;
+  totalDocuments: number;
+  totalTasks: number;
+  progress: number;
+  raw: WorkspaceApiItem;
 };
 
+type NotificationVariant = "create" | "update" | "delete" | "error" | "success";
+
+type NotificationItem = {
+  id: string;
+  variant: NotificationVariant;
+  message: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toText(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return undefined;
+}
+
+function toNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+}
+
+function firstDefinedNumber(values: unknown[]): number {
+  for (const value of values) {
+    const parsed = toNumber(value);
+    if (typeof parsed === "number") {
+      return parsed;
+    }
+  }
+
+  return 0;
+}
+
+function extractWorkspaceItems(payload: unknown): WorkspaceApiItem[] {
+  if (Array.isArray(payload)) {
+    return payload.filter(isRecord) as WorkspaceApiItem[];
+  }
+
+  if (!isRecord(payload)) {
+    return [];
+  }
+
+  const candidates = [payload.data, payload.content, payload.items, payload.workspaces, payload.payload, payload.result];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate.filter(isRecord) as WorkspaceApiItem[];
+    }
+
+    if (isRecord(candidate)) {
+      const nested = extractWorkspaceItems(candidate);
+      if (nested.length > 0) {
+        return nested;
+      }
+    }
+  }
+
+  return [];
+}
+
+function getWorkspaceDocumentCount(workspace: WorkspaceApiItem) {
+  return firstDefinedNumber([
+    workspace.documentsCount,
+    workspace.documentCount,
+    workspace.materialsCount,
+    Array.isArray(workspace.documents) ? workspace.documents.length : undefined,
+    Array.isArray(workspace.materials) ? workspace.materials.length : undefined,
+    Array.isArray(workspace.uploadedMaterials) ? workspace.uploadedMaterials.length : undefined,
+  ]);
+}
+
+function getWorkspaceTasksCount(workspace: WorkspaceApiItem) {
+  const learningStructure = isRecord(workspace.learningStructure) ? workspace.learningStructure : null;
+
+  return firstDefinedNumber([
+    workspace.tasksCount,
+    Array.isArray(learningStructure?.tasks) ? learningStructure.tasks.length : undefined,
+    Array.isArray(learningStructure?.chapters) ? learningStructure.chapters.length : undefined,
+  ]);
+}
+
+function getWorkspaceProgress(workspace: WorkspaceApiItem) {
+  return workspace.learningStructure?.status === "CONFIRMED" ? 100 : 0;
+}
+
+function normalizeWorkspaceItem(workspace: WorkspaceApiItem, index: number): WorkspaceItem {
+  const id =
+    toText(workspace.workspaceId) ??
+    toText(workspace.id) ??
+    toText(workspace["workspace_id"]) ??
+    `workspace-${index}`;
+
+  const name =
+    toText(workspace.name) ??
+    toText(workspace.title) ??
+    toText(workspace.workspaceName) ??
+    "Không có tên";
+
+  const description = toText(workspace.description) ?? toText(workspace.summary) ?? null;
+
+  const createdAt =
+    toText(workspace.createdAt) ??
+    toText(workspace.created_at) ??
+    toText(workspace.createdDate) ??
+    toText(workspace.updatedAt) ??
+    toText(workspace.updated_at);
+
+  return {
+    id,
+    name,
+    description,
+    createdAt,
+    totalDocuments: getWorkspaceDocumentCount(workspace),
+    totalTasks: getWorkspaceTasksCount(workspace),
+    progress: getWorkspaceProgress(workspace),
+    raw: workspace,
+  };
+}
+
 export default function Workspaces() {
+  const navigate = useNavigate();
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState<{ id: string; variant: "create" | "update" | "delete" | "error" | "success"; message: string }[]>([]);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [nameError, setNameError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const res = await workspaceService.getMyWorkspaces();
-        if (!mounted) return;
-        setWorkspaces(res.map(w => ({ id: w.workspaceId, name: w.name, createdAt: w.createdAt, description: w.description, totalDocuments: 0, totalTasks: 0, progress: 0 })));
-        } catch (err: any) {
-        console.error(err);
-        addNotification("error", err?.message || "Không thể tải workspaces");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  function addNotification(variant: "create" | "update" | "delete" | "error" | "success", message: string) {
-    const id = String(Date.now()) + Math.random().toString(36).slice(2, 7);
-    setNotifications((s) => [{ id, variant, message }, ...s]);
-    setTimeout(() => {
-      setNotifications((s) => s.filter(n => n.id !== id));
-    }, 3500);
-  }
-  const [showModal, setShowModal] = useState(false);
-  const [name, setName] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [workspaceName, setWorkspaceName] = useState("");
   const [editTarget, setEditTarget] = useState<WorkspaceItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<WorkspaceItem | null>(null);
-  const navigate = useNavigate();
+  const [actionBusy, setActionBusy] = useState(false);
 
-  const create = (opts?: { fromModal?: boolean }) => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    // check duplicate name (case-insensitive)
-    if (workspaces.some(w => w.name.trim().toLowerCase() === trimmed.toLowerCase())) {
+  useEffect(() => {
+    let active = true;
+
+    const fetchWorkspacesList = async () => {
+      setLoading(true);
+
+      try {
+        const res = (await workspaceService.getMyWorkspaces()) as unknown;
+        console.log("DEBUG_RAW_WORKSPACES_PAYLOAD:", res);
+        const mapped = extractWorkspaceItems(res).map((workspace, index) => normalizeWorkspaceItem(workspace, index));
+
+        if (active) {
+          setWorkspaces(mapped);
+        }
+      } catch (error) {
+        console.error(error);
+        if (active) {
+          setWorkspaces([]);
+          addNotification("error", error instanceof Error ? error.message : "Không thể tải workspaces");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void fetchWorkspacesList();
+
+    return () => {
+      active = false;
+    };
+  }, [reloadToken]);
+
+  function addNotification(variant: NotificationVariant, message: string) {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setNotifications((current) => [{ id, variant, message }, ...current].slice(0, 4));
+
+    window.setTimeout(() => {
+      setNotifications((current) => current.filter((item) => item.id !== id));
+    }, 3500);
+  }
+
+  const openCreateModal = () => {
+    setNameError(null);
+    setWorkspaceName("");
+    setShowCreateModal(true);
+  };
+
+  const openEditModal = (workspace: WorkspaceItem) => {
+    setNameError(null);
+    setWorkspaceName(workspace.name);
+    setEditTarget(workspace);
+  };
+
+  const submitCreateWorkspace = async () => {
+    const trimmedName = workspaceName.trim();
+
+    if (!trimmedName) {
+      setNameError("Vui lòng nhập tên workspace");
+      return;
+    }
+
+    if (workspaces.some((workspace) => workspace.name.trim().toLowerCase() === trimmedName.toLowerCase())) {
       setNameError("Tên workspace đã tồn tại");
       addNotification("error", "Tên workspace đã tồn tại");
       return;
     }
-    (async () => {
-      try {
-        const created = await workspaceService.createWorkspace({ name: name.trim() });
-        setWorkspaces(p => [{ id: created.workspaceId, name: created.name, createdAt: created.createdAt, description: created.description, totalDocuments: 0, totalTasks: 0, progress: 0 }, ...p]);
-        setName("");
-        if (opts?.fromModal) setShowModal(false);
-        navigate(`/app/workspaces`);
-        addNotification("create", "Tạo workspace thành công");
-      } catch (err: any) {
-        console.error(err);
-        addNotification("error", err?.message || 'Tạo workspace thất bại');
-      }
-    })();
+
+    setActionBusy(true);
+
+    try {
+      const created = await workspaceService.createWorkspace({ name: trimmedName });
+      const normalized = normalizeWorkspaceItem(created as unknown as WorkspaceApiItem, 0);
+      setWorkspaces((current) => [normalized, ...current]);
+      setWorkspaceName("");
+      setShowCreateModal(false);
+      addNotification("create", "Tạo workspace thành công");
+      navigate("/app/workspaces");
+    } catch (error) {
+      console.error(error);
+      addNotification("error", error instanceof Error ? error.message : "Tạo workspace thất bại");
+    } finally {
+      setActionBusy(false);
+    }
   };
 
-  const saveRename = () => {
+  const submitRenameWorkspace = async () => {
     if (!editTarget) return;
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    if (workspaces.some(w => w.id !== editTarget.id && w.name.trim().toLowerCase() === trimmed.toLowerCase())) {
+
+    const trimmedName = workspaceName.trim();
+
+    if (!trimmedName) {
+      setNameError("Vui lòng nhập tên workspace");
+      return;
+    }
+
+    if (workspaces.some((workspace) => workspace.id !== editTarget.id && workspace.name.trim().toLowerCase() === trimmedName.toLowerCase())) {
       setNameError("Tên workspace đã tồn tại");
       addNotification("error", "Tên workspace đã tồn tại");
       return;
     }
-    (async () => {
-      try {
-        const updated = await workspaceService.updateWorkspace(editTarget.id, { name: name.trim() });
-        setWorkspaces(prev => prev.map(item => item.id === editTarget.id ? { ...item, name: updated.name } : item));
-        setName("");
-        setEditTarget(null);
-        addNotification("update", "Cập nhật workspace thành công");
-      } catch (err: any) {
-        console.error(err);
-        addNotification("error", err?.message || 'Cập nhật workspace thất bại');
-      }
-    })();
+
+    setActionBusy(true);
+
+    try {
+      const updated = await workspaceService.updateWorkspace(editTarget.id, { name: trimmedName });
+      setWorkspaces((current) =>
+        current.map((workspace) =>
+          workspace.id === editTarget.id
+            ? {
+                ...workspace,
+                name: updated.name ?? trimmedName,
+                description: updated.description ?? workspace.description,
+                createdAt: updated.createdAt ?? workspace.createdAt,
+              }
+            : workspace,
+        ),
+      );
+      setWorkspaceName("");
+      setEditTarget(null);
+      addNotification("update", "Cập nhật workspace thành công");
+    } catch (error) {
+      console.error(error);
+      addNotification("error", error instanceof Error ? error.message : "Cập nhật workspace thất bại");
+    } finally {
+      setActionBusy(false);
+    }
   };
 
-  const deleteWorkspace = () => {
+  const submitDeleteWorkspace = async () => {
     if (!deleteTarget) return;
-    (async () => {
-      try {
-        await workspaceService.deleteWorkspace(deleteTarget.id);
-        setWorkspaces(prev => prev.filter(item => item.id !== deleteTarget.id));
-        setDeleteTarget(null);
-        navigate("/app/workspaces");
-        addNotification("delete", "Xóa workspace thành công");
-      } catch (err: any) {
-        console.error(err);
-        addNotification("error", err?.message || 'Xóa workspace thất bại');
-      }
-    })();
+
+    setActionBusy(true);
+
+    try {
+      await workspaceService.deleteWorkspace(deleteTarget.id);
+      setWorkspaces((current) => current.filter((workspace) => workspace.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      addNotification("delete", "Xóa workspace thành công");
+      navigate("/app/workspaces");
+    } catch (error) {
+      console.error(error);
+      addNotification("error", error instanceof Error ? error.message : "Xóa workspace thất bại");
+    } finally {
+      setActionBusy(false);
+    }
   };
 
   return (
-    <div style={{ fontFamily: F }}>
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <div>
-          <h2 className="m-0 text-[1.05rem] font-extrabold text-slate-800">Workspaces</h2>
-          <p className="m-0 text-sm text-slate-500">Tạo container cho mục tiêu học tập của bạn.</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50/50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-6">
+        <div className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:flex-row sm:items-center sm:p-6">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-orange-600">
+              <BookOpenCheck className="h-3.5 w-3.5" />
+              Workspace hub
+            </div>
+            <h2 className="text-2xl font-black tracking-tight text-slate-900">Workspaces</h2>
+            <p className="max-w-2xl text-sm leading-6 text-slate-500">Quản lý tài liệu, lộ trình học và trạng thái AI của từng workspace trong một nguồn dữ liệu đồng bộ.</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setReloadToken((value) => value + 1)}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              Tải lại
+            </button>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-500/20 transition hover:brightness-105"
+            >
+              <Plus className="h-4 w-4" />
+              Tạo workspace
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-600 transition hover:bg-orange-100"
-        >
-          <Plus size={14} />
-          Tạo workspace
-        </button>
+
+        {loading ? (
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 text-sm font-medium text-slate-500 shadow-sm">Đang tải workspaces...</div>
+        ) : workspaces.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+              <LayoutGrid className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">Chưa có workspace nào</h3>
+            <p className="mt-2 text-sm text-slate-500">Tạo workspace đầu tiên để bắt đầu đồng bộ tài liệu và sinh roadmap học tập.</p>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              <Sparkles className="h-4 w-4" />
+              Tạo workspace ngay
+            </button>
+          </div>
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {workspaces.map((workspace) => (
+              <WorkspaceCard
+                key={workspace.id}
+                title={workspace.name}
+                description={workspace.description}
+                createdAt={workspace.createdAt}
+                totalDocuments={workspace.totalDocuments}
+                totalTasks={workspace.totalTasks}
+                progress={workspace.progress}
+                onOpen={() => navigate(`/app/workspaces/${workspace.id}`)}
+                onEdit={() => openEditModal(workspace)}
+                onDelete={() => setDeleteTarget(workspace)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {loading ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-500 shadow-sm">Đang tải workspaces...</div>
-      ) : (
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {workspaces.map(ws => (
-            <WorkspaceCard
-              key={ws.id}
-              title={ws.name}
-              description={ws.description}
-              createdAt={ws.createdAt}
-              totalDocuments={ws.totalDocuments}
-              totalTasks={ws.totalTasks}
-              progress={ws.progress}
-              onOpen={() => navigate(`/app/workspaces/${ws.id}`)}
-              onEdit={() => { setEditTarget(ws); setName(ws.name); }}
-              onDelete={() => { setDeleteTarget(ws); }}
-            />
-          ))}
-        </div>
-      )}
-      {showModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.52)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 18 }}>
-          <div style={{ width: 720, maxWidth: "100%", background: CARD, borderRadius: 18, overflow: "hidden", boxShadow: "0 24px 80px rgba(15,23,42,0.22)", border: `1px solid ${BDR}` }}>
-            <div style={{ padding: 18, borderBottom: `1px solid ${BDR}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(135deg,#FFF7ED,#FFFFFF)" }}>
+      {showCreateModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-md">
+          <div className="w-full max-w-3xl overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.25)]">
+            <div className="flex items-start justify-between border-b border-slate-200 bg-gradient-to-r from-orange-50 to-white p-5">
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.02rem", fontWeight: 800, color: T1 }}>Tạo workspace</h3>
-                <p style={{ margin: "4px 0 0", color: "#6B7280", fontSize: "0.86rem" }}>Chọn cách tạo nhanh trong popup hoặc mở trang tạo đầy đủ.</p>
+                <h3 className="text-lg font-extrabold text-slate-900">Tạo workspace</h3>
+                <p className="mt-1 text-sm text-slate-500">Tạo nhanh từ popup hoặc chuyển sang trang tạo đầy đủ.</p>
               </div>
-              <button onClick={() => setShowModal(false)} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${BDR}`, background: CARD, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                <X size={16} />
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 0 }}>
-              <div style={{ padding: 18, borderRight: `1px solid ${BDR}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 12, background: "linear-gradient(135deg,#FF6B00,#FF9A3D)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Sparkles size={20} />
+            <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="space-y-4 border-b border-slate-200 p-5 lg:border-b-0 lg:border-r">
+                <div className="flex items-center gap-3 rounded-2xl border border-orange-100 bg-orange-50/60 p-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-400 text-white">
+                    <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
-                    <strong style={{ display: "block", color: T1 }}>Tạo nhanh trong popup</strong>
-                    <span style={{ color: "#6B7280", fontSize: "0.85rem" }}>Không rời trang hiện tại, phù hợp tạo workspace tức thì.</span>
+                    <div className="font-semibold text-slate-900">Tạo nhanh trong popup</div>
+                    <div className="text-sm text-slate-500">Không rời trang hiện tại, phù hợp khi cần thêm workspace ngay.</div>
                   </div>
                 </div>
 
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: T1, marginBottom: 6 }}>Tên workspace</label>
-                <input autoFocus value={name} onChange={e => { setName(e.target.value); setNameError(null); }} placeholder="Ví dụ: React Interview Prep"
-                  style={{ width: "100%", padding: 12, borderRadius: 10, border: `1px solid ${BDR}`, outline: "none" }} />
-                {nameError && <div style={{ marginTop: 8, color: "#DC2626", fontSize: 13 }}>{nameError}</div>}
+                <label className="block text-sm font-semibold text-slate-900">
+                  Tên workspace
+                  <input
+                    autoFocus
+                    value={workspaceName}
+                    onChange={(event) => {
+                      setWorkspaceName(event.target.value);
+                      setNameError(null);
+                    }}
+                    placeholder="Ví dụ: React Interview Prep"
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-0 transition placeholder:text-slate-400 focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
+                  />
+                </label>
 
-                <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
-                  <button onClick={() => create({ fromModal: true })}
-                    style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 14px", borderRadius: 10, background: "#10B981", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700 }}>
-                    Tạo workspace
-                    <ArrowRight size={16} />
+                {nameError && <p className="text-sm font-medium text-rose-600">{nameError}</p>}
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void submitCreateWorkspace()}
+                    disabled={actionBusy}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {actionBusy ? "Đang tạo..." : "Tạo workspace"}
+                    <ArrowRight className="h-4 w-4" />
                   </button>
-                  <button onClick={() => setShowModal(false)} style={{ padding: "11px 14px", borderRadius: 10, border: `1px solid ${BDR}`, background: CARD, cursor: "pointer", fontWeight: 700 }}>Hủy</button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Hủy
+                  </button>
                 </div>
               </div>
 
-              <div style={{ padding: 18, background: "#FAFAFB" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 12, background: "#E0F2FE", color: "#0369A1", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <LayoutGrid size={20} />
+              <div className="space-y-4 bg-slate-50 p-5">
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+                    <LayoutGrid className="h-5 w-5" />
                   </div>
                   <div>
-                    <strong style={{ display: "block", color: T1 }}>Trang tạo đầy đủ</strong>
-                    <span style={{ color: "#6B7280", fontSize: "0.85rem" }}>Có mô tả và bố cục rõ ràng hơn cho workspace mới.</span>
+                    <div className="font-semibold text-slate-900">Trang tạo đầy đủ</div>
+                    <div className="text-sm text-slate-500">Dành cho trường hợp cần thêm mô tả hoặc cấu trúc chi tiết hơn.</div>
                   </div>
                 </div>
 
-                <div style={{ border: `1px solid ${BDR}`, borderRadius: 14, background: CARD, padding: 14, marginBottom: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <span style={{ fontWeight: 700, color: T1 }}>Từ popup sang trang</span>
-                    <BookOpenCheck size={18} color="#FF6B00" />
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-semibold text-slate-900">Đi tới form đầy đủ</span>
+                    <BookOpenCheck className="h-5 w-5 text-orange-500" />
                   </div>
-                  <p style={{ margin: 0, color: "#6B7280", fontSize: "0.86rem", lineHeight: 1.55 }}>
-                    Nếu bạn muốn thêm mô tả mục tiêu học, cấu trúc thông tin rõ ràng hơn, hãy đi sang trang tạo workspace.
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    Nếu bạn muốn chuẩn hóa mô tả mục tiêu học ngay từ đầu, hãy chuyển sang trang tạo workspace chuyên dụng.
                   </p>
                 </div>
 
-                <button onClick={() => { setShowModal(false); navigate('/app/workspaces/new'); }}
-                  style={{ width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 14px", borderRadius: 10, border: `1px solid ${BDR}`, background: CARD, cursor: "pointer", fontWeight: 700 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    navigate("/app/workspaces/new");
+                  }}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
                   Đi tới trang tạo workspace
-                  <ArrowRight size={16} />
+                  <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -227,26 +527,54 @@ export default function Workspaces() {
       )}
 
       {editTarget && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.52)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 320, padding: 18 }}>
-          <div style={{ width: 520, maxWidth: "100%", background: CARD, borderRadius: 18, overflow: "hidden", boxShadow: "0 24px 80px rgba(15,23,42,0.22)", border: `1px solid ${BDR}` }}>
-            <div style={{ padding: 18, borderBottom: `1px solid ${BDR}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="fixed inset-0 z-[320] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-md">
+          <div className="w-full max-w-xl overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.25)]">
+            <div className="flex items-start justify-between border-b border-slate-200 p-5">
               <div>
-                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: T1 }}>Đổi tên workspace</h3>
-                <p style={{ margin: "4px 0 0", color: "#6B7280", fontSize: "0.86rem" }}>Cập nhật tên để quản lý workspace rõ ràng hơn.</p>
+                <h3 className="text-lg font-extrabold text-slate-900">Đổi tên workspace</h3>
+                <p className="mt-1 text-sm text-slate-500">Cập nhật tên để quản lý workspace rõ ràng hơn.</p>
               </div>
-              <button onClick={() => setEditTarget(null)} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${BDR}`, background: CARD, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                <X size={16} />
+              <button
+                type="button"
+                onClick={() => setEditTarget(null)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
-            <div style={{ padding: 18 }}>
-              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: T1, marginBottom: 6 }}>Tên workspace</label>
-              <input value={name} onChange={e => { setName(e.target.value); setNameError(null); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: `1px solid ${BDR}` }} />
-              {nameError && <div style={{ marginTop: 8, color: "#DC2626", fontSize: 13 }}>{nameError}</div>}
-              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                <button onClick={saveRename} style={{ flex: 1, padding: "11px 14px", borderRadius: 10, background: "#10B981", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <Check size={16} /> Lưu thay đổi
+
+            <div className="space-y-4 p-5">
+              <label className="block text-sm font-semibold text-slate-900">
+                Tên workspace
+                <input
+                  value={workspaceName}
+                  onChange={(event) => {
+                    setWorkspaceName(event.target.value);
+                    setNameError(null);
+                  }}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-0 transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
+                />
+              </label>
+
+              {nameError && <p className="text-sm font-medium text-rose-600">{nameError}</p>}
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void submitRenameWorkspace()}
+                  disabled={actionBusy}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  <Check className="h-4 w-4" />
+                  {actionBusy ? "Đang lưu..." : "Lưu thay đổi"}
                 </button>
-                <button onClick={() => setEditTarget(null)} style={{ padding: "11px 14px", borderRadius: 10, border: `1px solid ${BDR}`, background: CARD, cursor: "pointer", fontWeight: 700 }}>Hủy</button>
+                <button
+                  type="button"
+                  onClick={() => setEditTarget(null)}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Hủy
+                </button>
               </div>
             </div>
           </div>
@@ -254,50 +582,71 @@ export default function Workspaces() {
       )}
 
       {deleteTarget && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.52)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 330, padding: 18 }}>
-          <div style={{ width: 520, maxWidth: "100%", background: CARD, borderRadius: 18, overflow: "hidden", boxShadow: "0 24px 80px rgba(15,23,42,0.22)", border: `1px solid ${BDR}` }}>
-            <div style={{ padding: 18, borderBottom: `1px solid ${BDR}`, display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 12, background: "#FEF2F2", color: "#DC2626", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <AlertTriangle size={18} />
+        <div className="fixed inset-0 z-[330] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-md">
+          <div className="w-full max-w-xl overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.25)]">
+            <div className="flex items-center gap-3 border-b border-slate-200 p-5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                <AlertTriangle className="h-5 w-5" />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: T1 }}>Xóa workspace</h3>
-                <p style={{ margin: "4px 0 0", color: "#6B7280", fontSize: "0.86rem" }}>Hành động này sẽ xóa workspace khỏi danh sách local.</p>
+                <h3 className="text-lg font-extrabold text-slate-900">Xóa workspace</h3>
+                <p className="mt-1 text-sm text-slate-500">Hành động này sẽ xóa workspace khỏi danh sách hiện tại.</p>
               </div>
             </div>
-            <div style={{ padding: 18 }}>
-              <p style={{ marginTop: 0, color: T1, fontWeight: 700 }}>Bạn có chắc muốn xóa “{deleteTarget.name}” không?</p>
-              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                <button onClick={deleteWorkspace} style={{ flex: 1, padding: "11px 14px", borderRadius: 10, background: "#DC2626", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <Trash2 size={16} /> Xóa workspace
+
+            <div className="space-y-4 p-5">
+              <p className="text-sm font-semibold text-slate-900">Bạn có chắc muốn xóa “{deleteTarget.name}” không?</p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void submitDeleteWorkspace()}
+                  disabled={actionBusy}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {actionBusy ? "Đang xóa..." : "Xóa workspace"}
                 </button>
-                <button onClick={() => setDeleteTarget(null)} style={{ padding: "11px 14px", borderRadius: 10, border: `1px solid ${BDR}`, background: CARD, cursor: "pointer", fontWeight: 700 }}>Hủy</button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Hủy
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
-      {/* Notifications */}
-      <div style={{ position: "fixed", right: 18, top: 80, zIndex: 600, display: "flex", flexDirection: "column", gap: 10 }}>
-        {notifications.map(n => {
-          let bg = "#ECFDF5";
-          let border = "#BBF7D0";
-          let color = "#065F46";
-          let icon = <Check size={16} />;
-          if (n.variant === "update") {
-            bg = "#FFFBEB"; border = "#FEEBC8"; color = "#92400E"; icon = <PencilLine size={16} />;
-          } else if (n.variant === "delete") {
-            bg = "#FEF2F2"; border = "#FECACA"; color = "#991B1B"; icon = <Trash2 size={16} />;
-          } else if (n.variant === "error") {
-            bg = "#FEF2F2"; border = "#FECACA"; color = "#991B1B"; icon = <AlertTriangle size={16} />;
-          } else if (n.variant === "create") {
-            bg = "#ECFDF5"; border = "#BBF7D0"; color = "#065F46"; icon = <Sparkles size={16} />;
+
+      <div className="fixed right-4 top-20 z-[600] flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-hidden">
+        {notifications.map((notification) => {
+          let classes = "border-emerald-200 bg-emerald-50 text-emerald-800";
+          let icon = <Check className="h-4 w-4" />;
+
+          if (notification.variant === "update") {
+            classes = "border-amber-200 bg-amber-50 text-amber-800";
+            icon = <PencilLine className="h-4 w-4" />;
+          } else if (notification.variant === "delete") {
+            classes = "border-rose-200 bg-rose-50 text-rose-800";
+            icon = <Trash2 className="h-4 w-4" />;
+          } else if (notification.variant === "error") {
+            classes = "border-rose-200 bg-rose-50 text-rose-800";
+            icon = <AlertTriangle className="h-4 w-4" />;
+          } else if (notification.variant === "create") {
+            classes = "border-emerald-200 bg-emerald-50 text-emerald-800";
+            icon = <Sparkles className="h-4 w-4" />;
           }
 
           return (
-            <div key={n.id} style={{ minWidth: 280, maxWidth: 380, padding: 12, borderRadius: 12, boxShadow: "0 10px 30px rgba(2,6,23,0.12)", background: bg, border: `1px solid ${border}`, color, display: "flex", gap: 12, alignItems: "center", fontWeight: 700 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", color }}>{icon}</div>
-              <div style={{ fontSize: 14 }}>{n.message}</div>
+            <div
+              key={notification.id}
+              className={`min-w-[280px] max-w-[380px] rounded-2xl border px-4 py-3 shadow-[0_10px_30px_rgba(2,6,23,0.12)] ${classes}`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/70">{icon}</div>
+                <div className="text-sm font-semibold leading-5">{notification.message}</div>
+              </div>
             </div>
           );
         })}
