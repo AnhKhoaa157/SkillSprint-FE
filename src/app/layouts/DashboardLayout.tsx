@@ -38,7 +38,6 @@ const CRUMBS: Record<string,string> = {
   "/app/roadmap":"Lộ trình AI",
   "/app/calendar":"Lịch học",
   "/app/matrix":"Ma trận công việc",
-  "/app/analytics":"Phân tích",
   "/app/leaderboard":"Bảng xếp hạng",
   "/app/learning":"Trung tâm học tập",
   "/app/learning/course":"Trung tâm học tập > Video bài giảng",

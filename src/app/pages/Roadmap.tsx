@@ -134,6 +134,16 @@ function getTotalResources(roadmapData: RoadmapResponse | null): number {
   return stepResources + (roadmapData.resources?.length || 0);
 }
 
+function formatRoadmapId(rawId: unknown): string {
+  const id = toText(rawId);
+  if (!id) {
+    return "RM-000000";
+  }
+
+  const suffix = id.replace(/[^a-zA-Z0-9]/g, "").slice(-6).padStart(6, "0");
+  return `RM-${suffix}`;
+}
+
 export default function Roadmap() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const location = useLocation();
@@ -464,7 +474,7 @@ export default function Roadmap() {
                 </div>
                 <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{roadmapTitle}</h1>
                 <p className="mt-2 text-sm leading-6 text-slate-500">
-                  {roadmapDescription} <span className="font-semibold text-slate-700">{workspaceId}</span>.
+                  {roadmapDescription} <span className="font-semibold text-slate-700">{formatRoadmapId(roadmapData?.id || workspaceId)}</span>.
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-3">

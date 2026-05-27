@@ -408,6 +408,7 @@ export default function Workspaces() {
             {workspaces.map((workspace) => (
               <WorkspaceCard
                 key={workspace.id}
+                workspaceId={workspace.id}
                 title={workspace.name}
                 description={workspace.description}
                 createdAt={workspace.createdAt}

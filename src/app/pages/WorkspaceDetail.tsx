@@ -4,8 +4,10 @@ import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import LearningStructureDisplay from "../components/LearningStructureDisplay.tsx";
+import WorkspaceProgress from "../components/WorkspaceProgress";
 import { ArrowLeft, ArrowRight, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle, Copy, SlidersHorizontal, Check } from "lucide-react";
 import { getStoredAuthSession } from "../../api/authService";
+import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../api/materialService.ts";
 import roadmapService from "../../api/roadmapService";
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
@@ -23,6 +25,21 @@ type UploadFile = {
   jobStatus?: "PENDING" | "PROCESSING" | "FAILED" | "DONE" | string;
   materialId?: string;
 };
+
+const PROCESSING_JOB_ACTIVE_STATES = new Set([
+  "PENDING",
+  "RUNNING",
+  "REVIEW_REQUIRED",
+  "EXTRACTING",
+  "CLEANING",
+  "CHUNKING",
+  "ANALYZING",
+]);
+
+const PROCESSING_JOB_TERMINAL_STATES = new Set([
+  "COMPLETED",
+  "FAILED",
+]);
 
 type LearningStructureTopic = {
   title: string;
@@ -61,6 +78,8 @@ type AnalysisTimeline = {
   finishedAt?: string;
   [key: string]: unknown;
 };
+
+type WorkspaceDetailTab = "files" | "roadmap" | "progress" | "settings";
 
 function toWorkspaceCode(rawId?: string) {
   if (!rawId) return "WS-CHUA-CO";
@@ -169,6 +188,38 @@ function getStructureTimeline(value: unknown): number | null {
   return end - start;
 }
 
+function isProcessingState(status: string | null | undefined): boolean {
+  if (!status) {
+    return false;
+  }
+
+  return PROCESSING_JOB_ACTIVE_STATES.has(String(status).toUpperCase());
+}
+
+function isTerminalProcessingState(status: string | null | undefined, progressPercent: number | null): boolean {
+  const normalized = String(status || "").toUpperCase();
+
+  return PROCESSING_JOB_TERMINAL_STATES.has(normalized) || (typeof progressPercent === "number" && progressPercent >= 100);
+}
+
+function normalizeMaterialUploadFile(material: MaterialUploadedMaterialResponse, fallbackIndex: number): UploadFile {
+  const jobStatus = material.processingJob?.status ?? material.processingStatus ?? material.uploadStatus ?? null;
+  const progressPercent = material.processingJob?.progressPercent ?? 0;
+
+  return {
+    id: String(material.materialId || fallbackIndex),
+    name: material.fileName || material.originalFileName || "untitled",
+    progress: Number.isFinite(progressPercent) ? Number(progressPercent) : 0,
+    status: isProcessingState(jobStatus)
+      ? "processing"
+      : String(jobStatus || "").toUpperCase() === "COMPLETED"
+        ? "done"
+        : "idle",
+    jobStatus: jobStatus || undefined,
+    materialId: String(material.materialId || fallbackIndex),
+  };
+}
+
 export default function WorkspaceDetail(){
   const { id } = useParams();
   const navigate = useNavigate();
@@ -204,9 +255,6 @@ export default function WorkspaceDetail(){
   const docsCount = files.length;
   const doneDocsCount = files.filter(f => f.status === "done").length;
   const processingDocsCount = files.filter(f => f.status === "processing").length;
-  const chaptersCount = visibleChapters.length;
-  const tasksCount = structureData?.tasks?.length ?? 0;
-  const avgProgress = files.length ? Math.round(files.reduce((s,f)=>s+f.progress,0)/files.length) : 0;
   const pendingJobsCount = files.filter(f => f.jobStatus === 'PENDING').length;
   const processingJobsCount = files.filter(f => f.jobStatus === 'PROCESSING').length;
   const completedJobsCount = files.filter(f => f.jobStatus === 'COMPLETED' || f.jobStatus === 'DONE').length;
@@ -327,34 +375,7 @@ export default function WorkspaceDetail(){
         if (current?.name) setWorkspaceName(current.name);
       }
     } catch (e) {}
-    // load existing materials from backend
-    (async ()=>{
-      if (!id) return;
-      setMaterialsLoading(true);
-      try{
-        const headers = buildAuthHeaders(token);
-        const resp = await fetch(`${API_BASE}/api/workspaces/${id}/materials`, { method: 'GET', headers });
-        if (resp.ok) {
-          const payload = await resp.json().catch(()=>null) as any;
-          const list = Array.isArray(payload?.data || payload) ? (payload.data || payload) : [];
-          const mapped: UploadFile[] = list.map((m: any) => {
-            const jobStatus = m.processingJob?.status ?? m.processingStatus ?? m.status ?? null;
-            const progressPercent = m.processingJob?.progressPercent ?? m.progressPercent ?? 0;
-            return {
-              id: String(m.materialId || m.id || Math.random()),
-              name: m.fileName || m.name || 'untitled',
-              progress: Number.isFinite(progressPercent) ? Number(progressPercent) : 0,
-              status: jobStatus === 'DONE' || jobStatus === 'COMPLETED' ? 'done' : (jobStatus === 'PROCESSING' || jobStatus === 'PENDING' ? 'processing' : 'idle'),
-              jobStatus: jobStatus,
-              materialId: String(m.materialId || m.id),
-            };
-          });
-          setFiles(mapped);
-          mapped.filter(x=>x.status==='processing').forEach(f=>startProcessingPolling(f.materialId ?? f.id));
-        }
-      }catch(err:any){ console.error('Failed to load materials', err); }
-      finally{ setMaterialsLoading(false); }
-    })();
+    void reloadWorkspaceMaterials();
     return () => {
       try{
         Object.values(processingIntervals.current).forEach(iv => clearInterval(iv));
@@ -376,37 +397,32 @@ export default function WorkspaceDetail(){
     const iv = window.setInterval(async ()=>{
       try{
         if (!id) return;
-        const headers = buildAuthHeaders(token);
-        const resp = await fetch(`${API_BASE}/api/workspaces/${id}/materials/${materialId}/processing-job`, { method: 'GET', headers });
-        if (!resp.ok) return;
-        const payload = await resp.json().catch(()=>null) as any;
-        console.log("Job Data:", payload?.data ?? payload);
-        const progress = payload?.data?.progressPercent ?? payload?.progressPercent ?? null;
-            const status = payload?.data?.status ?? payload?.status ?? null;
-            const errorCode = payload?.data?.errorCode ?? payload?.errorCode ?? null; // Check for errorCode
-            if (typeof progress === 'number' || typeof status === 'string'){
-              setFiles(prev => prev.map(x => (x.materialId===materialId || x.id===materialId) ? {
-                ...x,
-                progress: typeof progress === 'number' ? progress : x.progress,
-                status: (status === 'DONE' || status === 'COMPLETED') ? 'done' : (status === 'FAILED' ? 'idle' : 'processing'),
-                jobStatus: status,
-              } : x));
+        const job = await materialService.getMaterialProcessingJob(id, materialId);
+        const progress = job.progressPercent ?? null;
+        const status = job.status ?? null;
+
+        if (typeof progress === 'number' || typeof status === 'string'){
+          setFiles(prev => prev.map(x => (x.materialId===materialId || x.id===materialId) ? {
+            ...x,
+            progress: typeof progress === 'number' ? progress : x.progress,
+            status: String(status || '').toUpperCase() === 'COMPLETED' ? 'done' : isProcessingState(status) || (typeof progress === 'number' && progress < 100) ? 'processing' : x.status,
+            jobStatus: status || x.jobStatus,
+          } : x));
+        }
+
+        if (isTerminalProcessingState(status, progress)) {
+          clearInterval(processingIntervals.current[materialId]);
+          delete processingIntervals.current[materialId];
+
+          if (String(status || '').toUpperCase() === 'COMPLETED' || (typeof progress === 'number' && progress >= 100)) {
+            void reloadWorkspaceMaterials();
+            if (structureGenerationRequested) {
+              startStructurePolling();
             }
-            // Stop polling once backend reports a terminal state.
-            if (status === 'DONE' || status === 'COMPLETED' || status === 'FAILED' || (typeof progress === 'number' && progress>=100)){
-              clearInterval(processingIntervals.current[materialId]);
-              delete processingIntervals.current[materialId];
-              if (status === 'DONE' || status === 'COMPLETED' || (typeof progress === 'number' && progress>=100)) {
-                if (structureGenerationRequested) {
-                  startStructurePolling();
-                }
-              } else {
-                stopStructurePolling();
-              }
-            }
-            if (status === 'FAILED' && errorCode) {
-              console.error(`Job ${materialId} failed with error code: ${errorCode}`);
-            }
+          } else {
+            stopStructurePolling();
+          }
+        }
       }catch(e){ console.error('Polling error', e); }
     }, 3000);
     processingIntervals.current[materialId] = iv;
@@ -492,10 +508,37 @@ export default function WorkspaceDetail(){
   const [confirming, setConfirming] = useState(false);
   const [roadmapGenerating, setRoadmapGenerating] = useState(false);
   const [roadmapError, setRoadmapError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<WorkspaceDetailTab>("files");
   const analysisDurationMs = getStructureTimeline(results);
   const liveAnalysisDurationMs = analysisStartedAtRef.current ? Date.now() - analysisStartedAtRef.current : null;
   const analysisDurationLabel = analysisDurationMs !== null ? formatDuration(analysisDurationMs) : (isGeneratingStructure || generateLoading ? formatDuration(liveAnalysisDurationMs) : '0s');
   const generating = isGeneratingStructure || generateLoading;
+  const workspaceTabs: Array<{ id: WorkspaceDetailTab; label: string; description: string }> = [
+    { id: "files", label: "Tài liệu", description: "Tải lên và xử lý nội dung" },
+    { id: "roadmap", label: "Roadmap", description: "Xem lộ trình học tập" },
+    { id: "progress", label: "Tiến độ", description: "Dashboard tiến độ" },
+    { id: "settings", label: "Cài đặt", description: "Cấu hình workspace" },
+  ];
+
+  async function reloadWorkspaceMaterials() {
+    if (!id) return;
+
+    setMaterialsLoading(true);
+
+    try {
+      const materials: MaterialUploadedMaterialResponse[] = await materialService.getWorkspaceMaterials(id);
+      const mapped = materials.map((material: MaterialUploadedMaterialResponse, index: number) => normalizeMaterialUploadFile(material, index));
+
+      setFiles(mapped);
+      mapped
+        .filter((item: UploadFile) => item.status === "processing")
+        .forEach((item: UploadFile) => startProcessingPolling(item.materialId ?? item.id));
+    } catch (err) {
+      console.error("Failed to load materials", err);
+    } finally {
+      setMaterialsLoading(false);
+    }
+  }
 
   async function handleGenerate(){
     if (!id) return;
@@ -589,16 +632,13 @@ export default function WorkspaceDetail(){
       setFiles(p => [...p, { id: localId, name: file.name, progress: 0, status: 'processing' }]);
       (async ()=>{
         try{
-          const backendHeaders = buildAuthHeaders(token);
           const contentType = file.type || 'application/octet-stream';
 
           // Step 1: Get upload URL from backend (Rule 1: Authorization header required)
-          const urlResp = await fetch(`${API_BASE}/api/workspaces/${id}/materials/upload-url`, { method: 'POST', headers: backendHeaders, body: JSON.stringify({ fileName: file.name, contentType }) });
-          if (!urlResp.ok) throw new Error('Upload URL request failed');
-          const urlPayload = await urlResp.json().catch(()=>null) as any;
-          const uploadUrl = urlPayload?.data?.uploadUrl || urlPayload?.uploadUrl;
-          const fileUrl = urlPayload?.data?.fileUrl || urlPayload?.fileUrl;
-          const objectKey = urlPayload?.data?.objectKey || urlPayload?.objectKey || fileUrl;
+          const uploadResponse = await materialService.createMaterialUploadUrl(id, { fileName: file.name, contentType });
+          const uploadUrl = uploadResponse.uploadUrl;
+          const fileUrl = uploadResponse.fileUrl;
+          const objectKey = uploadResponse.objectKey || fileUrl;
           if (!uploadUrl) throw new Error('No uploadUrl returned');
 
           // Step 2: Upload file to Amazon S3 (Rule 2: NO Authorization header, raw file body, Content-Type from file.type)
@@ -635,19 +675,12 @@ export default function WorkspaceDetail(){
           });
 
           // Step 3: Confirm upload with the backend (Rule 1: Authorization header required)
-          const confirmBody = { objectKey: objectKey, fileName: file.name, contentType };
-          const confResp = await fetch(`${API_BASE}/api/workspaces/${id}/materials/confirm`, { method: 'POST', headers: backendHeaders, body: JSON.stringify(confirmBody) });
-          if (!confResp.ok) {
-            const errText = await confResp.text().catch(()=>null);
-            throw new Error('Confirm upload failed: ' + (errText || confResp.statusText));
-          }
-          const confPayload = await confResp.json().catch(()=>null) as any;
-          const uploaded = confPayload?.data || confPayload || null;
-          const returnedMaterialId = uploaded?.materialId || uploaded?.id || uploaded?.material_id || null;
-          const returnedProgress = uploaded?.processingJob?.progressPercent ?? uploaded?.progressPercent ?? null;
-          const returnedJobStatus = uploaded?.processingJob?.status ?? uploaded?.processingStatus ?? uploaded?.status ?? null;
+          const uploaded = await materialService.confirmMaterialUpload(id, { objectKey: objectKey, fileName: file.name, contentType });
+          const returnedMaterialId = uploaded?.materialId || null;
+          const returnedProgress = uploaded?.processingJob?.progressPercent ?? 0;
+          const returnedJobStatus = uploaded?.processingJob?.status ?? uploaded?.processingStatus ?? null;
 
-          setFiles(prev => prev.map(x => x.id===localId ? { ...x, materialId: String(returnedMaterialId || objectKey || localId), progress: Number.isFinite(returnedProgress) ? Number(returnedProgress) : 0, status: returnedJobStatus === 'DONE' ? 'done' : 'processing', jobStatus: returnedJobStatus || 'PENDING' } : x));
+          setFiles(prev => prev.map(x => x.id===localId ? { ...x, materialId: String(returnedMaterialId || objectKey || localId), progress: Number.isFinite(returnedProgress) ? Number(returnedProgress) : 0, status: String(returnedJobStatus || '').toUpperCase() === 'COMPLETED' ? 'done' : 'processing', jobStatus: returnedJobStatus || 'PENDING' } : x));
           // if backend returned materialId (UUID), use it for polling; otherwise try best-effort
           startProcessingPolling(String(returnedMaterialId || objectKey || localId));
           toast.success('Tải lên thành công — bắt đầu phân tích');
@@ -732,16 +765,16 @@ export default function WorkspaceDetail(){
                   {confirming ? "Đang lưu cấu trúc..." : "Chấp nhận lộ trình"}
                 </button>
               )
-            ) : (
-              <button
-                disabled={generating}
-                onClick={handleGenerate}
-                className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-orange-700 disabled:opacity-50"
-              >
-                <Sparkles size={14} />
-                {generating ? "Đang xử lý AI..." : "Bắt đầu Phân tích AI"}
-              </button>
-            )}
+              ) : activeTab === "roadmap" ? (
+                <button
+                  disabled={generating}
+                  onClick={handleGenerate}
+                  className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-orange-700 disabled:opacity-50"
+                >
+                  <Sparkles size={14} />
+                  {generating ? "Đang xử lý AI..." : "Bắt đầu Phân tích AI"}
+                </button>
+              ) : null}
 
             <button 
               type="button"
@@ -753,65 +786,34 @@ export default function WorkspaceDetail(){
           </div>
         </div>
 
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+          <div className="grid gap-2 md:grid-cols-4">
+            {workspaceTabs.map(tab => {
+              const selected = activeTab === tab.id;
+
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`rounded-xl px-4 py-3 text-left transition ${selected ? "bg-orange-500 text-white shadow-md shadow-orange-500/20" : "bg-slate-50 text-slate-700 hover:bg-slate-100"}`}
+                >
+                  <div className="text-sm font-bold">{tab.label}</div>
+                  <div className={`mt-0.5 text-[11px] ${selected ? "text-orange-50" : "text-slate-400"}`}>{tab.description}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {roadmapError ? (
           <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
             {roadmapError}
           </div>
         ) : null}
 
-        {/* Top stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="rounded-xl bg-white p-4 shadow-sm border border-slate-100">
-            <div className="text-xs text-slate-400">Source Materials</div>
-            <div className="mt-2 flex items-center justify-between">
-              <div className="text-lg font-bold">{docsCount}</div>
-              <div className="text-xs text-slate-400">Total</div>
-            </div>
-          </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm border border-slate-100">
-            <div className="text-xs text-slate-400">Generated Chapters</div>
-            <div className="mt-2 flex items-center justify-between">
-              <div className="text-lg font-bold">{chaptersCount}</div>
-              <div className="text-xs text-slate-400">Mapped</div>
-            </div>
-          </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm border border-slate-100">
-            <div className="text-xs text-slate-400">AI Tasks Created</div>
-            <div className="mt-2 flex items-center justify-between">
-              <div className="text-lg font-bold">{tasksCount}</div>
-              <div className="text-xs text-slate-400">Actionable</div>
-            </div>
-          </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm border border-slate-100">
-            <div className="text-xs text-slate-400">Workspace Progress</div>
-            <div className="mt-2 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <svg width="48" height="48" viewBox="0 0 48 48" className="-mr-1">
-                  <circle cx="24" cy="24" r="18" stroke="#E6E9EE" strokeWidth="6" fill="none" />
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="18"
-                    stroke="#FF9800"
-                    strokeWidth="6"
-                    strokeLinecap="round"
-                    fill="none"
-                    strokeDasharray={Math.PI * 2 * 18}
-                    strokeDashoffset={(1 - (avgProgress/100)) * (Math.PI * 2 * 18)}
-                    style={{ transform: 'rotate(-90deg)', transformOrigin: '24px 24px' }}
-                  />
-                </svg>
-                <div>
-                  <div className="text-lg font-bold">{avgProgress}%</div>
-                  <div className="text-xs text-slate-400">Overall</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Main content area */}
-        <div className="grid grid-cols-12 gap-6 mb-6">
+        <div className={`grid grid-cols-12 gap-6 mb-6 ${activeTab === "files" ? "" : "hidden"}`}>
           {/* Left column: Materials & Knowledge Base */}
           <div className="col-span-12 lg:col-span-7">
             <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-100">
@@ -988,7 +990,7 @@ export default function WorkspaceDetail(){
         </div>
 
         {/* AI Results Preview - New Section */}
-        <div className="mt-6">
+        <div className={`mt-6 ${activeTab === "roadmap" ? "" : "hidden"}`}>
           <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-3 border-b border-orange-200 pb-2">
               <h3 className="text-md font-semibold">AI Results Preview</h3>
@@ -1043,6 +1045,10 @@ export default function WorkspaceDetail(){
               </div>
             )}
           </div>
+        </div>
+
+        <div className={`${activeTab === "progress" ? "mt-6" : "hidden"}`}>
+          {activeTab === "progress" && <WorkspaceProgress workspaceId={workspaceId} className="mt-0" />}
         </div>
 
         <OnboardingModal

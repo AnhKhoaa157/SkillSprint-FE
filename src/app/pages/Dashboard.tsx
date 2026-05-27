@@ -42,7 +42,7 @@ const SHOWCASE_MODULES = [
   {
     title: "Phân tích học tập",
     desc: "Theo dõi điểm sẵn sàng, lượt quiz, độ ổn định và tiến độ kỹ năng.",
-    to: "/app/analytics",
+    to: "/app/workspaces",
     icon: BarChart2,
     tier: "Xây nền tảng",
   },

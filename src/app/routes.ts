@@ -3,7 +3,6 @@ import { createBrowserRouter } from "react-router";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Roadmap from "./pages/Roadmap";
-import Analytics from "./pages/Analytics";
 import Profile from "./pages/Profile";
 import Landing from "./pages/Landing";
 import About from "./pages/About";
@@ -68,7 +67,6 @@ export const routeRegistry = {
       detail: "workspaces/:id",
       roadmap: "workspaces/:workspaceId/roadmap",
     },
-    analytics: "analytics",
     profile: "profile",
     leaderboard: "leaderboard",
     upgraded: "upgraded",
@@ -122,7 +120,6 @@ export const router = createBrowserRouter([
       { path: appRoutes.workspaces.new, Component: WorkspacesNew },
       { path: appRoutes.workspaces.detail, Component: WorkspaceDetail },
       { path: appRoutes.workspaces.roadmap, Component: Roadmap },
-      { path: appRoutes.analytics, Component: Analytics },
       { path: appRoutes.profile, Component: Profile },
       { path: appRoutes.leaderboard, Component: Leaderboard },
       { path: appRoutes.upgraded, Component: PostUpgradeDashboard },

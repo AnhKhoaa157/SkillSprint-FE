@@ -5,7 +5,6 @@ import {
   Map,
   Calendar,
   CheckSquare,
-  BarChart2,
   Trophy,
   Users,
   TrendingUp,
@@ -59,7 +58,6 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
     label: "Hệ thống",
     items: [
-      { path: "/app/analytics", label: "Phân tích", icon: BarChart2 },
       { path: "/app/leaderboard", label: "Bảng xếp hạng", icon: Trophy },
     ],
   },
