@@ -8,9 +8,9 @@ import {
 } from "lucide-react";
 import { APP_NAV_SECTIONS } from "../config/nav";
 import { motion, AnimatePresence } from "motion/react";
-import { PricingModal } from "../components/PricingModal";
-import { ReferralModal } from "../components/ReferralModal";
-import { BrandLogo } from "../components/BrandLogo";
+import { PricingModal } from "../components/modals/PricingModal";
+import { ReferralModal } from "../components/modals/ReferralModal";
+import { BrandLogo } from "../components/layout/BrandLogo";
 import meService from "../../api/meService";
 import workspaceService from "../../api/workspaceService";
 import { getStoredUserProfile } from "../../api/authService";

@@ -8,8 +8,8 @@ import {
   Twitter, Linkedin, Target, Clock,
   Mail, Phone, MapPin, ExternalLink,
 } from "lucide-react";
-import { BrandLogo } from "../components/BrandLogo";
-import { PublicNavbar } from "../components/PublicNavbar";
+import { BrandLogo } from "../../components/layout/BrandLogo";
+import { PublicNavbar } from "../../components/layout/PublicNavbar";
 
 /* ─── Design Tokens ─── */
 const F    = "'Plus Jakarta Sans', Inter, sans-serif";

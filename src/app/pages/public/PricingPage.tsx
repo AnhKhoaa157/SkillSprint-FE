@@ -1,5 +1,5 @@
-import { PublicNavbar } from "../components/PublicNavbar";
-import { Footer } from "../components/Footer";
+import { PublicNavbar } from "../../components/layout/PublicNavbar";
+import { Footer } from "../../components/layout/Footer";
 import { CheckCircle, Target } from "lucide-react";
 import { motion } from "motion/react";
 

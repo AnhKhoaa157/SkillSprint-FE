@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import adminUserService, { AdminUserSummary } from "../../api/adminUserService";
+import adminUserService, { AdminUserSummary } from "../../../api/adminUserService";
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");

@@ -1,8 +1,8 @@
 import { motion } from "motion/react";
 import { ArrowLeft, Mail, MapPin, MessageSquare, Send } from "lucide-react";
 import { Link } from "react-router";
-import { PublicNavbar } from "../components/PublicNavbar";
-import { Footer } from "../components/Footer";
+import { PublicNavbar } from "../../components/layout/PublicNavbar";
+import { Footer } from "../../components/layout/Footer";
 
 export default function Contact() {
   return (

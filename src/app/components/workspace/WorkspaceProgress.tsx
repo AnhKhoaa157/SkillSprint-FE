@@ -14,16 +14,16 @@ import {
   BookOpen,
   CircleDashed,
   Sparkles,
+  PlayCircle,
 } from "lucide-react";
-import workspaceService, { type WorkspaceResponse } from "../../api/workspaceService";
-import calendarService from "../../api/calendarService";
+import workspaceService, { type WorkspaceResponse } from "../../../api/workspaceService";
 import progressService, {
   type ProgressCalendarTaskResponse,
   type ProgressCurrentStepResponse,
   type ProgressDashboardResponse,
   type RoadmapStatus,
   type RoadmapStepStatus,
-} from "../../api/progressService";
+} from "../../../api/progressService";
 
 type WorkspaceProgressProps = {
   workspaceId?: string;
@@ -108,6 +108,15 @@ function isTaskDone(task: ProgressCalendarTaskResponse): boolean {
   return (task.status || "").toUpperCase() === "COMPLETED";
 }
 
+function getStudyActionLabel(task: ProgressCalendarTaskResponse): string {
+  const normalized = (task.status || "").toUpperCase();
+  if (normalized === "IN_PROGRESS" || normalized === "PROCESSING") {
+    return "Tiếp tục";
+  }
+
+  return "Vào học";
+}
+
 function ProgressRing({ value }: { value: number }) {
   const clamped = Math.max(0, Math.min(100, value));
   const radius = 54;
@@ -159,14 +168,13 @@ function StatCard({ icon, label, value, hint }: { icon: ReactNode; label: string
   );
 }
 
-function TaskList({ title, count, tasks, emptyTitle, emptyHint, completingTaskId, onCompleteTask }: {
+function TaskList({ title, count, tasks, emptyTitle, emptyHint, onOpenTask }: {
   title: string;
   count: number;
   tasks: ProgressCalendarTaskResponse[];
   emptyTitle: string;
   emptyHint: string;
-  completingTaskId: string | null;
-  onCompleteTask: (taskId: string) => Promise<void>;
+  onOpenTask: (taskId: string) => void;
 }) {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
@@ -231,20 +239,21 @@ function TaskList({ title, count, tasks, emptyTitle, emptyHint, completingTaskId
                         </span>
                       )}
 
-                      {!done && (
+                      {done ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Đã hoàn thành
+                        </span>
+                      ) : (
                         <button
                           type="button"
-                          onClick={() => void onCompleteTask(task.taskId)}
-                          disabled={completingTaskId === task.taskId || isFutureTaskDate(task.taskDate)}
+                          onClick={() => onOpenTask(task.taskId)}
+                          disabled={isFutureTaskDate(task.taskDate)}
                           title={isFutureTaskDate(task.taskDate) ? "Chưa đến ngày học" : undefined}
-                          className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-700 ring-1 ring-emerald-200 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 font-semibold text-orange-700 ring-1 ring-orange-200 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {completingTaskId === task.taskId ? (
-                            <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                          )}
-                          Hoàn thành
+                          <PlayCircle className="h-3.5 w-3.5" />
+                          {getStudyActionLabel(task)}
                         </button>
                       )}
                     </div>
@@ -268,7 +277,6 @@ export default function WorkspaceProgress({ workspaceId, className }: WorkspaceP
   const [loadingDashboard, setLoadingDashboard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
-  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     setSelectedWorkspaceId(workspaceId ?? "");
@@ -342,21 +350,14 @@ export default function WorkspaceProgress({ workspaceId, className }: WorkspaceP
   const progressPercent = dashboard?.progressPercent ?? 0;
   const currentStep = dashboard?.currentStep ?? null;
 
-  const handleCompleteTask = async (taskId: string) => {
-    if (!selectedWorkspaceId || !taskId || completingTaskId) {
+  const openStudySession = (taskId: string) => {
+    if (!selectedWorkspaceId || !taskId) {
       return;
     }
 
-    setCompletingTaskId(taskId);
-
-    try {
-      await calendarService.completeCalendarTask(taskId);
-      setRefreshToken(value => value + 1);
-    } catch (err: any) {
-      setError(err?.message || "Không thể đánh dấu task đã hoàn thành");
-    } finally {
-      setCompletingTaskId(null);
-    }
+    navigate("/app/learning/course", {
+      state: { taskId },
+    });
   };
 
   const isRoadmapMissing = Boolean(error && /roadmap/i.test(error));
@@ -548,8 +549,7 @@ export default function WorkspaceProgress({ workspaceId, className }: WorkspaceP
             tasks={dashboard?.todayTasks ?? []}
             emptyTitle="Không có task nào cho hôm nay"
             emptyHint="Bạn đang theo đúng kế hoạch. Hãy giữ nhịp học đều đặn nhé."
-            completingTaskId={completingTaskId}
-            onCompleteTask={handleCompleteTask}
+            onOpenTask={openStudySession}
           />
           <TaskList
             title="Overdue Tasks"
@@ -557,8 +557,7 @@ export default function WorkspaceProgress({ workspaceId, className }: WorkspaceP
             tasks={dashboard?.overdueTasks ?? []}
             emptyTitle="Không có task quá hạn"
             emptyHint="Rất tốt. Không có task nào cần xử lý gấp ở thời điểm này."
-            completingTaskId={completingTaskId}
-            onCompleteTask={handleCompleteTask}
+            onOpenTask={openStudySession}
           />
         </section>
       </div>

@@ -2,9 +2,9 @@ import { useEffect, useState, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ArrowLeft, Check } from "lucide-react";
-import { RegistrationSuccessModal } from "../components/RegistrationSuccessModal";
-import { BrandLogo } from "../components/BrandLogo";
-import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens, getPostLoginPath } from "../../api/authService";
+import { RegistrationSuccessModal } from "../../components/modals/RegistrationSuccessModal";
+import { BrandLogo } from "../../components/layout/BrandLogo";
+import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens, getPostLoginPath } from "../../../api/authService";
 
 /* ─── Tokens ─── */
 const F   = "'Inter','Plus Jakarta Sans',sans-serif";

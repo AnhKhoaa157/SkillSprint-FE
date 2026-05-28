@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
-import roadmapService, { RoadmapResponse, RoadmapResource, RoadmapStep } from "../../api/roadmapService";
+import roadmapService, { RoadmapResponse, RoadmapResource, RoadmapStep } from "../../../api/roadmapService";
+import calendarService, { type CalendarTaskResponse } from "../../../api/calendarService";
 import {
   ArrowLeft,
   ArrowRight,
   BookOpenCheck,
   CircleHelp,
+  CalendarDays,
   Clock3,
   ExternalLink,
   FileText,
@@ -118,6 +120,27 @@ function getStepSummary(step: RoadmapStep): string {
   return toText(step.description) || toText(step.summary) || "Nội dung đang được chuẩn hoá từ cấu trúc đã xác nhận.";
 }
 
+function getStepKey(step: RoadmapStep): string | null {
+  return toText(step.stepId) || toText(step.id) || toText(step._id) || null;
+}
+
+function formatTaskDate(taskDate: string | null | undefined): string {
+  if (!taskDate) {
+    return "";
+  }
+
+  const parsed = new Date(taskDate);
+  if (Number.isNaN(parsed.getTime())) {
+    return taskDate;
+  }
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(parsed);
+}
+
 function getProgressPercent(roadmapData: RoadmapResponse | null): number {
   if (!roadmapData) return 0;
   const status = (toText(roadmapData.status) || "").toUpperCase();
@@ -150,6 +173,7 @@ export default function Roadmap() {
   const navigate = useNavigate();
   const navigationRoadmap = (location.state as { roadmap?: RoadmapResponse } | null)?.roadmap ?? null;
   const [roadmapData, setRoadmapData] = useState<RoadmapResponse | null>(navigationRoadmap);
+  const [tasks, setTasks] = useState<CalendarTaskResponse[]>([]);
   const [loading, setLoading] = useState(!navigationRoadmap);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -165,10 +189,11 @@ export default function Roadmap() {
   useEffect(() => {
     let mounted = true;
 
-    const loadRoadmap = async () => {
+    const loadRoadmapAndTasks = async () => {
       if (!workspaceId) {
         if (mounted) {
           setRoadmapData(null);
+          setTasks([]);
           setError("Không tìm thấy workspace");
           setLoading(false);
         }
@@ -179,20 +204,37 @@ export default function Roadmap() {
       setError(null);
 
       try {
-        const data = await roadmapService.getRoadmap(workspaceId);
+        const [roadmapResult, taskResult] = await Promise.allSettled([
+          roadmapService.getRoadmap(workspaceId),
+          calendarService.getCalendarTasks(workspaceId),
+        ]);
+
         if (!mounted) return;
-        setRoadmapData(data);
+
+        if (roadmapResult.status === "fulfilled") {
+          setRoadmapData(roadmapResult.value);
+        } else {
+          setRoadmapData(null);
+          setError(roadmapResult.reason?.message || "Không thể tải lộ trình");
+        }
+
+        if (taskResult.status === "fulfilled") {
+          setTasks(taskResult.value || []);
+        } else {
+          setTasks([]);
+        }
         // No auto-select — roadmap starts perfectly centered
       } catch (err: any) {
         if (!mounted) return;
         setRoadmapData(null);
+        setTasks([]);
         setError(err?.message || "Không thể tải lộ trình");
       } finally {
         if (mounted) setLoading(false);
       }
     };
 
-    void loadRoadmap();
+    void loadRoadmapAndTasks();
     return () => { mounted = false; };
   }, [workspaceId]);
 
@@ -233,6 +275,9 @@ export default function Roadmap() {
     const durationMinutes = getStepDurationMinutes(step);
     const stepResources = step.resources || [];
     const stepSummary = getStepSummary(step);
+    const matchedTask = tasks.find((task) => task.roadmapStepId === getStepKey(step));
+    const matchedTaskDate = matchedTask?.taskDate ? formatTaskDate(matchedTask.taskDate) : "";
+    const studyNowDisabled = !matchedTask;
 
     // Placeholder for step completion percentage
     const stepCompletionPercent = Math.min(100, 20 + idx * 15);
@@ -268,6 +313,34 @@ export default function Roadmap() {
           </button>
         </div>
 
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {matchedTask ? (
+            <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Lịch học: {matchedTaskDate}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Chưa có lịch học
+            </span>
+          )}
+
+          <button
+            type="button"
+            disabled={studyNowDisabled}
+            onClick={() => {
+              if (!matchedTask) return;
+              navigate("/app/learning/course", { state: { taskId: matchedTask.taskId } });
+            }}
+            title={matchedTask ? "Mở bài học" : "Chưa có lịch học"}
+            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <PlayCircle className="h-3.5 w-3.5" />
+            Vào học
+          </button>
+        </div>
+
         {/* Progress bar for the selected step */}
         <div className="mb-4">
           <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
@@ -284,7 +357,7 @@ export default function Roadmap() {
 
         {/* Scrollable body: description + resources */}
         <div className="flex-1 overflow-y-auto custom-scrollbar text-xs text-slate-600 leading-relaxed space-y-4">
-          <p className="text-sm text-slate-700 leading-[1.7]">
+          <p className="text-sm text-slate-700 leading-[1.7] line-clamp-3" title={stepSummary}>
             {stepSummary}
           </p>
 
@@ -538,8 +611,11 @@ export default function Roadmap() {
               {steps.map((step, index) => {
                 const tone = getStepTone(step, index, steps.length);
                 const isActive = selectedStep?.id === step.id;
-                const stepId = toText(step.id) || `step-${index}`;
+                const stepId = getStepKey(step) || `step-${index}`;
                 const isLeft = index % 2 === 0; // For alternating text alignment
+                const matchedTask = tasks.find((task) => task.roadmapStepId === stepId);
+                const matchedTaskDate = matchedTask?.taskDate ? formatTaskDate(matchedTask.taskDate) : "";
+                const stepSummary = getStepSummary(step);
 
                 // Placeholder for step completion
                 const stepProgress = Math.min(100, 10 + index * 20);
@@ -606,9 +682,39 @@ export default function Roadmap() {
                       </div>
 
                       {/* Node Title */}
-                      <h4 className={`text-sm font-bold text-slate-800 group-hover:text-orange-600 transition-colors duration-200 max-w-[150px] ${isLeft ? "pr-2" : "pl-2"}`}>
+                      <h4 className={`text-sm font-bold text-slate-800 group-hover:text-orange-600 transition-colors duration-200 max-w-[150px] ${isLeft ? "pr-2" : "pl-2"}`} title={toText(step.title) || `Module ${index + 1}`}>
                         {toText(step.title) || `Module ${index + 1}`}
                       </h4>
+                      <p className={`mt-1 max-w-[180px] text-xs leading-5 text-slate-500 line-clamp-2 ${isLeft ? "pr-2 text-right" : "pl-2 text-left"}`} title={stepSummary}>
+                        {stepSummary}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                        {matchedTask ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold text-sky-700 ring-1 ring-sky-200">
+                            <CalendarDays className="h-3 w-3" />
+                            Lịch học: {matchedTaskDate}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-500 ring-1 ring-slate-200">
+                            <CalendarDays className="h-3 w-3" />
+                            Chưa có lịch học
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          disabled={!matchedTask}
+                          title={matchedTask ? "Mở bài học" : "Chưa có lịch học"}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (!matchedTask) return;
+                            navigate("/app/learning/course", { state: { taskId: matchedTask.taskId } });
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <PlayCircle className="h-3 w-3" />
+                          Vào học
+                        </button>
+                      </div>
                       <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
                         <span>{getStepDurationMinutes(step) ? `${getStepDurationMinutes(step)} phút` : "Tự điều chỉnh"}</span>
                         <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0 text-[9px] font-bold uppercase tracking-[0.15em] ${tone.dotClass}`}>

@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, ChevronLeft, ChevronRight, Clock3, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { fetchOnboardingProfile, upsertOnboardingProfile, type OnboardingProfileResponse } from "../../api/onboardingService";
+import { fetchOnboardingProfile, upsertOnboardingProfile, type OnboardingProfileResponse } from "../../../api/onboardingService";
 
 const dayOptions = [
   { label: "T2", value: "MONDAY" },

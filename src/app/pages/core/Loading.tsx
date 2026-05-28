@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { BrandLogo } from "../components/BrandLogo";
+import { BrandLogo } from "../../components/layout/BrandLogo";
 
 export default function LoadingPage() {
   const location = useLocation();
