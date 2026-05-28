@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#071129" />
+      <stop offset="50%" stop-color="#0f2438" />
+      <stop offset="100%" stop-color="#0b1220" />
+    </linearGradient>
+    <linearGradient id="og" x1="0" x2="1">
+      <stop offset="0%" stop-color="#FF6B00" />
+      <stop offset="100%" stop-color="#FF9A3D" />
+    </linearGradient>
+    <filter id="grain" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence baseFrequency="0.8" numOctaves="1" stitchTiles="stitch" result="noise" />
+      <feColorMatrix type="saturate" values="0" />
+      <feBlend in="SourceGraphic" in2="noise" mode="overlay" />
+    </filter>
+  </defs>
+  <rect width="1200" height="1600" fill="url(#g)" />
+  <g transform="translate(80,140)">
+    <g opacity="0.14">
+      <circle cx="900" cy="200" r="320" fill="#FF6B00" />
+      <circle cx="300" cy="1200" r="420" fill="#2D6BFF" />
+    </g>
+    <g transform="translate(40,40)" filter="url(#grain)">
+      <rect x="0" y="0" width="1080" height="1420" rx="24" fill="none" />
+    </g>
+    <g transform="translate(60,120)">
+      <text x="0" y="0" font-family="Inter, Helvetica, Arial" font-size="40" fill="#FFFFFF" font-weight="800">Biến kỹ năng thành</text>
+      <text x="0" y="62" font-family="Inter, Helvetica, Arial" font-size="56" fill="url(#og)" font-weight="900">cơ hội nghề nghiệp</text>
+      <rect x="0" y="110" width="360" height="4" rx="2" fill="url(#og)" opacity="0.95" />
+      <g transform="translate(0,170)" fill="#CBD5E1" font-size="20">
+        <text x="0" y="0">• Lộ trình học cá nhân hóa bằng AI</text>
+        <text x="0" y="34">• Phân tích khoảng trống kỹ năng</text>
+        <text x="0" y="68">• Tối ưu hồ sơ nghề nghiệp</text>
+        <text x="0" y="102">• Đánh giá kỹ năng</text>
+      </g>
+    </g>
+  </g>
+</svg>

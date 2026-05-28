@@ -1,5 +1,13 @@
-import { DEFAULT_USER_PROFILE, MOCK_STORAGE_KEYS, writeStorage } from "./mockDb";
-import { getStoredAuthSession, getStoredUserProfile, type StoredUserProfile } from "./authService";
+const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
+
+type ApiResponse<T> = {
+  success: boolean;
+  code: number;
+  message: string;
+  data: T | null;
+};
+
+import { getStoredAuthSession } from "./authService";
 
 export type MeResponse = {
   userId: string;
@@ -16,67 +24,51 @@ export type UpdateMeRequest = {
   fullName: string;
 };
 
-function splitName(fullName: string): { firstName: string; lastName: string } {
-  const normalized = fullName.trim().replace(/\s+/g, " ");
-  if (!normalized) {
-    return { firstName: "", lastName: "" };
+async function requestJson<T>(path: string, opts: RequestInit = {}): Promise<ApiResponse<T>> {
+  const session = getStoredAuthSession();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(opts.headers as Record<string, string> || {}),
+  };
+
+  if (session?.accessToken) {
+    headers["Authorization"] = `Bearer ${session.accessToken}`;
   }
 
-  const parts = normalized.split(" ");
-  if (parts.length === 1) {
-    return { firstName: parts[0], lastName: "" };
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers,
+  });
+
+  const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
+
+  if (!response.ok) {
+    const error: any = new Error(payload?.message || `Server error: ${response.status}`);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
   }
 
-  return {
-    firstName: parts[0],
-    lastName: parts.slice(1).join(" "),
-  };
-}
+  if (!payload) {
+    throw new Error("Invalid response from server");
+  }
 
-function toMeResponse(profile: StoredUserProfile | null): MeResponse {
-  const current = profile ?? {
-    email: DEFAULT_USER_PROFILE.email,
-    fullName: DEFAULT_USER_PROFILE.fullName,
-    firstName: DEFAULT_USER_PROFILE.fullName.split(" ")[0] ?? "",
-    lastName: DEFAULT_USER_PROFILE.fullName.split(" ").slice(1).join(" "),
-    role: DEFAULT_USER_PROFILE.roles?.[0] ?? "LEARNER",
-  };
-
-  return {
-    userId: DEFAULT_USER_PROFILE.userId,
-    email: current.email,
-    emailVerified: true,
-    fullName: current.fullName,
-    avatarUrl: DEFAULT_USER_PROFILE.avatarUrl,
-    timeZone: DEFAULT_USER_PROFILE.timeZone,
-    status: DEFAULT_USER_PROFILE.status,
-    roles: [current.role ?? "LEARNER"],
-  };
+  return payload;
 }
 
 export async function getMe(): Promise<MeResponse> {
-  const session = getStoredAuthSession();
-  const profile = getStoredUserProfile();
-
-  if (!session && !profile) {
-    return toMeResponse(null);
-  }
-
-  return toMeResponse(profile);
+  const res = await requestJson<MeResponse>("/api/me", { method: "GET" });
+  if (!res.data) throw new Error(res.message || "Fetch profile failed");
+  return res.data;
 }
 
 export async function updateMe(req: UpdateMeRequest): Promise<MeResponse> {
-  const profile = getStoredUserProfile();
-  const nextProfile: StoredUserProfile = {
-    email: profile?.email ?? DEFAULT_USER_PROFILE.email,
-    fullName: req.fullName.trim(),
-    firstName: splitName(req.fullName).firstName,
-    lastName: splitName(req.fullName).lastName,
-    role: profile?.role ?? DEFAULT_USER_PROFILE.roles?.[0] ?? "LEARNER",
-  };
-
-  writeStorage(MOCK_STORAGE_KEYS.userProfile, nextProfile);
-  return toMeResponse(nextProfile);
+  const res = await requestJson<MeResponse>("/api/me", {
+    method: "PATCH",
+    body: JSON.stringify(req),
+  });
+  if (!res.data) throw new Error(res.message || "Update profile failed");
+  return res.data;
 }
 
 export default { getMe, updateMe };

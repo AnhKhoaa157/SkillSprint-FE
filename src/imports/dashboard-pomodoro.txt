@@ -1,0 +1,63 @@
+1. Prompt: Giao diện Task & Pomodoro (Sạch sẽ như Notion/TickTick)
+Dành cho màn hình Dashboard chính (Gói Free), tập trung vào sự tối giản và đập vào mắt là vòng lặp Pomodoro.
+
+Context: Design the main dashboard for a student productivity web app named "SkillSprint".
+Style: Clean, minimalist, Light Mode. Highly inspired by Notion and TickTick. Lots of white space, soft shadows, and card-based design.
+
+Layout Requirements:
+
+Left Sidebar: Minimalist navigation menu. Menu items: Home, My Roadmap, Achievements, AI Mock Interview. At the bottom of the sidebar, add an eye-catching Upgrade Banner showing two tiers: "Basic: 89k VND/mo" and "Premium: 199k VND/course".
+
+Main Content (Left/Center): A clean, card-based "Today's Tasks" list. No clutter.
+
+Main Content (Right): A prominent, large Pomodoro timer widget. Show a glowing, animated countdown ring displaying "25:00". Below the timer, a bold "Start Focus" button.
+
+2. Prompt: Giao diện AI Roadmap (Gamification như Duolingo)
+Biến lộ trình học khô khan thành một bản đồ game cuốn hút để chốt sale gói 89k.
+
+Context: Design a gamified AI learning roadmap interface for a student app.
+Style: Playful, vibrant, Light Mode. Highly inspired by Duolingo's path UI and Coursera's milestones. Use soft rounded corners and bright primary colors (leaf green, sunny yellow, sky blue).
+
+Layout Requirements:
+
+Top Bar: Display a glowing "Fire Streak" counter (e.g., 12 days) and a "Coins/Gems" counter.
+
+The Roadmap: A vertical, winding path curving down the screen.
+
+Milestone Nodes: Place large, colorful circular buttons along the path.
+
+Passed nodes: Bright yellow with a glowing star icon.
+
+Failed/Retry nodes: Highlighted with a subtle red alert outline.
+
+Current node: Enlarged, pulsing, with a floating "Start Learning" tooltip.
+
+3. Prompt: Giao diện AI Mock Interview (Chân thực như ChatGPT Voice)
+Tạo cảm giác "áp lực phòng thi" chân thực cho tính năng vũ khí hạng nặng của gói 199k.
+
+Context: Design an AI Mock Interview screen for a career preparation app.
+Style: Immersive, modern, Light Mode. Inspired by the voice interface of ChatGPT Voice and Pi AI. Do not use a standard text chat format.
+
+Layout Requirements:
+
+Center Stage: A large, dynamic, animated voice wave or a glowing orb in the center of the screen, indicating the "AI HR Manager" is currently speaking and analyzing.
+
+Bottom Action Area: A massive, prominent microphone button with the text "Tap to Speak" or "Hold to Answer".
+
+Top Header: Simple text showing "Mock Interview: Frontend Developer" and a subtle recording timer (e.g., "04:12"). Keep the rest of the screen entirely empty and distraction-free to build a tense, realistic interview atmosphere.
+
+4. Prompt: Giao diện AI CV Builder (Chuyên nghiệp như Novoresume)
+Tính năng xịn nhất, yêu cầu chia đôi màn hình để thấy ngay kết quả biến đổi.
+
+Context: Design an AI-powered CV Builder web interface for students.
+Style: Professional, highly productive workspace, Light Mode. Inspired by Novoresume and Enhancv.
+
+Layout Requirements:
+
+Split-Screen Layout (50/50):
+
+Left Panel (AI Assistant): A clean chat interface where the AI prompts the user: "I see you just completed the React Roadmap. Let's add that to your CV!". Include input fields for the user to confirm their newly acquired skills.
+
+Right Panel (Live Preview): A real-time, high-fidelity preview of an ATS-friendly CV document (A4 paper aspect ratio). The UI should visually indicate that the CV is automatically updating and generating professional bullet points as the user chats on the left.
+
+Top Right: A premium "Export to PDF" button.

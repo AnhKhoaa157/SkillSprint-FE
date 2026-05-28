@@ -1,0 +1,64 @@
+Role: You are an Expert UI/UX Designer for B2C SaaS.
+
+Context: Design the "Paywall & Feature Lock" flow for SkillSprint. Show what happens when a Free Tier user tries to access a Premium feature.
+Style: Premium dark mode (slate-950), cloning the hyper-clean aesthetic of linear.app.
+
+Please generate a split-screen or 2-state UI:
+
+State 1: The Locked UI (The Teaser)
+
+Show the "Evidence Export" page.
+
+The main content (Radar charts, AI analytics) is blurred out or heavily faded (Glassmorphism blur effect).
+
+In the dead center, place a sleek floating card: "Unlock Advanced AI Analytics & CV Export."
+
+Add a padlock icon with a glowing purple accent.
+
+Button: "View Plans" (glowing gradient).
+
+State 2: The Checkout / Upgrade Modal
+
+A minimalist pop-up modal over the dark background.
+
+Header: "Upgrade to Student Freemium."
+
+Content: "For only 39.000 VNĐ/month, unlock personalized AI roadmaps, deep skill gap detection, and unlimited sprints."
+
+Payment UI Mockup: Show clean, minimalist mockups of local Vietnamese payment methods (a small MoMo logo, VNPay QR icon, and a generic Visa/Mastercard icon).
+
+Action: Primary button "Confirm Payment". Subtext: "Cancel anytime."
+
+2. Prompt UI: Super Admin Dashboard (Dành cho nội bộ SkillSprint)
+Màn hình này để bạn bỏ vào slide Pitch Deck, khoe với thầy cô rằng nhóm em kiểm soát dữ liệu kinh doanh rất chặt chẽ theo đúng các KPI đã đề ra .
+
+Role: You are a Lead Product Designer for internal B2B tools.
+
+Context: Design the "Super Admin & Analytics Dashboard" for the SkillSprint founding team.
+Style: High-end, data-heavy, minimalist B2B dashboard. Clone the layout logic of vercel.com/analytics. Deep dark mode with subtle borders.
+
+Layout & Components to generate:
+
+1. Left Sidebar Navigation:
+
+Minimalist icons for: "Overview", "Users & Cohorts", "Financials", "B2B Partners".
+
+2. Top KPI Bar (The 90-Day Metrics):
+
+Show 4 clean metric cards with green upward trend lines.
+
+Card 1: "Activation Rate: 48%" (Target >45%).
+
+Card 2: "Week-4 Retention: 42%" (Target >35-40%).
+
+Card 3: "Paid Conversion: 7.2%" (Target >5%).
+
+Card 4: "ARPA: 51,000 VNĐ".
+
+3. Main Data Visualizations (Bento Box layout):
+
+Chart 1 (Unit Economics): A clean bar chart comparing CAC (40,000 VNĐ) vs LTV (408,000 VNĐ). Make the LTV bar prominently taller with a green gradient.
+
+Chart 2 (User Acquisition): A sleek line chart showing user growth over 30/60/90 day cohorts.
+
+Table Widget: "Recent B2B / Campus Activations" showing a clean list (e.g., FPT University - 500 active users - Status: Healthy).
