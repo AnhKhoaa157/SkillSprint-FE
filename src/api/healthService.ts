@@ -1,51 +1,67 @@
-type HealthStatus = "unknown" | "up" | "down";
-
-let currentStatus: HealthStatus = "unknown";
-let intervalId: number | null = null;
-const subscribers = new Set<(status: HealthStatus) => void>();
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export async function probeHealth(): Promise<{ status: string; service?: string; timestamp?: string }> {
-  return {
-    status: "up",
-    service: "skillsprint-prototype-mock",
-    timestamp: new Date().toISOString(),
-  };
+  const res = await fetch(`${API_BASE}/health`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('Health check returned non-JSON response');
+  }
+
+  let data: any;
+  try {
+    data = await res.json();
+  } catch (e) {
+    throw new Error('Failed to parse health JSON');
+  }
+
+  if (!data || typeof data !== 'object' || !('status' in data)) {
+    throw new Error('Invalid health payload');
+  }
+
+  return data;
 }
+
+type HealthStatus = 'unknown' | 'up' | 'down';
+
+let currentStatus: HealthStatus = 'unknown';
+let intervalId: number | null = null;
+const subscribers = new Set<(s: HealthStatus) => void>();
 
 async function updateOnce() {
   try {
     await probeHealth();
-    if (currentStatus !== "up") {
-      currentStatus = "up";
+    if (currentStatus !== 'up') {
+      currentStatus = 'up';
       subscribers.forEach((cb) => cb(currentStatus));
     }
-  } catch {
-    if (currentStatus !== "down") {
-      currentStatus = "down";
+  } catch (e) {
+    if (currentStatus !== 'down') {
+      currentStatus = 'down';
       subscribers.forEach((cb) => cb(currentStatus));
     }
   }
 }
 
 function startPolling() {
-  if (intervalId != null) {
-    return;
-  }
-
-  void updateOnce();
+  if (intervalId != null) return;
+  // run immediately and then every 30s
+  updateOnce();
   intervalId = window.setInterval(updateOnce, 30000) as unknown as number;
 }
 
 function stopPollingIfUnused() {
   if (subscribers.size === 0 && intervalId != null) {
-    window.clearInterval(intervalId as unknown as number);
+    clearInterval(intervalId as unknown as number);
     intervalId = null;
-    currentStatus = "unknown";
+    currentStatus = 'unknown';
   }
 }
 
-export function subscribeHealth(cb: (status: HealthStatus) => void): () => void {
+export function subscribeHealth(cb: (s: HealthStatus) => void): () => void {
   subscribers.add(cb);
+  // notify immediately with current value
   cb(currentStatus);
   startPolling();
 

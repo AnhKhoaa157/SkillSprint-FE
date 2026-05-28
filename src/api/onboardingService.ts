@@ -1,10 +1,18 @@
-import { createId, MOCK_STORAGE_KEYS, nowIso, readStorage, writeStorage } from "./mockDb";
+const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
+
+type ApiResponse<T> = {
+  success: boolean;
+  code: number;
+  message: string;
+  data: T | null;
+};
+
 import { getStoredAuthSession } from "./authService";
 
 export type UpsertOnboardingProfileRequest = {
   targetGoal: string;
   studyHoursPerWeek?: number | null;
-  targetDeadline?: string | null;
+  targetDeadline?: string | null; // YYYY-MM-DD
   confidence: "HIGH" | "MEDIUM" | "LOW";
   preferredLanguage?: string | null;
   preferredDays?: string[] | null;
@@ -25,63 +33,43 @@ export type OnboardingProfileResponse = {
   updatedAt?: string | null;
 };
 
-type ApiResponse<T> = {
-  success: boolean;
-  code: number;
-  message: string;
-  data: T | null;
-};
-
-type OnboardingState = Record<string, OnboardingProfileResponse>;
-
-const KEY = MOCK_STORAGE_KEYS.onboarding;
-
-function readState(): OnboardingState {
-  return readStorage<OnboardingState>(KEY, {});
-}
-
-function writeState(state: OnboardingState): void {
-  writeStorage(KEY, state);
-}
-
-function buildResponse(profile: OnboardingProfileResponse | null): ApiResponse<OnboardingProfileResponse> {
-  if (!profile) {
-    return { success: false, code: 404, message: "Not found", data: null };
-  }
-
-  return { success: true, code: 200, message: "OK", data: profile };
-}
-
-export async function fetchOnboardingProfile(workspaceId: string): Promise<ApiResponse<OnboardingProfileResponse>> {
-  const state = readState();
-  return buildResponse(state[workspaceId] ?? null);
-}
-
-export async function upsertOnboardingProfile(workspaceId: string, body: UpsertOnboardingProfileRequest): Promise<ApiResponse<OnboardingProfileResponse>> {
+async function request<T>(path: string, opts: RequestInit = {}) {
   const session = getStoredAuthSession();
-  const state = readState();
-  const existing = state[workspaceId];
-  const now = nowIso();
-  const nextWorkspaceId = workspaceId || session?.accessToken || "default-workspace";
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(opts.headers as any || {}) };
+  if (session?.accessToken) headers["Authorization"] = `Bearer ${session.accessToken}`;
 
-  const next: OnboardingProfileResponse = {
-    profileId: existing?.profileId ?? createId("ONB"),
-    workspaceId: nextWorkspaceId,
-    targetGoal: body.targetGoal,
-    studyHoursPerWeek: body.studyHoursPerWeek ?? null,
-    targetDeadline: body.targetDeadline ?? null,
-    confidence: body.confidence,
-    preferredLanguage: body.preferredLanguage ?? null,
-    preferredDays: body.preferredDays ?? existing?.preferredDays ?? [],
-    preferredTimeSlots: body.preferredTimeSlots ?? existing?.preferredTimeSlots ?? [],
-    createdAt: existing?.createdAt ?? now,
-    updatedAt: now,
-  };
+  const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });
+  const payload = await res.json().catch(() => null) as ApiResponse<T> | null;
+  if (!res.ok) {
+    const err: any = new Error(payload?.message || `Server error ${res.status}`);
+    (err as any).status = res.status;
+    (err as any).payload = payload;
+    throw err;
+  }
+  return payload as ApiResponse<T>;
+}
 
-  state[nextWorkspaceId] = next;
-  writeState(state);
+export async function fetchOnboardingProfile(workspaceId: string) {
+  const session = getStoredAuthSession();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (session?.accessToken) headers["Authorization"] = `Bearer ${session.accessToken}`;
 
-  return { success: true, code: 200, message: "Saved", data: next };
+  const res = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/onboarding`, { method: "GET", headers });
+  const payload = await res.json().catch(() => null) as ApiResponse<OnboardingProfileResponse> | null;
+  if (res.status === 404) {
+    return { success: false, code: 404, message: "Not found", data: null } as ApiResponse<OnboardingProfileResponse>;
+  }
+  if (!res.ok) {
+    const err: any = new Error(payload?.message || `Server error ${res.status}`);
+    (err as any).status = res.status;
+    (err as any).payload = payload;
+    throw err;
+  }
+  return payload as ApiResponse<OnboardingProfileResponse>;
+}
+
+export async function upsertOnboardingProfile(workspaceId: string, body: UpsertOnboardingProfileRequest) {
+  return request<OnboardingProfileResponse>(`/api/workspaces/${workspaceId}/onboarding`, { method: "PUT", body: JSON.stringify(body) });
 }
 
 export default { fetchOnboardingProfile, upsertOnboardingProfile };

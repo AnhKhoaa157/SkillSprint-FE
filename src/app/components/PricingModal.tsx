@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { X, Check, ShieldCheck, ChevronRight, Zap, CreditCard, Smartphone, Star, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { X, Check, ShieldCheck, ChevronRight, Zap, CreditCard, Smartphone, Star } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 const F = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -9,7 +9,6 @@ interface PricingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (plan: "builder" | "premium") => void;
-  initialPlan?: "builder" | "premium";
 }
 
 /* ─── Reusable dark feature row ─── */
@@ -31,21 +30,12 @@ function DarkFeature({ text, color="rgba(255,255,255,0.75)", check="default", di
   );
 }
 
-export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premium" }: PricingModalProps) {
-  const [step,          setStep]          = useState<"pricing"|"checkout"|"success">("pricing");
+export function PricingModal({ isOpen, onClose, onSuccess }: PricingModalProps) {
+  const [step,          setStep]          = useState<"pricing"|"checkout">("pricing");
   const [selectedPlan,  setSelectedPlan]  = useState<"builder"|"premium">("premium");
   const [billingCycle,  setBillingCycle]  = useState<"monthly"|"yearly">("monthly");
   const [paymentMethod, setPaymentMethod] = useState<"momo"|"vnpay"|"card">("momo");
   const [paying, setPaying] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setStep("pricing");
-      setSelectedPlan(initialPlan);
-      setPaymentMethod("momo");
-      setPaying(false);
-    }
-  }, [isOpen, initialPlan]);
 
   if (!isOpen) return null;
 
@@ -60,16 +50,9 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     setPaying(true);
     setTimeout(() => {
       onSuccess?.(selectedPlan);
-      setPaying(false);
-      setStep("success");
+      resetAndClose();
     }, 1200);
   };
-
-  const paymentMethodLabel = paymentMethod === "momo"
-    ? "Ví MoMo"
-    : paymentMethod === "vnpay"
-      ? "VNPay"
-      : "Thẻ tín dụng/ghi nợ";
 
   return (
     <AnimatePresence>
@@ -91,7 +74,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
           onClick={e => e.stopPropagation()}
           style={{
             width:"100%",
-            maxWidth: step==="pricing" ? "860px" : step==="checkout" ? "820px" : "560px",
+            maxWidth: step==="pricing" ? "860px" : "820px",
             background:"#111115",
             borderRadius:"18px",
             border:"1px solid rgba(255,255,255,0.08)",
@@ -429,8 +412,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                       boxShadow:paying ? "0 2px 8px rgba(255,107,0,0.2)" : "0 4px 20px rgba(255,107,0,0.38)",
                       opacity:paying ? 0.8 : 1,
                     }}>
-                    {paying ? <Loader2 size={17} className="animate-spin" /> : <ShieldCheck size={17}/>}
-                    {paying ? "Đang xử lý thanh toán..." : "Thanh toán an toàn"}
+                    <ShieldCheck size={17}/> {paying ? "Đang xử lý thanh toán..." : "Thanh toán an toàn"}
                   </motion.button>
                   <div style={{ textAlign:"center" }}>
                     <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.25)" }}>
@@ -438,88 +420,6 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                     </p>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* ══ SUCCESS STEP ══ */}
-          {step === "success" && (
-            <div
-              style={{
-                minHeight:"440px",
-                display:"flex",
-                flexDirection:"column",
-                alignItems:"center",
-                justifyContent:"center",
-                textAlign:"center",
-                padding:"40px 28px",
-                background:"radial-gradient(circle at top, rgba(255,107,0,0.2) 0%, rgba(17,17,21,1) 52%)",
-              }}
-            >
-              <div
-                style={{
-                  width:"78px",
-                  height:"78px",
-                  borderRadius:"50%",
-                  background:"rgba(255,107,0,0.18)",
-                  border:"1px solid rgba(255,107,0,0.45)",
-                  display:"flex",
-                  alignItems:"center",
-                  justifyContent:"center",
-                  marginBottom:"18px",
-                  boxShadow:"0 0 0 10px rgba(255,107,0,0.08)",
-                }}
-              >
-                <Check size={34} color={OG} strokeWidth={3} />
-              </div>
-
-              <p style={{ fontSize:"0.8rem", color:OG, fontWeight:800, letterSpacing:"0.12em", marginBottom:"8px" }}>
-                THANH TOÁN THÀNH CÔNG
-              </p>
-              <h3 style={{ fontSize:"1.75rem", fontWeight:900, color:"#fff", lineHeight:1.2, marginBottom:"10px" }}>
-                Chúc mừng bạn đã nâng cấp gói!
-              </h3>
-              <p style={{ fontSize:"0.92rem", color:"rgba(255,255,255,0.62)", maxWidth:"380px", lineHeight:1.6, marginBottom:"6px" }}>
-                Gói <span style={{ color:"#fff", fontWeight:700 }}>{selectedPlan === "premium" ? "Career Premium" : "Skill Builder"}</span> đã được kích hoạt.
-              </p>
-              <p style={{ fontSize:"0.82rem", color:"rgba(255,255,255,0.42)", marginBottom:"26px" }}>
-                Phương thức thanh toán: {paymentMethodLabel}
-              </p>
-
-              <div style={{ display:"flex", gap:"10px", width:"100%", maxWidth:"360px" }}>
-                <button
-                  onClick={resetAndClose}
-                  style={{
-                    flex:1,
-                    padding:"12px",
-                    borderRadius:"10px",
-                    border:"1px solid rgba(255,255,255,0.18)",
-                    background:"transparent",
-                    color:"rgba(255,255,255,0.88)",
-                    fontFamily:F,
-                    fontWeight:700,
-                    cursor:"pointer",
-                  }}
-                >
-                  Đóng
-                </button>
-                <button
-                  onClick={resetAndClose}
-                  style={{
-                    flex:1,
-                    padding:"12px",
-                    borderRadius:"10px",
-                    border:"none",
-                    background:OG,
-                    color:"#fff",
-                    fontFamily:F,
-                    fontWeight:700,
-                    cursor:"pointer",
-                    boxShadow:"0 6px 22px rgba(255,107,0,0.38)",
-                  }}
-                >
-                  Bắt đầu học ngay
-                </button>
               </div>
             </div>
           )}

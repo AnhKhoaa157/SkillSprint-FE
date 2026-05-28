@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   FileText, UploadCloud, Sparkles, CheckCircle2,
@@ -29,30 +29,30 @@ const card: React.CSSProperties = {
 
 /* ─── Data ─── */
 const EXAMS = [
-  { name: "Bài kiểm tra 1", week: "Tuần 3", color: "#3B82F6", bg: "#EFF6FF", final: false },
-  { name: "Giữa kỳ",        week: "Tuần 5", color: OG,        bg: OGL,       final: false },
-  { name: "Bài kiểm tra 2", week: "Tuần 6", color: "#8B5CF6", bg: "#F5F3FF", final: false },
-  { name: "Thi cuối kỳ",    week: "Tuần 8", color: "#DC2626", bg: "#FEF2F2", final: true  },
+  { name: "Quiz 1",     week: "W3", color: "#3B82F6", bg: "#EFF6FF", final: false },
+  { name: "Midterm",    week: "W5", color: OG,        bg: OGL,       final: false },
+  { name: "Quiz 2",     week: "W6", color: "#8B5CF6", bg: "#F5F3FF", final: false },
+  { name: "Final Exam", week: "W8", color: "#DC2626", bg: "#FEF2F2", final: true  },
 ];
 
 const TOPICS = [
-  { n: 1, title: "Giới thiệu học phần và tổng quan",   week: "Tuần 1",   tag: "Nền tảng", tC: "#3B82F6", tB: "#EFF6FF" },
-  { n: 2, title: "Kiểu dữ liệu và biến cốt lõi",       week: "Tuần 2",   tag: "Nền tảng", tC: "#3B82F6", tB: "#EFF6FF" },
-  { n: 3, title: "Cơ bản về giải thuật và độ phức tạp", week: "Tuần 3",   tag: "Nền tảng", tC: "#3B82F6", tB: "#EFF6FF" },
-  { n: 4, title: "Kỹ thuật sắp xếp và tìm kiếm",       week: "Tuần 4",   tag: "Cốt lõi",  tC: OG,        tB: OGL       },
-  { n: 5, title: "Lý thuyết đồ thị và duyệt đồ thị",    week: "Tuần 5-6", tag: "Cốt lõi",  tC: OG,        tB: OGL       },
+  { n: 1, title: "Course Introduction & Overview",   week: "Week 1",   tag: "Foundation", tC: "#3B82F6", tB: "#EFF6FF" },
+  { n: 2, title: "Core Data Types & Variables",      week: "Week 2",   tag: "Foundation", tC: "#3B82F6", tB: "#EFF6FF" },
+  { n: 3, title: "Algorithm Basics & Complexity",    week: "Week 3",   tag: "Foundation", tC: "#3B82F6", tB: "#EFF6FF" },
+  { n: 4, title: "Sorting & Searching Techniques",   week: "Week 4",   tag: "Core",       tC: OG,        tB: OGL       },
+  { n: 5, title: "Graph Theory & Traversal Methods", week: "Week 5–6", tag: "Core",       tC: OG,        tB: OGL       },
 ];
 
 /* ─── Subject options ─── */
 const SUBJECTS = [
-  "Cấu trúc dữ liệu & Giải thuật (CS301)",
-  "Nền tảng phát triển Web",
-  "Nguyên lý Kỹ thuật phần mềm",
-  "Hệ quản trị cơ sở dữ liệu",
-  "Hệ điều hành",
-  "Mạng máy tính",
-  "Trí tuệ nhân tạo",
-  "Nhập môn Học máy",
+  "Data Structures & Algorithms (CS301)",
+  "Web Development Fundamentals",
+  "Software Engineering Principles",
+  "Database Management Systems",
+  "Operating Systems",
+  "Computer Networks",
+  "Artificial Intelligence",
+  "Machine Learning Basics",
 ];
 
 /* ════════════════════════════════════════════
@@ -81,7 +81,7 @@ function SubjectDeadlineRow() {
           fontSize: "0.72rem", color: "#374151", marginBottom: 7,
           letterSpacing: "0.02em",
         }}>
-          Chọn môn học
+          Select Subject
         </label>
         <div style={{ position: "relative" }}>
           <button
@@ -98,7 +98,7 @@ function SubjectDeadlineRow() {
             }}
           >
             <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {subject || "Chọn môn học của bạn..."}
+              {subject || "Choose your course subject…"}
             </span>
             <ChevronDown
               size={15} color={subOpen ? OG : T3}
@@ -160,7 +160,7 @@ function SubjectDeadlineRow() {
           fontSize: "0.72rem", color: "#374151", marginBottom: 7,
           letterSpacing: "0.02em",
         }}>
-          Ngày thi / Hạn mục tiêu
+          Exam Date / Target Deadline
         </label>
         <div style={{ position: "relative" }}>
           {/* Calendar icon */}
@@ -206,7 +206,7 @@ function SubjectDeadlineRow() {
             style={{ fontFamily: F, fontSize: "0.67rem", color: OG, fontWeight: 600, marginTop: 5, display: "flex", alignItems: "center", gap: 4 }}
           >
             <CheckCircle2 size={11} color={OG} />
-            Đã đặt hạn - AI sẽ lập kế hoạch ngược từ ngày này
+            Deadline set — AI will plan backwards from this date
           </motion.p>
         )}
       </div>
@@ -228,7 +228,7 @@ function SubjectDeadlineRow() {
         }}
       >
         <Sparkles size={13} />
-        Áp dụng
+        Apply
       </motion.button>
     </div>
   );
@@ -240,34 +240,9 @@ function SubjectDeadlineRow() {
 function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: boolean }) {
   const [tab, setTab]       = useState<"paste" | "upload">("paste");
   const [text, setText]     = useState("");
-  const [uploadedFileName, setUploadedFileName] = useState("");
   const [loading, setLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const canAnalyse = tab === "paste" ? text.trim().length > 0 : uploadedFileName.length > 0;
-
-  const handleFileSelect = (file?: File) => {
-    if (!file) return;
-
-    setUploadedFileName(file.name);
-
-    // Auto-fill textarea content for text files to improve analysis quality.
-    if (file.type.includes("text") || file.name.toLowerCase().endsWith(".txt")) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          setText(reader.result.slice(0, 50000));
-        }
-      };
-      reader.readAsText(file);
-      return;
-    }
-
-    setText(`[Đã tải lên tệp: ${file.name}]`);
-  };
 
   const handleAnalyse = () => {
-    if (!canAnalyse) return;
     setLoading(true);
     setTimeout(() => { setLoading(false); onAnalyse(); }, 2000);
   };
@@ -294,10 +269,10 @@ function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: b
             </div>
             <div>
               <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.95rem", color: T1, lineHeight: 1 }}>
-                Nội dung syllabus
+                Syllabus Content
               </p>
               <p style={{ fontFamily: F, fontSize: "0.72rem", color: T3, marginTop: 3 }}>
-                Dán hoặc tải lên syllabus môn học của bạn
+                Paste or upload your university course syllabus
               </p>
             </div>
           </div>
@@ -313,7 +288,7 @@ function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: b
             >
               <CheckCircle2 size={11} color="#16A34A" />
               <span style={{ fontFamily: F, fontSize: "0.68rem", fontWeight: 700, color: "#16A34A" }}>
-                Đã phân tích
+                Analysed
               </span>
             </motion.div>
           )}
@@ -340,8 +315,8 @@ function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: b
               }}
             >
               {t === "paste"
-                ? <><FileText size={13} />Dán văn bản</>
-                : <><UploadCloud size={13} />Tải tệp lên</>
+                ? <><FileText size={13} />Paste text</>
+                : <><UploadCloud size={13} />Upload file</>
               }
             </button>
           ))}
@@ -354,7 +329,7 @@ function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: b
           <textarea
             value={text}
             onChange={e => setText(e.target.value)}
-            placeholder="Dán toàn bộ syllabus môn học của bạn..."
+            placeholder="Paste your syllabus content here…"
             style={{
               width: "100%",
               height: 260,
@@ -382,17 +357,6 @@ function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: b
           />
         ) : (
           <div
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              (e.currentTarget as HTMLDivElement).style.borderColor = OG;
-              (e.currentTarget as HTMLDivElement).style.background = OGL;
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              const file = e.dataTransfer.files?.[0];
-              handleFileSelect(file);
-            }}
             style={{
               height: 260,
               borderRadius: 10,
@@ -424,38 +388,20 @@ function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: b
             </div>
             <div style={{ textAlign: "center" }}>
               <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.9rem", color: T1 }}>
-                Tải syllabus lên
+                Upload Syllabus PDF
               </p>
               <p style={{ fontFamily: F, fontSize: "0.75rem", color: T3, marginTop: 4 }}>
-                Kéo thả hoặc bấm để chọn tệp - PDF, DOC, DOCX, TXT
+                Drag & drop or click to browse · PDF, DOCX
               </p>
-              {uploadedFileName && (
-                <p style={{ fontFamily: F, fontSize: "0.74rem", color: OG, marginTop: 6, fontWeight: 600 }}>
-                  Đã chọn: {uploadedFileName}
-                </p>
-              )}
             </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                fileInputRef.current?.click();
-              }}
-              style={{
+            <button style={{
               padding: "8px 18px", borderRadius: 8,
               border: `1.5px solid ${BDR}`,
               background: WH, cursor: "pointer",
               fontFamily: F, fontWeight: 600, fontSize: "0.82rem", color: T2,
             }}>
-              Chọn tệp
+              Browse Files
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx,.txt"
-              style={{ display: "none" }}
-              onChange={(e) => handleFileSelect(e.target.files?.[0])}
-            />
           </div>
         )}
       </div>
@@ -467,9 +413,7 @@ function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: b
         gap: 12,
       }}>
         <span style={{ fontFamily: F, fontSize: "0.71rem", color: T3 }}>
-          {tab === "paste"
-            ? `${text.length.toLocaleString()} / 50.000 ký tự`
-            : (uploadedFileName ? `Đã tải: ${uploadedFileName}` : "Chưa có tệp nào")}
+          {text.length.toLocaleString()} / 50,000 chars
         </span>
         <div style={{ display: "flex", gap: 8 }}>
           {analysed && (
@@ -483,28 +427,28 @@ function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: b
                 display: "flex", alignItems: "center", gap: 6,
               }}
             >
-              <RotateCcw size={13} /> Làm mới
+              <RotateCcw size={13} /> Reset
             </button>
           )}
           <motion.button
             whileHover={{ scale: 1.025 }}
             whileTap={{ scale: 0.975 }}
             onClick={handleAnalyse}
-            disabled={loading || !canAnalyse}
+            disabled={loading || (!text && tab === "paste")}
             style={{
               padding: "9px 20px", borderRadius: 9,
               border: "none", cursor: loading ? "default" : "pointer",
               background: analysed
                 ? "#22C55E"
-                : loading || !canAnalyse
+                : loading || (!text && tab === "paste")
                   ? "#D1D5DB"
                   : OG,
-              color: loading || !canAnalyse ? T3 : WH,
+              color: loading || (!text && tab === "paste") ? T3 : WH,
               fontFamily: F, fontWeight: 700, fontSize: "0.86rem",
               display: "flex", alignItems: "center", gap: 7,
               boxShadow: analysed
                 ? "0 4px 12px rgba(34,197,94,0.28)"
-                : loading || !canAnalyse
+                : loading || (!text && tab === "paste")
                   ? "none"
                   : "0 4px 14px rgba(255,107,0,0.30)",
               transition: "all 0.25s ease",
@@ -518,12 +462,12 @@ function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: b
                   borderTopColor: WH, borderRadius: "50%",
                   animation: "syl-spin 0.7s linear infinite",
                 }} />
-                Đang phân tích...
+                Analysing…
               </>
             ) : analysed ? (
-              <><CheckCircle2 size={14} /> Phân tích hoàn tất</>
+              <><CheckCircle2 size={14} /> Analysis Complete</>
             ) : (
-              <><Sparkles size={14} /> Phân tích bằng AI</>
+              <><Sparkles size={14} /> Analyse with AI</>
             )}
           </motion.button>
         </div>
@@ -537,9 +481,9 @@ function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: b
 ════════════════════════════════════════════ */
 function SummaryCard() {
   const metrics = [
-    { num: "3", label: "Nền tảng", color: "#3B82F6", bg: "#EFF6FF" },
-    { num: "3", label: "Cốt lõi",  color: OG,        bg: OGL       },
-    { num: "2", label: "Nâng cao", color: "#8B5CF6", bg: "#F5F3FF" },
+    { num: "3", label: "Foundation", color: "#3B82F6", bg: "#EFF6FF" },
+    { num: "3", label: "Core",       color: OG,        bg: OGL       },
+    { num: "2", label: "Advanced",   color: "#8B5CF6", bg: "#F5F3FF" },
   ];
   return (
     <div style={card}>
@@ -559,10 +503,10 @@ function SummaryCard() {
             </div>
             <div>
               <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.88rem", color: T1, lineHeight: 1 }}>
-                Phân tích hoàn tất
+                Analysis complete
               </p>
               <p style={{ fontFamily: F, fontSize: "0.68rem", color: T3, marginTop: 3 }}>
-                Đã nhận diện 8 chủ đề - 4 cột mốc đánh giá
+                8 topics · 4 exams detected
               </p>
             </div>
           </div>
@@ -608,7 +552,7 @@ function SummaryCard() {
           }}
         >
           <CheckCircle2 size={14} />
-          Lưu và tạo lộ trình
+          Save &amp; Create Roadmap
         </motion.button>
       </div>
     </div>
@@ -629,7 +573,7 @@ function ExamsCard() {
             fontFamily: F, fontSize: "0.63rem", fontWeight: 700,
             color: T3, letterSpacing: "0.11em", textTransform: "uppercase",
           }}>
-            Bài thi và đánh giá
+            Exams &amp; Assessments
           </span>
         </div>
 
@@ -660,7 +604,7 @@ function ExamsCard() {
                     padding: "1px 6px", borderRadius: 99,
                     border: "1px solid #FCA5A5",
                     letterSpacing: "0.06em",
-                  }}>CUỐI KỲ</span>
+                  }}>FINAL</span>
                 )}
               </div>
               <span style={{
@@ -692,7 +636,7 @@ function TopicsCard() {
               fontFamily: F, fontSize: "0.63rem", fontWeight: 700,
               color: T3, letterSpacing: "0.11em", textTransform: "uppercase",
             }}>
-              Chủ đề đã phân tích
+              Analysed Topics
             </span>
           </div>
           <button style={{
@@ -701,7 +645,7 @@ function TopicsCard() {
             cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
             textDecoration: "underline", textUnderlineOffset: 2,
           }}>
-            <RotateCcw size={10} /> Xóa và nhập lại
+            <RotateCcw size={10} /> Clear &amp; Re-enter
           </button>
         </div>
 
@@ -760,7 +704,7 @@ function TopicsCard() {
             border: `1px dashed ${BDR}`, textAlign: "center",
           }}>
             <span style={{ fontFamily: F, fontSize: "0.70rem", color: T3, fontWeight: 500 }}>
-              + 3 chủ đề nữa - Cốt lõi &amp; Nâng cao
+              + 3 more topics — Core &amp; Advanced
             </span>
           </div>
         </div>
@@ -784,7 +728,15 @@ export default function SyllabusInput() {
     >
       <style>{`
         @keyframes syl-spin { to { transform: rotate(360deg); } }
-        textarea::placeholder { color: #9CA3AF; }
+        textarea { font-family: 'Inter', 'Plus Jakarta Sans', sans-serif; }
+        textarea::placeholder { 
+          color: #D1D5DB;
+          opacity: 1;
+          font-style: normal;
+        }
+        textarea::-webkit-input-placeholder { color: #D1D5DB; opacity: 1; }
+        textarea::-moz-placeholder { color: #D1D5DB; opacity: 1; }
+        textarea:-ms-input-placeholder { color: #D1D5DB; opacity: 1; }
         input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; position: absolute; width: 100%; height: 100%; cursor: pointer; }
         input[type="date"]::-webkit-inner-spin-button { display: none; }
       `}</style>
@@ -795,13 +747,13 @@ export default function SyllabusInput() {
           fontFamily: F, fontWeight: 800, fontSize: "1.55rem",
           color: T1, letterSpacing: "-0.035em", margin: 0, lineHeight: 1.2,
         }}>
-          Nhập syllabus 📑
+          Syllabus Input 📑
         </h1>
         <p style={{
           fontFamily: F, fontSize: "0.86rem", color: T2,
           marginTop: 6, lineHeight: 1.6,
         }}>
-          Môn học: <strong style={{ color: T1 }}>Chưa chọn</strong> - Dán hoặc tải syllabus lên để AI phân tích và tạo lộ trình học.
+          Subject: <strong style={{ color: T1 }}>PRJ301</strong> — Paste syllabus → AI will analyse and create your roadmap.
         </p>
       </div>
 
@@ -831,11 +783,11 @@ export default function SyllabusInput() {
             <Info size={16} color="#3B82F6" style={{ flexShrink: 0, marginTop: 1 }} />
             <div>
               <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.82rem", color: "#1D4ED8", marginBottom: 3 }}>
-                Mẹo
+                Tip
               </p>
               <p style={{ fontFamily: F, fontSize: "0.78rem", color: "#3B82F6", lineHeight: 1.6 }}>
-                Để có kết quả tốt nhất, hãy dán đầy đủ syllabus gồm chủ đề, chuẩn đầu ra và lịch kiểm tra.
-                Nên có kế hoạch theo từng tuần và mốc đánh giá để lộ trình chính xác hơn.
+                For best results, paste the full course syllabus including topics, learning outcomes, and exam schedules.
+                Include week-by-week breakdowns and assessment dates for maximum roadmap accuracy.
               </p>
             </div>
           </div>
@@ -868,9 +820,9 @@ export default function SyllabusInput() {
             >
               {/* Empty state placeholder cards */}
               {[
-                { h: 140, label: "Tóm tắt phân tích" },
-                { h: 172, label: "Bài thi và đánh giá" },
-                { h: 240, label: "Chủ đề đã phân tích" },
+                { h: 140, label: "Analysis Summary" },
+                { h: 172, label: "Exams & Assessments" },
+                { h: 240, label: "Analysed Topics" },
               ].map(p => (
                 <div key={p.label} style={{
                   ...card,
@@ -887,7 +839,7 @@ export default function SyllabusInput() {
                     {p.label}
                   </p>
                   <p style={{ fontFamily: F, fontSize: "0.70rem", color: T3, opacity: 0.7 }}>
-                    Sẽ hiển thị sau khi phân tích
+                    Appears after analysis
                   </p>
                 </div>
               ))}
@@ -925,7 +877,7 @@ export default function SyllabusInput() {
                   letterSpacing: "-0.02em",
                 }}
               >
-                Tạo lộ trình từ syllabus này
+                Create Roadmap from this Syllabus
                 <ArrowRight size={17} />
               </motion.button>
             </Link>
