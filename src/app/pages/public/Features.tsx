@@ -1,8 +1,8 @@
 import { motion } from "motion/react";
 import { Link } from "react-router";
 import { ArrowRight, Brain, CalendarClock, CheckCircle2, Clock3, FileText, Sparkles, Target } from "lucide-react";
-import { Footer } from "../components/Footer";
-import { PublicNavbar } from "../components/PublicNavbar";
+import { Footer } from "../../components/layout/Footer";
+import { PublicNavbar } from "../../components/layout/PublicNavbar";
 
 const featureGroups = [
   {

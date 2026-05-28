@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import healthService from "../../api/healthService";
-import { BrandLogo } from "../components/BrandLogo";
+import healthService from "../../../api/healthService";
+import { BrandLogo } from "../../components/layout/BrandLogo";
 
 type HistoryItem = { ts: string; payload: any; status: 'up' | 'down' | 'unknown' };
 
@@ -17,7 +17,8 @@ export default function AdminHealth() {
     // initial probe
     healthService.probeHealth().then((p) => {
       setLast(p);
-      setHistory((h) => [{ ts: p.timestamp || new Date().toISOString(), payload: p, status: (p.status === 'UP' ? 'up' : 'down') }, ...h].slice(0, 50));
+      const entry: HistoryItem = { ts: p.timestamp || new Date().toISOString(), payload: p, status: (p.status === 'UP' ? 'up' : 'down') };
+      setHistory((h) => [entry, ...h].slice(0, 50));
     }).catch(() => {});
     return () => off();
   }, []);
@@ -27,9 +28,11 @@ export default function AdminHealth() {
     try {
       const p = await healthService.probeHealth();
       setLast(p);
-      setHistory((h) => [{ ts: p.timestamp || new Date().toISOString(), payload: p, status: (p.status === 'UP' ? 'up' : 'down') }, ...h].slice(0, 50));
+      const entry: HistoryItem = { ts: p.timestamp || new Date().toISOString(), payload: p, status: (p.status === 'UP' ? 'up' : 'down') };
+      setHistory((h) => [entry, ...h].slice(0, 50));
     } catch (e) {
-      setHistory((h) => [{ ts: new Date().toISOString(), payload: { error: String(e) }, status: 'down' }, ...h].slice(0, 50));
+      const entry: HistoryItem = { ts: new Date().toISOString(), payload: { error: String(e) }, status: 'down' };
+      setHistory((h) => [entry, ...h].slice(0, 50));
       setStatus('down');
     } finally {
       setLoading(false);

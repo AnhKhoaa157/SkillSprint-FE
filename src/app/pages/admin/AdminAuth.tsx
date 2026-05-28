@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, Eye, EyeOff, Lock, Mail, ShieldCheck } from "lucide-react";
-import { BrandLogo } from "../components/BrandLogo";
-import { getPostLoginPath, isAdminRole, login, storeAuthTokens } from "../../api/authService";
+import { BrandLogo } from "../../components/layout/BrandLogo";
+import { getPostLoginPath, isAdminRole, login, storeAuthTokens } from "../../../api/authService";
 
 export default function AdminAuth() {
   const navigate = useNavigate();

@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { useState, useEffect } from "react";
 import { ExternalLink, Github, Linkedin, Mail, MapPin, Phone, Twitter } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
-import healthService from "../../api/healthService";
+import healthService from "../../../api/healthService";
 
 const footerLinks = {
     "Sản phẩm": [

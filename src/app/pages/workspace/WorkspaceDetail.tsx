@@ -1,14 +1,14 @@
-import OnboardingModal from "../components/OnboardingModal.tsx";
-import useOnboardingProfile from "../hooks/useOnboardingProfile";
+import OnboardingModal from "../../components/modals/OnboardingModal";
+import useOnboardingProfile from "../../hooks/useOnboardingProfile";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
-import LearningStructureDisplay from "../components/LearningStructureDisplay.tsx";
-import WorkspaceProgress from "../components/WorkspaceProgress";
+import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
+import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
 import { ArrowLeft, ArrowRight, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle, Copy, SlidersHorizontal, Check } from "lucide-react";
-import { getStoredAuthSession } from "../../api/authService";
-import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../api/materialService.ts";
-import roadmapService from "../../api/roadmapService";
+import { getStoredAuthSession } from "../../../api/authService";
+import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/materialService.ts";
+import roadmapService from "../../../api/roadmapService";
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
 

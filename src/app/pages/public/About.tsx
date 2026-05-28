@@ -1,8 +1,8 @@
 import { motion } from "motion/react";
 import { ArrowRight, CheckCircle2, Clock3, GraduationCap, Sparkles, Target } from "lucide-react";
 import { Link } from "react-router";
-import { PublicNavbar } from "../components/PublicNavbar";
-import { Footer } from "../components/Footer";
+import { PublicNavbar } from "../../components/layout/PublicNavbar";
+import { Footer } from "../../components/layout/Footer";
 
 export default function About() {
   return (

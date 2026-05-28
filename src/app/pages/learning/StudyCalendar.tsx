@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, Clock, LoaderCircle, RefreshCw, Sparkles, Check } from "lucide-react";
-import AIScheduleModal from "../components/AIScheduleModal";
-import workspaceService, { type WorkspaceResponse } from "../../api/workspaceService";
-import calendarService, { type CalendarTaskResponse, type GenerateCalendarRequest, type WeekDay } from "../../api/calendarService";
-import { useRoadmap } from "../hooks/useRoadmap";
-import { useCurrentDate } from "../hooks/useCurrentDate";
+import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, Clock, LoaderCircle, RefreshCw, Sparkles, Check, PlayCircle } from "lucide-react";
+import AIScheduleModal from "../../components/modals/AIScheduleModal";
+import workspaceService, { type WorkspaceResponse } from "../../../api/workspaceService";
+import calendarService, { type CalendarTaskResponse, type GenerateCalendarRequest, type WeekDay } from "../../../api/calendarService";
+import { useRoadmap } from "../../hooks/useRoadmap";
+import { useCurrentDate } from "../../hooks/useCurrentDate";
 import { useNavigate } from "react-router";
 
 const F = "'Plus Jakarta Sans', Inter, sans-serif";
@@ -76,7 +76,6 @@ export default function StudyCalendar() {
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [savingSchedule, setSavingSchedule] = useState(false);
-  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [calendarTasks, setCalendarTasks] = useState<CalendarTaskResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -181,22 +180,14 @@ export default function StudyCalendar() {
 
   const totalCompleted = calendarTasks.filter(task => String(task.status || "").toUpperCase() === "COMPLETED").length;
 
-  const handleCompleteTask = async (taskId: string) => {
-    if (!selectedWorkspaceId || !taskId || completingTaskId) {
+  const openStudySession = (taskId: string) => {
+    if (!taskId) {
       return;
     }
 
-    setCompletingTaskId(taskId);
-    setError(null);
-
-    try {
-      await calendarService.completeCalendarTask(taskId);
-      await reloadCalendarTasks();
-    } catch (err: any) {
-      setError(err?.message || "Không thể đánh dấu task đã hoàn thành");
-    } finally {
-      setCompletingTaskId(null);
-    }
+    navigate("/app/learning/course", {
+      state: { taskId },
+    });
   };
 
   const shiftMonth = (offset: number) => {
@@ -445,6 +436,9 @@ export default function StudyCalendar() {
 
             {selectedTasks.map(task => {
               const done = String(task.status || "").toUpperCase() === "COMPLETED";
+              const actionableLabel = String(task.status || "").toUpperCase() === "IN_PROGRESS" || String(task.status || "").toUpperCase() === "PROCESSING"
+                ? "Tiếp tục"
+                : "Vào học";
               const futureTask = isFutureTaskDate(task.taskDate, todayKey);
 
               return (
@@ -460,12 +454,8 @@ export default function StudyCalendar() {
                         <span style={{ fontSize: "0.66rem", color: T3 }}>{toReadableTime(task.startTime)} - {toReadableTime(task.endTime)}</span>
                         <span style={{ fontSize: "0.66rem", color: OG, fontWeight: 700 }}>{task.durationMinutes || 0}p</span>
                         <span style={{ fontSize: "0.66rem", color: done ? "#059669" : T2, fontWeight: 700 }}>{done ? "COMPLETED" : (task.status || "PENDING")}</span>
-                        {!done && (
-                          <button
-                            type="button"
-                            onClick={() => void handleCompleteTask(task.taskId)}
-                            disabled={completingTaskId === task.taskId || futureTask}
-                            title={futureTask ? "Chưa đến ngày học" : undefined}
+                        {done ? (
+                          <span
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
@@ -473,16 +463,38 @@ export default function StudyCalendar() {
                               padding: "6px 10px",
                               borderRadius: "999px",
                               border: "1px solid #BBF7D0",
-                              background: completingTaskId === task.taskId ? "#DCFCE7" : "#ECFDF5",
+                              background: "#ECFDF5",
                               color: "#047857",
-                              cursor: completingTaskId === task.taskId ? "not-allowed" : "pointer",
+                              fontSize: "0.66rem",
+                              fontWeight: 800,
+                            }}
+                          >
+                            <Check size={10} />
+                            Đã hoàn thành
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => openStudySession(task.taskId)}
+                            disabled={futureTask}
+                            title={futureTask ? "Chưa đến ngày học" : undefined}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              padding: "6px 10px",
+                              borderRadius: "999px",
+                              border: "1px solid #FED7AA",
+                              background: "#FFF7ED",
+                              color: "#C2410C",
+                              cursor: futureTask ? "not-allowed" : "pointer",
                               fontSize: "0.66rem",
                               fontWeight: 800,
                             }}
                             className={futureTask ? "opacity-50 cursor-not-allowed" : "transition hover:brightness-95"}
                           >
-                            {completingTaskId === task.taskId ? <LoaderCircle size={10} className="animate-spin" /> : <Check size={10} />}
-                            Hoàn thành
+                            <PlayCircle size={10} />
+                            {actionableLabel}
                           </button>
                         )}
                       </div>

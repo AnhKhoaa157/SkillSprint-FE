@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, Navigate } from "react-router";
-import { getStoredAuthSession } from "../../api/authService";
+import { getStoredAuthSession } from "../../../api/authService";
 
 function isAuthenticated() {
   try {

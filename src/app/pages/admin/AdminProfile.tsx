@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { clearAuthTokens } from "../../api/authService";
-import meService, { type MeResponse } from "../../api/meService";
+import { clearAuthTokens } from "../../../api/authService";
+import meService, { type MeResponse } from "../../../api/meService";
 import { Copy } from "lucide-react";
 
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";

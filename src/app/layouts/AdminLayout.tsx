@@ -1,5 +1,5 @@
 import { Link, Outlet } from "react-router";
-import { BrandLogo } from "../components/BrandLogo";
+import { BrandLogo } from "../components/layout/BrandLogo";
 import { useState } from "react";
 
 export default function AdminLayout() {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import workspaceService from "../../api/workspaceService";
+import workspaceService from "../../../api/workspaceService";
 import {
   AlertTriangle,
   ArrowRight,
@@ -13,7 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import WorkspaceCard from "../components/WorkspaceCard";
+import WorkspaceCard from "../../components/workspace/WorkspaceCard";
 
 type WorkspaceLearningStructure = {
   status?: "DRAFT" | "CONFIRMED" | string;
