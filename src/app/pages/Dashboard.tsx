@@ -5,6 +5,7 @@ import {
   Plus, Check, Play, Pause, RotateCcw, ArrowRight,
   Map, BarChart2, Calendar, CheckSquare, Sparkles, MessageSquare,
 } from "lucide-react";
+import { createWorkspace, getMyWorkspaces, type WorkspaceResponse } from "../../api/workspaceService";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -42,7 +43,7 @@ const SHOWCASE_MODULES = [
   {
     title: "Phân tích học tập",
     desc: "Theo dõi điểm sẵn sàng, lượt quiz, độ ổn định và tiến độ kỹ năng.",
-    to: "/app/workspaces",
+    to: "/app/analytics",
     icon: BarChart2,
     tier: "Xây nền tảng",
   },
@@ -52,6 +53,13 @@ const SHOWCASE_MODULES = [
     to: "/app/learning",
     icon: Sparkles,
     tier: "Xây nền tảng",
+  },
+  {
+    title: "Phỏng vấn mô phỏng",
+    desc: "Mô phỏng phỏng vấn để luyện phản xạ và kỹ năng trình bày.",
+    to: "/app/mock-interview",
+    icon: MessageSquare,
+    tier: "Cao cấp",
   },
 ];
 
@@ -78,6 +86,7 @@ const TAG_COLORS: Record<string,[string,string]> = {
   "Học tập":    ["#FFF3EB", "#9A3412"],
   "Ôn tập":     ["#EFF6FF", "#1E40AF"],
   "Sự nghiệp":  ["#FFF3EB", "#9A3412"],
+  "Phỏng vấn":  ["#EFF6FF", "#1E40AF"],
   "Lập trình":  ["#FFF3EB", "#9A3412"],
 };
 interface Task { id:number; text:string; done:boolean; tag:string; }
@@ -85,7 +94,7 @@ const INIT_TASKS: Task[] = [
   { id:1, text:"Hoàn thành module React Hooks", done:false, tag:"Học tập"   },
   { id:2, text:"Ôn lại ghi chú System Design",   done:false, tag:"Ôn tập"    },
   { id:3, text:"Cập nhật CV với kỹ năng mới",    done:false, tag:"Sự nghiệp" },
-  { id:4, text:"Xem 2 video kỹ năng mềm", done:false, tag:"Sự nghiệp" },
+  { id:4, text:"Xem 2 video phỏng vấn mô phỏng", done:false, tag:"Phỏng vấn" },
   { id:5, text:"Đẩy repo luyện TypeScript",      done:false, tag:"Lập trình" },
 ];
 
@@ -116,9 +125,13 @@ export default function Dashboard() {
   const [pMode,  setPMode]   = useState<PMode>("focus");
   const [timeLeft,setTimeLeft]= useState(PMODE.focus.dur);
   const [running, setRunning] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mm = String(Math.floor(timeLeft/60)).padStart(2,"0");
   const ss = String(timeLeft%60).padStart(2,"0");
+
+  /* Workspace mock */
+  const [workspaces, setWorkspaces] = useState<WorkspaceResponse[]>([]);
+  const [creatingWorkspace, setCreatingWorkspace] = useState(false);
 
   useEffect(()=>{
     if(running){
@@ -128,10 +141,32 @@ export default function Dashboard() {
           return t-1;
         });
       },1000);
-    } else clearInterval(timerRef.current);
-    return ()=>clearInterval(timerRef.current);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    return ()=>{
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   },[running]);
   const switchMode=(m:PMode)=>{ setPMode(m); setRunning(false); setTimeLeft(PMODE[m].dur); };
+
+  useEffect(() => {
+    void getMyWorkspaces().then(setWorkspaces).catch(() => setWorkspaces([]));
+  }, []);
+
+  const handleCreateWorkspace = () => {
+    setCreatingWorkspace(true);
+    void createWorkspace({
+      name: `Workspace ${workspaces.length + 1}`,
+      description: "Không gian học tập được tạo từ mock API.",
+    }).then((workspace) => {
+      setWorkspaces((current) => [workspace, ...current]);
+    }).finally(() => setCreatingWorkspace(false));
+  };
 
   return (
     <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.28}} style={{fontFamily:F}}>
@@ -188,6 +223,49 @@ export default function Dashboard() {
             </Link>
           </motion.div>
         ))}
+      </div>
+
+      <div style={{ background:CARD, borderRadius:"14px", border:`1px solid ${BDR}`, boxShadow:SH, padding:"18px", marginBottom:"12px" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"12px", marginBottom:"10px", flexWrap:"wrap" }}>
+          <div>
+            <p style={{ fontSize:"0.66rem", fontWeight:700, color:T3, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:"4px" }}>Workspace lõi</p>
+            <h2 style={{ fontWeight:800, fontSize:"1.05rem", color:T1, letterSpacing:"-0.02em" }}>Không gian học tập của bạn</h2>
+            <p style={{ color:T2, fontSize:"0.8rem", marginTop:"3px" }}>Mock API workspace đang lưu cục bộ và dùng chung cho các màn liên quan.</p>
+          </div>
+          <motion.button
+            whileHover={{ scale:1.02 }}
+            whileTap={{ scale:0.98 }}
+            onClick={handleCreateWorkspace}
+            disabled={creatingWorkspace}
+            style={{
+              display:"flex", alignItems:"center", gap:"6px",
+              padding:"9px 13px", borderRadius:"10px",
+              border:"1px solid #F7B489", background:"#FFF3EB",
+              color:"#9A3412", fontWeight:700, fontSize:"0.78rem",
+              cursor: creatingWorkspace ? "not-allowed" : "pointer",
+              opacity: creatingWorkspace ? 0.7 : 1,
+            }}
+          >
+            <Plus size={13}/> {creatingWorkspace ? "Đang tạo..." : "Tạo workspace"}
+          </motion.button>
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))", gap:"10px" }}>
+          {workspaces.map((workspace) => (
+            <div key={workspace.workspaceId} style={{ border:`1px solid ${BDR}`, borderRadius:"12px", padding:"14px", background:"#fff" }}>
+              <p style={{ fontWeight:800, fontSize:"0.92rem", color:T1, marginBottom:"4px" }}>{workspace.name}</p>
+              <p style={{ fontSize:"0.76rem", color:T2, lineHeight:1.55, minHeight:"36px" }}>{workspace.description || "Workspace mock"}</p>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:"10px", gap:"8px" }}>
+                <span style={{ fontSize:"0.64rem", padding:"3px 8px", borderRadius:"999px", background:"#ECFDF5", color:"#047857", fontWeight:800 }}>
+                  {workspace.status}
+                </span>
+                <Link to={`/app/workspaces/${workspace.workspaceId}`} style={{ textDecoration:"none", color:"#9A3412", fontSize:"0.74rem", fontWeight:700 }}>
+                  Xem chi tiết
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:"12px", marginBottom:"12px" }}>

@@ -1,11 +1,4 @@
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
-
-type ApiResponse<T> = {
-  success: boolean;
-  code: number;
-  message: string;
-  data: T | null;
-};
+import { DEFAULT_USER_PROFILE, MOCK_STORAGE_KEYS, readStorage, removeStorage, writeStorage } from "./mockDb";
 
 export type AuthTokens = {
   accessToken: string;
@@ -29,45 +22,18 @@ export type StoredUserProfile = {
   role: AuthRole | null;
 };
 
-type AuthPayload = AuthTokens & {
-  challengeName?: string | null;
-  session?: string | null;
-  role_name?: string | string[] | null;
-  roleName?: string | string[] | null;
-  role?: string | string[] | null;
-  userRole?: string | string[] | null;
-  roles?: string | string[] | null;
-  groups?: string | string[] | null;
-};
-
-type EmptyPayload = Record<string, never>;
-
 export type LoginResult =
   | { status: "authenticated"; tokens: AuthSession }
   | { status: "new-password-required"; challengeName: string; session: string; role: AuthRole | null };
 
-const AUTH_STORAGE_KEY = "skillSprint.auth.tokens";
+type AuthInput = {
+  email: string;
+  password: string;
+  fullName?: string;
+};
 
-function decodeBase64Url(input: string): string {
-  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
-  const padding = normalized.length % 4;
-  const padded = padding ? `${normalized}${"=".repeat(4 - padding)}` : normalized;
-
-  return atob(padded);
-}
-
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  const parts = token.split(".");
-  if (parts.length < 2) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(decodeBase64Url(parts[1]));
-  } catch {
-    return null;
-  }
-}
+const AUTH_STORAGE_KEY = MOCK_STORAGE_KEYS.authSession;
+const PROFILE_STORAGE_KEY = MOCK_STORAGE_KEYS.userProfile;
 
 function normalizeRole(value: unknown): AuthRole | null {
   if (typeof value !== "string") {
@@ -90,132 +56,6 @@ function normalizeRole(value: unknown): AuthRole | null {
   }
 
   return trimmed.toUpperCase();
-}
-
-function normalizeRoleSource(value: unknown): AuthRole | null {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const role = normalizeRole(item);
-      if (role) {
-        return role;
-      }
-    }
-
-    return null;
-  }
-
-  return normalizeRole(value);
-}
-
-function extractRole(data: Partial<AuthPayload> | Record<string, unknown> | null | undefined): AuthRole | null {
-  if (!data) {
-    return null;
-  }
-
-  const directSources = [data.role_name, data.roleName, data.role, data.userRole, data.roles, data.groups];
-
-  for (const source of directSources) {
-    const role = normalizeRoleSource(source);
-    if (role) {
-      return role;
-    }
-  }
-
-  const jwtSources = [data.idToken, data.accessToken];
-
-  for (const source of jwtSources) {
-    if (typeof source !== "string") {
-      continue;
-    }
-
-    const payload = decodeJwtPayload(source);
-    if (!payload) {
-      continue;
-    }
-
-    const claimSources = [
-      payload.role_name,
-      payload.roleName,
-      payload.role,
-      payload.userRole,
-      payload.roles,
-      payload.groups,
-      payload["custom:role"],
-      payload["custom:roles"],
-      payload["cognito:groups"],
-      payload["user_role"],
-    ];
-
-    for (const claimSource of claimSources) {
-      const role = normalizeRoleSource(claimSource);
-      if (role) {
-        return role;
-      }
-    }
-  }
-
-  return null;
-}
-
-function buildAuthSession(data: AuthPayload): AuthSession {
-  return {
-    accessToken: data.accessToken,
-    idToken: data.idToken,
-    refreshToken: data.refreshToken,
-    expiresIn: data.expiresIn ?? 0,
-    tokenType: data.tokenType ?? "Bearer",
-    role: extractRole(data),
-  };
-}
-
-export function isAdminRole(role: unknown): boolean {
-  return normalizeRole(role) === "ADMIN";
-}
-
-export function getPostLoginPath(role: unknown): string {
-  return isAdminRole(role) ? "/admin" : "/app";
-}
-
-export function getStoredAuthSession(): AuthSession | null {
-  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Partial<AuthSession>;
-
-    if (!parsed.accessToken || !parsed.idToken || !parsed.refreshToken) {
-      return null;
-    }
-
-    return {
-      accessToken: parsed.accessToken,
-      idToken: parsed.idToken,
-      refreshToken: parsed.refreshToken,
-      expiresIn: parsed.expiresIn ?? 0,
-      tokenType: parsed.tokenType ?? "Bearer",
-      role: extractRole(parsed as Partial<AuthPayload> & Record<string, unknown>),
-    };
-  } catch {
-    return null;
-  }
-}
-
-function readStringClaim(payload: Record<string, unknown> | null, keys: string[]): string {
-  if (!payload) {
-    return "";
-  }
-
-  for (const key of keys) {
-    const value = payload[key];
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-
-  return "";
 }
 
 function splitName(fullName: string): { firstName: string; lastName: string } {
@@ -249,156 +89,143 @@ function buildReadableNameFromEmail(email: string): string {
     .trim();
 }
 
+function inferRole(email: string, explicitRole?: AuthRole | null): AuthRole {
+  if (explicitRole) {
+    return normalizeRole(explicitRole) ?? "LEARNER";
+  }
+
+  return /admin/i.test(email) ? "ADMIN" : "LEARNER";
+}
+
+function buildTokens(email: string, role: AuthRole): AuthTokens {
+  const payload = JSON.stringify({ email, role, ts: Date.now() });
+  const encoded = typeof btoa === "function" ? btoa(payload) : payload;
+
+  return {
+    accessToken: `mock-access.${encoded}.token`,
+    idToken: `mock-id.${encoded}.token`,
+    refreshToken: `mock-refresh.${encoded}.token`,
+    expiresIn: 3600,
+    tokenType: "Bearer",
+  };
+}
+
+function buildSession(email: string, role: AuthRole): AuthSession {
+  return {
+    ...buildTokens(email, role),
+    role,
+  };
+}
+
+function saveProfile(profile: StoredUserProfile): StoredUserProfile {
+  return writeStorage(PROFILE_STORAGE_KEY, profile);
+}
+
+function getDefaultProfile(email?: string): StoredUserProfile {
+  const safeEmail = email || DEFAULT_USER_PROFILE.email;
+  const fullName = DEFAULT_USER_PROFILE.fullName || buildReadableNameFromEmail(safeEmail) || "SkillSprint User";
+  const { firstName, lastName } = splitName(fullName);
+
+  return {
+    email: safeEmail,
+    fullName,
+    firstName,
+    lastName,
+    role: DEFAULT_USER_PROFILE.roles?.[0] ?? "LEARNER",
+  };
+}
+
+export function isAdminRole(role: unknown): boolean {
+  return normalizeRole(role) === "ADMIN";
+}
+
+export function getPostLoginPath(role: unknown): string {
+  return isAdminRole(role) ? "/admin" : "/app";
+}
+
+export function getStoredAuthSession(): AuthSession | null {
+  return readStorage<AuthSession | null>(AUTH_STORAGE_KEY, null);
+}
+
+export function setStoredAuthSession(session: AuthSession, email?: string, fullName?: string): AuthSession {
+  writeStorage(AUTH_STORAGE_KEY, session);
+
+  const profile = getStoredUserProfile() ?? getDefaultProfile(email);
+  const mergedName = fullName?.trim() || profile.fullName;
+  const split = splitName(mergedName);
+
+  saveProfile({
+    ...profile,
+    email: email || profile.email,
+    fullName: mergedName,
+    firstName: split.firstName,
+    lastName: split.lastName,
+    role: session.role,
+  });
+
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("ss_user_logged_in", "true");
+  }
+
+  return session;
+}
+
 export function getStoredUserProfile(): StoredUserProfile | null {
+  const storedProfile = readStorage<StoredUserProfile | null>(PROFILE_STORAGE_KEY, null);
   const session = getStoredAuthSession();
+
+  if (storedProfile) {
+    return {
+      ...storedProfile,
+      role: session?.role ?? storedProfile.role,
+    };
+  }
+
   if (!session) {
     return null;
   }
 
-  const idTokenPayload = decodeJwtPayload(session.idToken);
-  const accessTokenPayload = decodeJwtPayload(session.accessToken);
-
-  const email =
-    readStringClaim(idTokenPayload, ["email", "username", "cognito:username"]) ||
-    readStringClaim(accessTokenPayload, ["email", "username", "cognito:username"]);
-
-  const claimedFullName =
-    readStringClaim(idTokenPayload, ["name", "full_name", "preferred_username"]) ||
-    readStringClaim(accessTokenPayload, ["name", "full_name", "preferred_username"]);
-
-  const givenName = readStringClaim(idTokenPayload, ["given_name"]);
-  const familyName = readStringClaim(idTokenPayload, ["family_name"]);
-
-  const fullName =
-    claimedFullName ||
-    `${givenName} ${familyName}`.trim() ||
-    buildReadableNameFromEmail(email);
-
-  const { firstName, lastName } = splitName(fullName);
-
-  return {
-    email,
-    fullName,
-    firstName,
-    lastName,
-    role: session.role,
-  };
+  return getDefaultProfile();
 }
 
-async function requestJson<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE}${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-  } catch (networkError) {
-    throw new Error("Không thể kết nối tới máy chủ đăng nhập. Hãy chắc BE đang chạy và không có lỗi mạng.");
+export async function login(input: AuthInput): Promise<LoginResult> {
+  const email = input.email.trim();
+  const role = inferRole(email);
+  const session = buildSession(email, role);
+  setStoredAuthSession(session, email, buildReadableNameFromEmail(email));
+
+  return { status: "authenticated", tokens: session };
+}
+
+export async function register(input: AuthInput): Promise<LoginResult> {
+  const email = input.email.trim();
+  const role = inferRole(email);
+  const session = buildSession(email, role);
+  const fullName = input.fullName?.trim() || buildReadableNameFromEmail(email) || "SkillSprint User";
+  setStoredAuthSession(session, email, fullName);
+
+  return { status: "authenticated", tokens: session };
+}
+
+export async function requestPasswordReset(email: string): Promise<{ sent: boolean; email: string }> {
+  return { sent: Boolean(email.trim()), email: email.trim() };
+}
+
+export function logout(): void {
+  removeStorage(AUTH_STORAGE_KEY);
+  removeStorage(PROFILE_STORAGE_KEY);
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem("ss_user_logged_in");
   }
-
-  const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
-
-  if (!response.ok) {
-    const message = payload?.message || `Máy chủ trả lỗi: ${response.status}`;
-    throw new Error(message);
-  }
-
-  if (!payload) {
-    throw new Error("Phản hồi đăng nhập không hợp lệ từ máy chủ.");
-  }
-
-  return payload;
 }
 
-export async function login(email: string, password: string): Promise<LoginResult> {
-  const response = await requestJson<AuthPayload>("/api/auth/login", {
-    email,
-    password,
-  });
-
-  const data = response.data;
-
-  if (!data) {
-    throw new Error(response.message || "Đăng nhập thất bại.");
-  }
-
-  if (data.challengeName && data.session) {
-    return {
-      status: "new-password-required",
-      challengeName: data.challengeName,
-      session: data.session,
-      role: extractRole(data),
-    };
-  }
-
-  if (!data.accessToken || !data.idToken || !data.refreshToken) {
-    throw new Error("Thiếu token xác thực từ máy chủ.");
-  }
-
-  return {
-    status: "authenticated",
-    tokens: buildAuthSession(data),
-  };
-}
-
-export async function register(fullName: string, email: string, password: string): Promise<void> {
-  await requestJson<EmptyPayload>("/api/auth/register", {
-    fullName,
-    email,
-    password,
-  });
-}
-
-export async function confirmRegister(email: string, confirmationCode: string): Promise<void> {
-  await requestJson<EmptyPayload>("/api/auth/confirm-register", {
-    email,
-    confirmationCode,
-  });
-}
-
-export async function resendConfirmationCode(email: string): Promise<void> {
-  await requestJson<EmptyPayload>("/api/auth/resend-confirmation-code", {
-    email,
-  });
-}
-
-export async function forgotPassword(email: string): Promise<void> {
-  await requestJson<EmptyPayload>("/api/auth/forgot-password", {
-    email,
-  });
-}
-
-export async function confirmForgotPassword(email: string, confirmationCode: string, newPassword: string): Promise<void> {
-  await requestJson<EmptyPayload>("/api/auth/confirm-forgot-password", {
-    email,
-    confirmationCode,
-    newPassword,
-  });
-}
-
-export async function completeNewPassword(email: string, newPassword: string, session: string): Promise<AuthSession> {
-  const response = await requestJson<AuthPayload>("/api/auth/complete-new-password", {
-    email,
-    newPassword,
-    session,
-  });
-
-  const data = response.data;
-
-  if (!data || !data.accessToken || !data.idToken || !data.refreshToken) {
-    throw new Error(response.message || "Không thể hoàn tất đổi mật khẩu.");
-  }
-
-  return buildAuthSession(data);
-}
-
-export function storeAuthTokens(tokens: AuthSession): void {
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(tokens));
-}
-
-export function clearAuthTokens(): void {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
-}
+export default {
+  login,
+  register,
+  logout,
+  requestPasswordReset,
+  getStoredAuthSession,
+  getStoredUserProfile,
+  isAdminRole,
+  getPostLoginPath,
+};

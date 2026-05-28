@@ -1,21 +1,20 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { RegistrationSuccessModal } from "../components/RegistrationSuccessModal";
 import { BrandLogo } from "../components/BrandLogo";
-import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens, getPostLoginPath } from "../../api/authService";
+import { login, register, requestPasswordReset } from "../../api/authService";
 
 /* ─── Tokens ─── */
 const F   = "'Inter','Plus Jakarta Sans',sans-serif";
 const OG  = "#FF6B00";
-const NAV = "#0B1220";
-const NAV2= "#111827";
+const BDR = "#E5E7EB";
 
 /* ─── Google SVG ─── */
 function GoogleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18">
+    <svg width="20" height="20" viewBox="0 0 18 18">
       <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
       <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
       <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
@@ -34,32 +33,37 @@ function Field({
   onChange: (v:string)=>void; right?: React.ReactNode; error?: string;
 }) {
   return (
-    <div className="mb-5">
-      <label className="block text-xs font-semibold text-gray-700 mb-2">
+    <div style={{marginBottom:"20px"}}>
+      <label style={{display:"block",fontSize:"0.85rem",fontWeight:600,color:"#374151",marginBottom:"8px",fontFamily:F}}>
         {label}
       </label>
-      <div className="relative flex items-center">
-        <Icon size={15} color="#9CA3AF" className="absolute left-3 pointer-events-none z-10"/>
+      <div style={{position:"relative",display:"flex",alignItems:"center"}}>
+        <Icon size={18} color="#9CA3AF" style={{position:"absolute",left:"14px",pointerEvents:"none",zIndex:1}}/>
         <input
           type={type} value={value} onChange={e=>onChange(e.target.value)}
           placeholder={placeholder}
-          className={`w-full px-10 py-3 text-sm rounded-lg font-[${F}] outline-none transition-all duration-200 ${
-            error 
-              ? 'border-1.5 border-red-500 focus:border-red-500' 
-              : 'border-1.5 border-gray-200 focus:border-orange-500'
-          } focus:ring-2 focus:ring-orange-100`}
+          style={{
+            width:"100%",padding:"13px 44px 13px 42px",
+            border:`1.5px solid ${error?"#EF4444":"#E5E7EB"}`,
+            borderRadius:"12px",fontSize:"0.95rem",
+            fontFamily:F,color:"#111827",background:"#FFFFFF",outline:"none",
+            transition:"all 0.2s ease",boxSizing:"border-box",
+            boxShadow:"0 1px 2px rgba(0,0,0,0.02)",
+          }}
           onFocus={e=>{
-            e.currentTarget.style.boxShadow="0 0 0 3px rgba(255,107,0,0.1)";
+            e.target.style.borderColor=OG;
+            e.target.style.boxShadow=`0 0 0 4px rgba(255,107,0,0.1)`;
           }}
           onBlur={e=>{
-            e.currentTarget.style.boxShadow="none";
+            e.target.style.borderColor=error?"#EF4444":"#E5E7EB";
+            e.target.style.boxShadow="0 1px 2px rgba(0,0,0,0.02)";
           }}
         />
         {right && (
-          <div className="absolute right-3 cursor-pointer">{right}</div>
+          <div style={{position:"absolute",right:"14px",cursor:"pointer"}}>{right}</div>
         )}
       </div>
-      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+      {error && <p style={{fontSize:"0.75rem",color:"#EF4444",marginTop:"6px",fontFamily:F}}>{error}</p>}
     </div>
   );
 }
@@ -69,7 +73,7 @@ const FEATURES = [
   "Lộ trình học cá nhân hóa bằng AI",
   "Phân tích khoảng trống kỹ năng theo thời gian thực",
   "Tối ưu hồ sơ nghề nghiệp và xuất portfolio",
-  "Hỗ trợ nâng cao hồ sơ nghề nghiệp",
+  "Mô phỏng phỏng vấn thử bằng AI",
 ];
 
 const TESTIMONIAL = {
@@ -81,97 +85,98 @@ const TESTIMONIAL = {
 };
 
 /* ═══════════════════════════════════════════
-   LEFT PANEL
+   LEFT PANEL (REDESIGNED: BRIGHT & CLEAN)
 ═══════════════════════════════════════════ */
 function LeftPanel() {
-  const aiImage = ((import.meta as any).env?.VITE_LEFT_PANEL_IMAGE as string | undefined) || "/assets/left-ai-3.svg";
-
   return (
-    <div
-      className="w-[40%] flex flex-col px-16 py-12 relative overflow-hidden flex-shrink-0"
-      style={{
-        backgroundImage: `linear-gradient(180deg, rgba(11,18,32,0.86), rgba(3,7,18,0.6)), url(${aiImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      {/* Subtle glow effects */}
-      <div className="absolute -top-20 -right-16 w-56 h-56 rounded-full bg-gradient-to-b from-orange-500/15 to-transparent opacity-50 pointer-events-none blur-3xl"/>
-      <div className="absolute -bottom-10 -left-10 w-52 h-52 rounded-full bg-gradient-to-t from-indigo-500/12 to-transparent opacity-50 pointer-events-none blur-3xl"/>
+    <div className="hidden lg:flex" style={{
+      width:"28%", minWidth:"300px", maxWidth:"380px",
+      background:"#FAFAFA", // Light beautiful gray/white
+      borderRight:`1px solid ${BDR}`,
+      flexDirection:"column", padding:"48px 32px",
+      position:"relative", overflow:"hidden", flexShrink:0,
+    }}>
+      {/* Subtle organic orange glow */}
+      <div style={{
+        position:"absolute", top:"-100px", right:"-100px",
+        width:"400px", height:"400px", borderRadius:"50%",
+        background:"radial-gradient(circle, rgba(255,107,0,0.07), transparent 70%)",
+        pointerEvents:"none",
+      }}/>
+      <div style={{
+        position:"absolute", bottom:"-80px", left:"-80px",
+        width:"350px", height:"350px", borderRadius:"50%",
+        background:"radial-gradient(circle, rgba(255,107,0,0.05), transparent 70%)",
+        pointerEvents:"none",
+      }}/>
 
       {/* Logo */}
-      <BrandLogo size={32} textColor="#FFFFFF" textSize="0.95rem" className="mb-7"/>
+      <BrandLogo size={36} textColor="#111827" textSize="1.15rem" className="mb-10" align="left"/>
 
       {/* Badge */}
       <div style={{
-        display:"inline-flex",alignItems:"center",gap:"5px",
-        padding:"4px 10px",borderRadius:"99px",
-        background:"rgba(255,107,0,0.15)",border:"1px solid rgba(255,107,0,0.3)",
-        marginBottom:"20px",width:"fit-content",
+        display:"inline-flex",alignItems:"center",gap:"8px",
+        padding:"6px 16px",borderRadius:"99px",
+        background:"#FFF7ED",border:"1px solid #FFEDD5",
+        marginBottom:"32px",width:"fit-content",
       }}>
-        <div style={{width:"5px",height:"5px",borderRadius:"50%",background:OG}}/>
-        <span style={{fontSize:"0.7rem",color:OG,fontWeight:700,fontFamily:F}}>
-          30.000+ sinh viên đang tăng tốc
+        <div style={{width:"6px",height:"6px",borderRadius:"50%",background:OG}}/>
+        <span style={{fontSize:"0.8rem",color:OG,fontWeight:700,fontFamily:F}}>
+          Dự án sinh viên (Bản thử nghiệm Beta)
         </span>
       </div>
 
       {/* Headline */}
       <h1 style={{
-        fontSize:"1.6rem",fontWeight:900,lineHeight:1.2,
-        letterSpacing:"-0.03em",marginBottom:"12px",fontFamily:F,
+        fontSize:"2.2rem",fontWeight:900,lineHeight:1.15,
+        letterSpacing:"-0.03em",marginBottom:"16px",fontFamily:F,
       }}>
-        <span style={{color:"#FFFFFF"}}>Biến kỹ năng của bạn thành </span>
-        <span style={{color:OG}}>cơ hội nghề nghiệp.</span>
+        <span style={{color:"#111827"}}>Đừng để kiến thức làm bạn </span>
+        <span style={{color:OG}}>quá tải.</span>
       </h1>
-      <p style={{fontSize:"0.78rem",color:"#94A3B8",lineHeight:1.65,marginBottom:"24px",fontFamily:F}}>
-        Nền tảng định hướng nghề nghiệp AI dành cho sinh viên Việt Nam. Cá nhân hóa lộ trình, tập trung vào kết quả thực tế.
+      <p style={{fontSize:"0.95rem",color:"#6B7280",lineHeight:1.65,marginBottom:"40px",fontFamily:F}}>
+        Ứng dụng được tạo ra bởi sinh viên, dành cho sinh viên. Giúp bạn gom nhóm kiến thức, biết mình thiếu gì và cần học gì tiếp theo.
       </p>
 
       {/* Features */}
-      <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"auto"}}>
-        {FEATURES.map(f => (
-          <div key={f} style={{display:"flex",alignItems:"flex-start",gap:"9px"}}>
+      <div style={{display:"flex",flexDirection:"column",gap:"16px",marginBottom:"auto"}}>
+        {[
+          "Học đến đâu, gạch đầu dòng đến đó",
+          "Phát hiện những phần kiến thức bị hổng",
+          "Mô phỏng phỏng vấn để luyện phản xạ",
+          "Tổng hợp lại hồ sơ học tập cực xịn",
+        ].map(f => (
+          <div key={f} style={{display:"flex",alignItems:"flex-start",gap:"12px"}}>
             <div style={{
-              width:"18px",height:"18px",borderRadius:"50%",
-              background:"rgba(255,107,0,0.15)",border:"1px solid rgba(255,107,0,0.3)",
-              display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:"1px",
+              width:"24px",height:"24px",borderRadius:"50%",
+              background:"#FFF7ED",border:"1px solid #FFEDD5",
+              display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:"2px",
             }}>
-              <Check size={10} color={OG} strokeWidth={3}/>
+              <Check size={12} color={OG} strokeWidth={3}/>
             </div>
-            <span style={{fontSize:"0.78rem",color:"#CBD5E1",lineHeight:1.5,fontFamily:F}}>{f}</span>
+            <span style={{fontSize:"0.9rem",color:"#4B5563",lineHeight:1.5,fontFamily:F}}>{f}</span>
           </div>
         ))}
       </div>
 
-      {/* Testimonial */}
+      {/* Dev Team Message instead of Fake Testimonial */}
       <div style={{
-        marginTop:"28px",padding:"16px",borderRadius:"12px",
-        background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",
+        marginTop:"32px",padding:"20px",borderRadius:"16px",
+        background:"#FFFFFF",border:"1px solid #F3F4F6",
+        boxShadow:"0 4px 24px rgba(0,0,0,0.03)",
       }}>
-        <div style={{display:"flex",gap:"2px",marginBottom:"10px"}}>
-          {Array.from({length:TESTIMONIAL.stars}).map((_,i)=>(
-            <span key={i} style={{color:"#FBBF24",fontSize:"11px"}}>★</span>
-          ))}
+        <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}}>
+          <div style={{width:"8px",height:"8px",borderRadius:"50%",background:"#10B981"}}/>
+          <span style={{fontSize:"0.8rem",fontWeight:700,color:"#111827",fontFamily:F,letterSpacing:"0.02em"}}>
+            LỜI NHẮN TỪ TEAM DEV 💻
+          </span>
         </div>
         <p style={{
-          fontSize:"0.75rem",color:"#CBD5E1",lineHeight:1.65,
-          fontStyle:"italic",marginBottom:"12px",fontFamily:F,
+          fontSize:"0.9rem",color:"#4B5563",lineHeight:1.65,
+          marginBottom:"0",fontFamily:F,
         }}>
-          {TESTIMONIAL.text}
+          "Tụi mình hiểu cảm giác hoang mang khi đứng trước núi tài liệu. SkillSprint được sinh ra không phải để 'hack' não, mà chỉ đơn giản là một công cụ giúp chúng ta đi từng bước vững chắc hơn."
         </p>
-        <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-          <div style={{
-            width:"28px",height:"28px",borderRadius:"50%",
-            background:"linear-gradient(135deg,#FF6B00,#FF9A3D)",
-            display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,
-          }}>
-            <span style={{fontSize:"11px",fontWeight:800,color:"#fff"}}>{TESTIMONIAL.avatar}</span>
-          </div>
-          <div>
-            <p style={{fontSize:"0.75rem",fontWeight:700,color:"#FFFFFF",fontFamily:F,lineHeight:1}}>{TESTIMONIAL.name}</p>
-            <p style={{fontSize:"0.68rem",color:"#94A3B8",fontFamily:F}}>{TESTIMONIAL.role}</p>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -180,321 +185,69 @@ function LeftPanel() {
 /* ═══════════════════════════════════════════
    RESET PASSWORD MODAL
 ═══════════════════════════════════════════ */
-function ResetPassword({ onBack }: { onBack:()=>void }) {
+function ResetPassword({ onBack, onSubmit }: { onBack:()=>void; onSubmit:(email: string) => Promise<{ sent: boolean; email: string }>; }) {
   const [email, setEmail] = useState("");
-  const [confirmationCode, setConfirmationCode] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [step, setStep] = useState<"request" | "confirm">("request");
-  const [loading, setLoading] = useState(false);
-  const [notice, setNotice] = useState("");
-  const [error, setError] = useState("");
-
-  const handleSendCode = async () => {
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (!normalizedEmail) {
-      setError("Vui lòng nhập email.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setNotice("");
-
-    try {
-      await forgotPassword(normalizedEmail);
-      setStep("confirm");
-      setNotice("Mã xác nhận đã được gửi tới email của bạn.");
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Không thể gửi mã xác nhận.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleConfirmReset = async () => {
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (!confirmationCode || !newPassword || !confirmPassword) {
-      setError("Vui lòng nhập mã xác nhận và mật khẩu mới.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError("Mật khẩu xác nhận không khớp.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      await confirmForgotPassword(normalizedEmail, confirmationCode.trim(), newPassword);
-      onBack();
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Không thể đặt lại mật khẩu.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [sent, setSent]   = useState(false);
   return (
     <div style={{
       position:"fixed",inset:0,zIndex:50,
-      background:"#F3F4F6",
+      background:"rgba(243,244,246,0.9)", backdropFilter:"blur(12px)",
       display:"flex",alignItems:"center",justifyContent:"center",
     }}>
       <motion.div
         initial={{opacity:0,scale:0.94,y:12}}
         animate={{opacity:1,scale:1,y:0}}
         style={{
-          background:"#FFFFFF",borderRadius:"16px",padding:"36px 40px",
-          width:"100%",maxWidth:"440px",
-          boxShadow:"0 4px 6px rgba(0,0,0,0.05), 0 20px 60px rgba(0,0,0,0.12)",
+          background:"#FFFFFF",borderRadius:"24px",padding:"48px",
+          width:"100%",maxWidth:"480px",
+          border:"1px solid #E5E7EB",
+          boxShadow:"0 20px 80px rgba(0,0,0,0.08)",
           margin:"16px",
         }}
       >
         {/* Logo */}
-        <BrandLogo size={32} textSize="0.9rem" className="mb-6"/>
+        <BrandLogo size={36} textColor="#111827" textSize="1.1rem" className="mb-8" align="left"/>
 
-        {step === "request" ? (
+        {!sent ? (
           <>
-            <h2 style={{fontWeight:900,fontSize:"1.5rem",color:"#111827",letterSpacing:"-0.03em",marginBottom:"6px",fontFamily:F}}>Quên mật khẩu</h2>
-            <p style={{fontSize:"0.85rem",color:"#6B7280",marginBottom:"24px",lineHeight:1.6,fontFamily:F}}>
-              Nhập email trường học để nhận mã đặt lại mật khẩu an toàn.
+            <h2 style={{fontWeight:900,fontSize:"1.6rem",color:"#111827",letterSpacing:"-0.03em",marginBottom:"10px",fontFamily:F}}>Quên mật khẩu</h2>
+            <p style={{fontSize:"0.95rem",color:"#6B7280",marginBottom:"32px",lineHeight:1.6,fontFamily:F}}>
+              Nhập email trường học để nhận liên kết đặt lại mật khẩu an toàn.
             </p>
-            <Field label="Email trường học" placeholder="student@gmail.com"
+            <Field label="Email trường học" placeholder="student@university.edu"
               icon={Mail} value={email} onChange={setEmail}/>
-            {error && <p style={{fontSize:"0.72rem",color:"#EF4444",marginBottom:"12px",fontFamily:F}}>{error}</p>}
             <motion.button
               whileHover={{scale:1.02}} whileTap={{scale:0.98}}
-              onClick={handleSendCode}
-              disabled={loading}
+              onClick={async()=>{ await onSubmit(email); setSent(true); }}
               style={{
-                width:"100%",padding:"13px",borderRadius:"10px",
-                background: loading ? "#FDBA74" : OG,color:"#fff",border:"none",cursor: loading ? "not-allowed" : "pointer",
-                fontFamily:F,fontWeight:700,fontSize:"0.95rem",
-                boxShadow:"0 4px 16px rgba(255,107,0,0.35)",marginBottom:"14px",
+                width:"100%",padding:"15px",borderRadius:"12px",
+                background:OG,color:"#fff",border:"none",cursor:"pointer",
+                fontFamily:F,fontWeight:700,fontSize:"1rem",
+                boxShadow:"0 8px 24px rgba(255,107,0,0.3)",marginBottom:"20px",marginTop:"10px",
               }}
             >
-              {loading ? "Đang gửi..." : "Gửi mã đặt lại"}
+              Gửi liên kết đặt lại
             </motion.button>
             <button onClick={onBack}
-              style={{display:"flex",alignItems:"center",gap:"4px",background:"none",border:"none",cursor:"pointer",color:"#6B7280",fontFamily:F,fontSize:"0.82rem",margin:"0 auto"}}>
-              <ArrowLeft size={13}/> Quay về đăng nhập
+              style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",background:"none",border:"none",cursor:"pointer",color:"#6B7280",fontFamily:F,fontSize:"0.9rem",width:"100%"}}>
+              <ArrowLeft size={16}/> Quay về đăng nhập
             </button>
           </>
         ) : (
           <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} style={{textAlign:"center"}}>
-            <div style={{width:"52px",height:"52px",borderRadius:"50%",background:"#ECFDF5",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
-              <Check size={24} color="#059669" strokeWidth={3}/>
+            <div style={{width:"64px",height:"64px",borderRadius:"50%",background:"#ECFDF5",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
+              <Check size={32} color="#059669" strokeWidth={3}/>
             </div>
-            <h2 style={{fontWeight:900,fontSize:"1.3rem",color:"#111827",fontFamily:F,marginBottom:"6px"}}>Nhập mã xác nhận</h2>
-            <p style={{fontSize:"0.85rem",color:"#6B7280",lineHeight:1.65,fontFamily:F,marginBottom:"16px"}}>
-              {notice || <>Mã đặt lại đã được gửi đến <strong>{email}</strong>. Vui lòng nhập mã và mật khẩu mới.</>}
+            <h2 style={{fontWeight:900,fontSize:"1.5rem",color:"#111827",fontFamily:F,marginBottom:"10px"}}>Kiểm tra email của bạn</h2>
+            <p style={{fontSize:"0.95rem",color:"#6B7280",lineHeight:1.65,fontFamily:F,marginBottom:"32px"}}>
+              Liên kết đặt lại đã được gửi đến <strong>{email}</strong>. Vui lòng kiểm tra hộp thư.
             </p>
-            <Field label="Mã xác nhận" placeholder="123456" icon={Check} value={confirmationCode} onChange={setConfirmationCode}/>
-            <Field label="Mật khẩu mới" type="password" placeholder="Tối thiểu 8 ký tự" icon={Lock} value={newPassword} onChange={setNewPassword}/>
-            <Field label="Xác nhận mật khẩu" type="password" placeholder="Nhập lại mật khẩu mới" icon={Lock} value={confirmPassword} onChange={setConfirmPassword} error={error}/>
-            {error && !confirmPassword && <p style={{fontSize:"0.72rem",color:"#EF4444",marginTop:"-8px",marginBottom:"12px",fontFamily:F}}>{error}</p>}
-            <motion.button
-              whileHover={{scale:1.02}} whileTap={{scale:0.98}}
-              onClick={handleConfirmReset}
-              disabled={loading}
-              style={{
-                width:"100%",padding:"13px",borderRadius:"10px",
-                background: loading ? "#FDBA74" : OG,color:"#fff",border:"none",cursor: loading ? "not-allowed" : "pointer",
-                fontFamily:F,fontWeight:700,fontSize:"0.95rem",
-                boxShadow:"0 4px 16px rgba(255,107,0,0.35)",marginBottom:"14px",
-              }}
-            >
-              {loading ? "Đang cập nhật..." : "Đặt lại mật khẩu"}
-            </motion.button>
             <button onClick={onBack}
-              style={{display:"flex",alignItems:"center",gap:"4px",background:"none",border:"none",cursor:"pointer",color:OG,fontFamily:F,fontSize:"0.85rem",fontWeight:600,margin:"0 auto"}}>
-              <ArrowLeft size={13}/> Quay về đăng nhập
+              style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",background:"none",border:"none",cursor:"pointer",color:OG,fontFamily:F,fontSize:"0.95rem",fontWeight:700,width:"100%"}}>
+              <ArrowLeft size={16}/> Quay về đăng nhập
             </button>
           </motion.div>
         )}
-      </motion.div>
-    </div>
-  );
-}
-
-function NewPasswordRequiredModal({
-  email,
-  session,
-  onBack,
-  onSuccess,
-}: {
-  email: string;
-  session: string;
-  onBack: () => void;
-  onSuccess: (role: string | null) => void;
-}) {
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async () => {
-    if (!newPassword || !confirmPassword) {
-      setError("Vui lòng nhập mật khẩu mới và xác nhận mật khẩu.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError("Mật khẩu xác nhận không khớp.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const tokens = await completeNewPassword(email, newPassword, session);
-
-      if (isAdminRole(tokens.role)) {
-        setError("Tài khoản quản trị không thể đăng nhập ở cổng Learner. Vui lòng dùng cổng Admin.");
-        return;
-      }
-
-      storeAuthTokens(tokens);
-      onSuccess(tokens.role);
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Không thể hoàn tất đổi mật khẩu.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{
-      position:"fixed",inset:0,zIndex:60,
-      background:"rgba(11,18,32,0.42)",
-      display:"flex",alignItems:"center",justifyContent:"center",
-      padding:"16px",
-    }}>
-      <motion.div
-        initial={{opacity:0,scale:0.94,y:12}}
-        animate={{opacity:1,scale:1,y:0}}
-        style={{
-          background:"#FFFFFF",borderRadius:"16px",padding:"36px 40px",
-          width:"100%",maxWidth:"460px",
-          boxShadow:"0 4px 6px rgba(0,0,0,0.05), 0 20px 60px rgba(0,0,0,0.18)",
-        }}
-      >
-        <BrandLogo size={32} textSize="0.9rem" className="mb-6"/>
-        <h2 style={{fontWeight:900,fontSize:"1.45rem",color:"#111827",letterSpacing:"-0.03em",marginBottom:"6px",fontFamily:F}}>
-          Đặt mật khẩu mới
-        </h2>
-        <p style={{fontSize:"0.85rem",color:"#6B7280",marginBottom:"20px",lineHeight:1.6,fontFamily:F}}>
-          Tài khoản <strong>{email}</strong> cần đặt mật khẩu mới để hoàn tất đăng nhập.
-        </p>
-
-        <Field
-          label="Mật khẩu mới"
-          type="password"
-          placeholder="Tối thiểu 8 ký tự"
-          icon={Lock}
-          value={newPassword}
-          onChange={setNewPassword}
-        />
-        <Field
-          label="Xác nhận mật khẩu"
-          type="password"
-          placeholder="Nhập lại mật khẩu mới"
-          icon={Lock}
-          value={confirmPassword}
-          onChange={setConfirmPassword}
-          error={error}
-        />
-
-        {error && !confirmPassword && (
-          <p style={{fontSize:"0.72rem",color:"#EF4444",marginTop:"-8px",marginBottom:"12px",fontFamily:F}}>{error}</p>
-        )}
-
-        <motion.button
-          whileHover={{scale:1.02}}
-          whileTap={{scale:0.98}}
-          onClick={handleSubmit}
-          disabled={loading}
-          style={{
-            width:"100%",padding:"13px",borderRadius:"10px",
-            background: loading ? "#FDBA74" : OG,
-            color:"#fff",border:"none",cursor: loading ? "not-allowed" : "pointer",
-            fontFamily:F,fontWeight:700,fontSize:"0.95rem",
-            boxShadow:"0 4px 16px rgba(255,107,0,0.35)",marginTop:"6px",marginBottom:"12px",
-            opacity: loading ? 0.85 : 1,
-          }}
-        >
-          {loading ? "Đang cập nhật..." : "Hoàn tất đăng nhập"}
-        </motion.button>
-
-        <button
-          onClick={onBack}
-          style={{display:"flex",alignItems:"center",gap:"4px",background:"none",border:"none",cursor:"pointer",color:"#6B7280",fontFamily:F,fontSize:"0.82rem",margin:"0 auto"}}
-        >
-          <ArrowLeft size={13}/> Quay lại
-        </button>
-      </motion.div>
-    </div>
-  );
-}
-
-function ConfirmRegisterModal({ email, onClose, onConfirmed }: { email: string; onClose: () => void; onConfirmed: () => void; }) {
-  const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-
-  const handleResend = async () => {
-    setLoading(true);
-    setError("");
-    setNotice("");
-    try {
-      await resendConfirmationCode(email);
-      setNotice("Mã xác nhận đã được gửi lại.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể gửi lại mã.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleConfirm = async () => {
-    if (!code.trim()) {
-      setError("Vui lòng nhập mã xác nhận.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    try {
-      await confirmRegister(email, code.trim());
-      onConfirmed();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể xác nhận mã.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{position:"fixed",inset:0,zIndex:60,background:"rgba(11,18,32,0.42)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px"}}>
-      <motion.div initial={{opacity:0,scale:0.94,y:12}} animate={{opacity:1,scale:1,y:0}} style={{background:"#FFFFFF",borderRadius:"16px",padding:"28px 32px",width:"100%",maxWidth:"420px",boxShadow:"0 10px 30px rgba(0,0,0,0.12)"}}>
-        <BrandLogo size={28} textSize="0.9rem" className="mb-4"/>
-        <h3 style={{fontWeight:900,fontSize:"1.25rem",marginBottom:"8px",fontFamily:F}}>Xác nhận email</h3>
-        <p style={{fontSize:"0.9rem",color:"#6B7280",marginBottom:"14px",fontFamily:F}}>Nhập mã xác nhận đã gửi tới <strong>{email}</strong>.</p>
-        <Field label="Mã xác nhận" placeholder="123456" icon={Check} value={code} onChange={setCode} error={error}/>
-        {notice && <p style={{fontSize:"0.8rem",color:"#059669",marginBottom:"8px",fontFamily:F}}>{notice}</p>}
-        <div style={{display:"flex",gap:"10px",marginTop:"6px"}}>
-          <button onClick={handleConfirm} disabled={loading} style={{flex:1,padding:"12px",borderRadius:"10px",background:loading?"#FDBA74":OG,color:"#fff",border:"none",fontWeight:700,cursor:loading?"not-allowed":"pointer",fontFamily:F}}> {loading?"Đang xác nhận...":"Xác nhận"}</button>
-          <button onClick={handleResend} disabled={loading} style={{padding:"12px",borderRadius:"10px",background:"#F3F4F6",border:"none",cursor:loading?"not-allowed":"pointer",fontFamily:F}}>Gửi lại</button>
-        </div>
-        <div style={{textAlign:"center",marginTop:"12px"}}>
-          <button onClick={onClose} style={{background:"none",border:"none",color:"#6B7280",cursor:"pointer",fontFamily:F}}>Đóng</button>
-        </div>
       </motion.div>
     </div>
   );
@@ -508,21 +261,20 @@ export default function Auth() {
   const location = useLocation();
   const [tab,       setTab]     = useState<"signin"|"signup">("signin");
   const [showReset, setShowReset] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [showPw,    setShowPw]  = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [challengeSession, setChallengeSession] = useState("");
-  const [challengeRole, setChallengeRole] = useState<string | null>(null);
-  // removed local overlay; destination layout will display loader
   /* form state */
   const [name,     setName]     = useState("");
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
 
   const isSignup = tab === "signup";
+  const params = new URLSearchParams(location.search);
+  const redirectPath = params.get("redirect") || "";
+  const redirectPlan = params.get("plan") || "";
+  const redirectTarget = redirectPath === "/pricing"
+    ? `${redirectPath}${redirectPlan ? `?plan=${redirectPlan}` : ""}`
+    : "/app";
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -531,62 +283,11 @@ export default function Auth() {
     if (mode === "login") setTab("signin");
   }, [location.search]);
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setAuthError("");
-
-    try {
-      const normalizedEmail = email.trim().toLowerCase();
-
-      if (isSignup) {
-        if (!name.trim() || !normalizedEmail || !password) {
-          setAuthError("Vui lòng nhập họ tên, email và mật khẩu.");
-          return;
-        }
-
-        try {
-          await register(name.trim(), normalizedEmail, password);
-          setShowConfirm(true);
-          setShowSuccess(false);
-        } catch (e) {
-          setAuthError(e instanceof Error ? e.message : "Không thể tạo tài khoản.");
-        }
-
-        return;
-      }
-
-      // Signin flow
-      if (!normalizedEmail || !password) {
-        setAuthError("Vui lòng nhập email và mật khẩu.");
-        return;
-      }
-
-      try {
-        const result = await login(normalizedEmail, password);
-
-        if (result.status === "authenticated") {
-          if (isAdminRole(result.tokens.role)) {
-            setAuthError("Tài khoản quản trị không thể đăng nhập ở cổng Learner. Vui lòng dùng cổng Admin.");
-            return;
-          }
-
-          // store tokens and navigate immediately; dashboard will show loader
-          storeAuthTokens(result.tokens);
-          const to = getPostLoginPath(result.tokens.role);
-          // navigate to a dedicated loading page which will forward to the final target
-          navigate(`/loading`, { replace: true, state: { to } });
-        } else if (result.status === "new-password-required") {
-          setChallengeSession(result.session);
-          setChallengeRole(result.role);
-          setShowNewPassword(true);
-        }
-      } catch (e) {
-        setAuthError(e instanceof Error ? e.message : "Đăng nhập thất bại.");
-        // ensure user sees the error area
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-    } finally {
-      setIsSubmitting(false);
+  const handleSubmit = () => {
+    if (isSignup) {
+      void register({ fullName: name, email, password }).then(() => setShowSuccess(true));
+    } else {
+      void login({ email, password }).then(() => navigate(redirectTarget));
     }
   };
 
@@ -595,8 +296,7 @@ export default function Auth() {
       minHeight:"100vh", display:"flex",
       fontFamily:F, background:"#FFFFFF",
     }}>
-      {/* Navigates immediately to app; loader displayed by dashboard layout when needed */}
-      {/* ── Left dark panel ── */}
+      {/* ── Left light panel (redesigned) ── */}
       <LeftPanel/>
 
       {/* ── Right white panel ── */}
@@ -604,75 +304,77 @@ export default function Auth() {
         flex:1, display:"flex", flexDirection:"column",
         background:"#FFFFFF", overflowY:"auto",
       }}>
-        {/* Top bar with back link */}
+        {/* Top bar */}
         <div style={{
-          display:"flex", alignItems:"center", justifyContent:"flex-start",
-          padding:"20px 32px",
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          padding:"24px 40px",
         }}>
           <Link to="/" style={{
-            display:"flex",alignItems:"center",gap:"5px",
-            fontSize:"0.8rem",color:"#6B7280",textDecoration:"none",fontFamily:F,
-            transition:"color 0.2s ease",
+            display:"flex",alignItems:"center",gap:"8px",
+            fontSize:"0.9rem",fontWeight:500,color:"#6B7280",textDecoration:"none",fontFamily:F,
+            transition:"color 0.2s"
           }}
           onMouseEnter={e=>{(e.currentTarget as HTMLAnchorElement).style.color="#111827";}}
-          onMouseLeave={e=>{(e.currentTarget as HTMLAnchorElement).style.color="#6B7280";}}
-          >
-            <ArrowLeft size={14}/>
+          onMouseLeave={e=>{(e.currentTarget as HTMLAnchorElement).style.color="#6B7280";}}>
+            <ArrowLeft size={16}/>
             Về trang chủ
           </Link>
+          <div className="lg:hidden">
+             <BrandLogo size={28} textColor="#111827" textSize="0.95rem" align="left"/>
+          </div>
         </div>
 
         {/* Form content */}
         <div style={{
           flex:1, display:"flex", alignItems:"center", justifyContent:"center",
-          padding:"0px 32px 40px",
+          padding:"20px 40px 60px",
         }}>
-          <div style={{width:"100%",maxWidth:"400px"}}>
-
+          <div style={{width:"100%",maxWidth:"420px"}}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={tab}
-                initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}
-                exit={{opacity:0,y:-8}}
-                transition={{duration:0.22}}
+                initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}
+                exit={{opacity:0,y:-12}}
+                transition={{duration:0.25, ease:[0.16,1,0.3,1]}}
               >
                 {/* Heading */}
-                <h2 style={{
-                  fontWeight:900, fontSize:"1.75rem",
-                  letterSpacing:"-0.04em", color:"#111827",
-                  marginBottom:"8px", fontFamily:F, lineHeight:1.2,
-                  marginTop:"0px",
-                }}>
-                  {isSignup ? "Tạo tài khoản" : "Đăng nhập"}
-                </h2>
-                <p style={{fontSize:"0.875rem",color:"#6B7280",marginBottom:"24px",fontFamily:F}}>
-                  {isSignup
-                    ? "Bắt đầu hành trình cá nhân hóa học tập của bạn."
-                    : "Tiếp tục từ nơi bạn đã dừng lại."}
-                </p>
+                <div style={{textAlign:"center", marginBottom:"36px"}}>
+                  <h2 style={{
+                    fontWeight:900, fontSize:"2.2rem",
+                    letterSpacing:"-0.04em", color:"#111827",
+                    marginBottom:"8px", fontFamily:F, lineHeight:1.2,
+                  }}>
+                    {isSignup ? "Tạo tài khoản mới ✨" : "Chào mừng trở lại 👋"}
+                  </h2>
+                  <p style={{fontSize:"1rem",color:"#8A94A6",fontFamily:F,margin:0}}>
+                    {isSignup
+                      ? "Tham gia cùng các bạn sinh viên đang bứt phá."
+                      : "Đăng nhập để tiếp tục hành trình học tập"}
+                  </p>
+                </div>
 
                 {/* Google button */}
-                <motion.button
-                  whileHover={{backgroundColor:"#F9FAFB",boxShadow:"0 2px 4px rgba(0,0,0,0.08)"}}
-                  whileTap={{scale:0.99}}
+                <button
                   style={{
-                    width:"100%",padding:"11px 14px",borderRadius:"10px",
-                    border:"1px solid #D1D5DB",background:"#FFFFFF",
-                    display:"flex",alignItems:"center",justifyContent:"center",gap:"10px",
-                    cursor:"pointer",fontSize:"0.875rem",fontWeight:600,
+                    width:"100%",padding:"13px",borderRadius:"12px",
+                    border:"1.5px solid #E5E7EB",background:"#FFFFFF",
+                    display:"flex",alignItems:"center",justifyContent:"center",gap:"12px",
+                    cursor:"pointer",fontSize:"0.95rem",fontWeight:600,
                     color:"#374151",fontFamily:F,
-                    boxShadow:"0 1px 2px rgba(0,0,0,0.05)",
-                    transition:"all 0.2s ease",marginBottom:"18px",
+                    boxShadow:"0 2px 6px rgba(0,0,0,0.02)",
+                    transition:"all 0.2s ease",marginBottom:"24px",
                   }}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="#F9FAFB";(e.currentTarget as HTMLButtonElement).style.borderColor="#D1D5DB";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="#FFFFFF";(e.currentTarget as HTMLButtonElement).style.borderColor="#E5E7EB";}}
                 >
                   <GoogleIcon/>
                   Tiếp tục với Google
-                </motion.button>
+                </button>
 
                 {/* Divider */}
-                <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"18px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"24px"}}>
                   <div style={{flex:1,height:"1px",background:"#E5E7EB"}}/>
-                  <span style={{fontSize:"0.75rem",color:"#9CA3AF",fontFamily:F}}>hoặc</span>
+                  <span style={{fontSize:"0.8rem",color:"#9CA3AF",fontFamily:F,fontWeight:500}}>hoặc tiếp tục với email</span>
                   <div style={{flex:1,height:"1px",background:"#E5E7EB"}}/>
                 </div>
 
@@ -681,130 +383,93 @@ export default function Auth() {
                   <Field label="Họ và tên" placeholder="Nguyễn Văn A"
                     icon={User} value={name} onChange={setName}/>
                 )}
-                <Field label="Địa chỉ email" type="email" placeholder="student@gmail.com"
+                <Field label="Địa chỉ email" type="email" placeholder="student@university.edu"
                   icon={Mail} value={email} onChange={setEmail}/>
-                <div style={{marginBottom:"18px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:"6px",alignItems:"baseline"}}>
-                    <label style={{fontSize:"0.8rem",fontWeight:600,color:"#374151",fontFamily:F}}>Mật khẩu</label>
+                <div style={{marginBottom:"28px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:"8px"}}>
+                    <label style={{fontSize:"0.85rem",fontWeight:600,color:"#374151",fontFamily:F}}>Mật khẩu</label>
                     {!isSignup && (
                       <button onClick={()=>setShowReset(true)}
-                        style={{fontSize:"0.78rem",color:OG,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontWeight:600,padding:0,transition:"opacity 0.2s"}}
-                        onMouseEnter={e=>{(e.target as HTMLButtonElement).style.opacity="0.8";}}
-                        onMouseLeave={e=>{(e.target as HTMLButtonElement).style.opacity="1";}}
-                      >
+                        style={{fontSize:"0.85rem",color:OG,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontWeight:600,padding:0}}>
                         Quên mật khẩu?
                       </button>
                     )}
                   </div>
                   <div style={{position:"relative",display:"flex",alignItems:"center"}}>
-                    <Lock size={15} color="#9CA3AF" style={{position:"absolute",left:"13px",pointerEvents:"none",zIndex:1}}/>
+                    <Lock size={18} color="#9CA3AF" style={{position:"absolute",left:"14px",zIndex:1}}/>
                     <input
                       type={showPw?"text":"password"} value={password}
                       onChange={e=>setPassword(e.target.value)}
-                      placeholder="Tối thiểu 8 ký tự"
+                      placeholder="••••••••"
                       style={{
-                        width:"100%",padding:"11px 40px 11px 38px",
-                        border:"1.5px solid #E5E7EB",borderRadius:"10px",
-                        fontSize:"0.875rem",fontFamily:F,color:"#111827",
+                        width:"100%",padding:"13px 44px 13px 42px",
+                        border:"1.5px solid #E5E7EB",borderRadius:"12px",
+                        fontSize:"0.95rem",fontFamily:F,color:"#111827",
                         background:"#FFFFFF",outline:"none",boxSizing:"border-box",
                         transition:"all 0.2s ease",
+                        boxShadow:"0 1px 2px rgba(0,0,0,0.02)",
                       }}
                       onFocus={e=>{
                         e.target.style.borderColor=OG;
-                        e.target.style.boxShadow="0 0 0 3px rgba(255,107,0,0.1)";
+                        e.target.style.boxShadow=`0 0 0 4px rgba(255,107,0,0.1)`;
                       }}
                       onBlur={e=>{
                         e.target.style.borderColor="#E5E7EB";
-                        e.target.style.boxShadow="none";
+                        e.target.style.boxShadow="0 1px 2px rgba(0,0,0,0.02)";
                       }}
                     />
                     <button onClick={()=>setShowPw(v=>!v)}
-                      style={{position:"absolute",right:"13px",background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",padding:0,display:"flex",alignItems:"center",transition:"color 0.2s"}}
-                      onMouseEnter={e=>{(e.target as HTMLButtonElement).style.color="#6B7280";}}
-                      onMouseLeave={e=>{(e.target as HTMLButtonElement).style.color="#9CA3AF";}}
-                    >
-                      {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
+                      style={{position:"absolute",right:"14px",background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",padding:0}}>
+                      {showPw ? <EyeOff size={18}/> : <Eye size={18}/>}
                     </button>
                   </div>
                 </div>
 
-                {authError && (
-                  <motion.div
-                    initial={{opacity:0,y:-4}}
-                    animate={{opacity:1,y:0}}
-                    style={{
-                      padding:"10px 12px",borderRadius:"8px",
-                      background:"#FEE2E2",border:"1px solid #FECACA",
-                      fontSize:"0.8rem",color:"#991B1B",marginBottom:"14px",fontFamily:F,lineHeight:1.5,
-                    }}
-                  >
-                    {authError}
-                  </motion.div>
-                )}
-
                 {/* CTA */}
                 <motion.button
-                  whileHover={{scale:1.02,boxShadow:"0 6px 20px rgba(255,107,0,0.45)"}}
-                  whileTap={{scale:0.97}}
+                  whileHover={{scale:1.02}} whileTap={{scale:0.98}}
                   onClick={handleSubmit}
-                  disabled={isSubmitting}
                   style={{
-                    width:"100%",padding:"13px",borderRadius:"10px",
-                    background:isSubmitting ? "#FDBA74" : OG,
-                    color:"#fff",border:"none",cursor:isSubmitting ? "not-allowed" : "pointer",
-                    fontFamily:F,fontWeight:700,fontSize:"0.95rem",
-                    display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",
-                    boxShadow:"0 4px 14px rgba(255,107,0,0.35)",
-                    marginBottom:"14px",opacity:isSubmitting ? 0.9 : 1,
-                    transition:"all 0.2s ease",
+                    width:"100%",padding:"16px",borderRadius:"12px",
+                    background:`linear-gradient(135deg, ${OG}, #FF8C3A)`,
+                    color:"#fff",border:"none",cursor:"pointer",
+                    fontFamily:F,fontWeight:700,fontSize:"1.05rem",
+                    display:"flex",alignItems:"center",justifyContent:"center",gap:"10px",
+                    boxShadow:"0 8px 24px rgba(255,107,0,0.3)",
+                    marginBottom:"20px",
                   }}
                 >
-                  {isSubmitting ? (isSignup ? "Đang tạo..." : "Đang đăng nhập...") : (isSignup ? "Tạo tài khoản" : "Đăng nhập")}
-                  {!isSubmitting && <ArrowRight size={14}/>}
+                  {isSignup ? "Tạo tài khoản" : "Đăng nhập"}
+                  <ArrowRight size={18}/>
                 </motion.button>
 
                 {/* Start for free note */}
                 {isSignup && (
-                  <p style={{textAlign:"center",fontSize:"0.75rem",color:"#9CA3AF",fontFamily:F,marginBottom:"14px"}}>
+                  <p style={{textAlign:"center",fontSize:"0.85rem",color:"#9CA3AF",fontFamily:F,marginBottom:"16px"}}>
                     Bắt đầu miễn phí. Không cần thẻ tín dụng.
                   </p>
                 )}
 
                 {/* Switch mode */}
-                <p style={{textAlign:"center",fontSize:"0.82rem",color:"#6B7280",fontFamily:F,marginBottom:"24px"}}>
+                <p style={{textAlign:"center",fontSize:"0.95rem",color:"#6B7280",fontFamily:F,marginBottom:"32px"}}>
                   {isSignup ? (
                     <>Đã có tài khoản?{" "}
-                      <button onClick={()=>{setTab("signin");setAuthError("");}} style={{color:OG,fontWeight:700,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontSize:"0.82rem",transition:"opacity 0.2s"}} onMouseEnter={e=>{(e.target as HTMLButtonElement).style.opacity="0.8";}} onMouseLeave={e=>{(e.target as HTMLButtonElement).style.opacity="1";}}
-                      >
+                      <button onClick={()=>setTab("signin")} style={{color:OG,fontWeight:700,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontSize:"0.95rem"}}>
                         Đăng nhập
                       </button>
                     </>
                   ) : (
                     <>Chưa có tài khoản?{" "}
-                      <button onClick={()=>{setTab("signup");setAuthError("");}} style={{color:OG,fontWeight:700,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontSize:"0.82rem",transition:"opacity 0.2s"}} onMouseEnter={e=>{(e.target as HTMLButtonElement).style.opacity="0.8";}} onMouseLeave={e=>{(e.target as HTMLButtonElement).style.opacity="1";}}
-                      >
+                      <button onClick={()=>setTab("signup")} style={{color:OG,fontWeight:700,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontSize:"0.95rem"}}>
                         Đăng ký miễn phí
                       </button>
                     </>
                   )}
                 </p>
 
-                {/* Trust badges */}
-                <div style={{borderTop:"1px solid #F3F4F6",paddingTop:"16px",textAlign:"center"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"16px",marginBottom:"6px"}}>
-                    {["AWS","Google Cloud","ISO 27001"].map(b=>(
-                      <span key={b} style={{fontSize:"0.68rem",color:"#9CA3AF",fontWeight:600,fontFamily:F}}>{b}</span>
-                    ))}
-                  </div>
-                  <p style={{fontSize:"0.68rem",color:"#9CA3AF",fontFamily:F}}>
-                    Ẩn danh dữ liệu 100%. Tuân thủ PDPA.
-                  </p>
-                </div>
-
                 {/* Admin link */}
-                <p style={{textAlign:"center",marginTop:"14px",fontSize:"0.72rem",color:"#9CA3AF",fontFamily:F}}>
-                  🏛 Bạn là đối tác trường đại học?{" "}
-                  <Link to="/admin-login" style={{color:"#6B7280",fontWeight:600}}>Đăng nhập quản trị</Link>
+                <p style={{textAlign:"center",marginTop:"40px",fontSize:"0.8rem",color:"#9CA3AF",fontFamily:F}}>
+                  <Link to="/admin-login" style={{color:"#9CA3AF",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>{(e.target as HTMLAnchorElement).style.color="#6B7280"}} onMouseLeave={e=>{(e.target as HTMLAnchorElement).style.color="#9CA3AF"}}>Đăng nhập cho đối tác trường ĐH</Link>
                 </p>
               </motion.div>
             </AnimatePresence>
@@ -816,54 +481,7 @@ export default function Auth() {
       <AnimatePresence>
         {showReset && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
-            <ResetPassword onBack={()=>setShowReset(false)}/>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showNewPassword && (
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
-            <NewPasswordRequiredModal
-              email={email.trim().toLowerCase()}
-              session={challengeSession}
-              onBack={() => {
-                setShowNewPassword(false);
-                setChallengeSession("");
-                setChallengeRole(null);
-              }}
-              onSuccess={(role) => {
-                if (isAdminRole(role ?? challengeRole)) {
-                  setShowNewPassword(false);
-                  setChallengeSession("");
-                  setChallengeRole(null);
-                  setPassword("");
-                  setAuthError("Tài khoản quản trị không thể đăng nhập ở cổng Learner. Vui lòng dùng cổng Admin.");
-                  return;
-                }
-
-                setShowNewPassword(false);
-                setChallengeSession("");
-                setChallengeRole(null);
-                setPassword("");
-                navigate("/app");
-              }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-      <AnimatePresence>
-        {showConfirm && (
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
-            <ConfirmRegisterModal
-              email={email.trim().toLowerCase()}
-              onClose={() => setShowConfirm(false)}
-              onConfirmed={() => {
-                setShowConfirm(false);
-                setShowSuccess(true);
-              }}
-            />
+            <ResetPassword onBack={()=>setShowReset(false)} onSubmit={requestPasswordReset}/>
           </motion.div>
         )}
       </AnimatePresence>
@@ -871,8 +489,20 @@ export default function Auth() {
       {/* Registration success modal */}
       <RegistrationSuccessModal
         open={showSuccess}
-        onStartSetup={() => { setShowSuccess(false); navigate("/onboarding"); }}
-        onSkip={() => { setShowSuccess(false); navigate("/app"); }}
+        onStartSetup={() => {
+          setShowSuccess(false);
+          window.localStorage.setItem("ss_user_logged_in", "true");
+          if (redirectPath === "/pricing") {
+            navigate(redirectTarget);
+            return;
+          }
+          navigate("/onboarding");
+        }}
+        onSkip={() => {
+          setShowSuccess(false);
+          window.localStorage.setItem("ss_user_logged_in", "true");
+          navigate(redirectTarget);
+        }}
       />
     </div>
   );

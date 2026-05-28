@@ -6,6 +6,7 @@ import {
   Layers, Palette, Server, Check, Target, Sparkles,
   AlertTriangle, BookOpen, Brain, Rocket,
 } from "lucide-react";
+import { upsertOnboardingProfile } from "../../api/onboardingService";
 
 /* ─── Design Tokens ─── */
 const F    = "'Plus Jakarta Sans', Inter, sans-serif";
@@ -46,68 +47,68 @@ interface StepConfig {
 const STEPS: StepConfig[] = [
   {
     type: "welcome",
-    tag: "REGISTRATION SUCCESSFUL",
+    tag: "ĐĂNG KÝ THÀNH CÔNG",
     tagEmoji: "🎉",
-    heading: "Welcome! What subject are you studying?",
-    sub: "Enter your course name so we can build your personalized roadmap.",
+    heading: "Chào mừng! Bạn đang học môn gì?",
+    sub: "Nhập tên môn học để hệ thống tạo lộ trình cá nhân hóa cho bạn.",
   },
   {
     type: "cards-grid",
-    tag: "CAREER GOAL",
-    heading: "What's your target role?",
-    sub: "We'll build your entire learning path around this goal.",
+    tag: "MỤC TIÊU NGHỀ NGHIỆP",
+    heading: "Vai trò mục tiêu của bạn là gì?",
+    sub: "Chúng tôi sẽ xây dựng toàn bộ lộ trình học xoay quanh mục tiêu này.",
     options: [
-      { id: "fe",  label: "Frontend Dev",       sub: "React, TypeScript, CSS",       icon: <Code2 size={20}/>,    shortcut: "A" },
-      { id: "be",  label: "Backend Dev",         sub: "Node.js, SQL, APIs",           icon: <Server size={20}/>,   shortcut: "B" },
-      { id: "ds",  label: "Data Scientist",      sub: "Python, ML, Statistics",       icon: <BarChart2 size={20}/>,shortcut: "C" },
-      { id: "pm",  label: "Product Manager",     sub: "Strategy, Roadmaps, Metrics",  icon: <Layers size={20}/>,   shortcut: "D" },
-      { id: "ux",  label: "UI/UX Designer",      sub: "Figma, Research, Prototyping", icon: <Palette size={20}/>,  shortcut: "E" },
-      { id: "de",  label: "DevOps / Cloud",      sub: "AWS, Docker, CI/CD",           icon: <Database size={20}/>, shortcut: "F" },
+      { id: "fe",  label: "Lập trình viên Frontend", sub: "React, TypeScript, CSS",          icon: <Code2 size={20}/>,    shortcut: "A" },
+      { id: "be",  label: "Lập trình viên Backend",  sub: "Node.js, SQL, API",                icon: <Server size={20}/>,   shortcut: "B" },
+      { id: "ds",  label: "Nhà khoa học dữ liệu",    sub: "Python, ML, Thống kê",              icon: <BarChart2 size={20}/>,shortcut: "C" },
+      { id: "pm",  label: "Quản lý sản phẩm",        sub: "Chiến lược, Lộ trình, Chỉ số",      icon: <Layers size={20}/>,   shortcut: "D" },
+      { id: "ux",  label: "Nhà thiết kế UI/UX",      sub: "Figma, Nghiên cứu, Prototype",      icon: <Palette size={20}/>,  shortcut: "E" },
+      { id: "de",  label: "DevOps / Điện toán đám mây", sub: "AWS, Docker, CI/CD",              icon: <Database size={20}/>, shortcut: "F" },
     ],
   },
   {
     type: "cards",
-    tag: "CURRENT LEVEL",
-    heading: "What's your experience level?",
-    sub: "Be honest — this helps us set the right starting point.",
+    tag: "TRÌNH ĐỘ HIỆN TẠI",
+    heading: "Trình độ hiện tại của bạn ở mức nào?",
+    sub: "Hãy chọn đúng với năng lực để hệ thống đặt điểm bắt đầu phù hợp.",
     options: [
-      { id: "beg", label: "Complete Beginner",  sub: "Just starting from scratch",       icon: <span style={{ fontSize: "22px" }}>🌱</span>, shortcut: "A" },
-      { id: "som", label: "Know the Basics",    sub: "Understand fundamentals",           icon: <span style={{ fontSize: "22px" }}>📖</span>, shortcut: "B" },
-      { id: "int", label: "Intermediate",       sub: "Built a few personal projects",     icon: <span style={{ fontSize: "22px" }}>⚡</span>, shortcut: "C" },
-      { id: "adv", label: "Advanced",           sub: "Ready to polish & go deep",         icon: <span style={{ fontSize: "22px" }}>🚀</span>, shortcut: "D" },
+      { id: "beg", label: "Người mới bắt đầu",  sub: "Mới làm quen từ đầu",                icon: <span style={{ fontSize: "22px" }}>🌱</span>, shortcut: "A" },
+      { id: "som", label: "Đã biết cơ bản",      sub: "Hiểu các kiến thức nền tảng",        icon: <span style={{ fontSize: "22px" }}>📖</span>, shortcut: "B" },
+      { id: "int", label: "Trung cấp",           sub: "Đã làm vài dự án cá nhân",           icon: <span style={{ fontSize: "22px" }}>⚡</span>, shortcut: "C" },
+      { id: "adv", label: "Nâng cao",            sub: "Sẵn sàng đào sâu và tối ưu",         icon: <span style={{ fontSize: "22px" }}>🚀</span>, shortcut: "D" },
     ],
   },
   {
     type: "cards",
-    tag: "TIMELINE",
-    heading: "How long until your exam or deadline?",
-    sub: "We'll calibrate the intensity of your sprint plan.",
+    tag: "MỐC THỜI GIAN",
+    heading: "Còn bao lâu đến kỳ thi hoặc hạn nộp?",
+    sub: "Chúng tôi sẽ điều chỉnh cường độ sprint dựa trên mốc này.",
     options: [
-      { id: "w2",  label: "Under 2 weeks",   sub: "Hyper-intensive crunch mode",    icon: <span style={{ fontSize: "22px" }}>🔥</span>, shortcut: "A" },
-      { id: "w4",  label: "2 – 4 weeks",     sub: "Focused, high-intensity sprints", icon: <span style={{ fontSize: "22px" }}>⏱️</span>, shortcut: "B" },
-      { id: "m3",  label: "1 – 3 months",    sub: "Steady and balanced pace",       icon: <span style={{ fontSize: "22px" }}>📅</span>, shortcut: "C" },
-      { id: "m6",  label: "Over 3 months",   sub: "Deep mastery with time to spare", icon: <span style={{ fontSize: "22px" }}>🌊</span>, shortcut: "D" },
+      { id: "w2",  label: "Dưới 2 tuần",     sub: "Nước rút cường độ cao",           icon: <span style={{ fontSize: "22px" }}>🔥</span>, shortcut: "A" },
+      { id: "w4",  label: "2 - 4 tuần",       sub: "Sprint tập trung cao",            icon: <span style={{ fontSize: "22px" }}>⏱️</span>, shortcut: "B" },
+      { id: "m3",  label: "1 - 3 tháng",      sub: "Nhịp học ổn định, cân bằng",       icon: <span style={{ fontSize: "22px" }}>📅</span>, shortcut: "C" },
+      { id: "m6",  label: "Trên 3 tháng",     sub: "Có thời gian đào sâu kỹ năng",     icon: <span style={{ fontSize: "22px" }}>🌊</span>, shortcut: "D" },
     ],
   },
   {
     type: "cards",
-    tag: "CHALLENGES",
-    heading: "What's your biggest challenge?",
-    sub: "Pick up to 2. We'll tackle these head-on.",
+    tag: "THÁCH THỨC",
+    heading: "Thách thức lớn nhất của bạn là gì?",
+    sub: "Chọn tối đa 2 mục, chúng ta sẽ xử lý trực diện.",
     multi: true,
     maxSelect: 2,
     options: [
-      { id: "gap",  label: "Skill gaps",             sub: "Missing technical knowledge",    icon: <Brain size={20}/>,         shortcut: "A" },
-      { id: "int2", label: "Interview prep",          sub: "Nervous in mock interviews",     icon: <Sparkles size={20}/>,      shortcut: "B" },
-      { id: "port", label: "Portfolio / Projects",   sub: "Nothing impressive to show yet", icon: <Code2 size={20}/>,         shortcut: "C" },
-      { id: "cv",   label: "Writing a strong CV",    sub: "Don't know what to highlight",   icon: <AlertTriangle size={20}/>, shortcut: "D" },
+      { id: "gap",  label: "Hổng kiến thức",             sub: "Thiếu nền tảng kỹ thuật",              icon: <Brain size={20}/>,         shortcut: "A" },
+      { id: "int2", label: "Luyện phỏng vấn",            sub: "Dễ mất bình tĩnh khi mock interview", icon: <Sparkles size={20}/>,      shortcut: "B" },
+      { id: "port", label: "Portfolio / Dự án",          sub: "Chưa có dự án nổi bật để trình bày",   icon: <Code2 size={20}/>,         shortcut: "C" },
+      { id: "cv",   label: "Viết CV nổi bật",            sub: "Chưa biết nên nhấn mạnh điểm nào",     icon: <AlertTriangle size={20}/>, shortcut: "D" },
     ],
   },
   {
     type: "commitment",
-    tag: "COMMITMENT",
-    heading: "How much time can you study?",
-    sub: "We'll plan your schedule around your availability.",
+    tag: "CAM KẾT",
+    heading: "Mỗi tuần bạn có thể học bao nhiêu thời gian?",
+    sub: "Chúng tôi sẽ lên lịch học dựa trên quỹ thời gian của bạn.",
   },
 ];
 
@@ -162,7 +163,7 @@ function WelcomeStep({
           fontFamily: F, fontSize: "0.75rem", color: OG,
           fontWeight: 800, letterSpacing: "0.09em", textTransform: "uppercase",
         }}>
-          Registration Successful 🎉
+          Đăng ký thành công 🎉
         </span>
       </motion.div>
 
@@ -178,9 +179,9 @@ function WelcomeStep({
           color: T1, marginBottom: "12px",
         }}
       >
-        Welcome!{" "}
-        <span style={{ color: OG }}>What subject</span>
-        <br />are you studying?
+        Chào mừng!{" "}
+        <span style={{ color: OG }}>Bạn đang học</span>
+        <br />môn gì?
       </motion.h1>
 
       {/* Sub */}
@@ -193,7 +194,7 @@ function WelcomeStep({
           lineHeight: 1.65, marginBottom: "36px",
         }}
       >
-        Enter your course name so we can personalise your AI roadmap.
+        Nhập tên môn học để hệ thống cá nhân hóa lộ trình AI cho bạn.
       </motion.p>
 
       {/* Input */}
@@ -217,7 +218,7 @@ function WelcomeStep({
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="e.g. Data Structures, Machine Learning, React..."
+          placeholder="Ví dụ: Cấu trúc dữ liệu, Machine Learning, React..."
           style={{
             width: "100%",
             padding: "17px 20px 17px 52px",
@@ -259,7 +260,7 @@ function WelcomeStep({
           marginTop: "12px",
         }}
       >
-        Press <strong style={{ color: T2 }}>Enter</strong> to continue
+        Nhấn <strong style={{ color: T2 }}>Enter</strong> để tiếp tục
       </motion.p>
     </motion.div>
   );
@@ -504,7 +505,7 @@ function CardStep({
           <span style={{
             fontFamily: F, fontSize: "0.75rem", color: T3, marginLeft: "4px",
           }}>
-            {answers.length}/{maxSelect} selected
+            Đã chọn {answers.length}/{maxSelect}
           </span>
         </motion.div>
       )}
@@ -528,10 +529,10 @@ function CommitmentStep({
 }) {
   const DAY_OPTIONS = [1, 2, 3, 4, 5, 6, 7];
   const HOUR_OPTIONS = [
-    { id: "30m", label: "30 min" },
-    { id: "1h",  label: "1 hour" },
-    { id: "2h",  label: "2 hours" },
-    { id: "2h+", label: "2h+" },
+    { id: "30m", label: "30 phút" },
+    { id: "1h",  label: "1 giờ" },
+    { id: "2h",  label: "2 giờ" },
+    { id: "2h+", label: "2 giờ+" },
   ];
 
   return (
@@ -560,7 +561,7 @@ function CommitmentStep({
           fontFamily: F, fontSize: "0.72rem", color: OG,
           fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase",
         }}>
-          Commitment
+          Cam kết
         </span>
       </motion.div>
 
@@ -576,8 +577,8 @@ function CommitmentStep({
           color: T1, marginBottom: "8px",
         }}
       >
-        How much time can you<br />
-        <span style={{ color: OG }}>study each week?</span>
+        Bạn có thể dành bao nhiêu thời gian<br />
+        <span style={{ color: OG }}>để học mỗi tuần?</span>
       </motion.h1>
 
       <motion.p
@@ -589,7 +590,7 @@ function CommitmentStep({
           lineHeight: 1.65, marginBottom: "36px",
         }}
       >
-        We'll create a realistic study schedule around your availability.
+        Chúng tôi sẽ tạo lịch học thực tế theo quỹ thời gian của bạn.
       </motion.p>
 
       {/* Days/week */}
@@ -604,7 +605,7 @@ function CommitmentStep({
           color: T2, textTransform: "uppercase", letterSpacing: "0.08em",
           marginBottom: "14px",
         }}>
-          Days per week
+          Số ngày học mỗi tuần
         </p>
         <div style={{
           display: "flex", gap: "10px", flexWrap: "wrap",
@@ -643,7 +644,7 @@ function CommitmentStep({
                   color: sel ? "rgba(255,255,255,0.8)" : T3,
                   fontWeight: 600, marginTop: "1px",
                 }}>
-                  {d === 1 ? "day" : "days"}
+                  {d === 1 ? "ngày" : "ngày"}
                 </span>
               </motion.button>
             );
@@ -662,7 +663,7 @@ function CommitmentStep({
           color: T2, textTransform: "uppercase", letterSpacing: "0.08em",
           marginBottom: "14px",
         }}>
-          Hours per day
+          Thời gian học mỗi ngày
         </p>
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           {HOUR_OPTIONS.map((h, i) => {
@@ -717,11 +718,10 @@ function CommitmentStep({
           </div>
           <div>
             <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.88rem", color: T1 }}>
-              Your weekly commitment
+              Cam kết học tập mỗi tuần
             </p>
             <p style={{ fontFamily: F, fontSize: "0.8rem", color: OG, fontWeight: 600, marginTop: "2px" }}>
-              {days} day{days > 1 ? "s" : ""} ×{" "}
-              {hours === "30m" ? "30 min" : hours === "1h" ? "1 hour" : hours === "2h" ? "2 hours" : "2+ hours"} per day
+              {days} ngày x {hours === "30m" ? "30 phút" : hours === "1h" ? "1 giờ" : hours === "2h" ? "2 giờ" : "2+ giờ"} mỗi ngày
             </p>
           </div>
         </motion.div>
@@ -788,7 +788,7 @@ function CompletionScreen({ onFinish }: { onFinish: () => void }) {
           fontFamily: F, fontSize: "0.72rem", color: OG,
           fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em",
         }}>
-          Setup Complete
+          Thiết lập hoàn tất
         </span>
       </motion.div>
 
@@ -802,8 +802,8 @@ function CompletionScreen({ onFinish }: { onFinish: () => void }) {
           letterSpacing: "-0.04em", lineHeight: 1.1, color: T1, marginBottom: "12px",
         }}
       >
-        Your AI roadmap<br />
-        <span style={{ color: OG }}>is ready. 🚀</span>
+        Lộ trình AI của bạn<br />
+        <span style={{ color: OG }}>đã sẵn sàng. 🚀</span>
       </motion.h1>
 
       <motion.p
@@ -815,8 +815,8 @@ function CompletionScreen({ onFinish }: { onFinish: () => void }) {
           lineHeight: 1.7, marginBottom: "32px",
         }}
       >
-        Based on your answers, we've built a personalised skill roadmap,
-        ATS CV template, and weekly study plan — all tailored just for you.
+        Dựa trên câu trả lời của bạn, chúng tôi đã tạo lộ trình kỹ năng cá nhân hóa,
+        mẫu CV chuẩn ATS và kế hoạch học theo tuần phù hợp riêng cho bạn.
       </motion.p>
 
       {/* Perks */}
@@ -830,10 +830,10 @@ function CompletionScreen({ onFinish }: { onFinish: () => void }) {
         }}
       >
         {[
-          { emoji: "🎯", text: "Personalised Roadmap" },
-          { emoji: "📋", text: "ATS CV Template" },
-          { emoji: "🎤", text: "Mock Interview #1" },
-          { emoji: "⚡", text: "Weekly Sprint Plan" },
+          { emoji: "🎯", text: "Lộ trình cá nhân hóa" },
+          { emoji: "📋", text: "Mẫu CV chuẩn ATS" },
+          { emoji: "🎤", text: "Buổi phỏng vấn thử #1" },
+          { emoji: "⚡", text: "Kế hoạch sprint theo tuần" },
         ].map(p => (
           <span key={p.text} style={{
             display: "inline-flex", alignItems: "center", gap: "6px",
@@ -865,7 +865,7 @@ function CompletionScreen({ onFinish }: { onFinish: () => void }) {
         }}
       >
         <Zap size={18} fill="#fff" color="#fff" />
-        Go to Dashboard
+        Đi đến bảng điều khiển
         <ArrowRight size={18} />
       </motion.button>
     </motion.div>
@@ -915,6 +915,29 @@ export default function Onboarding() {
   const [commitDays, setCommitDays]     = useState<number | null>(null);
   const [commitHours, setCommitHours]   = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isDone) {
+      return;
+    }
+
+    const hourMap: Record<string, number> = {
+      "30m": 0.5,
+      "1h": 1,
+      "2h": 2,
+      "2h+": 2.5,
+    };
+
+    void upsertOnboardingProfile("default-workspace", {
+      targetGoal: subject.trim() || "Lộ trình cá nhân hóa",
+      studyHoursPerWeek: commitHours ? hourMap[commitHours] ?? null : null,
+      targetDeadline: null,
+      confidence: commitDays !== null && commitDays >= 5 ? "HIGH" : commitDays !== null && commitDays >= 3 ? "MEDIUM" : "LOW",
+      preferredLanguage: "Vietnamese",
+      preferredDays: [],
+      preferredTimeSlots: [],
+    });
+  }, [isDone, subject, commitDays, commitHours]);
+
   /* Can advance? */
   const canAdvance = (() => {
     if (isDone) return true;
@@ -957,11 +980,11 @@ export default function Onboarding() {
     const handler = (e: KeyboardEvent) => {
       if (isDone) return;
       const s = STEPS[step];
-      // Enter = advance
+      // Enter = đi tiếp
       if (e.key === "Enter" && canAdvance) { setStep(prev => prev + 1); return; }
-      // Backspace = go back
+      // Backspace = quay lại
       if (e.key === "Backspace" && step > 0) { setStep(prev => prev - 1); return; }
-      // Shortcut keys for card steps
+      // Phím tắt cho các bước dạng thẻ
       if (s.type === "cards" || s.type === "cards-grid") {
         const key = e.key.toUpperCase();
         const opt = s.options?.find(o => o.shortcut === key);
@@ -1035,7 +1058,7 @@ export default function Onboarding() {
               (e.currentTarget as HTMLButtonElement).style.borderColor = BDR;
             }}
           >
-            Skip setup →
+            Bỏ qua thiết lập →
           </button>
         )}
       </div>
@@ -1097,7 +1120,7 @@ export default function Onboarding() {
             letterSpacing: "0.05em",
             position: "absolute", left: "50%", transform: "translateX(-50%)",
           }}>
-            {step + 1} <span style={{ color: BDR }}>of</span> {TOTAL}
+            {step + 1} <span style={{ color: BDR }}>trên</span> {TOTAL}
           </span>
 
           {/* Buttons */}
@@ -1121,7 +1144,7 @@ export default function Onboarding() {
                 }}
               >
                 <ArrowLeft size={15} />
-                Back
+                Quay lại
               </motion.button>
             )}
 
@@ -1152,11 +1175,11 @@ export default function Onboarding() {
               {step === TOTAL - 1 ? (
                 <>
                   <Sparkles size={15} />
-                  Complete Setup
+                  Hoàn tất thiết lập
                 </>
               ) : (
                 <>
-                  Next
+                  Tiếp tục
                   <ArrowRight size={15} />
                 </>
               )}

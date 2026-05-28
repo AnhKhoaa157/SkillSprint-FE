@@ -103,10 +103,10 @@ export default function PostUpgradeDashboard() {
 
           <FeatureCard
             icon={tier === "premium" ? <Mic className="w-4 h-4 text-orange-500" /> : <FileText className="w-4 h-4 text-orange-500" />}
-            title={tier === "premium" ? "Career Tools" : "Skill Gap + Resources"}
-            desc={tier === "premium" ? "Career profile nâng cao và bộ công cụ nghề nghiệp." : "Phân tích thiếu hụt kỹ năng và đề xuất tài liệu học tập."}
-            cta={tier === "premium" ? "Mở Career Tools" : "Xem phân tích"}
-            onClick={() => navigate(tier === "premium" ? "/app/profile" : "/app/workspaces")}
+            title={tier === "premium" ? "AI Mock Interview" : "Skill Gap + Resources"}
+            desc={tier === "premium" ? "Phỏng vấn mô phỏng theo role với feedback tức thì." : "Phân tích thiếu hụt kỹ năng và đề xuất tài liệu học tập."}
+            cta={tier === "premium" ? "Bắt đầu Mock Interview" : "Xem phân tích"}
+            onClick={() => navigate(tier === "premium" ? "/app/mock-interview" : "/app/analytics")}
           />
 
           <FeatureCard
@@ -119,7 +119,7 @@ export default function PostUpgradeDashboard() {
         </motion.div>
       </AnimatePresence>
 
-          {tier === "premium" && (
+      {tier === "premium" && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -128,7 +128,7 @@ export default function PostUpgradeDashboard() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-bold tracking-widest text-orange-600 uppercase mb-1">Premium Starter Pack</p>
-                  <p className="text-sm text-slate-700">Bạn có thể bắt đầu ngay với Career Profile và bộ công cụ nghề nghiệp để thấy kết quả nhanh nhất.</p>
+              <p className="text-sm text-slate-700">Bạn có thể bắt đầu ngay với Career Profile hoặc Mock Interview để thấy kết quả nhanh nhất.</p>
             </div>
             <button
               onClick={() => navigate("/app/profile")}

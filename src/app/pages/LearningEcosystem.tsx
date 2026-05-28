@@ -323,7 +323,6 @@ export default function LearningEcosystem() {
                         setQuizOpen(false);
                         setPanelOpen(false);
                         setHubPlaying(true);
-                        const activeLessonIndex = Math.max(0, EPISODES.findIndex(ep => ep.id === activeEpisode.id));
                         navigate("/app/learning/course", {
                           state: {
                             title: activeEpisode.title,
@@ -331,8 +330,6 @@ export default function LearningEcosystem() {
                             channel: "SkillSprint Academy",
                             subject: learningSubject,
                             lessonId: activeEpisode.id,
-                            lessonIndex: activeLessonIndex,
-                            lessonSection: activeEpisode.tag,
                           },
                         });
                       }
