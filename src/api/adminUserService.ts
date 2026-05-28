@@ -1,4 +1,13 @@
-import { MOCK_STORAGE_KEYS, nowIso, readStorage, writeStorage } from "./mockDb";
+import { getStoredAuthSession } from "./authService";
+
+const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
+
+type ApiResponse<T> = {
+  success: boolean;
+  code: number;
+  message: string;
+  data: T | null;
+};
 
 export type AdminUserSummary = {
   id: string;
@@ -13,108 +22,101 @@ export type AdminUserDetail = AdminUserSummary & {
   updatedAt?: string;
 };
 
-type AdminUserState = AdminUserDetail[];
+async function authFetch<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
+  const session = getStoredAuthSession();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (session?.accessToken) headers["Authorization"] = `Bearer ${session.accessToken}`;
+  // Debug logging (development): do not remove — helps trace missing API data
+  try {
+    const safeHeaders = { ...headers } as Record<string,string>;
+    if (safeHeaders.Authorization) safeHeaders.Authorization = "REDACTED";
+    console.log("[adminUserService] request:", `${API_BASE}${path}`, safeHeaders, init?.method || "GET");
 
-const KEY = MOCK_STORAGE_KEYS.adminUsers;
+    const res = await fetch(`${API_BASE}${path}`, { headers, ...init });
+    const text = await res.text().catch(() => null);
+    let payload: any = null;
+    try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }
 
-function seedUsers(): AdminUserState {
-  return [
-    {
-      id: "USR-1084",
-      email: "a.nguyen@skillsprint.vn",
-      fullName: "Nguyễn Văn A",
-      role: "LEARNER",
-      status: "ACTIVE",
-      createdAt: "2026-04-01T08:25:00.000Z",
-      updatedAt: "2026-04-01T08:25:00.000Z",
-    },
-    {
-      id: "USR-1130",
-      email: "b.tran@skillsprint.vn",
-      fullName: "Trần Thị B",
-      role: "LEARNER",
-      status: "REVIEW",
-      createdAt: "2026-03-31T21:14:00.000Z",
-      updatedAt: "2026-03-31T21:14:00.000Z",
-    },
-    {
-      id: "USR-0912",
-      email: "c.le@skillsprint.vn",
-      fullName: "Lê Văn C",
-      role: "ADMIN",
-      status: "ACTIVE",
-      createdAt: "2026-04-01T07:42:00.000Z",
-      updatedAt: "2026-04-01T07:42:00.000Z",
-    },
-  ];
-}
+    console.log("[adminUserService] response:", res.status, payload);
 
-function readState(): AdminUserState {
-  return readStorage<AdminUserState>(KEY, []);
-}
+    if (!res.ok) {
+      const message = payload?.message || `Server error ${res.status}`;
+      throw new Error(message);
+    }
 
-function writeState(state: AdminUserState): void {
-  writeStorage(KEY, state);
-}
-
-function ensureSeeded(): AdminUserState {
-  const current = readState();
-  if (current.length > 0) {
-    return current;
+    return payload as ApiResponse<T>;
+  } catch (err) {
+    console.error('[adminUserService] fetch error', err);
+    throw err;
   }
-
-  const seeded = seedUsers();
-  writeState(seeded);
-  return seeded;
 }
 
 export async function getAdminUsers(search?: string, page = 0, size = 10) {
-  const current = ensureSeeded();
-  const term = search?.trim().toLowerCase() ?? "";
-  const filtered = term
-    ? current.filter((item) => [item.email, item.fullName, item.role, item.status].some((value) => value?.toLowerCase().includes(term)))
-    : current;
-  const start = page * size;
-  const content = filtered.slice(start, start + size);
-
-  return {
-    content,
-    totalElements: filtered.length,
+  const q = new URLSearchParams();
+  if (search) q.set("search", search);
+  q.set("page", String(page));
+  q.set("size", String(size));
+  const resp = await authFetch<any>(`/api/admin/users?${q.toString()}`);
+  if (!resp.data) throw new Error(resp.message || "Empty response");
+  // Backend returns PageResponse shape: {items, totalItems, page, size, totalPages}
+  // Backend items have: {userId, email, emailVerified, fullName, status, roles, ...}
+  // Normalize to expected shape: {content, totalElements} + map userId → id for consistency
+  const normalized = {
+    content: (resp.data.items || resp.data.content || []).map((item: any) => ({
+      ...item,
+      id: item.userId || item.id, // Ensure id field is set
+      role: item.roles?.length ? item.roles[0] : undefined, // First role for display
+    })),
+    totalElements: resp.data.totalItems ?? resp.data.totalElements ?? 0,
   };
+  console.log("[adminUserService] normalized response:", normalized);
+  console.log("[adminUserService] first user item:", normalized.content?.[0]);
+  return normalized;
 }
 
 export async function getAdminUser(userId: string) {
-  const user = ensureSeeded().find((item) => item.id === userId);
-  if (!user) {
-    throw new Error("User not found");
-  }
-
-  return user;
+  console.log("[adminUserService] getAdminUser called with userId:", userId);
+  const resp = await authFetch<any>(`/api/admin/users/${encodeURIComponent(userId)}`);
+  if (!resp.data) throw new Error(resp.message || "Empty response");
+  // Normalize backend response to match expected shape
+  const normalized = {
+    ...resp.data,
+    id: resp.data.userId || resp.data.id, // Ensure id field is set
+    role: resp.data.roles?.length ? resp.data.roles[0] : undefined, // First role for display
+  };
+  console.log("[adminUserService] normalized detail:", normalized);
+  return normalized;
 }
 
 export async function updateUserStatus(userId: string, body: { status: string }) {
-  const current = ensureSeeded();
-  const index = current.findIndex((item) => item.id === userId);
-  if (index < 0) {
-    throw new Error("User not found");
-  }
-
-  current[index] = { ...current[index], status: body.status, updatedAt: nowIso() };
-  writeState(current);
-  return current[index];
+  const resp = await authFetch<any>(`/api/admin/users/${encodeURIComponent(userId)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  if (!resp.data) throw new Error(resp.message || "Empty response");
+  const normalized = {
+    ...resp.data,
+    id: resp.data.userId || resp.data.id,
+    role: resp.data.roles?.length ? resp.data.roles[0] : undefined,
+  };
+  return normalized;
 }
 
 export async function updateUserRole(userId: string, body: { role?: string; roles?: string[] }) {
-  const current = ensureSeeded();
-  const index = current.findIndex((item) => item.id === userId);
-  if (index < 0) {
-    throw new Error("User not found");
-  }
-
-  const nextRole = body.role || body.roles?.[0] || "LEARNER";
-  current[index] = { ...current[index], role: nextRole, updatedAt: nowIso() };
-  writeState(current);
-  return current[index];
+  // Backend expects single role, convert from array if needed
+  const role = body.role || body.roles?.[0] || "LEARNER";
+  console.log("[adminUserService] updateUserRole - sending role:", role);
+  const resp = await authFetch<any>(`/api/admin/users/${encodeURIComponent(userId)}/roles`, {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
+  });
+  if (!resp.data) throw new Error(resp.message || "Empty response");
+  const normalized = {
+    ...resp.data,
+    id: resp.data.userId || resp.data.id,
+    role: resp.data.roles?.length ? resp.data.roles[0] : undefined,
+  };
+  return normalized;
 }
 
 export default { getAdminUsers, getAdminUser, updateUserStatus, updateUserRole };

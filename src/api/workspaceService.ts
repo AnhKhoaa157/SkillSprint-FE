@@ -1,4 +1,4 @@
-import { createId, MOCK_STORAGE_KEYS, nowIso, readStorage, writeStorage } from "./mockDb";
+const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -6,6 +6,8 @@ type ApiResponse<T> = {
   message: string;
   data: T | null;
 };
+
+import { getStoredAuthSession } from "./authService";
 
 export type CreateWorkspaceRequest = {
   name: string;
@@ -27,149 +29,71 @@ export type WorkspaceResponse = {
   updatedAt?: string | null;
 };
 
-const KEY = MOCK_STORAGE_KEYS.workspaces;
+async function requestJson<T>(path: string, opts: RequestInit = {}): Promise<ApiResponse<T>> {
+  const session = getStoredAuthSession();
 
-function readState(): WorkspaceResponse[] {
-  return readStorage<WorkspaceResponse[]>(KEY, []);
-}
-
-function writeState(state: WorkspaceResponse[]): void {
-  writeStorage(KEY, state);
-}
-
-function seedWorkspaces(): WorkspaceResponse[] {
-  return [
-    {
-      workspaceId: "WKS-001",
-      name: "Frontend Sprint",
-      description: "Lộ trình React, TypeScript và UI foundations.",
-      status: "ACTIVE",
-      createdAt: "2026-03-15T08:00:00.000Z",
-      updatedAt: "2026-05-10T10:00:00.000Z",
-    },
-    {
-      workspaceId: "WKS-002",
-      name: "Interview Prep",
-      description: "Phỏng vấn thử, luyện câu hỏi và checklist CV.",
-      status: "ACTIVE",
-      createdAt: "2026-04-02T08:00:00.000Z",
-      updatedAt: "2026-05-12T14:30:00.000Z",
-    },
-  ];
-}
-
-function ensureSeeded(): WorkspaceResponse[] {
-  const current = readState();
-  if (current.length > 0) {
-    return current;
-  }
-
-  const seeded = seedWorkspaces();
-  writeState(seeded);
-  return seeded;
-}
-
-function response<T>(data: T | null, code = 200, message = "OK", success = true): ApiResponse<T> {
-  return { success, code, message, data };
-}
-
-export async function fetchMyWorkspacesResponse(): Promise<ApiResponse<WorkspaceResponse[]>> {
-  return response(ensureSeeded());
-}
-
-export async function fetchWorkspaceResponse(workspaceId: string): Promise<ApiResponse<WorkspaceResponse>> {
-  const workspace = ensureSeeded().find((item) => item.workspaceId === workspaceId);
-  if (!workspace) {
-    return response(null, 404, "Workspace not found", false);
-  }
-
-  return response(workspace);
-}
-
-export async function createWorkspaceResponse(req: CreateWorkspaceRequest): Promise<ApiResponse<WorkspaceResponse>> {
-  const current = ensureSeeded();
-  const next: WorkspaceResponse = {
-    workspaceId: createId("WKS"),
-    name: req.name.trim(),
-    description: req.description ?? null,
-    status: "ACTIVE",
-    createdAt: nowIso(),
-    updatedAt: null,
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(opts.headers as Record<string, string> || {}),
   };
 
-  writeState([next, ...current]);
-  return response(next, 200, "Created");
-}
-
-export async function updateWorkspaceResponse(workspaceId: string, req: UpdateWorkspaceRequest): Promise<ApiResponse<WorkspaceResponse>> {
-  const current = ensureSeeded();
-  const index = current.findIndex((item) => item.workspaceId === workspaceId);
-  if (index < 0) {
-    return response(null, 404, "Workspace not found", false);
+  if (session?.accessToken) {
+    headers["Authorization"] = `Bearer ${session.accessToken}`;
   }
 
-  const next: WorkspaceResponse = {
-    ...current[index],
-    name: req.name?.trim() || current[index].name,
-    description: req.description ?? current[index].description ?? null,
-    status: req.status ?? current[index].status,
-    updatedAt: nowIso(),
-  };
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers,
+  });
 
-  current[index] = next;
-  writeState(current);
-  return response(next, 200, "Updated");
-}
+  const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
 
-export async function deleteWorkspaceResponse(workspaceId: string): Promise<ApiResponse<null>> {
-  const current = ensureSeeded();
-  const next = current.filter((item) => item.workspaceId !== workspaceId);
-
-  if (next.length === current.length) {
-    return response(null, 404, "Workspace not found", false);
+  if (!response.ok) {
+    const message = payload?.message || `Server error: ${response.status}`;
+    throw new Error(message);
   }
 
-  writeState(next);
-  return response(null, 200, "Deleted");
+  if (!payload) {
+    throw new Error("Invalid response from server");
+  }
+
+  return payload;
 }
 
 export async function createWorkspace(req: CreateWorkspaceRequest): Promise<WorkspaceResponse> {
-  const res = await createWorkspaceResponse(req);
-  if (!res.data) {
-    throw new Error(res.message || "Create workspace failed");
-  }
+  const res = await requestJson<WorkspaceResponse>("/api/workspaces", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 
+  if (!res.data) throw new Error(res.message || "Create workspace failed");
   return res.data;
 }
 
 export async function getMyWorkspaces(): Promise<WorkspaceResponse[]> {
-  const res = await fetchMyWorkspacesResponse();
-  return res.data ?? [];
+  const res = await requestJson<WorkspaceResponse[]>("/api/workspaces", { method: "GET" });
+  if (!res.data) throw new Error(res.message || "Fetch workspaces failed");
+  return res.data;
 }
 
 export async function getWorkspace(workspaceId: string): Promise<WorkspaceResponse> {
-  const res = await fetchWorkspaceResponse(workspaceId);
-  if (!res.data) {
-    throw new Error(res.message || "Workspace not found");
-  }
-
+  const res = await requestJson<WorkspaceResponse>(`/api/workspaces/${workspaceId}`, { method: "GET" });
+  if (!res.data) throw new Error(res.message || "Fetch workspace failed");
   return res.data;
 }
 
 export async function updateWorkspace(workspaceId: string, req: UpdateWorkspaceRequest): Promise<WorkspaceResponse> {
-  const res = await updateWorkspaceResponse(workspaceId, req);
-  if (!res.data) {
-    throw new Error(res.message || "Update workspace failed");
-  }
-
+  const res = await requestJson<WorkspaceResponse>(`/api/workspaces/${workspaceId}`, {
+    method: "PATCH",
+    body: JSON.stringify(req),
+  });
+  if (!res.data) throw new Error(res.message || "Update workspace failed");
   return res.data;
 }
 
 export async function deleteWorkspace(workspaceId: string): Promise<void> {
-  const res = await deleteWorkspaceResponse(workspaceId);
-  if (!res.success) {
-    throw new Error(res.message || "Delete workspace failed");
-  }
+  const res = await requestJson<null>(`/api/workspaces/${workspaceId}`, { method: "DELETE" });
+  if (!res.success) throw new Error(res.message || "Delete workspace failed");
 }
 
 export default {

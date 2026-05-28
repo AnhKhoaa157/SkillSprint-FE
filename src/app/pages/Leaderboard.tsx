@@ -8,7 +8,7 @@ export default function Leaderboard() {
   const currentUser = {
     rank: 4,
     name: "Nguyễn Văn A",
-    subject: "Cấu trúc dữ liệu & Giải thuật",
+    subject: "Data Structures & Algorithms",
     streak: 12,
     xp: 2450,
     avatar: "A",
@@ -16,23 +16,17 @@ export default function Leaderboard() {
   };
 
   const leaderboardData = [
-    { id: 1, name: "Trần Bình", subject: "Chuyên sâu React Native", streak: 45, xp: 5200, avatar: "T", trend: "same" },
-    { id: 2, name: "Lê Thị C", subject: "UI/UX nâng cao", streak: 32, xp: 4800, avatar: "L", trend: "up" },
-    { id: 3, name: "Phạm D", subject: "Thiết kế hệ thống", streak: 28, xp: 3900, avatar: "P", trend: "down" },
-    { id: 4, name: "Nguyễn Văn A", subject: "Cấu trúc dữ liệu & Giải thuật", streak: 12, xp: 2450, avatar: "A", trend: "up", isUser: true },
-    { id: 5, name: "Hoàng E", subject: "Nền tảng AWS Cloud", streak: 10, xp: 2100, avatar: "H", trend: "same" },
+    { id: 1, name: "Trần Bình", subject: "React Native Masterclass", streak: 45, xp: 5200, avatar: "T", trend: "same" },
+    { id: 2, name: "Lê Thị C", subject: "Advanced UI/UX", streak: 32, xp: 4800, avatar: "L", trend: "up" },
+    { id: 3, name: "Phạm D", subject: "System Design", streak: 28, xp: 3900, avatar: "P", trend: "down" },
+    { id: 4, name: "Nguyễn Văn A", subject: "Data Structures & Algorithms", streak: 12, xp: 2450, avatar: "A", trend: "up", isUser: true },
+    { id: 5, name: "Hoàng E", subject: "AWS Cloud Practitioner", streak: 10, xp: 2100, avatar: "H", trend: "same" },
     { id: 6, name: "Đặng F", subject: "Fullstack Next.js", streak: 8, xp: 1950, avatar: "Đ", trend: "down" },
-    { id: 7, name: "Bùi G", subject: "Python cho Khoa học dữ liệu", streak: 5, xp: 1500, avatar: "B", trend: "up" },
-    { id: 8, name: "Vũ H", subject: "Nhập môn Học máy", streak: 4, xp: 1200, avatar: "V", trend: "same" },
-    { id: 9, name: "Ngô I", subject: "An toàn thông tin 101", streak: 3, xp: 950, avatar: "N", trend: "down" },
-    { id: 10, name: "Đỗ K", subject: "Phát triển game với Unity", streak: 2, xp: 800, avatar: "Đ", trend: "same" },
+    { id: 7, name: "Bùi G", subject: "Python for Data Science", streak: 5, xp: 1500, avatar: "B", trend: "up" },
+    { id: 8, name: "Vũ H", subject: "Machine Learning Basics", streak: 4, xp: 1200, avatar: "V", trend: "same" },
+    { id: 9, name: "Ngô I", subject: "Cybersecurity 101", streak: 3, xp: 950, avatar: "N", trend: "down" },
+    { id: 10, name: "Đỗ K", subject: "Game Dev with Unity", streak: 2, xp: 800, avatar: "Đ", trend: "same" },
   ];
-
-  const timeframeLabels = {
-    week: "Tuần này",
-    month: "Tháng này",
-    all: "Toàn thời gian",
-  };
 
   return (
     <motion.div
@@ -48,8 +42,8 @@ export default function Leaderboard() {
             <Trophy size={24} className="fill-amber-500" />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Bảng xếp hạng</h1>
-            <p className="text-gray-500 text-sm mt-1">Thi đua cùng bạn bè và duy trì chuỗi học của bạn.</p>
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Leaderboard</h1>
+            <p className="text-gray-500 text-sm mt-1">Compete with peers and maintain your streak.</p>
           </div>
         </div>
 
@@ -65,7 +59,7 @@ export default function Leaderboard() {
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {timeframeLabels[t]}
+              This {t}
             </button>
           ))}
         </div>
@@ -82,7 +76,7 @@ export default function Leaderboard() {
             {currentUser.avatar}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 text-lg truncate">{currentUser.name} (Bạn)</h3>
+            <h3 className="font-bold text-gray-900 text-lg truncate">{currentUser.name} (You)</h3>
             <p className="text-gray-500 text-xs truncate">{currentUser.subject}</p>
           </div>
           <div className="flex gap-4 sm:gap-6 items-center shrink-0">
@@ -91,7 +85,7 @@ export default function Leaderboard() {
                 <Flame size={16} className="fill-orange-500" />
                 <span className="font-bold text-lg leading-none">{currentUser.streak}</span>
               </div>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Ngày</p>
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Days</p>
             </div>
             <div className="text-center border-l border-gray-100 pl-4 sm:pl-6">
               <div className="flex items-center justify-center gap-1 text-blue-500 mb-0.5">
@@ -107,10 +101,10 @@ export default function Leaderboard() {
       {/* List Area */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         <div className="grid grid-cols-[40px_1fr_60px_60px] sm:grid-cols-[60px_1fr_80px_80px] gap-4 p-4 border-b border-gray-50 bg-gray-50/50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          <div className="text-center">Hạng</div>
-          <div>Học viên</div>
-          <div className="text-center">Chuỗi</div>
-          <div className="text-center">Điểm</div>
+          <div className="text-center">Rank</div>
+          <div>Student</div>
+          <div className="text-center">Streak</div>
+          <div className="text-center">Score</div>
         </div>
         <div className="divide-y divide-gray-50">
           {leaderboardData.map((user, idx) => (
@@ -140,7 +134,7 @@ export default function Leaderboard() {
                 </div>
                 <div className="min-w-0">
                   <p className="font-bold text-gray-900 text-sm truncate flex items-center gap-2">
-                    {user.name} {user.isUser && <span className="bg-[#FF6B00] text-white text-[10px] px-1.5 py-0.5 rounded uppercase">Bạn</span>}
+                    {user.name} {user.isUser && <span className="bg-[#FF6B00] text-white text-[10px] px-1.5 py-0.5 rounded uppercase">You</span>}
                   </p>
                   <p className="text-xs text-gray-500 truncate mt-0.5 hidden sm:block">{user.subject}</p>
                 </div>
@@ -168,7 +162,7 @@ export default function Leaderboard() {
           <Info size={18} />
         </div>
         <p className="text-green-800 text-sm font-medium">
-          <strong className="font-bold">Mẹo:</strong> Hoàn thành ít nhất 1 phiên học hoặc 1 bài quiz mỗi ngày để giữ chuỗi và nhận hệ số nhân 2x XP.
+          <strong className="font-bold">Pro Tip:</strong> Complete at least one study session or quiz daily to maintain your streak and earn a 2x XP multiplier!
         </p>
       </div>
     </motion.div>
