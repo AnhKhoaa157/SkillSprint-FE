@@ -1,8 +1,8 @@
-import React from "react";
 import { createBrowserRouter } from "react-router";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Roadmap from "./pages/Roadmap";
+import Analytics from "./pages/Analytics";
 import Profile from "./pages/Profile";
 import Landing from "./pages/Landing";
 import About from "./pages/About";
@@ -10,17 +10,12 @@ import Auth from "./pages/Auth";
 import Contact from "./pages/Contact";
 import Onboarding from "./pages/Onboarding";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminLayout from "./layouts/AdminLayout";
-import AdminHealth from "./pages/AdminHealth";
 import AdminAuth from "./pages/AdminAuth";
-import AdminUsers from "./pages/AdminUsers";
-import AdminUserDetail from "./pages/AdminUserDetail";
-import AdminProfile from "./pages/AdminProfile";
 import PostUpgradeDashboard from "./pages/PostUpgrade";
 import FeaturesLanding from "./pages/Features";
-import PricingPage from "./pages/PricingPage";
-import RequireAuth from "./components/RequireAuth";
-import Loading from "./pages/Loading";
+import Pricing from "./pages/Pricing";
+import MockInterview from "./pages/MockInterview";
+
 import SyllabusInput from "./pages/SyllabusInput";
 import StudyCalendar from "./pages/StudyCalendar";
 import TaskMatrix from "./pages/TaskMatrix";
@@ -29,105 +24,46 @@ import LearningEcosystem from "./pages/LearningEcosystem";
 import CoursePlayer from "./pages/CoursePlayer";
 import QuizReviewFlow from "./pages/QuizReviewFlow";
 import QuizResult from "./pages/QuizResult";
-import Workspaces from "./pages/Workspaces.tsx";
-import WorkspaceDetail from "./pages/WorkspaceDetail";
+import Workspaces from "./pages/Workspaces";
 import WorkspacesNew from "./pages/WorkspacesNew";
-
-export const routeRegistry = {
-  public: {
-    home: "/",
-    about: "/about",
-    features: "/features",
-    pricing: "/pricing",
-    auth: "/auth",
-    loading: "/loading",
-    contact: "/contact",
-    onboarding: "/onboarding",
-    adminLogin: "/admin-login",
-    learning: "/learning",
-    course: "/learning/course",
-    quizReview: "/quiz-review",
-    quizResult: "/quiz-review/result",
-  },
-  admin: {
-    root: "/admin",
-    profile: "profile",
-    users: "users",
-    userDetail: "users/:id",
-    health: "health",
-  },
-  app: {
-    root: "/app",
-    syllabus: "syllabus",
-    calendar: "calendar",
-    matrix: "matrix",
-    workspaces: {
-      list: "workspaces",
-      new: "workspaces/new",
-      detail: "workspaces/:id",
-      roadmap: "workspaces/:workspaceId/roadmap",
-    },
-    profile: "profile",
-    leaderboard: "leaderboard",
-    upgraded: "upgraded",
-    learning: "learning",
-    learningCourse: "learning/course",
-    quizReview: "quiz-review",
-    quizResult: "quiz-review/result",
-    fallback: "*",
-  },
-} as const;
-
-// Wrapper created without JSX to keep this file .ts-compatible.
-const ProtectedLayout = () => React.createElement(RequireAuth, null, React.createElement(DashboardLayout, null));
-
-const { public: publicRoutes, admin: adminRoutes, app: appRoutes } = routeRegistry;
+import WorkspaceDetail from "./pages/WorkspaceDetail";
 
 export const router = createBrowserRouter([
-  { path: publicRoutes.home, Component: Landing },
-  { path: publicRoutes.about, Component: About },
-  { path: publicRoutes.features, Component: FeaturesLanding },
-  { path: publicRoutes.pricing, Component: PricingPage },
-  { path: publicRoutes.auth, Component: Auth },
-  { path: publicRoutes.loading, Component: Loading },
-  { path: publicRoutes.contact, Component: Contact },
-  { path: publicRoutes.onboarding, Component: Onboarding },
-  { path: publicRoutes.adminLogin, Component: AdminAuth },
+  { path: "/",              Component: Landing },
+  { path: "/about",         Component: About },
+  { path: "/features",      Component: FeaturesLanding },
+  { path: "/pricing",       Component: Pricing },
+  { path: "/auth",          Component: Auth },
+  { path: "/contact",       Component: Contact },
+  { path: "/onboarding",    Component: Onboarding },
+  { path: "/admin-login",   Component: AdminAuth },
+  { path: "/admin",         Component: AdminDashboard },
+  { path: "/learning",      Component: LearningEcosystem },
+  { path: "/learning/course", Component: CoursePlayer },
+  { path: "/quiz-review",   Component: QuizReviewFlow },
+  { path: "/quiz-review/result", Component: QuizResult },
   {
-    path: adminRoutes.root,
-    Component: AdminLayout,
+    path: "/app",
+    Component: DashboardLayout,
     children: [
-      { index: true, Component: AdminDashboard },
-      { path: adminRoutes.profile, Component: AdminProfile },
-      { path: adminRoutes.users, Component: AdminUsers },
-      { path: adminRoutes.userDetail, Component: AdminUserDetail },
-      { path: adminRoutes.health, Component: AdminHealth },
-    ],
-  },
-  { path: publicRoutes.learning, Component: LearningEcosystem },
-  { path: publicRoutes.course, Component: CoursePlayer },
-  { path: publicRoutes.quizReview, Component: QuizReviewFlow },
-  { path: publicRoutes.quizResult, Component: QuizResult },
-  {
-    path: appRoutes.root,
-    Component: ProtectedLayout,
-    children: [
-      { index: true, Component: Dashboard },
-      { path: appRoutes.syllabus, Component: SyllabusInput },
-      { path: appRoutes.calendar, Component: StudyCalendar },
-      { path: appRoutes.matrix, Component: TaskMatrix },
-      { path: appRoutes.workspaces.list, Component: Workspaces },
-      { path: appRoutes.workspaces.new, Component: WorkspacesNew },
-      { path: appRoutes.workspaces.detail, Component: WorkspaceDetail },
-      { path: appRoutes.workspaces.roadmap, Component: Roadmap },
-      { path: appRoutes.profile, Component: Profile },
-      { path: appRoutes.leaderboard, Component: Leaderboard },
-      { path: appRoutes.upgraded, Component: PostUpgradeDashboard },
-      { path: appRoutes.learning, Component: LearningEcosystem },
-      { path: appRoutes.learningCourse, Component: CoursePlayer },
-      { path: appRoutes.quizReview, Component: QuizReviewFlow },
-      { path: appRoutes.quizResult, Component: QuizResult },
-      { path: appRoutes.fallback, Component: Dashboard },
+      { index: true,            Component: Dashboard },
+      { path: "syllabus",       Component: SyllabusInput },
+      { path: "calendar",       Component: StudyCalendar },
+      { path: "matrix",         Component: TaskMatrix },
+      { path: "roadmap",        Component: Roadmap },
+      { path: "analytics",      Component: Analytics },
+      { path: "profile",        Component: Profile },
+      { path: "workspaces",     Component: Workspaces },
+      { path: "workspaces/new", Component: WorkspacesNew },
+      { path: "workspaces/:id", Component: WorkspaceDetail },
+      { path: "leaderboard",    Component: Leaderboard },
+      { path: "upgraded",       Component: PostUpgradeDashboard },
+      { path: "mock-interview",  Component: MockInterview },
+      { path: "learning",       Component: LearningEcosystem },
+      { path: "learning/course", Component: CoursePlayer },
+      { path: "quiz-review",    Component: QuizReviewFlow },
+      { path: "quiz-review/result", Component: QuizResult },
+      { path: "*",              Component: Dashboard },
     ],
   },
 ]);

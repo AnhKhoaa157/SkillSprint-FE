@@ -1,702 +1,1247 @@
-import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router";
-import roadmapService, { RoadmapResponse, RoadmapResource, RoadmapStep } from "../../api/roadmapService";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { useNavigate } from "react-router";
 import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpenCheck,
-  CircleHelp,
-  Clock3,
-  ExternalLink,
-  FileText,
-  Layers3,
-  LoaderCircle,
-  PlayCircle,
-  Sparkles,
-  X,
-  CheckCircle2,
+  Check, Lock, ExternalLink, Clock, Star,
+  Sparkles, ChevronRight, ArrowRight, BookOpen,
+  Play, Zap, Target, Trophy, RotateCcw, X,
+  FlaskConical, Award,
 } from "lucide-react";
+import Safe3DViewer from "../components/roadmap/Safe3DViewer";
 
-type StepTone = {
-  label: string;
-  bgClass: string;
-  borderClass: string;
-  dotClass: string;
+/* ─── Design Tokens ─── */
+const F    = "'Plus Jakarta Sans', Inter, sans-serif";
+const BG   = "#F9FAFB";
+const CARD = "#FFFFFF";
+const T1   = "#1F2937";
+const T2   = "#6B7280";
+const T3   = "#9CA3AF";
+const OG   = "#FF6B00";
+const OGL  = "#FFF7ED";
+const OGLT = "#FFEDD5";
+const BDR  = "#E5E7EB";
+const SH   = "0 1px 3px rgba(0,0,0,0.03), 0 6px 20px rgba(0,0,0,0.05)";
+const SHM  = "0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)";
+const SHL  = "0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.05)";
+
+/* ─── Path geometry ─── */
+const PW = 480;   // path container width
+const TH = 1840;  // total path height
+const XL = 108, XC = 240, XR = 372; // node centre-x positions
+
+/* ─── Types ─── */
+type NS = "completed" | "active" | "locked";
+interface Skill {
+  id: string; title: string; sub: string;
+  phase: number; status: NS; icon: string;
+  xp: number; est: string; desc: string; skills: string[];
+  res: { title: string; type: "Video"|"Article"|"Course"|"Practice"; source: string; dur: string; };
+  tip: string;
+  cx: number; cy: number;
+}
+
+/* ─── Node Data ─── */
+const NODES: Skill[] = [
+  { id:"n1",  title:"HTML & CSS",             sub:"Nền tảng web",         phase:1, status:"completed", icon:"🏗️", xp:200,  est:"1 tuần",    cx:XC, cy:140,
+    desc:"Semantic HTML5, modern CSS3, Flexbox, Grid, and responsive design principles.",
+    skills:["Semantic HTML","CSS Flexbox","CSS Grid","Responsive Design"],
+    res:{ title:"The Odin Project — Foundations", type:"Course", source:"theodinproject.com", dur:"2 weeks" },
+    tip:"Rebuild 3 real websites pixel-for-pixel to build muscle memory." },
+
+  { id:"n2",  title:"JavaScript ES6+",        sub:"Ngôn ngữ cốt lõi",     phase:1, status:"completed", icon:"⚡", xp:400,  est:"2 tuần",   cx:XR, cy:290,
+    desc:"Closures, async/await, destructuring, modules and the JavaScript event loop.",
+    skills:["Arrow Functions","Async/Await","Destructuring","ES Modules"],
+    res:{ title:"Modern JavaScript Tutorial", type:"Article", source:"javascript.info", dur:"15 hours" },
+    tip:"Master the event loop — the most common frontend interview topic." },
+
+  { id:"n3",  title:"Git & Kiểm soát phiên bản", sub:"Cộng tác",         phase:1, status:"completed", icon:"🌿", xp:150,  est:"3 ngày",    cx:XC, cy:440,
+    desc:"Git workflows, branching, pull requests, merge conflicts and GitHub collaboration.",
+    skills:["Git Branching","Pull Requests","Merge Conflicts","GitHub Flow"],
+    res:{ title:"Learn Git Branching (Interactive)", type:"Practice", source:"learngitbranching.js.org", dur:"4 hours" },
+    tip:"Commit early, commit often — and always write descriptive commit messages." },
+
+  { id:"n4",  title:"React cơ bản",           sub:"Tư duy component",      phase:2, status:"completed", icon:"⚛️", xp:500,  est:"2 tuần",   cx:XL, cy:630,
+    desc:"JSX, components, props, state, event handling and the React mental model.",
+    skills:["JSX","Components","Props & State","Event Handling"],
+    res:{ title:"React Official Tutorial", type:"Article", source:"react.dev", dur:"8 hours" },
+    tip:"Build a Todo App, then rebuild it from scratch. Repetition is key." },
+
+  { id:"n5",  title:"React Hooks & State",    sub:"Module hiện tại ✦",     phase:2, status:"active",    icon:"🎣", xp:600,  est:"2 tuần",   cx:XC, cy:780,
+    desc:"Master the full Hooks API: useState, useEffect, useRef, useCallback, useMemo and custom hooks.",
+    skills:["useState","useEffect","useRef","Custom Hooks","Context API"],
+    res:{ title:"React Hooks In Depth — Jack Herrington", type:"Video", source:"YouTube", dur:"4 hours" },
+    tip:"Every custom hook should solve exactly one problem — keep them small." },
+
+  { id:"n6",  title:"Mẫu thiết kế component", sub:"Thiết kế React nâng cao",phase:2, status:"locked",    icon:"🧩", xp:550,  est:"1.5 tuần", cx:XR, cy:930,
+    desc:"Compound components, render props, HOC pattern and modern composition strategies.",
+    skills:["Compound Components","Render Props","HOC","Slot Pattern"],
+    res:{ title:"Epic React — Advanced Patterns", type:"Course", source:"Kent C. Dodds", dur:"6 hours" },
+    tip:"Study open-source UI libraries like Radix UI — they use all these patterns." },
+
+  { id:"n7",  title:"TypeScript",             sub:"React an toàn kiểu dữ liệu", phase:3, status:"locked", icon:"📘", xp:600,  est:"2 tuần",   cx:XC, cy:1120,
+    desc:"Static typing, interfaces, generics, discriminated unions and TypeScript with React.",
+    skills:["Interfaces","Generics","Union Types","TS + React"],
+    res:{ title:"TypeScript Deep Dive (Free Book)", type:"Article", source:"basarat.gitbook.io", dur:"15 hours" },
+    tip:"Always enable 'strict' mode from day one — no shortcuts." },
+
+  { id:"n8",  title:"Quản lý state",          sub:"Mở rộng ứng dụng",      phase:3, status:"locked",    icon:"🗃️", xp:550,  est:"1.5 tuần", cx:XL, cy:1270,
+    desc:"Redux Toolkit and Zustand for complex application-level state management.",
+    skills:["Redux Toolkit","Zustand","Async Thunks","State Architecture"],
+    res:{ title:"Redux Toolkit Official Tutorial", type:"Article", source:"redux.js.org", dur:"5 hours" },
+    tip:"Prefer Zustand for new projects — simpler API and better developer experience." },
+
+  { id:"n9",  title:"API & React Query",      sub:"Làm chủ server state",  phase:3, status:"locked",    icon:"🔌", xp:600,  est:"2 tuần",   cx:XR, cy:1420,
+    desc:"REST APIs, React Query for server state caching, loading states and optimistic updates.",
+    skills:["Fetch / Axios","React Query","Error Boundaries","Optimistic UI"],
+    res:{ title:"Practical React Query — TkDodo's Blog", type:"Article", source:"tkdodo.eu", dur:"3 hours" },
+    tip:"Never store server state in Redux — React Query handles it perfectly." },
+
+  { id:"n10", title:"System Design Frontend", sub:"Tư duy cấp senior",     phase:4, status:"locked",    icon:"🏛️", xp:700,  est:"3 tuần",   cx:XC, cy:1590,
+    desc:"Performance, accessibility, code splitting, bundle optimization and architecture patterns.",
+    skills:["Core Web Vitals","Accessibility","Code Splitting","Architecture"],
+    res:{ title:"Frontend System Design Interview", type:"Course", source:"GreatFrontEnd", dur:"10 hours" },
+    tip:"Document your architectural decisions — interviewers reward thoughtfulness." },
+
+  { id:"n11", title:"Dự án portfolio AI",     sub:"★ Trùm cuối",          phase:4, status:"locked",    icon:"🏆", xp:1000, est:"3 tuần",   cx:XC, cy:1730,
+    desc:"Build and deploy a full-stack AI-powered project to showcase every skill you've gained.",
+    skills:["Full-Stack React","AI Integration","CI/CD","Portfolio Ready"],
+    res:{ title:"Build & Deploy a Full-Stack AI SaaS", type:"Course", source:"JS Mastery", dur:"20 hours" },
+    tip:"★ Complete this node to unlock your first real mock interview session!" },
+];
+
+/* ─── Phase Banners ─── */
+const BANNERS = [
+  { phase:1, label:"Giai đoạn 1", title:"Nền tảng",          emoji:"🌱", color:"#059669", bg:"#ECFDF5", brd:"#A7F3D0", y:20,   pct:100 },
+  { phase:2, label:"Giai đoạn 2", title:"React cốt lõi",      emoji:"⚛️", color:OG,        bg:OGL,       brd:OGLT,      y:530,  pct:67  },
+  { phase:3, label:"Giai đoạn 3", title:"Frontend nâng cao",   emoji:"🚀", color:"#7C3AED", bg:"#F5F3FF", brd:"#DDD6FE", y:1020, pct:0   },
+  { phase:4, label:"Giai đoạn 4", title:"Sẵn sàng sự nghiệp",  emoji:"🎯", color:"#D97706", bg:"#FFFBEB", brd:"#FDE68A", y:1490, pct:0   },
+];
+
+/* Phase meta */
+const PHASE_META: Record<number, { color:string; bg:string }> = {
+  1:{ color:"#059669", bg:"#ECFDF5" },
+  2:{ color:OG,        bg:OGL       },
+  3:{ color:"#7C3AED", bg:"#F5F3FF" },
+  4:{ color:"#D97706", bg:"#FFFBEB" },
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+const RES_COLORS: Record<string,string> = {
+  Video:"#EF4444", Article:"#0EA5E9", Course:"#7C3AED", Practice:"#059669",
+};
+
+/* ─── Bezier path between two nodes ─── */
+function segPath(n1: Skill, n2: Skill): string {
+  const mx = (n1.cy + n2.cy) / 2;
+  return `M ${n1.cx} ${n1.cy} C ${n1.cx} ${mx} ${n2.cx} ${mx} ${n2.cx} ${n2.cy}`;
 }
 
-function toText(value: unknown): string | undefined {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : undefined;
-  }
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return String(value);
-  }
-  return undefined;
+/* ══════════════════════════════════
+   CHAPTER COMPLETE CARD
+══════════════════════════════════ */
+function ChapterCompleteCard({ node }: { node: Skill }) {
+  const [testStarted, setTestStarted] = useState(false);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        borderRadius: 16, overflow: "hidden",
+        border: "1.5px solid rgba(5,150,105,0.22)",
+        boxShadow: "0 4px 6px rgba(0,0,0,0.03), 0 16px 40px rgba(5,150,105,0.10)",
+        marginBottom: 14,
+      }}
+    >
+      {/* ── Green gradient top banner ── */}
+      <div style={{
+        padding: "20px 20px 18px",
+        background: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 60%, #A7F3D0 100%)",
+        borderBottom: "1px solid rgba(5,150,105,0.15)",
+      }}>
+        {/* Confetti emoji row */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 12, fontSize: "1.4rem" }}>
+          {"🎉 🏆 ✨".split(" ").map((e, i) => (
+            <motion.span
+              key={i}
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut", delay: i * 0.3 }}
+            >{e}</motion.span>
+          ))}
+        </div>
+
+        {/* Title */}
+        <div style={{ textAlign: "center", marginBottom: 14 }}>
+          <p style={{
+            fontFamily: F, fontWeight: 900, fontSize: "1.05rem",
+            color: "#065F46", letterSpacing: "-0.02em", lineHeight: 1.2, marginBottom: 5,
+          }}>
+            Hoàn thành chương!
+          </p>
+          <p style={{ fontFamily: F, fontSize: "0.80rem", color: "#059669", fontWeight: 500 }}>
+            Bạn đã làm chủ <strong>{node.title}</strong> 🚀
+          </p>
+        </div>
+
+        {/* XP earned pill */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 14,
+        }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "7px 18px", borderRadius: 99,
+            background: "rgba(5,150,105,0.14)", border: "1.5px solid rgba(5,150,105,0.28)",
+          }}>
+            <Star size={14} color="#059669" fill="#059669"/>
+            <span style={{ fontFamily: F, fontWeight: 800, fontSize: "0.9rem", color: "#059669" }}>
+              +{node.xp} XP nhận được
+            </span>
+          </div>
+        </div>
+
+        {/* Skills mastered */}
+        <div>
+          <p style={{
+            fontFamily: F, fontSize: "0.62rem", fontWeight: 700, color: "#059669",
+            letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 9, textAlign: "center",
+          }}>
+            Kỹ năng đã nắm vững
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+            {node.skills.map((skill, i) => (
+              <motion.div
+                key={skill}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.07, duration: 0.25 }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "5px 12px", borderRadius: 99,
+                  background: "#FFFFFF", border: "1.5px solid rgba(5,150,105,0.28)",
+                  boxShadow: "0 1px 4px rgba(5,150,105,0.10)",
+                }}
+              >
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#059669", flexShrink: 0 }}/>
+                <span style={{ fontFamily: F, fontSize: "0.75rem", fontWeight: 700, color: "#065F46" }}>
+                  {skill}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Call to action bottom ── */}
+      <div style={{
+        padding: "18px 20px",
+        background: CARD,
+      }}>
+        {/* Description text */}
+        <div style={{
+          display: "flex", alignItems: "flex-start", gap: 9, marginBottom: 16,
+          padding: "10px 13px", borderRadius: 10,
+          background: "#FFFBEB", border: "1px solid #FDE68A",
+        }}>
+          <Award size={15} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }}/>
+          <p style={{ fontFamily: F, fontSize: "0.76rem", color: "#92400E", lineHeight: 1.6 }}>
+            <strong>Sẵn sàng lên cấp tiếp theo?</strong> Làm bài kiểm tra thực hành để xác nhận kỹ năng và mở khóa chương kế tiếp.
+          </p>
+        </div>
+
+        {/* CTA Button */}
+        <motion.button
+          whileHover={!testStarted ? { scale: 1.025 } : {}}
+          whileTap={!testStarted ? { scale: 0.975 } : {}}
+          onClick={() => setTestStarted(true)}
+          style={{
+            width: "100%", padding: "15px 18px", borderRadius: 12,
+            border: "none", cursor: testStarted ? "default" : "pointer",
+            background: testStarted
+              ? "linear-gradient(135deg, #059669, #047857)"
+              : `linear-gradient(135deg, ${OG} 0%, #FF8C3A 100%)`,
+            color: "#fff",
+            fontFamily: F, fontWeight: 800, fontSize: "0.92rem",
+            letterSpacing: "-0.02em",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            boxShadow: testStarted
+              ? "0 4px 18px rgba(5,150,105,0.40)"
+              : "0 6px 24px rgba(255,107,0,0.45), 0 2px 8px rgba(255,107,0,0.25)",
+            transition: "all 0.3s ease",
+            position: "relative", overflow: "hidden",
+          }}
+        >
+          {/* Shimmer overlay */}
+          {!testStarted && (
+            <motion.div
+              animate={{ x: ["-100%", "200%"] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 1 }}
+              style={{
+                position: "absolute", top: 0, bottom: 0, left: 0, width: "50%",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)",
+                pointerEvents: "none",
+              }}
+            />
+          )}
+          {testStarted ? (
+            <>
+              <Check size={17} strokeWidth={3}/> Đã bắt đầu bài kiểm tra!
+            </>
+          ) : (
+            <>
+              <FlaskConical size={17}/>
+              Làm bài kiểm tra để mở khóa cấp tiếp theo
+              <ArrowRight size={16}/>
+            </>
+          )}
+        </motion.button>
+
+        {/* Sub-text */}
+        {!testStarted && (
+          <p style={{
+            fontFamily: F, fontSize: "0.66rem", color: T3,
+            textAlign: "center", marginTop: 9, lineHeight: 1.5,
+          }}>
+            ⏱ ~15 phút · 10 câu hỏi · Độ khó thích ứng
+          </p>
+        )}
+      </div>
+    </motion.div>
+  );
 }
 
-function toNumber(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim().length > 0) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
+/* ══════════════════════════════════
+   PHASE BANNER
+══════════════════════════════════ */
+function PhaseBanner({ b }: { b: typeof BANNERS[0] }) {
+  return (
+    <div style={{
+      position:"absolute", left:0, right:0, top:b.y, height:"68px",
+      background:b.bg, border:`1px solid ${b.brd}`,
+      borderRadius:"14px",
+      display:"flex", alignItems:"center", padding:"0 18px", gap:"12px",
+      zIndex:10,
+    }}>
+      <span style={{ fontSize:"20px", flexShrink:0 }}>{b.emoji}</span>
+      <div style={{ flex:1 }}>
+        <p style={{ fontSize:"9px", color:b.color, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.12em" }}>
+          {b.label}
+        </p>
+        <p style={{ fontSize:"0.88rem", fontWeight:700, color:T1, fontFamily:F }}>{b.title}</p>
+      </div>
+      <div style={{ flexShrink:0, textAlign:"right" }}>
+        <p style={{ fontSize:"0.8rem", fontWeight:800, color:b.color, fontFamily:F }}>{b.pct}%</p>
+        <p style={{ fontSize:"9px", color:T3, fontFamily:F }}>hoàn thành</p>
+      </div>
+      {/* Progress pip row */}
+      <div style={{ display:"flex", gap:"3px", flexShrink:0 }}>
+        {Array.from({length: b.pct > 0 ? 3 : 3}, (_, i) => (
+          <div key={i} style={{
+            width:"5px", height:"5px", borderRadius:"50%",
+            background: (i+1)*34 <= b.pct ? b.color : `${b.color}30`,
+          }}/>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-function getResourceMeta(resource: RoadmapResource) {
-  const type = (toText(resource.type) || "document").toLowerCase();
+/* ══════════════════════════════════
+   PATH NODE BUTTON
+══════════════════════════════════ */
+function PathNode({
+  node, selected, onClick, onHover,
+}: { node: Skill; selected: boolean; onClick: () => void; onHover?: (id: string | null) => void }) {
+  const isDone   = node.status === "completed";
+  const isActive = node.status === "active";
+  const isLocked = node.status === "locked";
+  const isBoss   = node.id === "n11";
 
-  if (type.includes("video") || type.includes("lecture") || type.includes("course")) {
-    return {
-      icon: PlayCircle,
-      label: "Video",
-      action: "Học ngay",
-      tone: "bg-sky-50 text-sky-700 border-sky-200",
-    };
-  }
+  const SIZE = isActive ? 88 : isBoss ? 80 : 72;
+  const R = SIZE / 2;
 
-  if (type.includes("quiz") || type.includes("test") || type.includes("exercise") || type.includes("practice")) {
-    return {
-      icon: CircleHelp,
-      label: "Quiz",
-      action: "Làm bài",
-      tone: "bg-amber-50 text-amber-700 border-amber-200",
-    };
-  }
+  return (
+    <div style={{
+      position:"absolute",
+      left: node.cx - R,
+      top:  node.cy - R,
+      width: SIZE, height: SIZE,
+      zIndex: 20,
+    }}>
+      {/* ── Pulse rings (active only) ── */}
+      {isActive && [0,1,2].map(i => (
+        <motion.div key={i} style={{
+          position:"absolute",
+          inset: -(10 + i * 11),
+          borderRadius:"50%",
+          border: `${1.8 - i*0.3}px solid rgba(255,107,0,${0.45 - i*0.12})`,
+          pointerEvents:"none",
+        }}
+        animate={{ scale:[1, 1.18+i*0.08, 1], opacity:[0.75, 0, 0.75] }}
+        transition={{ duration:2.2, repeat:Infinity, ease:"easeInOut", delay:i*0.28 }}/>
+      ))}
 
-  return {
-    icon: FileText,
-    label: "Tài liệu",
-    action: "Xem tài liệu",
-    tone: "bg-slate-50 text-slate-700 border-slate-200",
-  };
+      {/* ── Selection ring ── */}
+      {selected && (
+        <motion.div
+          initial={{ opacity:0, scale:1.2 }} animate={{ opacity:1, scale:1 }}
+          style={{
+            position:"absolute", inset:"-5px", borderRadius:"50%",
+            border:"2.5px solid #1F2937", pointerEvents:"none",
+            boxShadow:"0 0 0 4px rgba(31,41,55,0.08)",
+          }}/>
+      )}
+
+      {/* ── Main circle ── */}
+      <motion.button
+        onClick={onClick}
+        onMouseEnter={() => onHover?.(node.id)}
+        onMouseLeave={() => onHover?.(null)}
+        whileHover={!isLocked ? { scale:1.1 } : { scale:1.03 }}
+        whileTap={!isLocked ? { scale:0.92 } : {}}
+        style={{
+          width:SIZE, height:SIZE, borderRadius:"50%",
+          background: isDone || isActive
+            ? OG
+            : isBoss ? "linear-gradient(135deg, #F59E0B, #D97706)"
+            : "#F3F4F6",
+          border: isDone || isActive
+            ? "none"
+            : `2px solid ${isLocked ? "#E5E7EB" : OG}`,
+          boxShadow: isDone
+            ? "0 4px 16px rgba(255,107,0,0.38)"
+            : isActive
+            ? "0 6px 28px rgba(255,107,0,0.52), 0 0 0 4px rgba(255,107,0,0.1)"
+            : "none",
+          display:"flex", flexDirection:"column",
+          alignItems:"center", justifyContent:"center", gap:"2px",
+          cursor: isLocked ? "pointer" : "pointer",
+          outline:"none", position:"relative",
+          transition:"box-shadow 0.2s, background 0.2s",
+        }}
+      >
+        {isDone  && <Check size={isBoss?26:22} color="#fff" strokeWidth={3}/>}
+        {isActive && (
+          <>
+            <span style={{ fontSize:"22px", lineHeight:1 }}>{node.icon}</span>
+          </>
+        )}
+        {isLocked && (
+          isBoss
+            ? <span style={{ fontSize:"24px" }}>🏆</span>
+            : <Lock size={17} color="#9CA3AF" strokeWidth={2}/>
+        )}
+      </motion.button>
+
+      {/* ── "Continue Here!" badge (active) ── */}
+      {isActive && (
+        <motion.div
+          animate={{ y:[0,-5,0] }}
+          transition={{ duration:2, repeat:Infinity, ease:"easeInOut" }}
+          style={{
+            position:"absolute", bottom: SIZE + 10,
+            left:"50%", transform:"translateX(-50%)",
+            background:OG, color:"#fff",
+            borderRadius:"99px", padding:"5px 14px",
+            fontSize:"11px", fontWeight:800, fontFamily:F,
+            whiteSpace:"nowrap", zIndex:30,
+            boxShadow:"0 4px 14px rgba(255,107,0,0.45)",
+          }}>
+          🚀 Tiếp tục tại đây!
+          <div style={{
+            position:"absolute", bottom:"-5px", left:"50%",
+            transform:"translateX(-50%) rotate(45deg)",
+            width:"8px", height:"8px", background:OG,
+          }}/>
+        </motion.div>
+      )}
+
+      {/* ── XP pill (completed + active) ── */}
+      {(isDone || isActive) && (
+        <div style={{
+          position:"absolute", top:"-9px", right:"-18px",
+          background: isDone ? "#ECFDF5" : OGL,
+          border:`1px solid ${isDone?"#A7F3D0":OGLT}`,
+          borderRadius:"99px", padding:"2px 8px",
+          fontSize:"9px", color: isDone?"#059669":OG,
+          fontWeight:800, fontFamily:F, whiteSpace:"nowrap",
+        }}>
+          +{node.xp} XP
+        </div>
+      )}
+
+      {/* ── Node label (below circle) ── */}
+      <div style={{
+        position:"absolute", top: SIZE + 8,
+        left:"50%", transform:"translateX(-50%)",
+        textAlign:"center", width:"130px",
+        pointerEvents:"none",
+      }}>
+        <p style={{
+          fontSize:"0.78rem", fontWeight: isActive?700:selected?600:500,
+          color: isLocked && !isBoss ? T3 : T1, fontFamily:F,
+          lineHeight:1.3,
+        }}>
+          {node.title}
+        </p>
+        {(isDone || isActive) && (
+          <p style={{ fontSize:"0.66rem", color:isActive?OG:T3, fontFamily:F, marginTop:"1px" }}>
+            {node.sub}
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
 
-function getStepTone(step: RoadmapStep, index: number, totalSteps: number): StepTone {
-  const difficulty = toText(step.difficulty) || toText(step.complexity) || (index === 0 ? "easy" : index === totalSteps - 1 ? "hard" : "medium");
-  const normalized = difficulty.toLowerCase();
+/* ══════════════════════════════════
+   OVERVIEW PANEL (no selection)
+══════════════════════════════════ */
+function OverviewPanel({ onSelect, onContinue }: { onSelect: (id:string) => void; onContinue: (id:string) => void }) {
+  const completedCount = NODES.filter(n=>n.status==="completed").length;
+  const totalXP = NODES.filter(n=>n.status==="completed").reduce((a,b)=>a+b.xp,0);
+  const nextNodes = NODES.filter(n => n.status !== "completed").slice(0, 3);
 
-  if (normalized.includes("hard") || normalized.includes("advanced") || normalized.includes("high")) {
-    return {
-      label: "Hard",
-      bgClass: "from-red-500 to-rose-500",
-      borderClass: "border-red-400",
-      dotClass: "border-red-200 text-red-600",
-    };
-  }
+  return (
+    <motion.div
+      key="overview"
+      initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+      exit={{ opacity:0, y:-8 }}
+      transition={{ duration:0.3 }}
+      style={{ fontFamily:F }}
+    >
+      {/* Hero */}
+      <div style={{
+        padding:"22px", borderRadius:"16px",
+        background:`linear-gradient(135deg, ${OGL}, #FFFBF5)`,
+        border:`1px solid ${OGLT}`, marginBottom:"16px",
+        backgroundImage:"radial-gradient(ellipse 80% 60% at 100% 0%, rgba(255,107,0,0.08), transparent)",
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"14px" }}>
+          <div style={{
+            width:"38px", height:"38px", borderRadius:"10px",
+            background:OG, display:"flex", alignItems:"center", justifyContent:"center",
+            boxShadow:"0 4px 12px rgba(255,107,0,0.3)",
+          }}>
+            <Target size={18} color="#fff"/>
+          </div>
+          <div>
+            <p style={{ fontSize:"0.68rem", color:OG, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase" }}>
+              Hành trình của bạn
+            </p>
+            <p style={{ fontWeight:700, fontSize:"0.92rem", color:T1 }}>Lộ trình Frontend Developer</p>
+          </div>
+        </div>
+        {/* Progress */}
+        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"8px" }}>
+          <span style={{ fontSize:"0.75rem", color:T2 }}>{completedCount} / {NODES.length} nút</span>
+          <span style={{ fontSize:"0.75rem", color:OG, fontWeight:700 }}>
+            {Math.round(completedCount/NODES.length*100)}% hoàn thành
+          </span>
+        </div>
+        <div style={{ height:"7px", borderRadius:"99px", background:"rgba(255,107,0,0.12)", overflow:"hidden" }}>
+          <motion.div
+            initial={{ width:0 }} animate={{ width:`${completedCount/NODES.length*100}%` }}
+            transition={{ duration:1.2, ease:[0.22,1,0.36,1] }}
+            style={{ height:"100%", background:`linear-gradient(90deg,${OG},#FBBF24)`, borderRadius:"99px" }}/>
+        </div>
+      </div>
 
-  if (normalized.includes("medium") || normalized.includes("intermediate")) {
-    return {
-      label: "Medium",
-      bgClass: "from-orange-500 to-amber-500",
-      borderClass: "border-orange-400",
-      dotClass: "border-orange-200 text-orange-600",
-    };
-  }
+      {/* Quick stats */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px", marginBottom:"16px" }}>
+        {[
+          { icon:"⚡", label:"Tổng XP",         val:`${totalXP.toLocaleString()}`, color:"#8B5CF6" },
+          { icon:"🔥", label:"Chuỗi ngày",      val:"12 ngày",          color:OG        },
+          { icon:"✅", label:"Đã hoàn thành",   val:`${completedCount} kỹ năng`,    color:"#059669" },
+          { icon:"🎯", label:"Mở khóa kế tiếp", val:"Còn 1 kỹ năng",    color:"#0EA5E9" },
+        ].map(s => (
+          <div key={s.label} style={{
+            padding:"14px", borderRadius:"12px",
+            background:CARD, boxShadow:SH,
+            display:"flex", flexDirection:"column", gap:"5px",
+          }}>
+            <span style={{ fontSize:"16px" }}>{s.icon}</span>
+            <p style={{ fontWeight:800, fontSize:"0.95rem", color:s.color, fontFamily:F, lineHeight:1 }}>{s.val}</p>
+            <p style={{ fontSize:"0.7rem", color:T3, fontFamily:F }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
 
-  return {
-    label: "Easy",
-    bgClass: "from-emerald-500 to-teal-500",
-    borderClass: "border-emerald-400",
-    dotClass: "border-emerald-200 text-emerald-600",
-  };
+      {/* Phase progress */}
+      <div style={{
+        background:CARD, borderRadius:"14px",
+        padding:"16px", boxShadow:SH, marginBottom:"16px",
+      }}>
+        <p style={{ fontSize:"0.72rem", color:T3, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:"12px" }}>
+          Tiến độ giai đoạn
+        </p>
+        {BANNERS.map(b => (
+          <div key={b.phase} style={{ marginBottom:"10px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"5px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:"5px" }}>
+                <span style={{ fontSize:"13px" }}>{b.emoji}</span>
+                <span style={{ fontSize:"0.78rem", fontWeight:600, color:T1, fontFamily:F }}>{b.title}</span>
+              </div>
+              <span style={{ fontSize:"0.72rem", fontWeight:700, color:b.color, fontFamily:F }}>{b.pct}%</span>
+            </div>
+            <div style={{ height:"5px", borderRadius:"99px", background:"#F3F4F6", overflow:"hidden" }}>
+              <motion.div
+                initial={{ width:0 }} animate={{ width:`${b.pct}%` }}
+                transition={{ duration:1, ease:[0.22,1,0.36,1], delay:b.phase * 0.1 }}
+                style={{ height:"100%", background:b.color, borderRadius:"99px" }}/>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Next roadmap */}
+      <div style={{
+        background:CARD, borderRadius:"14px",
+        padding:"16px", boxShadow:SH, marginBottom:"16px",
+      }}>
+        <p style={{ fontSize:"0.68rem", color:T3, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:"10px" }}>
+          Tiếp theo trong lộ trình
+        </p>
+        <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+          {nextNodes.map((node, idx) => (
+            <button
+              key={node.id}
+              onClick={() => onSelect(node.id)}
+              style={{
+                width:"100%", textAlign:"left",
+                padding:"10px 12px", borderRadius:"10px",
+                border:`1px solid ${idx === 0 ? OGLT : BDR}`,
+                background: idx === 0 ? OGL : "#F9FAFB",
+                cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"space-between", gap:"10px",
+              }}
+            >
+              <div style={{ display:"flex", alignItems:"center", gap:"8px", minWidth:0 }}>
+                <span style={{ fontSize:"1rem" }}>{node.icon}</span>
+                <div style={{ minWidth:0 }}>
+                  <p style={{ fontSize:"0.80rem", fontWeight:700, color:T1, lineHeight:1.3 }}>{node.title}</p>
+                  <p style={{ fontSize:"0.68rem", color:idx === 0 ? OG : T3 }}>{idx === 0 ? "Sắp học" : node.sub}</p>
+                </div>
+              </div>
+              <ArrowRight size={13} color={idx === 0 ? OG : T3} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* CTA */}
+      <button
+        onClick={() => onContinue("n5")}
+        style={{
+          width:"100%", padding:"13px", borderRadius:"12px",
+          background:OG, color:"#fff", border:"none", cursor:"pointer",
+          fontFamily:F, fontWeight:700, fontSize:"0.9rem",
+          display:"flex", alignItems:"center", justifyContent:"center", gap:"7px",
+          boxShadow:"0 4px 16px rgba(255,107,0,0.38)",
+        }}
+      >
+        <Play size={15} fill="#fff"/> Tiếp tục học <ArrowRight size={15}/>
+      </button>
+    </motion.div>
+  );
 }
 
-function getStepDurationMinutes(step: RoadmapStep): number | null {
-  const value = toNumber(step.durationMinutes) ?? toNumber(step.duration) ?? toNumber(step.minutes);
-  return typeof value === "number" ? value : null;
+/* ══════════════════════════════════
+   DETAIL PANEL
+══════════════════════════════════ */
+function DetailPanel({ node, onClose, onContinue }: { node: Skill; onClose?: ()=>void; onContinue: (node: Skill) => void }) {
+  const isDone   = node.status === "completed";
+  const isActive = node.status === "active";
+  const isLocked = node.status === "locked";
+  const pm = PHASE_META[node.phase];
+  const rc = RES_COLORS[node.res.type];
+  const isBoss = node.id === "n11";
+  const currentIndex = NODES.findIndex(n => n.id === node.id);
+  const nextNodes = NODES.slice(currentIndex + 1, currentIndex + 4);
+
+  return (
+    <motion.div
+      key={node.id}
+      initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}
+      exit={{ opacity:0, y:-10 }}
+      transition={{ duration:0.32, ease:[0.22,1,0.36,1] }}
+      style={{ fontFamily:F }}
+    >
+      {/* Phase pill + close */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"16px" }}>
+        <span style={{
+          fontSize:"0.7rem", padding:"4px 12px", borderRadius:"99px",
+          background:pm.bg, color:pm.color, fontWeight:800,
+          letterSpacing:"0.08em", textTransform:"uppercase",
+        }}>
+          Giai đoạn {node.phase} · {BANNERS[node.phase-1].title}
+        </span>
+        {onClose && (
+          <button onClick={onClose} style={{
+            width:"26px", height:"26px", borderRadius:"7px",
+            border:`1px solid ${BDR}`, background:"transparent",
+            color:T3, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+          }}>
+            <X size={12}/>
+          </button>
+        )}
+      </div>
+
+      {/* Icon + Title */}
+      <div style={{ display:"flex", alignItems:"flex-start", gap:"12px", marginBottom:"16px" }}>
+        <div style={{
+          width:"52px", height:"52px", borderRadius:"14px", flexShrink:0,
+          background: isDone||isActive ? OGL : "#F3F4F6",
+          border:`2px solid ${isDone||isActive ? OGLT : BDR}`,
+          display:"flex", alignItems:"center", justifyContent:"center", fontSize:"22px",
+        }}>
+          {node.icon}
+        </div>
+        <div style={{ flex:1 }}>
+          <h2 style={{
+            fontWeight:800, fontSize:"1.1rem", letterSpacing:"-0.03em",
+            color:T1, lineHeight:1.2, marginBottom:"3px",
+          }}>
+            {node.title}
+          </h2>
+          <p style={{ color: isActive?OG:T2, fontSize:"0.78rem", fontWeight:isActive?700:400 }}>
+            {node.sub}
+          </p>
+        </div>
+      </div>
+
+      {/* Status badge */}
+      <div style={{ marginBottom:"14px" }}>
+        {isDone && (
+          <div style={{ display:"flex", alignItems:"center", gap:"7px", padding:"8px 12px", borderRadius:"9px", background:"#ECFDF5", border:"1px solid #A7F3D0" }}>
+            <Check size={13} color="#059669" strokeWidth={3}/>
+            <span style={{ color:"#059669", fontSize:"0.8rem", fontWeight:700 }}>Đã hoàn thành · Rất tốt!</span>
+          </div>
+        )}
+        {isActive && (
+          <div style={{ padding:"10px 12px", borderRadius:"9px", background:OGL, border:`1px solid ${OGLT}` }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"6px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+                <Zap size={12} color={OG} fill={OG}/>
+                <span style={{ color:OG, fontSize:"0.8rem", fontWeight:700 }}>Đang học - 60% hoàn thành</span>
+              </div>
+              <span style={{ color:OG, fontSize:"0.75rem" }}>3/5 chặng</span>
+            </div>
+            <div style={{ height:"5px", borderRadius:"99px", background:"rgba(255,107,0,0.15)", overflow:"hidden" }}>
+              <motion.div
+                initial={{ width:0 }} animate={{ width:"60%" }}
+                transition={{ duration:0.8 }}
+                style={{ height:"100%", background:OG, borderRadius:"99px" }}/>
+            </div>
+          </div>
+        )}
+        {isLocked && (
+          <div style={{ display:"flex", alignItems:"center", gap:"7px", padding:"8px 12px", borderRadius:"9px", background:"#F9FAFB", border:`1px solid ${BDR}` }}>
+            <Lock size={13} color={T3}/>
+            <span style={{ color:T2, fontSize:"0.8rem" }}>
+              {isBoss ? "Hoàn thành toàn bộ module Giai đoạn 4 để mở khóa" : "Hoàn thành module trước để mở khóa"}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Description */}
+      <p style={{ color:T2, fontSize:"0.875rem", lineHeight:1.7, marginBottom:"16px" }}>
+        {node.desc}
+      </p>
+
+      {/* What you'll learn */}
+      <div style={{
+        background:"#F9FAFB", borderRadius:"12px", padding:"14px",
+        marginBottom:"14px",
+      }}>
+        <p style={{
+          fontSize:"0.68rem", color:T3, fontWeight:800, letterSpacing:"0.1em",
+          textTransform:"uppercase", marginBottom:"10px",
+        }}>
+          Bạn sẽ học được gì
+        </p>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
+          {node.skills.map(s => (
+            <div key={s} style={{ display:"flex", alignItems:"center", gap:"4px" }}>
+              <Check size={11} color={isDone?"#059669":isActive?OG:T3} strokeWidth={3}/>
+              <span style={{ fontSize:"0.8rem", color:T1, fontFamily:F }}>{s}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Meta pills */}
+      <div style={{ display:"flex", gap:"8px", marginBottom:"16px" }}>
+        <div style={{
+          display:"flex", alignItems:"center", gap:"5px",
+          padding:"7px 12px", borderRadius:"8px",
+          background:CARD, border:`1px solid ${BDR}`, boxShadow:SH, flex:1,
+        }}>
+          <Clock size={13} color={T3}/>
+          <div>
+            <p style={{ fontSize:"9px", color:T3 }}>Thời gian hoàn thành</p>
+            <p style={{ fontSize:"0.82rem", fontWeight:700, color:T1 }}>{node.est}</p>
+          </div>
+        </div>
+        <div style={{
+          display:"flex", alignItems:"center", gap:"5px",
+          padding:"7px 12px", borderRadius:"8px",
+          background:CARD, border:`1px solid ${BDR}`, boxShadow:SH, flex:1,
+        }}>
+          <Star size={13} color="#D97706" fill="#D97706"/>
+          <div>
+            <p style={{ fontSize:"9px", color:T3 }}>Phần thưởng XP</p>
+            <p style={{ fontSize:"0.82rem", fontWeight:700, color:"#D97706" }}>+{node.xp} XP</p>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Recommended Resource */}
+      <div style={{
+        background:CARD, borderRadius:"14px", padding:"16px",
+        boxShadow:SH, border:`1px solid ${BDR}`, marginBottom:"12px",
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"5px", marginBottom:"10px" }}>
+          <Sparkles size={12} color="#7C3AED"/>
+          <span style={{ fontSize:"0.68rem", color:"#7C3AED", fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase" }}>
+            AI đề xuất
+          </span>
+        </div>
+        <div style={{ display:"flex", alignItems:"flex-start", gap:"10px", marginBottom:"10px" }}>
+          <div style={{
+            width:"36px", height:"36px", borderRadius:"9px", flexShrink:0,
+            background:`${rc}15`, border:`1px solid ${rc}25`,
+            display:"flex", alignItems:"center", justifyContent:"center",
+          }}>
+            {node.res.type === "Video"    && <span style={{ fontSize:"16px" }}>🎬</span>}
+            {node.res.type === "Article"  && <span style={{ fontSize:"16px" }}>📖</span>}
+            {node.res.type === "Course"   && <span style={{ fontSize:"16px" }}>🎓</span>}
+            {node.res.type === "Practice" && <span style={{ fontSize:"16px" }}>🎮</span>}
+          </div>
+          <div style={{ flex:1 }}>
+            <p style={{ fontWeight:700, fontSize:"0.85rem", color:T1, lineHeight:1.3, marginBottom:"3px" }}>
+              {node.res.title}
+            </p>
+            <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+              <span style={{
+                fontSize:"9px", padding:"2px 7px", borderRadius:"5px",
+                background:`${rc}12`, color:rc, fontWeight:700,
+              }}>
+                {node.res.type}
+              </span>
+              <span style={{ fontSize:"0.72rem", color:T3 }}>{node.res.source}</span>
+              <span style={{ fontSize:"0.72rem", color:T3 }}>·</span>
+              <span style={{ fontSize:"0.72rem", color:T3 }}>{node.res.dur}</span>
+            </div>
+          </div>
+        </div>
+        <a href="#" style={{ textDecoration:"none" }}
+          onClick={e => e.preventDefault()}>
+          <div style={{
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            padding:"8px 12px", borderRadius:"9px",
+            background:"#F5F3FF", border:"1px solid #DDD6FE",
+            cursor:"pointer", transition:"background 0.12s",
+          }}
+          onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.background="#EDE9FE";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.background="#F5F3FF";}}>
+            <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#7C3AED" }}>Mở tài nguyên</span>
+            <ExternalLink size={12} color="#7C3AED"/>
+          </div>
+        </a>
+      </div>
+
+      {/* AI Tip */}
+      <div style={{
+        display:"flex", alignItems:"flex-start", gap:"8px",
+        padding:"12px", borderRadius:"12px",
+        background:"#FFFBEB", border:"1px solid #FDE68A",
+        marginBottom:"16px",
+      }}>
+        <Sparkles size={13} color="#D97706" style={{ flexShrink:0, marginTop:"1px" }}/>
+        <p style={{ fontSize:"0.78rem", color:"#92400E", lineHeight:1.6 }}>
+          <span style={{ fontWeight:700 }}>Mẹo AI: </span>{node.tip}
+        </p>
+      </div>
+
+      {/* Next milestones */}
+      {nextNodes.length > 0 && (
+        <div style={{
+          background:CARD, borderRadius:"12px", padding:"14px",
+          border:`1px solid ${BDR}`, boxShadow:SH,
+          marginBottom:"16px",
+        }}>
+          <p style={{
+            fontSize:"0.68rem", color:T3, fontWeight:800, letterSpacing:"0.1em",
+            textTransform:"uppercase", marginBottom:"10px",
+          }}>
+            Các bước tiếp theo
+          </p>
+          <div style={{ display:"flex", flexDirection:"column", gap:"7px" }}>
+            {nextNodes.map((nextNode, idx) => (
+              <div
+                key={nextNode.id}
+                style={{
+                  padding:"9px 10px", borderRadius:"9px",
+                  background: idx === 0 ? OGL : "#F9FAFB",
+                  border:`1px solid ${idx === 0 ? OGLT : BDR}`,
+                  display:"flex", alignItems:"center", justifyContent:"space-between", gap:"8px",
+                }}
+              >
+                <div style={{ display:"flex", alignItems:"center", gap:"8px", minWidth:0 }}>
+                  <span style={{ fontSize:"0.95rem" }}>{nextNode.icon}</span>
+                  <div style={{ minWidth:0 }}>
+                    <p style={{ fontSize:"0.78rem", fontWeight:700, color:T1, lineHeight:1.25 }}>{nextNode.title}</p>
+                    <p style={{ fontSize:"0.66rem", color:idx === 0 ? OG : T3 }}>{idx === 0 ? "Sắp mở" : nextNode.est}</p>
+                  </div>
+                </div>
+                <ChevronRight size={12} color={idx === 0 ? OG : T3}/>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Chapter Complete Card (completed nodes only) ── */}
+      {isDone && <ChapterCompleteCard node={node}/>}
+
+      {/* CTA */}
+      {!isLocked ? (
+        <motion.button
+          whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
+          onClick={() => onContinue(node)}
+          style={{
+            width:"100%", padding:"13px", borderRadius:"12px",
+            background: isDone ? BG : OG,
+            color: isDone ? OG : "#fff",
+            border: isDone ? `1.5px solid ${OGLT}` : "none",
+            fontFamily:F, fontWeight:700, fontSize:"0.9rem", cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center", gap:"7px",
+            boxShadow: isDone ? "none" : "0 4px 16px rgba(255,107,0,0.38)",
+          }}
+        >
+          {isDone
+            ? <><RotateCcw size={14}/> Ôn lại module</>
+            : <><Play size={14} fill="#fff"/> Tiếp tục học <ArrowRight size={14}/></>}
+        </motion.button>
+      ) : (
+        <div style={{
+          width:"100%", padding:"13px", borderRadius:"12px",
+          background:"#F3F4F6", color:T3, textAlign:"center",
+          fontFamily:F, fontWeight:600, fontSize:"0.875rem",
+          display:"flex", alignItems:"center", justifyContent:"center", gap:"7px",
+        }}>
+          <Lock size={14}/> Hoàn thành module trước để mở khóa
+        </div>
+      )}
+    </motion.div>
+  );
 }
 
-function getStepSummary(step: RoadmapStep): string {
-  return toText(step.description) || toText(step.summary) || "Nội dung đang được chuẩn hoá từ cấu trúc đã xác nhận.";
-}
-
-function getProgressPercent(roadmapData: RoadmapResponse | null): number {
-  if (!roadmapData) return 0;
-  const status = (toText(roadmapData.status) || "").toUpperCase();
-  if (status === "DONE") return 100;
-  if (status === "GENERATING") return 60;
-  const steps = roadmapData.steps || [];
-  if (steps.length === 0) return 15;
-  return Math.min(95, 20 + steps.length * 16);
-}
-
-function getTotalResources(roadmapData: RoadmapResponse | null): number {
-  if (!roadmapData) return 0;
-  const stepResources = (roadmapData.steps || []).reduce((count, step) => count + (step.resources?.length || 0), 0);
-  return stepResources + (roadmapData.resources?.length || 0);
-}
-
-function formatRoadmapId(rawId: unknown): string {
-  const id = toText(rawId);
-  if (!id) {
-    return "RM-000000";
-  }
-
-  const suffix = id.replace(/[^a-zA-Z0-9]/g, "").slice(-6).padStart(6, "0");
-  return `RM-${suffix}`;
-}
-
+/* ══════════════════════════════════
+   MAIN ROADMAP PAGE
+══════════════════════════════════ */
 export default function Roadmap() {
-  const { workspaceId } = useParams<{ workspaceId: string }>();
-  const location = useLocation();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [mobilePanel, setMobilePanel] = useState(false);
+  const [roadmap3DEnabled, setRoadmap3DEnabled] = useState(false);
   const navigate = useNavigate();
-  const navigationRoadmap = (location.state as { roadmap?: RoadmapResponse } | null)?.roadmap ?? null;
-  const [roadmapData, setRoadmapData] = useState<RoadmapResponse | null>(navigationRoadmap);
-  const [loading, setLoading] = useState(!navigationRoadmap);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedStep, setSelectedStep] = useState<RoadmapStep | null>(null);
 
-  const steps = roadmapData?.steps || [];
-  const resources = roadmapData?.resources || [];
-  const totalResources = useMemo(() => getTotalResources(roadmapData), [roadmapData]);
-  const progressPercent = useMemo(() => getProgressPercent(roadmapData), [roadmapData]);
-  const roadmapTitle = toText(roadmapData?.title) || "Roadmap học tập";
-  const roadmapDescription = toText(roadmapData?.description) || "Lộ trình học tập theo workspace đã xác nhận.";
+  const selected = NODES.find(n => n.id === selectedId) ?? null;
+  const completedCount = NODES.filter(n => n.status === "completed").length;
 
   useEffect(() => {
-    let mounted = true;
+    const query = new URLSearchParams(window.location.search);
+    const forceOn = query.get("roadmap3d") === "on";
+    const forceOff = query.get("roadmap3d") === "off";
 
-    const loadRoadmap = async () => {
-      if (!workspaceId) {
-        if (mounted) {
-          setRoadmapData(null);
-          setError("Không tìm thấy workspace");
-          setLoading(false);
-        }
-        return;
-      }
-
-      if (!roadmapData) setLoading(true);
-      setError(null);
-
-      try {
-        const data = await roadmapService.getRoadmap(workspaceId);
-        if (!mounted) return;
-        setRoadmapData(data);
-        // No auto-select — roadmap starts perfectly centered
-      } catch (err: any) {
-        if (!mounted) return;
-        setRoadmapData(null);
-        setError(err?.message || "Không thể tải lộ trình");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    void loadRoadmap();
-    return () => { mounted = false; };
-  }, [workspaceId]);
-
-  const handleGenerate = async () => {
-    if (!workspaceId) return;
-    setGenerating(true);
-    setError(null);
-
-    try {
-      const data = await roadmapService.generateRoadmap(workspaceId);
-      setRoadmapData(data);
-      // No auto-select on generate either, keep centered
-    } catch (err: any) {
-      setError(err?.message || "Không thể khởi tạo lộ trình");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handleBackToDetail = () => {
-    if (!workspaceId) {
-      navigate("/app/workspaces");
+    if (forceOff) {
+      setRoadmap3DEnabled(false);
       return;
     }
-    navigate(`/app/workspaces/${workspaceId}`);
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+    const cpuCores = navigator.hardwareConcurrency ?? 8;
+    const lowTierDevice = deviceMemory <= 4 || cpuCores <= 4;
+    const smallMobileViewport = coarsePointer && window.innerWidth < 1024;
+
+    setRoadmap3DEnabled(forceOn || (!prefersReducedMotion && !lowTierDevice && !smallMobileViewport));
+  }, []);
+
+  const handleNodeClick = (id: string) => {
+    setSelectedId(id);
+    setMobilePanel(true);
   };
 
-  /* ==================================================================
-     RIGHT PANEL: Step detail with close button
-     ================================================================== */
-  const renderStepDetail = () => {
-    if (!selectedStep) return null;
+  const handleContinueLearning = (target: string | Skill) => {
+    const node = typeof target === "string" ? NODES.find(n => n.id === target) : target;
+    if (!node) return;
 
-    const step = selectedStep;
-    const stepIndex = steps.findIndex((s) => s.id === step.id);
-    const idx = stepIndex >= 0 ? stepIndex : 0;
-    const tone = getStepTone(step, idx, steps.length);
-    const durationMinutes = getStepDurationMinutes(step);
-    const stepResources = step.resources || [];
-    const stepSummary = getStepSummary(step);
-
-    // Placeholder for step completion percentage
-    const stepCompletionPercent = Math.min(100, 20 + idx * 15);
-
-    return (
-      <div className="h-full flex flex-col p-6">
-        {/* Panel header with close button */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-500">
-              <Layers3 className="h-6 w-6" /> {/* Placeholder icon */}
-            </div>
-            <div>
-              <h2 className="text-lg font-black tracking-tight text-slate-900 break-words">
-                {toText(step.title) || `Learning Module ${idx + 1}`}
-              </h2>
-              <div className="mt-1 flex items-center gap-2 text-sm text-slate-600">
-                <Clock3 className="h-4 w-4 text-orange-500 shrink-0" />
-                <span>{durationMinutes ? `${durationMinutes} phút` : "Tự điều chỉnh"}</span>
-                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] ${tone.dotClass}`}>
-                  <Layers3 className="h-3 w-3" />
-                  {tone.label}
-                </span>
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSelectedStep(null)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Progress bar for the selected step */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-            <span>Tiến độ module</span>
-            <span>{stepCompletionPercent}%</span>
-          </div>
-          <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-orange-500 to-red-500 transition-all duration-500"
-              style={{ width: `${stepCompletionPercent}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Scrollable body: description + resources */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar text-xs text-slate-600 leading-relaxed space-y-4">
-          <p className="text-sm text-slate-700 leading-[1.7]">
-            {stepSummary}
-          </p>
-
-          {/* Topics (placeholder for now, assuming topics are part of step.resources or a separate field) */}
-          {/* For now, I'll just list resources as topics */}
-          {stepResources.length > 0 && (
-            <div>
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <FileText className="h-4 w-4 text-orange-500" />
-                Các chủ đề & Tài nguyên
-              </div>
-              <div className="grid gap-3">
-                {stepResources.map((resource, resourceIndex) => {
-                  const meta = getResourceMeta(resource);
-                  const ResourceIcon = meta.icon;
-
-                  return (
-                    <a
-                      key={`panel-${step.id}-${resourceIndex}-${toText(resource.title) || "res"}`}
-                      href={toText(resource.url) || "#"}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`group flex items-center gap-3 rounded-xl border px-4 py-3 transition hover:shadow-sm ${meta.tone}`}
-                    >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/80 shadow-sm">
-                        <ResourceIcon className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500">
-                            {meta.label}
-                          </span>
-                          <span className="truncate text-sm font-semibold text-slate-900">
-                            {toText(resource.title) || "Tài nguyên"}
-                          </span>
-                        </div>
-                      </div>
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition group-hover:bg-slate-900 group-hover:text-white">
-                        {meta.action}
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </span>
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {stepResources.length === 0 && (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center">
-              <FileText className="mx-auto h-6 w-6 text-slate-300" />
-              <p className="mt-1 text-xs text-slate-400">Chưa có tài liệu cho module này.</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    navigate("/app/learning", {
+      state: {
+        roadmap: {
+          id: node.id,
+          title: node.title,
+          subtitle: node.sub,
+          description: node.desc,
+          phase: node.phase,
+          tip: node.tip,
+          resource: node.res,
+          est: node.est,
+          xp: node.xp,
+        },
+      },
+    });
   };
 
-  /* ---- Skeleton loading ---- */
-  if (loading) {
-    return (
-      <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] bg-[radial-gradient(circle_at_top_left,_rgba(255,107,0,0.10),_transparent_30%),linear-gradient(180deg,_#F8FAFC_0%,_#F1F5F9_100%)] px-6 py-8 text-slate-900 lg:px-10">
-        <div className="h-[calc(100vh-120px)] overflow-hidden flex">
-          <div className="w-full lg:w-[65%] h-full overflow-y-auto pr-4 custom-scrollbar">
-            <div className="mb-6 rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur lg:p-7">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
-                    <Sparkles className="h-4 w-4" />
-                    AI Roadmap
-                  </div>
-                  <div className="mt-4 h-10 w-72 animate-pulse rounded-2xl bg-slate-100" />
-                  <div className="mt-3 h-4 w-96 max-w-full animate-pulse rounded-full bg-slate-100" />
-                </div>
-                <div className="grid min-w-[260px] gap-3 sm:grid-cols-3">
-                  <div className="h-16 animate-pulse rounded-2xl bg-slate-100" />
-                  <div className="h-16 animate-pulse rounded-2xl bg-slate-100" />
-                  <div className="h-16 animate-pulse rounded-2xl bg-slate-100" />
-                </div>
-              </div>
-              <div className="mt-5 h-2.5 animate-pulse rounded-full bg-slate-100" />
-            </div>
-            {/* Skeleton gamified nodes */}
-            <div className="relative py-6">
-              <div className="absolute left-1/2 top-0 h-full w-1 -translate-x-1/2 bg-gradient-to-b from-orange-200 via-slate-200 to-transparent rounded-full" />
-              {[1, 2, 3].map((i) => (
-                <div key={i} className={`relative flex items-center mb-14 ${i % 2 === 1 ? "justify-start pl-4 md:pl-20" : "justify-end pr-4 md:pr-20"}`}>
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 animate-pulse rounded-full bg-slate-200" />
-                    <div className="h-12 w-40 animate-pulse rounded-2xl bg-white border border-slate-200" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          {/* Skeleton for right panel if it were open */}
-          {selectedStep && (
-            <div className="w-full lg:w-[35%] shrink-0 h-full border-l border-slate-100 bg-white p-6 animate-pulse">
-              <div className="h-6 w-3/4 rounded-xl bg-slate-100 mb-4" />
-              <div className="h-3 w-full rounded bg-slate-100 mb-2" />
-              <div className="h-3 w-5/6 rounded bg-slate-100 mb-4" />
-              <div className="space-y-3">
-                <div className="h-16 w-full rounded-xl bg-slate-100" />
-                <div className="h-16 w-full rounded-xl bg-slate-100" />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  /* ---- Error state ---- */
-  if (error && !roadmapData) {
-    return (
-      <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] bg-[radial-gradient(circle_at_top_left,_rgba(255,107,0,0.10),_transparent_30%),linear-gradient(180deg,_#F8FAFC_0%,_#F1F5F9_100%)] px-6 py-8 text-slate-900 lg:px-10">
-        <div className="mx-auto flex min-h-[70vh] max-w-3xl items-center justify-center">
-          <div className="w-full rounded-[2rem] border border-rose-200 bg-white p-8 text-center shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
-              <BookOpenCheck className="h-8 w-8" />
-            </div>
-            <h1 className="mt-5 text-2xl font-bold text-slate-900">Không thể tải lộ trình</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-500">{error}</p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <button type="button" onClick={handleBackToDetail} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                <ArrowLeft size={16} /> Quay lại
-              </button>
-              <button type="button" onClick={handleGenerate} disabled={generating} className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-orange-700 disabled:opacity-50">
-                {generating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles size={16} />}
-                {generating ? "Đang khởi tạo..." : "Thử tạo lại roadmap"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /* ---- Pending / Generating state ---- */
-  if (!roadmapData || roadmapData.status === "PENDING" || roadmapData.status === "GENERATING") {
-    return (
-      <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] bg-[radial-gradient(circle_at_top_left,_rgba(255,107,0,0.10),_transparent_30%),linear-gradient(180deg,_#F8FAFC_0%,_#F1F5F9_100%)] px-6 py-8 text-slate-900 lg:px-10">
-        <div className="mx-auto flex min-h-[70vh] max-w-3xl items-center justify-center">
-          <div className="w-full rounded-[2rem] border border-slate-200 bg-white p-8 text-center shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-orange-50 text-orange-500">
-              <Layers3 className="h-9 w-9" />
-            </div>
-            <h1 className="mt-5 text-2xl font-bold text-slate-900">No roadmap generated</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              Workspace này chưa có roadmap được tạo hoặc roadmap đang chờ khởi tạo từ cấu trúc học tập đã xác nhận.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <button type="button" onClick={handleBackToDetail} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                <ArrowLeft size={16} /> Quay lại
-              </button>
-              <button type="button" onClick={handleGenerate} disabled={generating} className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-orange-700 disabled:opacity-50">
-                {generating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles size={16} />}
-                {generating ? "Đang khởi tạo lộ trình..." : "Tạo roadmap"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /* ====================================================================
-     MAIN RENDER: Gamified Curved Path with Independent Scrolling
-     ==================================================================== */
   return (
-    <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] bg-[radial-gradient(circle_at_top_left,_rgba(255,107,0,0.10),_transparent_30%),linear-gradient(180deg,_#F8FAFC_0%,_#F1F5F9_100%)] px-6 py-8 text-slate-900 lg:px-10">
-      <div className="h-[calc(100vh-120px)] overflow-hidden flex transition-all duration-500 ease-in-out">
-        {/* ==================== LEFT COLUMN: ROADMAP PATH ==================== */}
-        <div
-          className={`h-full overflow-y-auto custom-scrollbar pr-4 transition-all duration-500 ease-in-out ${
-            selectedStep ? "w-full lg:w-[65%]" : "w-full max-w-4xl mx-auto"
-          }`}
-        >
-          {/* Hero Header */}
-          <section className="mb-6 rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur lg:p-7">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
-                  <Sparkles className="h-4 w-4" />
-                  AI Roadmap
-                </div>
-                <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{roadmapTitle}</h1>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  {roadmapDescription} <span className="font-semibold text-slate-700">{formatRoadmapId(roadmapData?.id || workspaceId)}</span>.
-                </p>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-3">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Trạng thái</div>
-                  <div className="mt-0.5 text-sm font-semibold text-slate-800">{(roadmapData.status || "DONE").toUpperCase()}</div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Bước học</div>
-                  <div className="mt-0.5 text-sm font-semibold text-slate-800">{steps.length}</div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Tài nguyên</div>
-                  <div className="mt-0.5 text-sm font-semibold text-slate-800">{totalResources}</div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-5">
-              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                <span>Tiến độ</span>
-                <span>{progressPercent}%</span>
-              </div>
-              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-orange-500 to-red-500 transition-all duration-500"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            </div>
-          </section>
+    <motion.div
+      initial={{ opacity:0 }} animate={{ opacity:1 }}
+      transition={{ duration:0.3 }}
+      style={{
+        fontFamily:F,
+        display:"flex", height:"calc(100vh - 48px)",
+        position:"relative",
+        overflow:"hidden", gap:"0",
+      }}
+    >
+      <style>{`
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 99px; }
+        @keyframes node-drift { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+      `}</style>
 
-          {/* Gamified curved roadmap */}
-          <div className="relative py-6">
-            {/* SVG for curved path and nodes */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 2000" preserveAspectRatio="xMidYMin slice">
-              {/* Placeholder for curved path - will draw a simple line for now */}
-              {steps.map((step, index) => {
-                if (index === 0) return null;
-                const prevStep = steps[index - 1];
-                // These coordinates are highly simplified and will need dynamic calculation
-                // For now, just drawing a vertical line between conceptual points
-                const startX = 500; // Center of the SVG
-                const startY = (index - 1) * 150 + 100; // Approximate Y for previous step
-                const endX = 500; // Center of the SVG
-                const endY = index * 150 + 100; // Approximate Y for current step
+      {/* ════════════════════════════
+          LEFT — Winding Path
+      ════════════════════════════ */}
+      <div style={{
+        flex:1, overflowY:"auto", overflowX:"hidden",
+        position:"relative",
+        zIndex:1,
+        padding:"0 0 60px",
+      }}>
+        {/* ── Page header ── */}
+        <div style={{
+          position:"sticky", top:0, zIndex:30,
+          background:"rgba(249,250,251,0.92)", backdropFilter:"blur(16px)",
+          borderBottom:`1px solid rgba(0,0,0,0.05)`,
+          padding:"12px 24px",
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+        }}>
+          <div>
+            <h1 style={{ fontWeight:900, fontSize:"1.15rem", letterSpacing:"-0.03em", color:T1, lineHeight:1 }}>
+              Lộ trình học
+            </h1>
+            <p style={{ color:T2, fontSize:"0.78rem", marginTop:"2px" }}>
+              Lập trình viên Frontend · {completedCount}/{NODES.length} hoàn thành
+            </p>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+            {/* Streak */}
+            <div style={{
+              display:"flex", alignItems:"center", gap:"5px",
+              padding:"5px 12px", borderRadius:"99px",
+              background:OGL, border:`1px solid ${OGLT}`,
+            }}>
+              <span style={{ fontSize:"13px" }}>🔥</span>
+              <span style={{ fontSize:"0.75rem", color:OG, fontWeight:800 }}>Chuỗi 12 ngày</span>
+            </div>
+            {/* XP */}
+            <div style={{
+              display:"flex", alignItems:"center", gap:"5px",
+              padding:"5px 12px", borderRadius:"99px",
+              background:"#F5F3FF", border:"1px solid #DDD6FE",
+            }}>
+              <span style={{ fontSize:"13px" }}>⚡</span>
+              <span style={{ fontSize:"0.75rem", color:"#7C3AED", fontWeight:800 }}>1,250 XP</span>
+            </div>
+          </div>
+        </div>
 
+        {/* ── Path canvas ── */}
+        <div style={{
+          display:"flex", justifyContent:"center",
+          position:"relative", zIndex:1,
+          padding:"32px 16px 80px",
+        }}>
+          {roadmap3DEnabled && (
+            <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none" }}>
+              <Safe3DViewer
+                width={PW}
+                height={TH}
+                selectedId={hoveredId ?? selectedId}
+                forceMode="auto"
+                nodes={NODES.map((node) => ({
+                  id: node.id,
+                  cx: node.cx,
+                  cy: node.cy,
+                  status: node.status,
+                }))}
+              />
+            </div>
+          )}
+
+          <div style={{
+            position:"relative",
+            width:`${PW}px`, height:`${TH}px`,
+            zIndex:1,
+            flexShrink:0,
+          }}>
+
+            {/* ── SVG paths between nodes ── */}
+            <svg
+              width={PW} height={TH}
+              style={{ position:"absolute", top:0, left:0, pointerEvents:"none", zIndex:1 }}
+            >
+              <defs>
+                <filter id="pathGlow">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+              {NODES.map((node, i) => {
+                if (i === 0) return null;
+                const prev = NODES[i - 1];
+                const isSolid = prev.status !== "locked";
+                const isGlowing = prev.status === "active" || (prev.status === "completed" && node.status === "active");
                 return (
                   <path
-                    key={`path-${index}`}
-                    d={`M ${startX} ${startY} L ${endX} ${endY}`}
-                    stroke="#FFB74D"
-                    strokeWidth="4"
+                    key={`seg-${i}`}
+                    d={segPath(prev, node)}
                     fill="none"
-                    className="opacity-50"
+                    stroke={isSolid ? OG : "#E5E7EB"}
+                    strokeWidth={isSolid ? 4 : 3}
+                    strokeLinecap="round"
+                    strokeDasharray={isSolid ? undefined : "9 7"}
+                    filter={isGlowing ? "url(#pathGlow)" : undefined}
+                    opacity={isSolid ? 1 : 0.8}
                   />
                 );
               })}
             </svg>
 
-            <div className="relative z-10">
-              {steps.map((step, index) => {
-                const tone = getStepTone(step, index, steps.length);
-                const isActive = selectedStep?.id === step.id;
-                const stepId = toText(step.id) || `step-${index}`;
-                const isLeft = index % 2 === 0; // For alternating text alignment
+            {/* ── Phase banners ── */}
+            {BANNERS.map(b => (
+              <PhaseBanner key={b.phase} b={b}/>
+            ))}
 
-                // Placeholder for step completion
-                const stepProgress = Math.min(100, 10 + index * 20);
-                const circumference = 2 * Math.PI * 20; // For a 40px diameter circle (radius 20)
-                const strokeDashoffset = circumference - (stepProgress / 100) * circumference;
+            {/* ── Nodes ── */}
+            {NODES.map(node => (
+              <PathNode
+                key={node.id}
+                node={node}
+                selected={selectedId === node.id}
+                onClick={() => handleNodeClick(node.id)}
+                onHover={setHoveredId}
+              />
+            ))}
 
-                return (
-                  <div
-                    key={stepId}
-                    className={`relative flex items-center mb-20 ${
-                      isLeft ? "justify-start md:justify-end md:pr-[calc(50%-100px)]" : "justify-start md:pl-[calc(50%-100px)]"
-                    }`}
-                  >
-                    {/* Phase Header - simple grouping */}
-                    {index % 3 === 0 && (
-                      <div className={`absolute -top-10 w-full text-center ${isLeft ? "md:text-right pr-40" : "md:text-left pl-40"}`}>
-                        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-                          GIAI ĐOẠN {Math.floor(index / 3) + 1}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Node and text container */}
-                    <div
-                      onClick={() => setSelectedStep(step)}
-                      className={`flex flex-col items-center gap-2 cursor-pointer transition-all duration-200 hover:scale-110 group ${
-                        isLeft ? "text-right" : "text-left"
-                      }`}
-                    >
-                      {/* Floating XP Badge */}
-                      <span className="absolute -top-8 px-2 py-0.5 rounded-full bg-orange-500 text-white text-[10px] font-bold shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        +100 XP
-                      </span>
-
-                      {/* Circular Node with Progress Ring */}
-                      <div className="relative w-12 h-12 flex items-center justify-center">
-                        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 44 44">
-                          <circle
-                            className="text-slate-200"
-                            strokeWidth="4"
-                            stroke="currentColor"
-                            fill="transparent"
-                            r="20"
-                            cx="22"
-                            cy="22"
-                          />
-                          <circle
-                            className={`${isActive ? "text-orange-500" : "text-emerald-500"} transition-colors duration-200`}
-                            strokeWidth="4"
-                            strokeDasharray={circumference}
-                            strokeDashoffset={strokeDashoffset}
-                            strokeLinecap="round"
-                            stroke="currentColor"
-                            fill="transparent"
-                            r="20"
-                            cx="22"
-                            cy="22"
-                            transform="rotate(-90 22 22)"
-                          />
-                        </svg>
-                        <span className={`absolute text-sm font-bold ${isActive ? "text-orange-700" : "text-slate-700"}`}>
-                          {index + 1}
-                        </span>
-                      </div>
-
-                      {/* Node Title */}
-                      <h4 className={`text-sm font-bold text-slate-800 group-hover:text-orange-600 transition-colors duration-200 max-w-[150px] ${isLeft ? "pr-2" : "pl-2"}`}>
-                        {toText(step.title) || `Module ${index + 1}`}
-                      </h4>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
-                        <span>{getStepDurationMinutes(step) ? `${getStepDurationMinutes(step)} phút` : "Tự điều chỉnh"}</span>
-                        <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0 text-[9px] font-bold uppercase tracking-[0.15em] ${tone.dotClass}`}>
-                          <Layers3 className="h-2.5 w-2.5" />
-                          {tone.label}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Finish node */}
-              <div className="relative flex justify-center mt-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg">
-                  <Sparkles className="h-6 w-6" />
-                </div>
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">
-                  Hoàn thành
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Shared resources */}
-          {resources.length > 0 && (
-            <section className="mt-6 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <ExternalLink className="h-4 w-4 text-orange-500" />
-                Nguồn học liệu chung
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                {resources.map((resource, index) => {
-                  const meta = getResourceMeta(resource);
-                  const ResourceIcon = meta.icon;
-
-                  return (
-                    <a
-                      key={`shared-${index}-${toText(resource.title) || "resource"}`}
-                      href={toText(resource.url) || "#"}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="group rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 transition hover:-translate-y-0.5 hover:border-orange-200 hover:bg-white hover:shadow-sm"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm">
-                          <ResourceIcon className="h-4 w-4 text-orange-500" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold text-slate-900 truncate">{toText(resource.title) || "Tài nguyên"}</div>
-                          <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">{meta.label}</div>
-                          <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-orange-500 px-2.5 py-1 text-[10px] font-semibold text-white transition group-hover:bg-orange-600">
-                            {meta.action}
-                            <ArrowRight className="h-3 w-3" />
-                          </div>
-                        </div>
-                      </div>
-                    </a>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* Footer */}
-          <div className="mt-6 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={handleBackToDetail}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              <ArrowLeft size={16} />
-              Quay lại
-            </button>
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500 shadow-sm">
-              <LoaderCircle className="h-4 w-4 text-orange-500" />
-              {roadmapData.updatedAt ? `Cập nhật: ${new Date(roadmapData.updatedAt).toLocaleString("vi-VN")}` : "Đã sẵn sàng"}
-            </div>
+            {/* ── "Click a node" hint ── */}
+            {!selectedId && (
+              <motion.div
+                initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1.2 }}
+                style={{
+                  position:"absolute", bottom:"20px", left:"50%",
+                  transform:"translateX(-50%)",
+                  display:"flex", alignItems:"center", gap:"6px",
+                  padding:"7px 16px", borderRadius:"99px",
+                  background:CARD, border:`1px solid ${BDR}`,
+                  boxShadow:SH, whiteSpace:"nowrap",
+                  color:T3, fontSize:"0.78rem", fontFamily:F,
+                  pointerEvents:"none",
+                }}
+              >
+                <BookOpen size={12}/> Chạm vào node để xem chi tiết
+              </motion.div>
+            )}
           </div>
         </div>
-
-        {/* ==================== RIGHT COLUMN: LOCKED DETAIL PANEL ==================== */}
-        {selectedStep && (
-          <div className="w-full lg:w-[35%] shrink-0 h-full overflow-y-auto custom-scrollbar border-l border-slate-100 bg-white transition-all duration-500 ease-in-out">
-            {renderStepDetail()}
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* ════════════════════════════
+          RIGHT — Detail Panel (desktop)
+      ════════════════════════════ */}
+      <div
+        className="hidden lg:flex"
+        style={{
+          width:"360px", flexShrink:0,
+          position:"relative", zIndex:1,
+          flexDirection:"column",
+          borderLeft:`1px solid rgba(0,0,0,0.06)`,
+          background:BG,
+          overflowY:"auto",
+        }}
+      >
+        {/* Panel header */}
+        <div style={{
+          position:"sticky", top:0, zIndex:20,
+          background:"rgba(249,250,251,0.95)", backdropFilter:"blur(16px)",
+          borderBottom:`1px solid rgba(0,0,0,0.05)`,
+          padding:"13px 20px",
+          display:"flex", alignItems:"center", gap:"8px",
+        }}>
+          <div style={{
+            width:"26px", height:"26px", borderRadius:"8px",
+            background:OGL, display:"flex", alignItems:"center", justifyContent:"center",
+          }}>
+            <BookOpen size={13} color={OG}/>
+          </div>
+          <p style={{ fontWeight:700, fontSize:"0.875rem", color:T1 }}>
+            {selected ? "Chi tiết kỹ năng" : "Tổng quan lộ trình"}
+          </p>
+        </div>
+
+        {/* Panel body */}
+        <div style={{ padding:"20px" }}>
+          <AnimatePresence mode="wait">
+            {selected
+              ? <DetailPanel key={selected.id} node={selected} onClose={() => setSelectedId(null)} onContinue={handleContinueLearning}/>
+              : <OverviewPanel key="overview" onSelect={(id) => setSelectedId(id)} onContinue={handleContinueLearning}/>}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* ════════════════════════════
+          MOBILE — Bottom Sheet
+      ════════════════════════════ */}
+      <AnimatePresence>
+        {mobilePanel && selected && (
+          <>
+            <motion.div
+              initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+              onClick={() => setMobilePanel(false)}
+              className="lg:hidden"
+              style={{
+                position:"fixed", inset:0, zIndex:60,
+                background:"rgba(0,0,0,0.3)", backdropFilter:"blur(4px)",
+              }}
+            />
+            <motion.div
+              initial={{ y:"100%" }} animate={{ y:0 }} exit={{ y:"100%" }}
+              transition={{ type:"spring", stiffness:280, damping:30 }}
+              className="lg:hidden"
+              style={{
+                position:"fixed", bottom:0, left:0, right:0, zIndex:70,
+                background:BG, borderRadius:"20px 20px 0 0",
+                maxHeight:"80vh", overflowY:"auto",
+                padding:"20px",
+                boxShadow:"0 -8px 32px rgba(0,0,0,0.12)",
+              }}
+            >
+              {/* Handle */}
+              <div style={{
+                width:"36px", height:"4px", borderRadius:"99px",
+                background:BDR, margin:"0 auto 16px",
+              }}/>
+              <DetailPanel node={selected} onClose={() => setMobilePanel(false)} onContinue={handleContinueLearning}/>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

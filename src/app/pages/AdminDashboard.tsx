@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -6,20 +6,55 @@ import {
 } from "recharts";
 import {
   Users, TrendingUp, Building2,
-  Zap, ArrowUpRight, Download, Bell,
+  ArrowUpRight, Download, Bell,
   Activity, DollarSign, Repeat, Target,
-  GraduationCap, BookOpen, Award, ShieldCheck,
-  ChevronDown, Search, AlertTriangle, Command, X, ChevronRight,
+  ShieldCheck,
+  ChevronDown, Search, Command, X, ChevronRight,
+  UserCheck, UserX,
 } from "lucide-react";
 import { Link } from "react-router";
-import AdminHealth from "./AdminHealth";
-import healthService from "../../api/healthService";
-import adminUserService from "../../api/adminUserService";
+import { BrandLogo } from "../components/BrandLogo";
 
 const ACCENT = "#FF6B00";
 const ACCENT_DEEP = "#EA580C";
 const ACCENT_SOFT = "rgba(255,107,0,0.08)";
 const ACCENT_BORDER = "rgba(255,107,0,0.2)";
+type VisualMode = "classic" | "muted";
+
+const OVERVIEW_COLOR_PRESETS: Record<VisualMode, {
+  users: string;
+  partners: string;
+  revenue: string;
+  cancellation: string;
+  totalArea: string;
+  newUsers: string;
+  plan: string;
+  statusGood: string;
+  statusRisk: string;
+}> = {
+  classic: {
+    users: "#06B6D4",
+    partners: "#22C55E",
+    revenue: "#F59E0B",
+    cancellation: "#EF4444",
+    totalArea: "#0EA5E9",
+    newUsers: "#16A34A",
+    plan: "#FF6B00",
+    statusGood: "#16A34A",
+    statusRisk: "#D97706",
+  },
+  muted: {
+    users: "#1D4ED8",
+    partners: "#0F766E",
+    revenue: "#475569",
+    cancellation: "#B91C1C",
+    totalArea: "#2563EB",
+    newUsers: "#0E7490",
+    plan: "#334155",
+    statusGood: "#166534",
+    statusRisk: "#A16207",
+  },
+};
 
 function toCsv(rows: Record<string, string | number>[]) {
   if (!rows.length) return "";
@@ -78,88 +113,94 @@ function Sparkline({ data, color, width = 80, height = 28 }: { data: number[]; c
 ───────────────────────────────────────────────────────── */
 // Student cohort data for "Users & Cohorts" view
 const STUDENTS = [
-  { id: 1, name: "Nguyễn Văn A", cohort: "FPT K21", roadmap: "Frontend Dev", progress: 72, skillGap: 28, streak: 12, plan: "Premium", status: "on-track" },
-  { id: 2, name: "Trần Thị B", cohort: "FPT K21", roadmap: "Backend Dev", progress: 58, skillGap: 42, streak: 5, plan: "Premium", status: "at-risk" },
-  { id: 3, name: "Lê Văn C", cohort: "VNU K20", roadmap: "Data Science", progress: 91, skillGap: 9, streak: 21, plan: "Premium", status: "excellent" },
-  { id: 4, name: "Phạm Thị D", cohort: "HUST K22", roadmap: "UI/UX Design", progress: 44, skillGap: 56, streak: 2, plan: "Free", status: "at-risk" },
-  { id: 5, name: "Hoàng Minh E", cohort: "RMIT 2024", roadmap: "Frontend Dev", progress: 83, skillGap: 17, streak: 18, plan: "Premium", status: "excellent" },
-  { id: 6, name: "Vũ Thị F", cohort: "VNU K20", roadmap: "DevOps", progress: 37, skillGap: 63, streak: 0, plan: "Free", status: "stalled" },
-  { id: 7, name: "Đặng Văn G", cohort: "FPT K21", roadmap: "Backend Dev", progress: 66, skillGap: 34, streak: 8, plan: "Premium", status: "on-track" },
-  { id: 8, name: "Bùi Thị H", cohort: "HCMUT K23", roadmap: "Frontend Dev", progress: 19, skillGap: 81, streak: 1, plan: "Free", status: "stalled" },
-  { id: 9, name: "Ngô Văn I", cohort: "HUST K22", roadmap: "Data Science", progress: 77, skillGap: 23, streak: 14, plan: "Premium", status: "on-track" },
-  { id: 10, name: "Đinh Thị J", cohort: "RMIT 2024", roadmap: "UI/UX Design", progress: 94, skillGap: 6, streak: 30, plan: "Premium", status: "excellent" },
+  { id: 1, name: "Nguyễn Văn A",   cohort: "FPT K21",   roadmap: "Frontend Dev", progress: 72, skillGap: 28, streak: 12, plan: "Premium", status: "on-track" },
+  { id: 2, name: "Trần Thị B",     cohort: "FPT K21",   roadmap: "Backend Dev",  progress: 58, skillGap: 42, streak: 5,  plan: "Premium", status: "at-risk" },
+  { id: 3, name: "Lê Văn C",       cohort: "VNU K20",   roadmap: "Data Science", progress: 91, skillGap: 9,  streak: 21, plan: "Premium", status: "excellent" },
+  { id: 4, name: "Phạm Thị D",     cohort: "HUST K22",  roadmap: "UI/UX Design", progress: 44, skillGap: 56, streak: 2,  plan: "Free",    status: "at-risk" },
+  { id: 5, name: "Hoàng Minh E",   cohort: "RMIT 2024", roadmap: "Frontend Dev", progress: 83, skillGap: 17, streak: 18, plan: "Premium", status: "excellent" },
+  { id: 6, name: "Vũ Thị F",       cohort: "VNU K20",   roadmap: "DevOps",       progress: 37, skillGap: 63, streak: 0,  plan: "Free",    status: "stalled" },
+  { id: 7, name: "Đặng Văn G",     cohort: "FPT K21",   roadmap: "Backend Dev",  progress: 66, skillGap: 34, streak: 8,  plan: "Premium", status: "on-track" },
+  { id: 8, name: "Bùi Thị H",      cohort: "HCMUT K23", roadmap: "Frontend Dev", progress: 19, skillGap: 81, streak: 1,  plan: "Free",    status: "stalled" },
+  { id: 9, name: "Ngô Văn I",      cohort: "HUST K22",  roadmap: "Data Science", progress: 77, skillGap: 23, streak: 14, plan: "Premium", status: "on-track" },
+  { id: 10, name: "Đinh Thị J",    cohort: "RMIT 2024", roadmap: "UI/UX Design", progress: 94, skillGap: 6,  streak: 30, plan: "Premium", status: "excellent" },
 ];
 
+const ADMIN_USER_ACCOUNTS = [
+  { id: "USR-1084", name: "Nguyễn Văn A", email: "a.nguyen@skillsprint.vn", role: "Learner", plan: "Premium", accountStatus: "active", lastLogin: "01/04/2026 08:25", source: "Google" },
+  { id: "USR-1130", name: "Trần Thị B", email: "b.tran@skillsprint.vn", role: "Learner", plan: "Premium", accountStatus: "review", lastLogin: "31/03/2026 21:14", source: "Email" },
+  { id: "USR-0912", name: "Lê Văn C", email: "c.le@skillsprint.vn", role: "Mentor", plan: "Internal", accountStatus: "active", lastLogin: "01/04/2026 07:42", source: "Microsoft" },
+  { id: "USR-0766", name: "Phạm Thị D", email: "d.pham@skillsprint.vn", role: "Learner", plan: "Free", accountStatus: "locked", lastLogin: "28/03/2026 10:05", source: "Email" },
+  { id: "USR-1215", name: "Hoàng Minh E", email: "e.hoang@skillsprint.vn", role: "Admin", plan: "Internal", accountStatus: "active", lastLogin: "01/04/2026 09:01", source: "Microsoft" },
+  { id: "USR-0998", name: "Vũ Thị F", email: "f.vu@skillsprint.vn", role: "Learner", plan: "Builder", accountStatus: "active", lastLogin: "31/03/2026 19:36", source: "Google" },
+  { id: "USR-1251", name: "Đặng Văn G", email: "g.dang@skillsprint.vn", role: "Learner", plan: "Premium", accountStatus: "active", lastLogin: "01/04/2026 06:48", source: "Apple" },
+  { id: "USR-0640", name: "Bùi Thị H", email: "h.bui@skillsprint.vn", role: "Learner", plan: "Free", accountStatus: "locked", lastLogin: "27/03/2026 15:10", source: "Email" },
+];
+
+const SUBSCRIPTION_HISTORY = [
+  { id: "SUB-240401-01", user: "Nguyễn Văn A", plan: "Career Premium", action: "Đăng ký", date: "01/04/2026 08:29", channel: "MoMo", operator: "Self-service", note: "Thanh toán thành công" },
+  { id: "SUB-240331-07", user: "Trần Thị B", plan: "Career Premium", action: "Hủy gói", date: "31/03/2026 22:03", channel: "Portal", operator: "Self-service", note: "Lý do: tạm dừng học kỳ" },
+  { id: "SUB-240331-02", user: "Vũ Thị F", plan: "Skill Builder", action: "Đăng ký", date: "31/03/2026 19:40", channel: "VNPay", operator: "Self-service", note: "Nâng cấp từ Free" },
+  { id: "SUB-240330-05", user: "Bùi Thị H", plan: "Skill Builder", action: "Hủy gói", date: "30/03/2026 13:12", channel: "Portal", operator: "Admin", note: "Khóa tài khoản do vi phạm" },
+  { id: "SUB-240329-03", user: "Đặng Văn G", plan: "Career Premium", action: "Đăng ký", date: "29/03/2026 09:18", channel: "Card", operator: "Self-service", note: "Gia hạn 1 tháng" },
+  { id: "SUB-240328-11", user: "Phạm Thị D", plan: "Skill Builder", action: "Hủy gói", date: "28/03/2026 10:09", channel: "Portal", operator: "Admin", note: "Bị khóa theo chính sách" },
+  { id: "SUB-240326-09", user: "Hoàng Minh E", plan: "Career Premium", action: "Đăng ký", date: "26/03/2026 17:21", channel: "Internal", operator: "Admin", note: "Cấp quyền nội bộ" },
+];
+
+const ACCOUNT_STATUS_STYLE: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  active: { label: "Đang hoạt động", bg: "rgba(34,197,94,0.08)", text: "#15803D", border: "rgba(34,197,94,0.2)" },
+  review: { label: "Cần rà soát", bg: "rgba(245,158,11,0.10)", text: "#B45309", border: "rgba(245,158,11,0.25)" },
+  locked: { label: "Đã khóa", bg: "rgba(239,68,68,0.10)", text: "#B91C1C", border: "rgba(239,68,68,0.25)" },
+};
+
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  excellent: { label: "Xuất sắc", bg: "rgba(34,197,94,0.08)", text: "#22c55e", border: "rgba(34,197,94,0.25)" },
-  "on-track": { label: "Đúng tiến độ", bg: "rgba(6,182,212,0.08)", text: "#06b6d4", border: "rgba(6,182,212,0.25)" },
-  "at-risk": { label: "Cần chú ý", bg: "rgba(245,158,11,0.08)", text: "#f59e0b", border: "rgba(245,158,11,0.25)" },
-  stalled: { label: "Chững lại", bg: "rgba(239,68,68,0.08)", text: "#ef4444", border: "rgba(239,68,68,0.25)" },
+  excellent: { label: "Xuất sắc",  bg: "rgba(34,197,94,0.08)",   text: "#22c55e", border: "rgba(34,197,94,0.25)"  },
+  "on-track":{ label: "Đúng tiến độ",   bg: "rgba(6,182,212,0.08)",   text: "#06b6d4", border: "rgba(6,182,212,0.25)"  },
+  "at-risk":  { label: "Cần chú ý",    bg: "rgba(245,158,11,0.08)",  text: "#f59e0b", border: "rgba(245,158,11,0.25)" },
+  stalled:    { label: "Chững lại",    bg: "rgba(239,68,68,0.08)",   text: "#ef4444", border: "rgba(239,68,68,0.25)"  },
 };
 
 const USER_GROWTH_DATA = [
-  { week: "W1", total: 148, organic: 90, paid: 38, referral: 20 },
-  { week: "W2", total: 290, organic: 170, paid: 75, referral: 45 },
-  { week: "W3", total: 440, organic: 255, paid: 110, referral: 75 },
-  { week: "W4", total: 620, organic: 350, paid: 160, referral: 110 },
-  { week: "W5", total: 810, organic: 450, paid: 210, referral: 150 },
-  { week: "W6", total: 1020, organic: 560, paid: 265, referral: 195 },
-  { week: "W7", total: 1230, organic: 665, paid: 310, referral: 255 },
-  { week: "W8", total: 1410, organic: 760, paid: 345, referral: 305 },
-  { week: "W9", total: 1560, organic: 830, paid: 368, referral: 362 },
+  { week: "W1",  total: 148,  organic: 90,  paid: 38,  referral: 20 },
+  { week: "W2",  total: 290,  organic: 170, paid: 75,  referral: 45 },
+  { week: "W3",  total: 440,  organic: 255, paid: 110, referral: 75 },
+  { week: "W4",  total: 620,  organic: 350, paid: 160, referral: 110 },
+  { week: "W5",  total: 810,  organic: 450, paid: 210, referral: 150 },
+  { week: "W6",  total: 1020, organic: 560, paid: 265, referral: 195 },
+  { week: "W7",  total: 1230, organic: 665, paid: 310, referral: 255 },
+  { week: "W8",  total: 1410, organic: 760, paid: 345, referral: 305 },
+  { week: "W9",  total: 1560, organic: 830, paid: 368, referral: 362 },
   { week: "W10", total: 1680, organic: 883, paid: 378, referral: 419 },
   { week: "W11", total: 1760, organic: 915, paid: 382, referral: 463 },
   { week: "W12", total: 1840, organic: 940, paid: 385, referral: 515 },
 ];
 
 const CAMPUS_DATA = [
-  { name: "FPT University", users: 500, mrr: 12500000, plan: "Campus Pro", status: "Ổn định", trend: "+18%", health: "green" },
-  { name: "VNU-HCM", users: 310, mrr: 7750000, plan: "Campus Basic", status: "Đang hoạt động", trend: "+11%", health: "green" },
-  { name: "HUST", users: 200, mrr: 5000000, plan: "Campus Basic", status: "Đang hoạt động", trend: "+9%", health: "green" },
-  { name: "RMIT Vietnam", users: 120, mrr: 3000000, plan: "Campus Pilot", status: "Tăng trưởng", trend: "+34%", health: "cyan" },
-  { name: "UEH", users: 85, mrr: 2125000, plan: "Dùng thử", status: "Dùng thử", trend: "+5%", health: "amber" },
-  { name: "HCMUT", users: 45, mrr: 0, plan: "Tiềm năng", status: "Tiềm năng", trend: "—", health: "gray" },
+  { name: "FPT University", users: 500, mrr: 12500000, plan: "Campus Pro",   status: "Ổn định",     trend: "+18%", health: "green" },
+  { name: "VNU-HCM",        users: 310, mrr: 7750000,  plan: "Campus Basic", status: "Đang hoạt động", trend: "+11%", health: "green" },
+  { name: "HUST",           users: 200, mrr: 5000000,  plan: "Campus Basic", status: "Đang hoạt động", trend: "+9%",  health: "green" },
+  { name: "RMIT Vietnam",   users: 120, mrr: 3000000,  plan: "Campus Pilot", status: "Tăng trưởng",   trend: "+34%", health: "cyan"  },
+  { name: "UEH",            users: 85,  mrr: 2125000,  plan: "Dùng thử",     status: "Dùng thử",      trend: "+5%",  health: "amber" },
+  { name: "HCMUT",          users: 45,  mrr: 0,        plan: "Tiềm năng",    status: "Tiềm năng",     trend: "—",    health: "gray"  },
 ];
 
 const HEALTH_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  green: { bg: "rgba(34,197,94,0.08)", text: "#16a34a", border: "rgba(34,197,94,0.2)" },
-  cyan: { bg: "rgba(6,182,212,0.08)", text: "#0891b2", border: "rgba(6,182,212,0.2)" },
-  amber: { bg: "rgba(245,158,11,0.08)", text: "#d97706", border: "rgba(245,158,11,0.2)" },
-  gray: { bg: "#F3F4F6", text: "#9CA3AF", border: "#E5E7EB" },
+  green: { bg: "rgba(34,197,94,0.08)",   text: "#16a34a", border: "rgba(34,197,94,0.2)"  },
+  cyan:  { bg: "rgba(6,182,212,0.08)",   text: "#0891b2", border: "rgba(6,182,212,0.2)"  },
+  amber: { bg: "rgba(245,158,11,0.08)",  text: "#d97706", border: "rgba(245,158,11,0.2)" },
+  gray:  { bg: "#F3F4F6", text: "#9CA3AF", border: "#E5E7EB" },
 };
 
 const KPI_DATA = [
-  { id: "activation", label: "Tỷ lệ kích hoạt", value: "48%", target: ">45%", passing: true, delta: "+3.2%", color: "#FF6B00", icon: Activity, sparkline: [38, 40, 41, 42, 43, 45, 46, 47, 48] },
-  { id: "retention", label: "Giữ chân tuần 4", value: "42%", target: ">35%", passing: true, delta: "+4.5%", color: "#FB923C", icon: Repeat, sparkline: [32, 33, 34, 36, 37, 38, 40, 41, 42] },
-  { id: "conversion", label: "Chuyển đổi trả phí", value: "7.2%", target: ">5%", passing: true, delta: "+1.1%", color: "#F97316", icon: TrendingUp, sparkline: [4.8, 5.2, 5.5, 5.8, 6.1, 6.4, 6.7, 7.0, 7.2] },
-  { id: "arpa", label: "Doanh thu bình quân", value: "51K ₫", target: "Tối đa", passing: true, delta: "+12%", color: "#EA580C", icon: DollarSign, sparkline: [44, 45, 46, 47, 48, 49.5, 50, 50.5, 51] },
+  { id: "activation", label: "Tỷ lệ kích hoạt", value: "48%",  target: ">45%", passing: true, delta: "+3.2%", color: "#FF6B00", icon: Activity,   sparkline: [38,40,41,42,43,45,46,47,48] },
+  { id: "retention",  label: "Giữ chân tuần 4", value: "42%", target: ">35%", passing: true, delta: "+4.5%", color: "#FB923C", icon: Repeat,     sparkline: [32,33,34,36,37,38,40,41,42] },
+  { id: "conversion", label: "Chuyển đổi trả phí",  value: "7.2%",target: ">5%",  passing: true, delta: "+1.1%", color: "#F97316", icon: TrendingUp,  sparkline: [4.8,5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.2] },
+  { id: "arpa",       label: "Doanh thu bình quân", value: "51K ₫",target: "Tối đa", passing: true, delta: "+12%",  color: "#EA580C", icon: DollarSign, sparkline: [44,45,46,47,48,49.5,50,50.5,51] },
 ];
 
 const UNIT_ECON_DATA = [
-  { label: "CAC", value: 40000, fill: "#475569" },
+  { label: "CAC", value: 40000,  fill: "#475569" },
   { label: "LTV", value: 408000, fill: "#FF6B00" },
 ];
-
-const ADMIN_ALERTS = [
-  {
-    id: "alert-1",
-    level: "critical",
-    title: "2 cohorts có tỷ lệ stalled > 25%",
-    detail: "HCMUT K23 và VNU K20 cần can thiệp mentor trong 48h.",
-  },
-  {
-    id: "alert-2",
-    level: "warning",
-    title: "Chuyển đổi trả phí giảm 0.8% tuần này",
-    detail: "Nên kiểm tra điểm nghẽn tại bước thanh toán của nhóm gói miễn phí.",
-  },
-  {
-    id: "alert-3",
-    level: "info",
-    title: "RMIT 2024 tăng tốc tốt",
-    detail: "Tỷ lệ hoàn thành vượt 85%, có thể nhân bản playbook cho cohort khác.",
-  },
-] as const;
 
 /* ─────────────────────────────────────────────────────────
    Custom Tooltip
@@ -194,30 +235,230 @@ function UnitEconBar(props: any) {
 }
 
 /* ─────────────────────────────────────────────────────────
-  Sidebar nav config
+   Sidebar nav
 ───────────────────────────────────────────────────────── */
-import { ADMIN_NAV } from "../config/nav";
-const NAV_ITEMS = ADMIN_NAV;
+const NAV_ITEMS = [
+  { id: "overview",   label: "Tổng quan",             icon: Activity   },
+  { id: "users",      label: "Người học & Nhóm học", icon: Users     },
+  { id: "financials", label: "Tài chính",           icon: TrendingUp },
+  { id: "b2b",        label: "Đối tác B2B",         icon: Building2  },
+];
+
+function OverviewAdminView({ onNavigate, visualMode }: { onNavigate: (nav: "users" | "financials" | "b2b") => void; visualMode: VisualMode }) {
+  const totalLearners = STUDENTS.length;
+  const premiumUsers = STUDENTS.filter((item) => item.plan === "Premium").length;
+  const totalCampuses = CAMPUS_DATA.filter((campus) => campus.health !== "gray").length;
+  const totalMRR = CAMPUS_DATA.reduce((sum, campus) => sum + campus.mrr, 0);
+  const cancellationCount = SUBSCRIPTION_HISTORY.filter((entry) => entry.action === "Hủy gói").length;
+  const registrationsCount = SUBSCRIPTION_HISTORY.filter((entry) => entry.action === "Đăng ký").length;
+  const chartColors = OVERVIEW_COLOR_PRESETS[visualMode];
+
+  const weeklyNewUsersData = USER_GROWTH_DATA.map((point, index) => ({
+    week: point.week,
+    newUsers: index === 0 ? point.total : point.total - USER_GROWTH_DATA[index - 1].total,
+    total: point.total,
+  }));
+
+  const userPlanDistribution = Object.entries(
+    STUDENTS.reduce((acc, student) => {
+      acc[student.plan] = (acc[student.plan] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([plan, users]) => ({ plan, users }));
+
+  const learnerStatusData = [
+    { name: "Ổn định", value: STUDENTS.filter((student) => ["excellent", "on-track"].includes(student.status)).length },
+    { name: "Cần chú ý", value: STUDENTS.filter((student) => ["at-risk", "stalled"].includes(student.status)).length },
+  ];
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {[
+          { label: "Người học hoạt động", value: totalLearners.toString(), sub: `${premiumUsers} Premium`, icon: Users, color: chartColors.users },
+          { label: "Đối tác B2B", value: `${totalCampuses}`, sub: "Campus đang hoạt động", icon: Building2, color: chartColors.partners },
+          { label: "MRR toàn hệ thống", value: `${(totalMRR / 1000000).toFixed(1)}M ₫`, sub: "Từ các gói đang chạy", icon: DollarSign, color: chartColors.revenue },
+          { label: "Lượt hủy gói", value: cancellationCount.toString(), sub: "Trong lịch sử gần nhất", icon: UserX, color: chartColors.cancellation },
+        ].map((card) => (
+          <div key={card.label} className="rounded-2xl p-5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: `${card.color}10`, border: `1px solid ${card.color}22` }}>
+              <card.icon size={16} style={{ color: card.color }} />
+            </div>
+            <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em" }}>{card.value}</p>
+            <p style={{ fontSize: "0.78rem", color: "#6B7280" }}>{card.label}</p>
+            <p style={{ fontSize: "0.7rem", color: "#9CA3AF", marginTop: "2px" }}>{card.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="rounded-2xl p-5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p style={{ fontWeight: 700, fontSize: "0.92rem", color: "#111827" }}>Tăng trưởng người dùng</p>
+              <p style={{ fontSize: "0.74rem", color: "#9CA3AF" }}>Tổng user tích lũy theo tuần</p>
+            </div>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(29,78,216,0.08)", color: "#1E3A8A", border: "1px solid rgba(29,78,216,0.2)" }}>
+              {USER_GROWTH_DATA[USER_GROWTH_DATA.length - 1].total.toLocaleString()} users
+            </span>
+          </div>
+          <div style={{ height: "220px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={USER_GROWTH_DATA} margin={{ top: 8, right: 12, left: -12, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+                <XAxis dataKey="week" tick={{ fill: "#94A3B8", fontSize: 10 }} stroke="#E5E7EB" />
+                <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} stroke="#F3F4F6" />
+                <Tooltip content={<CustomTooltip />} />
+                <Area type="monotone" dataKey="total" name="Tổng user" stroke={chartColors.totalArea} strokeWidth={2} fill={chartColors.totalArea} fillOpacity={0.14} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="rounded-2xl p-5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p style={{ fontWeight: 700, fontSize: "0.92rem", color: "#111827" }}>User mới theo tuần</p>
+              <p style={{ fontSize: "0.74rem", color: "#9CA3AF" }}>Số lượng user mới tăng thêm mỗi tuần</p>
+            </div>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(14,116,144,0.08)", color: "#155E75", border: "1px solid rgba(14,116,144,0.2)" }}>
+              +{weeklyNewUsersData[weeklyNewUsersData.length - 1].newUsers} tuần gần nhất
+            </span>
+          </div>
+          <div style={{ height: "220px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyNewUsersData} margin={{ top: 8, right: 12, left: -12, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                <XAxis dataKey="week" tick={{ fill: "#94A3B8", fontSize: 10 }} stroke="#E5E7EB" />
+                <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} stroke="#F3F4F6" />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="newUsers" name="User mới" fill={chartColors.newUsers} radius={[5, 5, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="rounded-2xl p-5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p style={{ fontWeight: 700, fontSize: "0.92rem", color: "#111827" }}>Phân bổ theo gói</p>
+              <p style={{ fontSize: "0.74rem", color: "#9CA3AF" }}>Số user hiện có theo từng plan</p>
+            </div>
+          </div>
+          <div style={{ height: "220px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={userPlanDistribution} margin={{ top: 8, right: 12, left: -12, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                <XAxis dataKey="plan" tick={{ fill: "#94A3B8", fontSize: 10 }} stroke="#E5E7EB" />
+                <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} stroke="#F3F4F6" />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="users" name="Người dùng" fill={chartColors.plan} radius={[5, 5, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="rounded-2xl p-5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p style={{ fontWeight: 700, fontSize: "0.92rem", color: "#111827" }}>Sức khỏe user & subscription</p>
+              <p style={{ fontSize: "0.74rem", color: "#9CA3AF" }}>Tổng hợp trạng thái học tập và lịch sử gói</p>
+            </div>
+          </div>
+          <div style={{ height: "220px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={[
+                  { metric: "Đăng ký", value: registrationsCount },
+                  { metric: "Hủy gói", value: cancellationCount },
+                  { metric: "Ổn định", value: learnerStatusData[0].value },
+                  { metric: "Cần chú ý", value: learnerStatusData[1].value },
+                ]}
+                margin={{ top: 8, right: 12, left: -12, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                <XAxis dataKey="metric" tick={{ fill: "#94A3B8", fontSize: 10 }} stroke="#E5E7EB" />
+                <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} stroke="#F3F4F6" />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="value" name="Số lượng" radius={[5, 5, 0, 0]}>
+                  <Cell fill={chartColors.statusGood} />
+                  <Cell fill={chartColors.cancellation} />
+                  <Cell fill={chartColors.users} />
+                  <Cell fill={chartColors.statusRisk} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <button onClick={() => onNavigate("users")} className="rounded-2xl p-4 text-left" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+          <p style={{ fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em" }}>Người học</p>
+          <p style={{ fontSize: "1.05rem", fontWeight: 700, color: "#111827", marginTop: "4px" }}>Quản lý user và cohort</p>
+          <p style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "2px" }}>Theo dõi tài khoản, lịch sử gói và hiệu suất học.</p>
+        </button>
+        <button onClick={() => onNavigate("financials")} className="rounded-2xl p-4 text-left" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+          <p style={{ fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em" }}>Tài chính</p>
+          <p style={{ fontSize: "1.05rem", fontWeight: 700, color: "#111827", marginTop: "4px" }}>Theo dõi CAC, LTV, tăng trưởng</p>
+          <p style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "2px" }}>Đánh giá hiệu quả vận hành và doanh thu.</p>
+        </button>
+        <button onClick={() => onNavigate("b2b")} className="rounded-2xl p-4 text-left" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+          <p style={{ fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em" }}>Đối tác</p>
+          <p style={{ fontSize: "1.05rem", fontWeight: 700, color: "#111827", marginTop: "4px" }}>Sức khỏe hệ campus B2B</p>
+          <p style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "2px" }}>Xem đối tác hoạt động, xu hướng và MRR.</p>
+        </button>
+      </div>
+    </motion.div>
+  );
+}
 
 /* ─────────────────────────────────────────────────────────
    ── USERS & COHORTS view ──
 ───────────────────────────────────────────────────────── */
-function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown' | 'up' | 'down'; lastHealthPayload: any }) {
+function UsersView() {
+  const USERS_VIEW_NAV = [
+    { id: "accounts", label: "Quản lý user" },
+    { id: "subscriptions", label: "Lịch sử gói" },
+    { id: "cohorts", label: "Cohort" },
+    { id: "students", label: "Người học" },
+  ] as const;
+
   const [search, setSearch] = useState("");
+  const [adminSearch, setAdminSearch] = useState("");
+  const [usersSection, setUsersSection] = useState<(typeof USERS_VIEW_NAV)[number]["id"]>("accounts");
   const [selectedStudent, setSelectedStudent] = useState<(typeof STUDENTS)[number] | null>(null);
-  const [alerts, setAlerts] = useState([...ADMIN_ALERTS]);
-
-
-  const totalActive = STUDENTS.length;
-  const avgCompletion = Math.round(STUDENTS.reduce((s, st) => s + st.progress, 0) / totalActive);
-  const premiumLicenses = STUDENTS.filter(s => s.plan === "Premium").length;
   const filtered = STUDENTS.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.cohort.toLowerCase().includes(search.toLowerCase()) ||
     s.roadmap.toLowerCase().includes(search.toLowerCase())
   );
 
+  const filteredManagedUsers = useMemo(() => {
+    return ADMIN_USER_ACCOUNTS.filter((user) => {
+      const query = adminSearch.toLowerCase();
+      return (
+        user.name.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        user.id.toLowerCase().includes(query) ||
+        user.role.toLowerCase().includes(query)
+      );
+    });
+  }, [adminSearch]);
 
+  const filteredSubscriptionHistory = useMemo(() => {
+    return SUBSCRIPTION_HISTORY.filter((entry) => {
+      const query = adminSearch.toLowerCase();
+      return (
+        entry.user.toLowerCase().includes(query) ||
+        entry.id.toLowerCase().includes(query) ||
+        entry.action.toLowerCase().includes(query) ||
+        entry.plan.toLowerCase().includes(query)
+      );
+    });
+  }, [adminSearch]);
 
   const cohortHeatmap = useMemo(() => {
     const grouped = STUDENTS.reduce((acc, student) => {
@@ -245,151 +486,228 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
     });
   }, []);
 
+  const accountSummary = useMemo(() => {
+    return {
+      active: ADMIN_USER_ACCOUNTS.filter((item) => item.accountStatus === "active").length,
+      review: ADMIN_USER_ACCOUNTS.filter((item) => item.accountStatus === "review").length,
+      locked: ADMIN_USER_ACCOUNTS.filter((item) => item.accountStatus === "locked").length,
+    };
+  }, []);
 
-  const alertStyle = (level: (typeof ADMIN_ALERTS)[number]["level"]) => {
-    if (level === "critical") {
-      return { bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)", text: "#B91C1C", tag: "Nghiêm trọng" };
-    }
-    if (level === "warning") {
-      return { bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.24)", text: "#B45309", tag: "Cảnh báo" };
-    }
-    return { bg: "rgba(6,182,212,0.08)", border: "rgba(6,182,212,0.2)", text: "#0E7490", tag: "Thông tin" };
+  const usersSectionMeta: Record<(typeof USERS_VIEW_NAV)[number]["id"], { title: string; desc: string; count?: string }> = {
+    accounts: {
+      title: "Quản lý user",
+      desc: "Theo dõi trạng thái tài khoản, vai trò và xử lý nhanh.",
+      count: `${filteredManagedUsers.length} tài khoản`,
+    },
+    subscriptions: {
+      title: "Lịch sử gói",
+      desc: "Theo dõi đăng ký và hủy gói gần nhất theo thời gian.",
+      count: `${filteredSubscriptionHistory.length} giao dịch`,
+    },
+    cohorts: {
+      title: "Cohort",
+      desc: "Đánh giá hiệu suất cohort để ưu tiên can thiệp.",
+      count: `${cohortHeatmap.length} cohort`,
+    },
+    students: {
+      title: "Người học",
+      desc: "Phân tích chi tiết từng learner theo tiến độ và risk.",
+      count: `${filtered.length}/${STUDENTS.length} learner`,
+    },
   };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      {/* ── ALERT CENTER ── */}
-      <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={15} color={ACCENT} />
-            <p style={{ fontWeight: 700, fontSize: "0.86rem", color: "#111827" }}>Trung tâm cảnh báo ưu tiên</p>
+
+      <div className="rounded-2xl px-3 py-2.5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {USERS_VIEW_NAV.map((item) => {
+              const isActive = usersSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setUsersSection(item.id)}
+                  className="px-3 py-1.5 rounded-xl text-xs transition-all"
+                  style={{
+                    background: isActive ? ACCENT_SOFT : "transparent",
+                    color: isActive ? "#9A3412" : "#64748B",
+                    border: isActive ? `1px solid ${ACCENT_BORDER}` : "1px solid transparent",
+                    fontWeight: isActive ? 700 : 500,
+                  }}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2" style={{ alignItems: 'center' }}>
-              <div
-                style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: 999,
-                  background: healthStatus === 'up' ? '#22c55e' : healthStatus === 'down' ? '#ef4444' : '#94A3B8',
-                  boxShadow: healthStatus === 'up' ? '0 0 6px #22c55e' : healthStatus === 'down' ? '0 0 6px #ef4444' : 'none',
-                  animation: healthStatus === 'up' || healthStatus === 'down' ? 'pulse 1800ms infinite' : 'none',
-                }}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 700 }}>
-                  {healthStatus === 'up' ? 'Ổn định' : healthStatus === 'down' ? 'Sự cố' : 'Đang kiểm tra'}
-                </span>
-                {lastHealthPayload?.timestamp && (
-                  <span style={{ fontSize: '10px', color: '#9CA3AF' }}>
-                    Cập nhật: {new Date(lastHealthPayload.timestamp).toLocaleTimeString()}
-                  </span>
-                )}
-              </div>
-              <style>{`@keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.6; } 100% { transform: scale(1); opacity: 1; } }`}</style>
-            </div>
-            <span style={{ fontSize: "11px", color: "#9CA3AF" }}>{alerts.length} cảnh báo</span>
-          </div>
-        </div>
-
-
-
-        {/* Health indicator (sidebar) */}
-        <div className="px-5 py-3" style={{ borderBottom: "1px solid rgba(148,163,184,0.06)", borderLeft: healthStatus === 'down' ? '4px solid rgba(239,68,68,0.06)' : undefined }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 9, height: 9, borderRadius: 999, background: healthStatus === 'up' ? '#22c55e' : healthStatus === 'down' ? '#ef4444' : '#94A3B8', boxShadow: healthStatus === 'up' ? '0 0 6px #22c55e' : healthStatus === 'down' ? '0 0 6px #ef4444' : 'none', animation: healthStatus === 'up' || healthStatus === 'down' ? 'statusPulse 1800ms infinite' : 'none' }} />
+          <div className="flex items-center gap-2 rounded-xl px-3 py-1.5" style={{ background: "#F8FAFC", border: "1px solid #E5E7EB" }}>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#FFF7ED", border: "1px solid #FDBA74", color: "#9A3412" }}>
+              {usersSectionMeta[usersSection].count}
+            </span>
             <div>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</div>
-              {lastHealthPayload?.timestamp && (
-                <div style={{ fontSize: '11px', color: '#64748B' }}>Cập nhật: {new Date(lastHealthPayload.timestamp).toLocaleTimeString()}</div>
-              )}
+              <p style={{ fontSize: "11px", fontWeight: 700, color: "#334155" }}>{usersSectionMeta[usersSection].title}</p>
+              <p style={{ fontSize: "10px", color: "#94A3B8" }}>{usersSectionMeta[usersSection].desc}</p>
             </div>
-            <div className="sr-only" aria-live="polite">{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</div>
           </div>
         </div>
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
-          {alerts.map((alert) => {
-            const style = alertStyle(alert.level);
-            return (
-              <div key={alert.id} className="rounded-xl p-3" style={{ background: style.bg, border: `1px solid ${style.border}` }}>
-                <div className="flex items-start justify-between gap-2 mb-1.5">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ color: style.text, border: `1px solid ${style.border}` }}>
-                    {style.tag}
-                  </span>
-                  <button
-                    className="text-xs"
-                    style={{ color: style.text }}
-                    onClick={() => setAlerts((prev) => prev.filter((entry) => entry.id !== alert.id))}
-                  >
-                    Bỏ qua
-                  </button>
-                </div>
-                <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1F2937", marginBottom: "3px" }}>{alert.title}</p>
-                <p style={{ fontSize: "0.72rem", color: "#6B7280", lineHeight: 1.45 }}>{alert.detail}</p>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
-      {/* ── TOP METRIC CARDS ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          {
-            icon: GraduationCap,
-            label: "Tổng người học hoạt động",
-            value: totalActive.toString(),
-            sub: "Trên toàn bộ cohort",
-            color: "#06b6d4",
-            sparkline: [55, 60, 65, 70, 80, 90, 100, 110, 120, 130, 140, totalActive],
-          },
-          {
-            icon: BookOpen,
-            label: "Tỷ lệ hoàn thành TB",
-            value: `${avgCompletion}%`,
-            sub: "Gộp toàn bộ lộ trình",
-            color: "#a78bfa",
-            sparkline: [52, 55, 58, 59, 60, 61, 62, 63, 64, 65, 66, avgCompletion],
-          },
-          {
-            icon: Award,
-            label: "Gói Premium đang dùng",
-            value: `${premiumLicenses}/${totalActive}`,
-            sub: `${Math.round((premiumLicenses / totalActive) * 100)}% tỷ lệ sử dụng`,
-            color: "#f59e0b",
-            sparkline: [3, 4, 4, 5, 5, 6, 6, 6, 7, 7, 7, premiumLicenses],
-          },
-        ].map((card, i) => (
-          <motion.div
-            key={card.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07 }}
-            className="relative rounded-2xl p-5 overflow-hidden"
-            style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
-          >
-            <div className="absolute top-0 right-0 w-28 h-28 pointer-events-none"
-              style={{ background: `radial-gradient(circle, ${card.color}10 0%, transparent 70%)`, transform: "translate(20%,-20%)" }} />
-
-            <div className="flex items-start justify-between mb-4 relative z-10">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: `${card.color}10`, border: `1px solid ${card.color}22` }}>
-                <card.icon size={16} style={{ color: card.color }} />
-              </div>
-              <Sparkline data={card.sparkline} color={card.color} width={70} height={24} />
+      {usersSection === "accounts" && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.16 }}
+          className="rounded-2xl overflow-hidden"
+          style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+            <div>
+              <p style={{ fontWeight: 700, fontSize: "0.92rem", color: "#111827" }}>Quản lý người dùng</p>
+              <p style={{ color: "#9CA3AF", fontSize: "0.74rem" }}>Theo dõi trạng thái tài khoản, vai trò và hành động xử lý nhanh</p>
             </div>
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
+              <input
+                type="text"
+                value={adminSearch}
+                onChange={e => setAdminSearch(e.target.value)}
+                placeholder="Tìm user, email, mã ID..."
+                className="pl-8 pr-4 py-2 rounded-xl text-xs outline-none"
+                style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", width: "220px", color: "#111827" }}
+              />
+            </div>
+          </div>
 
-            <p className="relative z-10" style={{ fontWeight: 800, fontSize: "1.8rem", letterSpacing: "-0.05em", lineHeight: 1, color: "#111827" }}>
-              {card.value}
-            </p>
-            <p className="relative z-10 mt-1" style={{ color: "#6B7280", fontSize: "0.78rem" }}>{card.label}</p>
-            <p className="relative z-10" style={{ color: "#9CA3AF", fontSize: "0.7rem", marginTop: "2px" }}>{card.sub}</p>
-          </motion.div>
-        ))}
-      </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 px-6 py-4" style={{ borderBottom: "1px solid #F8FAFC", background: "#FCFCFD" }}>
+            <div className="rounded-xl p-3" style={{ border: "1px solid #E5E7EB", background: "#FFFFFF" }}>
+              <p style={{ fontSize: "11px", color: "#9CA3AF" }}>User đang hoạt động</p>
+              <p style={{ fontSize: "1.2rem", fontWeight: 800, color: "#15803D" }}>
+                {accountSummary.active}
+              </p>
+            </div>
+            <div className="rounded-xl p-3" style={{ border: "1px solid #E5E7EB", background: "#FFFFFF" }}>
+              <p style={{ fontSize: "11px", color: "#9CA3AF" }}>Tài khoản cần rà soát</p>
+              <p style={{ fontSize: "1.2rem", fontWeight: 800, color: "#B45309" }}>
+                {accountSummary.review}
+              </p>
+            </div>
+            <div className="rounded-xl p-3" style={{ border: "1px solid #E5E7EB", background: "#FFFFFF" }}>
+              <p style={{ fontSize: "11px", color: "#9CA3AF" }}>Tài khoản bị khóa</p>
+              <p style={{ fontSize: "1.2rem", fontWeight: 800, color: "#B91C1C" }}>
+                {accountSummary.locked}
+              </p>
+            </div>
+          </div>
 
-      {/* ── COHORT HEATMAP ── */}
+          <div className="grid px-6 py-2.5" style={{ gridTemplateColumns: "1.2fr 1.6fr 0.8fr 0.8fr 1fr 1fr", borderBottom: "1px solid #F3F4F6", background: "#FAFAFA" }}>
+            {["Mã", "Người dùng", "Vai trò", "Gói", "Trạng thái", "Hành động"].map((col) => (
+              <span key={col} style={{ color: "#9CA3AF", fontSize: "0.68rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>{col}</span>
+            ))}
+          </div>
+
+          <div className="overflow-y-auto" style={{ maxHeight: "320px" }}>
+            {filteredManagedUsers.map((user) => {
+              const style = ACCOUNT_STATUS_STYLE[user.accountStatus];
+              const isLocked = user.accountStatus === "locked";
+              return (
+                <div
+                  key={user.id}
+                  className="grid px-6 py-3"
+                  style={{ gridTemplateColumns: "1.2fr 1.6fr 0.8fr 0.8fr 1fr 1fr", borderBottom: "1px solid #F9FAFB", alignItems: "center" }}
+                >
+                  <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569" }}>{user.id}</p>
+                  <div>
+                    <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#111827" }}>{user.name}</p>
+                    <p style={{ fontSize: "0.7rem", color: "#9CA3AF" }}>{user.email} · {user.lastLogin}</p>
+                  </div>
+                  <p style={{ fontSize: "0.75rem", color: "#475569" }}>{user.role}</p>
+                  <p style={{ fontSize: "0.75rem", color: "#475569" }}>{user.plan}</p>
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full w-fit"
+                    style={{ background: style.bg, color: style.text, border: `1px solid ${style.border}`, fontWeight: 600, fontSize: "10px" }}>
+                    {isLocked ? <UserX size={11} /> : <UserCheck size={11} />}
+                    {style.label}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button className="px-2.5 py-1 rounded-lg text-[11px]" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", color: "#374151" }}>
+                      Chi tiết
+                    </button>
+                    <button className="px-2.5 py-1 rounded-lg text-[11px]" style={{ background: isLocked ? "#ECFDF5" : "#FEF2F2", border: "1px solid #E5E7EB", color: isLocked ? "#166534" : "#B91C1C" }}>
+                      {isLocked ? "Mở khóa" : "Khóa"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      {usersSection === "subscriptions" && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.22 }}
+          className="rounded-2xl overflow-hidden"
+          style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
+        >
+          <div className="px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+            <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111827" }}>Lịch sử đăng ký và hủy gói</p>
+            <p style={{ fontSize: "0.74rem", color: "#9CA3AF" }}>Ghi nhận các thay đổi subscription gần nhất trong hệ thống</p>
+            <div className="relative mt-3">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
+              <input
+                type="text"
+                value={adminSearch}
+                onChange={e => setAdminSearch(e.target.value)}
+                placeholder="Lọc theo user, mã giao dịch, hành động..."
+                className="pl-8 pr-4 py-2 rounded-xl text-xs outline-none"
+                style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", width: "280px", color: "#111827" }}
+              />
+            </div>
+          </div>
+
+          <div className="overflow-y-auto" style={{ maxHeight: "456px" }}>
+            {filteredSubscriptionHistory.map((entry) => {
+              const isCancel = entry.action === "Hủy gói";
+              return (
+                <div key={entry.id} className="px-5 py-3.5" style={{ borderBottom: "1px solid #F8FAFC" }}>
+                  <div className="flex items-start justify-between gap-3 mb-1.5">
+                    <div>
+                      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827" }}>{entry.user}</p>
+                      <p style={{ fontSize: "0.7rem", color: "#9CA3AF" }}>{entry.id} · {entry.plan}</p>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                      style={{
+                        background: isCancel ? "rgba(239,68,68,0.10)" : "rgba(34,197,94,0.10)",
+                        color: isCancel ? "#B91C1C" : "#15803D",
+                        border: `1px solid ${isCancel ? "rgba(239,68,68,0.24)" : "rgba(34,197,94,0.24)"}`,
+                      }}>
+                      {entry.action}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 mb-1.5">
+                    <p style={{ fontSize: "0.7rem", color: "#6B7280" }}>Kênh: <strong>{entry.channel}</strong></p>
+                    <p style={{ fontSize: "0.7rem", color: "#6B7280" }}>Xử lý: <strong>{entry.operator}</strong></p>
+                    <p style={{ fontSize: "0.7rem", color: "#6B7280" }}>Thời gian: <strong>{entry.date}</strong></p>
+                  </div>
+                  <p style={{ fontSize: "0.72rem", color: "#64748B" }}>{entry.note}</p>
+                </div>
+              );
+            })}
+
+            {!filteredSubscriptionHistory.length && (
+              <div className="px-5 py-6">
+                <p style={{ fontSize: "0.78rem", color: "#9CA3AF" }}>Không có lịch sử phù hợp bộ lọc hiện tại.</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {usersSection === "cohorts" && (
       <div className="rounded-2xl p-5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -425,7 +743,10 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
           })}
         </div>
       </div>
+      )}
 
+      {usersSection === "students" && (
+      <>
       {/* ── STUDENT DATA TABLE ── */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
@@ -469,7 +790,7 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
               onMouseEnter={e => { e.currentTarget.style.color = "#111827"; e.currentTarget.style.background = "#F3F4F6"; }}
               onMouseLeave={e => { e.currentTarget.style.color = "#6B7280"; e.currentTarget.style.background = "#F9FAFB"; }}
             >
-              <Download size={12} /> Xuất dữ liệu
+                <Download size={12} /> Xuất dữ liệu
             </button>
           </div>
         </div>
@@ -483,7 +804,7 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
           }}>
           {["Người học", "Cohort", "Lộ trình", "Tiến độ", "Skill Gap", "Chuỗi học", "Trạng thái"].map(col => (
             <div key={col} className="flex items-center gap-1" style={{ color: "#9CA3AF", fontSize: "0.68rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              {col} {["Tiến độ", "Skill Gap"].includes(col) && <ChevronDown size={10} />}
+              {col} {["Tiến độ","Skill Gap"].includes(col) && <ChevronDown size={10} />}
             </div>
           ))}
         </div>
@@ -513,7 +834,7 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white"
                     style={{
-                      background: `linear-gradient(135deg, ${["#0ea5e9", "#a78bfa", "#22c55e", "#f59e0b", "#ef4444", "#06b6d4"][i % 6]}, ${["#6366f1", "#ec4899", "#059669", "#d97706", "#dc2626", "#0891b2"][i % 6]})`,
+                      background: `linear-gradient(135deg, ${["#0ea5e9","#a78bfa","#22c55e","#f59e0b","#ef4444","#06b6d4"][i % 6]}, ${["#6366f1","#ec4899","#059669","#d97706","#dc2626","#0891b2"][i % 6]})`,
                     }}
                   >
                     {student.name.charAt(0)}
@@ -652,6 +973,8 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
           </div>
         </motion.div>
       )}
+      </>
+      )}
     </motion.div>
   );
 }
@@ -730,9 +1053,9 @@ function FinancialsView() {
                 <BarChart data={[{ label: "CAC", value: 40000, name: "CAC" }, { label: "LTV", value: 408000, name: "LTV" }]} margin={{ top: 10, right: 20, left: 10, bottom: 5 }} barCategoryGap="50%">
                   <CartesianGrid key="grid" strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
                   <XAxis key="x" dataKey="label" stroke="#E5E7EB" tick={{ fill: "#6B7280", fontSize: 12, fontWeight: 600 }} />
-                  <YAxis key="y" stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
+                  <YAxis key="y" stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}K`} />
                   <Tooltip key="tooltip" content={<CustomTooltip />} />
-                  <Bar key="bar" dataKey="value" name="value" shape={<UnitEconBar />} radius={[6, 6, 0, 0]}>
+                  <Bar key="bar" dataKey="value" name="value" shape={<UnitEconBar />} radius={[6,6,0,0]}>
                     {UNIT_ECON_DATA.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
@@ -763,7 +1086,7 @@ function FinancialsView() {
                   <YAxis key="y" stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
                   <Tooltip key="tooltip" content={<CustomTooltip />} />
                   <Legend key="legend" wrapperStyle={{ fontSize: "11px", paddingTop: "10px", color: "#6B7280" }} />
-                  <Area key="total" type="monotone" dataKey="total" name="Tổng" stroke="#06b6d4" strokeWidth={2} fill="#06b6d4" fillOpacity={0.1} />
+                  <Area key="total" type="monotone" dataKey="total"   name="Tổng"   stroke="#06b6d4" strokeWidth={2}   fill="#06b6d4" fillOpacity={0.1} />
                   <Area key="organic" type="monotone" dataKey="organic" name="Tự nhiên" stroke="#22c55e" strokeWidth={1.5} fill="#22c55e" fillOpacity={0.08} />
                   <Area key="referral" type="monotone" dataKey="referral" name="Giới thiệu" stroke="#a78bfa" strokeWidth={1.5} fill="#a78bfa" fillOpacity={0.08} strokeDasharray="4 2" />
                 </AreaChart>
@@ -777,10 +1100,10 @@ function FinancialsView() {
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="grid grid-cols-2 gap-3">
             {[
-              { label: "MRR tổng", value: `${(totalMRR / 1000000).toFixed(1)}M ₫`, color: "#22c55e", sub: "↑ 24% so với tháng trước" },
-              { label: "Campus đang hoạt động", value: `${CAMPUS_DATA.filter(c => c.health !== "gray").length}`, color: "#06b6d4", sub: "1 campus đang dùng thử" },
-              { label: "Phiên học trung bình", value: "47 phút", color: "#FF6B00", sub: "Trên mỗi người học/ngày" },
-              { label: "Điểm NPS", value: "72", color: "#d97706", sub: "Mức hài lòng rất tốt" },
+              { label: "MRR tổng",         value: `${(totalMRR/1000000).toFixed(1)}M ₫`, color: "#22c55e", sub: "↑ 24% so với tháng trước" },
+              { label: "Campus đang hoạt động", value: `${CAMPUS_DATA.filter(c=>c.health!=="gray").length}`,   color: "#06b6d4", sub: "1 campus đang dùng thử" },
+              { label: "Phiên học trung bình", value: "47 phút",                                           color: "#FF6B00", sub: "Trên mỗi người học/ngày" },
+              { label: "Điểm NPS",        value: "72",                                                  color: "#d97706", sub: "Mức hài lòng rất tốt" },
             ].map(s => (
               <div key={s.label} className="rounded-xl p-4"
                 style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
@@ -806,10 +1129,10 @@ function B2BView() {
       {/* Partner summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Đối tác đang hoạt động", value: "5", color: "#22c55e", icon: Building2 },
-          { label: "Tổng người dùng B2B", value: "1,260", color: "#06b6d4", icon: Users },
-          { label: "MRR từ B2B", value: "30.4M ₫", color: "#f59e0b", icon: DollarSign },
-          { label: "Điểm sức khỏe TB", value: "87/100", color: "#a78bfa", icon: ShieldCheck },
+          { label: "Đối tác đang hoạt động", value: "5",        color: "#22c55e", icon: Building2  },
+          { label: "Tổng người dùng B2B",   value: "1,260",    color: "#06b6d4", icon: Users      },
+          { label: "MRR từ B2B",            value: "30.4M ₫",  color: "#f59e0b", icon: DollarSign },
+          { label: "Điểm sức khỏe TB",      value: "87/100",   color: "#a78bfa", icon: ShieldCheck },
         ].map((card, i) => (
           <motion.div key={card.label}
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
@@ -863,14 +1186,14 @@ function B2BView() {
             >
               <div className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white"
-                  style={{ background: `linear-gradient(135deg, ${["#0ea5e9", "#22c55e", "#a78bfa", "#f59e0b", "#ef4444", "#6366f1"][i % 6]}, ${["#6366f1", "#16a34a", "#FF6B00", "#d97706", "#dc2626", "#4f46e5"][i % 6]})` }}>
+                  style={{ background: `linear-gradient(135deg, ${["#0ea5e9","#22c55e","#a78bfa","#f59e0b","#ef4444","#6366f1"][i % 6]}, ${["#6366f1","#16a34a","#FF6B00","#d97706","#dc2626","#4f46e5"][i % 6]})` }}>
                   {c.name.charAt(0)}
                 </div>
                 <span style={{ fontWeight: 600, fontSize: "0.85rem", color: "#111827" }}>{c.name}</span>
               </div>
               <span style={{ color: "#374151", fontSize: "0.82rem", fontWeight: 600 }}>{c.users.toLocaleString()}</span>
               <span style={{ color: "#16a34a", fontSize: "0.82rem", fontWeight: 600 }}>
-                {c.mrr > 0 ? `${(c.mrr / 1000000).toFixed(1)}M ₫` : "—"}
+                {c.mrr > 0 ? `${(c.mrr/1000000).toFixed(1)}M ₫` : "—"}
               </span>
               <span style={{ color: "#6B7280", fontSize: "0.78rem" }}>{c.plan}</span>
               <span style={{ color: c.trend.startsWith("+") ? "#16a34a" : "#9CA3AF", fontSize: "0.82rem", fontWeight: 600 }}>
@@ -892,138 +1215,60 @@ function B2BView() {
    Main Admin Dashboard
 ───────────────────────────────────────────────────────── */
 export default function AdminDashboard() {
-  const USER_MANAGEMENT_NAV_MODE: "item" | "dropdown" = (globalThis as any).__ADMIN_USER_MGMT_NAV_MODE__ === "item" ? "item" : "dropdown";
-  const [activeNav, setActiveNav] = useState<"users" | "financials" | "b2b" | "users-management">("users");
+  const [activeNav, setActiveNav] = useState<"overview" | "users" | "financials" | "b2b">("overview");
+  const [visualMode, setVisualMode] = useState<VisualMode>("muted");
   const [timeRange, setTimeRange] = useState("90d");
   const [lastSync, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
-  const [currentUser, setCurrentUser] = useState<{ fullName?: string; roles?: string[]; avatarUrl?: string } | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
-  const [showHealthPanel, setShowHealthPanel] = useState(false);
-  const [showMgmtMain, setShowMgmtMain] = useState(false);
-  const [mgmtUsers, setMgmtUsers] = useState<any[]>([]);
-  const [mgmtPage, setMgmtPage] = useState(0);
-  const [mgmtSize] = useState(10);
-  const [mgmtTotal, setMgmtTotal] = useState(0);
-  const [mgmtLoading, setMgmtLoading] = useState(false);
-  const [mgmtSelected, setMgmtSelected] = useState<any | null>(null);
-  const [mgmtSearch, setMgmtSearch] = useState("");
-  const [mgmtStatusDraft, setMgmtStatusDraft] = useState("");
-  const [mgmtRolesDraft, setMgmtRolesDraft] = useState("");
-  const [mgmtMessage, setMgmtMessage] = useState("");
-  const navItems = useMemo(
-    () => USER_MANAGEMENT_NAV_MODE === "item"
-      ? [...NAV_ITEMS, { id: "users-management", label: "Quản lý người dùng", icon: ShieldCheck }]
-      : NAV_ITEMS,
-    [USER_MANAGEMENT_NAV_MODE],
-  );
 
-  async function loadMgmt(page = 0, searchTerm = mgmtSearch) {
-    setMgmtLoading(true);
-    try {
-      console.log('[AdminDashboard] loadMgmt called', { page, searchTerm });
-      const data = await adminUserService.getAdminUsers(searchTerm.trim() || undefined, page, mgmtSize);
-      console.log('[AdminDashboard] API response data:', data);
-      console.log('[AdminDashboard] data.content:', data.content, 'data.totalElements:', data.totalElements);
-      setMgmtUsers(data.content || []);
-      setMgmtTotal(data.totalElements || (data.content?.length ?? 0));
-      setMgmtPage(page);
-      setMgmtMessage("");
-    } catch (e) {
-      console.error(e);
-      setMgmtMessage((e as Error).message || 'Không tải được danh sách admin users');
-    } finally {
-      setMgmtLoading(false);
-    }
-  }
-
-  async function openMgmtDetail(userId: string) {
-    console.log("[AdminDashboard] openMgmtDetail called with userId:", userId);
-    setMgmtLoading(true);
-    try {
-      const detail = await adminUserService.getAdminUser(userId);
-      setMgmtSelected(detail);
-      setMgmtStatusDraft(detail.status || "ACTIVE");
-      setMgmtRolesDraft(detail.role || "");
-    } catch (e) {
-      console.error(e);
-      setMgmtMessage((e as Error).message || 'Không tải được chi tiết người dùng');
-    } finally { setMgmtLoading(false); }
-  }
-
-  async function saveMgmtStatus(userId: string, status: string) {
-    setMgmtLoading(true);
-    try {
-      const updated = await adminUserService.updateUserStatus(userId, { status });
-      await loadMgmt(mgmtPage, mgmtSearch);
-      setMgmtSelected(updated);
-      setMgmtStatusDraft(updated.status || status);
-      setMgmtMessage('Cập nhật trạng thái thành công');
-    } catch (e) { setMgmtMessage((e as Error).message || 'Lỗi cập nhật trạng thái'); }
-    finally { setMgmtLoading(false); }
-  }
-
-  async function saveMgmtRoles(userId: string, roles: string[]) {
-    setMgmtLoading(true);
-    try {
-      const updated = await adminUserService.updateUserRole(userId, { roles });
-      await loadMgmt(mgmtPage, mgmtSearch);
-      setMgmtSelected(updated);
-      setMgmtRolesDraft(updated.role || roles.join(", "));
-      setMgmtMessage('Cập nhật vai trò thành công');
-    } catch (e) { setMgmtMessage((e as Error).message || 'Lỗi cập nhật vai trò'); }
-    finally { setMgmtLoading(false); }
-  }
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setUserMenuOpen(false);
+  const navTone = visualMode === "muted"
+    ? {
+        soft: "rgba(51,65,85,0.08)",
+        border: "rgba(100,116,139,0.25)",
+        text: "#334155",
+        dot: "#475569",
+        icon: "#475569",
       }
-    }
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
-  }, []);
-  const [usersNavOpen, setUsersNavOpen] = useState(false);
-
-  const openUserManagement = async () => {
-    await loadMgmt(0, mgmtSearch);
-    setShowMgmtMain(true);
-    setActiveNav(USER_MANAGEMENT_NAV_MODE === "item" ? "users-management" : "users");
-    setUsersNavOpen(true);
-  };
+    : {
+        soft: ACCENT_SOFT,
+        border: ACCENT_BORDER,
+        text: "#9A3412",
+        dot: "#C2410C",
+        icon: "#C2410C",
+      };
 
   const headerLabels: Record<string, { title: string; sub: string }> = {
-    users: { title: "Người học & Nhóm học", sub: "Tiến độ người học · Phân tích skill gap" },
-    "users-management": { title: "Quản lý người dùng", sub: "Quản lý người dùng và phân quyền" },
-    financials: { title: "Tài chính", sub: "Chỉ số doanh thu · Unit economics" },
-    b2b: { title: "Đối tác B2B", sub: "Tài khoản trường · Sức khỏe đối tác" },
+    overview:   { title: "Tổng quan",            sub: "Toàn cảnh vận hành · Điều hướng nhanh" },
+    users:      { title: "Người học & Nhóm học",  sub: "Tiến độ người học · Phân tích skill gap" },
+    financials: { title: "Tài chính",            sub: "Chỉ số doanh thu · Unit economics" },
+    b2b:        { title: "Đối tác B2B",          sub: "Tài khoản trường · Sức khỏe đối tác" },
   };
   const current = headerLabels[activeNav];
 
-  useEffect(() => {
-    let mounted = true;
-    import('../../api/meService').then(mod => mod.getMe().then((me: any) => {
-      if (!mounted) return;
-      setCurrentUser(me);
-    }).catch(() => { }));
-    return () => { mounted = false; };
-  }, []);
-
   const handleExport = () => {
+    if (activeNav === "overview") {
+      downloadCsv("admin-overview.csv", STUDENTS.map((student) => ({
+        name: student.name,
+        cohort: student.cohort,
+        plan: student.plan,
+        progress: student.progress,
+      })));
+      setActionMessage("Đã xuất dữ liệu Tổng quan.");
+      return;
+    }
+
     if (activeNav === "users") {
-      const source = mgmtUsers && mgmtUsers.length ? mgmtUsers : STUDENTS;
-      downloadCsv("admin-users-cohorts.csv", (source as any[]).map((student) => ({
-        name: student.fullName || student.name || student.email,
-        cohort: student.cohort || student.campus || "-",
-        roadmap: student.roadmap || "-",
-        progress: student.progress ?? 0,
-        skillGap: student.skillGap ?? 0,
-        streak: student.streak ?? 0,
-        plan: student.plan ?? "-",
-        status: student.status ?? "-",
+      downloadCsv("admin-users-cohorts.csv", STUDENTS.map((student) => ({
+        name: student.name,
+        cohort: student.cohort,
+        roadmap: student.roadmap,
+        progress: student.progress,
+        skillGap: student.skillGap,
+        streak: student.streak,
+        plan: student.plan,
+        status: student.status,
       })));
       setActionMessage("Đã xuất dữ liệu Người học & Nhóm học.");
       return;
@@ -1062,8 +1307,8 @@ export default function AdminDashboard() {
   };
 
   const commandActions = [
+    { id: "goto-overview", label: "Đi tới Tổng quan", keywords: "overview dashboard home", action: () => setActiveNav("overview") },
     { id: "goto-users", label: "Đi tới Người học & Nhóm học", keywords: "users students cohorts", action: () => setActiveNav("users") },
-    { id: "goto-users-management", label: "Mở Quản lý người dùng", keywords: "quản lý người dùng phân quyền", action: () => openUserManagement() },
     { id: "goto-financials", label: "Đi tới Tài chính", keywords: "finance revenue mrr", action: () => setActiveNav("financials") },
     { id: "goto-b2b", label: "Đi tới Đối tác B2B", keywords: "b2b partners campus", action: () => setActiveNav("b2b") },
     { id: "export", label: "Xuất dữ liệu màn hình hiện tại", keywords: "export csv download", action: handleExport },
@@ -1103,37 +1348,6 @@ export default function AdminDashboard() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Health subscription for admin sidebar
-  const [healthStatus, setHealthStatus] = useState<'unknown' | 'up' | 'down'>('unknown');
-  const [lastHealthPayload, setLastHealthPayload] = useState<any>(null);
-  useEffect(() => {
-    const off = healthService.subscribeHealth((s: any) => setHealthStatus(s));
-    healthService.probeHealth().then((p) => setLastHealthPayload(p)).catch(() => { });
-    return () => off();
-  }, []);
-
-  // Listen for external toggle (profile dropdown -> open management)
-  useEffect(() => {
-    const handler = (e: any) => {
-      try {
-        const page = e?.detail?.page ?? 0;
-        loadMgmt(page, mgmtSearch);
-        setShowMgmtMain(true);
-        setActiveNav(USER_MANAGEMENT_NAV_MODE === "item" ? "users-management" : "users");
-      } catch (err) {
-        console.error('openAdminUserMgmt handler error', err);
-      }
-    };
-    window.addEventListener('openAdminUserMgmt', handler as EventListener);
-    return () => window.removeEventListener('openAdminUserMgmt', handler as EventListener);
-  }, [mgmtSearch, USER_MANAGEMENT_NAV_MODE]);
-
-  useEffect(() => {
-    if ((activeNav === 'users' || activeNav === 'users-management') && showMgmtMain) {
-      loadMgmt(0, mgmtSearch);
-    }
-  }, [activeNav, showMgmtMain, mgmtSearch]);
-
   return (
     <div
       className="flex h-screen overflow-hidden"
@@ -1141,8 +1355,6 @@ export default function AdminDashboard() {
     >
       <style>{`
         @keyframes statusPulse { 0%,100%{opacity:1;}50%{opacity:0.4;} }
-        @keyframes slideInFromRight { from { transform: translateX(8px) translateY(-6px); opacity: 0; } to { transform: translateX(0) translateY(0); opacity: 1; } }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 2px; }
@@ -1156,10 +1368,7 @@ export default function AdminDashboard() {
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-5 py-5"
           style={{ borderBottom: "1px solid rgba(148,163,184,0.18)" }}>
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: `linear-gradient(135deg, ${ACCENT}, ${ACCENT_DEEP})` }}>
-            <Zap size={13} className="text-white fill-white" />
-          </div>
+          <BrandLogo size={28} showText={false} useSvg={true} />
           <div>
             <p style={{ fontWeight: 700, fontSize: "0.85rem", letterSpacing: "-0.02em", color: "#0F172A" }}>SkillSprint</p>
             <p style={{ color: "#64748B", fontSize: "9px", fontWeight: 600, letterSpacing: "0.1em" }}>B2B · CỔNG QUẢN TRỊ</p>
@@ -1173,94 +1382,34 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        {/* Health quick link in sidebar (open inline panel) */}
-        <div className="px-4 pb-3">
-          <button onClick={() => setShowHealthPanel(true)} className="flex items-center gap-3 px-3 py-2 rounded-xl"
-            style={{ background: "#FFFFFF", border: "1px solid rgba(226,232,240,0.6)", color: "#374151" }}>
-            <div style={{ width: 10, height: 10, borderRadius: 999, background: healthStatus === 'up' ? '#22c55e' : healthStatus === 'down' ? '#ef4444' : '#94A3B8', boxShadow: healthStatus === 'up' ? '0 0 6px #22c55e' : healthStatus === 'down' ? '0 0 6px #ef4444' : 'none' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-              <span style={{ fontSize: '13px', fontWeight: 700 }}>{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</span>
-              {lastHealthPayload?.timestamp && (
-                <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Cập nhật: {new Date(lastHealthPayload.timestamp).toLocaleTimeString()}</span>
-              )}
-            </div>
-          </button>
-        </div>
-
-        {/* Nav */}
+        {/* Navigation */}
         <nav className="flex-1 px-3 space-y-0.5">
-          {navItems.map(item => {
+          {NAV_ITEMS.map(item => {
             const isActive = activeNav === item.id;
-            const isUsers = item.id === "users";
             return (
-              <div key={item.id}>
-                <button
-                  onClick={() => {
-                    if (item.id === "users-management") {
-                      openUserManagement();
-                      return;
-                    }
-                    setActiveNav(item.id as any);
-                    if (item.id === "financials" || item.id === "b2b") {
-                      setShowMgmtMain(false);
-                      setUsersNavOpen(false);
-                    }
-                    if (isUsers && USER_MANAGEMENT_NAV_MODE === "dropdown") {
-                      setUsersNavOpen((prev) => !prev);
-                    }
-                  }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 text-left"
-                  style={{
-                    background: isActive ? ACCENT_SOFT : "transparent",
-                    border: isActive ? `1px solid ${ACCENT_BORDER}` : "1px solid transparent",
-                    color: isActive ? "#9A3412" : "#334155",
-                    fontWeight: isActive ? 600 : 400,
-                  }}
-                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(148,163,184,0.10)"; e.currentTarget.style.color = "#0F172A"; } }}
-                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#334155"; } }}
-                >
-                  <item.icon size={15} style={{ color: isActive ? "#C2410C" : "#64748B", flexShrink: 0 }} />
-                  <span style={{ flex: 1 }}>{item.label}</span>
-                  {isUsers && USER_MANAGEMENT_NAV_MODE === "dropdown" && (
-                    <ChevronDown
-                      size={14}
-                      style={{
-                        color: "#64748B",
-                        transform: usersNavOpen ? "rotate(180deg)" : "rotate(0deg)",
-                        transition: "transform 160ms ease",
-                      }}
-                    />
-                  )}
-                  {isActive && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#C2410C" }} />
-                  )}
-                </button>
-                {isUsers && USER_MANAGEMENT_NAV_MODE === "dropdown" && usersNavOpen && (
-                  <button
-                    id="users-management"
-                    data-id="users management"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openUserManagement();
-                    }}
-                    className="w-full text-left px-9 py-2 rounded-lg text-xs"
-                    style={{
-                      marginTop: 4,
-                      color: showMgmtMain ? "#9A3412" : "#6B7280",
-                      background: showMgmtMain ? "rgba(255,107,0,0.08)" : "transparent",
-                      border: showMgmtMain ? "1px solid rgba(255,107,0,0.2)" : "1px solid transparent",
-                      fontWeight: showMgmtMain ? 700 : 500,
-                    }}
-                  >
-                    Quản lý người dùng
-                  </button>
+              <button
+                key={item.id}
+                onClick={() => setActiveNav(item.id as any)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 text-left"
+                style={{
+                  background: isActive ? navTone.soft : "transparent",
+                  border: isActive ? `1px solid ${navTone.border}` : "1px solid transparent",
+                  color: isActive ? navTone.text : "#334155",
+                  fontWeight: isActive ? 600 : 400,
+                }}
+                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(148,163,184,0.10)"; e.currentTarget.style.color = "#0F172A"; } }}
+                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#334155"; } }}
+              >
+                <item.icon size={15} style={{ color: isActive ? navTone.icon : "#64748B", flexShrink: 0 }} />
+                {item.label}
+                {isActive && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full"
+                    style={{ background: navTone.dot }} />
                 )}
-              </div>
+              </button>
             );
           })}
         </nav>
-
-        {/* Direct management link removed — moved to user dropdown */}
 
         {/* Bottom */}
         <div className="px-3 pb-4 pt-3 space-y-2" style={{ borderTop: "1px solid rgba(148,163,184,0.18)" }}>
@@ -1276,45 +1425,23 @@ export default function AdminDashboard() {
       {/* ── MAIN ── */}
       <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
 
-        {/* Top header: title, quick actions, and Health link */}
+        {/* ── TOP HEADER ── */}
         <header
           className="flex items-center justify-between px-8 h-14 shrink-0"
-          style={{ borderBottom: "1px solid #E5E7EB", background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)" }}
+          style={{ borderBottom: "1px solid #E5E7EB", background: "rgba(255,255,255,0.95)", backdropFilter: "blur(16px)" }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div>
-              <h1 style={{ fontWeight: 700, fontSize: "0.95rem", letterSpacing: "-0.02em", color: "#111827" }}>{current.title}</h1>
-              <p style={{ color: "#9CA3AF", fontSize: "11px" }}>{current.sub}</p>
-            </div>
+          <div>
+            <h1 style={{ fontWeight: 700, fontSize: "0.95rem", letterSpacing: "-0.02em", color: "#111827" }}>
+              {current.title}
+            </h1>
+            <p style={{ color: "#9CA3AF", fontSize: "11px" }}>{current.sub}</p>
           </div>
 
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            {/* Health summary button - open inline health panel (no redirect) */}
-            <button
-              onClick={() => setShowHealthPanel(true)}
-              className="hidden md:inline-flex items-center gap-3 px-3 py-1.5 rounded-xl text-sm"
-              style={{
-                background: "#FFFFFF",
-                border: healthStatus === 'down' ? '1px solid rgba(239,68,68,0.18)' : '1px solid #E5E7EB',
-                color: "#374151",
-                boxShadow: healthStatus === 'down' ? '0 6px 20px rgba(239,68,68,0.06)' : undefined,
-                animation: healthStatus === 'down' ? 'statusPulse 1600ms infinite' : undefined,
-              }}
-              title={lastHealthPayload?.timestamp ? `Cập nhật: ${new Date(lastHealthPayload.timestamp).toLocaleString()}` : "Trạng thái hệ thống"}
-            >
-              <div style={{ width: 10, height: 10, borderRadius: 999, background: healthStatus === 'up' ? '#22c55e' : healthStatus === 'down' ? '#ef4444' : '#94A3B8', boxShadow: healthStatus === 'up' ? '0 0 6px #22c55e' : healthStatus === 'down' ? '0 0 6px #ef4444' : 'none' }} />
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                <span style={{ fontSize: '12px', fontWeight: 700 }}>
-                  {healthStatus === 'up' ? 'Ổn định' : healthStatus === 'down' ? 'Sự cố' : 'Đang kiểm tra'}
-                </span>
-                {lastHealthPayload?.timestamp && (
-                  <span style={{ fontSize: '10px', color: '#9CA3AF' }}>{new Date(lastHealthPayload.timestamp).toLocaleTimeString()}</span>
-                )}
-              </div>
-              <div className="sr-only" aria-live="polite">{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</div>
-            </button>
-            <div className="hidden xl:flex items-center rounded-xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
-              {['30d', '60d', '90d'].map(r => (
+            {/* Time range */}
+            <div className="hidden xl:flex items-center rounded-xl overflow-hidden"
+              style={{ border: "1px solid #E5E7EB" }}>
+              {["30d","60d","90d"].map(r => (
                 <button key={r} onClick={() => setTimeRange(r)}
                   className="px-3 py-1.5 text-xs transition-all"
                   style={{
@@ -1324,6 +1451,27 @@ export default function AdminDashboard() {
                     borderRight: r !== "90d" ? "1px solid #E5E7EB" : "none",
                   }}>
                   {r}
+                </button>
+              ))}
+            </div>
+
+            <div className="hidden lg:flex items-center rounded-xl overflow-hidden" style={{ border: "1px solid #E5E7EB", background: "#FFFFFF" }}>
+              {[
+                { id: "classic", label: "Classic" },
+                { id: "muted", label: "Muted" },
+              ].map((mode) => (
+                <button
+                  key={mode.id}
+                  onClick={() => setVisualMode(mode.id as VisualMode)}
+                  className="px-3 py-1.5 text-xs transition-all"
+                  style={{
+                    background: visualMode === mode.id ? "#F8FAFC" : "transparent",
+                    color: visualMode === mode.id ? "#334155" : "#9CA3AF",
+                    fontWeight: visualMode === mode.id ? 700 : 500,
+                    borderRight: mode.id === "classic" ? "1px solid #E5E7EB" : "none",
+                  }}
+                >
+                  {mode.label}
                 </button>
               ))}
             </div>
@@ -1344,6 +1492,14 @@ export default function AdminDashboard() {
               Gửi báo cáo
             </button>
 
+            <button className="relative p-2 rounded-xl transition-all"
+              style={{ color: "#6B7280", border: "1px solid #E5E7EB" }}
+              onMouseEnter={e => { e.currentTarget.style.color = "#111827"; e.currentTarget.style.background = "#F3F4F6"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "#6B7280"; e.currentTarget.style.background = "transparent"; }}>
+              <Bell size={15} />
+              <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />
+            </button>
+
             <button
               onClick={() => setCommandOpen(true)}
               className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all"
@@ -1353,34 +1509,23 @@ export default function AdminDashboard() {
               Lệnh nhanh
               <span className="px-1.5 py-0.5 rounded" style={{ background: "#F3F4F6", color: "#9CA3AF", fontSize: "10px" }}>/</span>
             </button>
-
-            {/* User menu (hover) */}
-            <div ref={userMenuRef} style={{ position: 'relative' }}>
-              <button
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm"
-                style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}
-                onClick={() => setUserMenuOpen(v => !v)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setUserMenuOpen(v => !v); } }}
-                aria-expanded={userMenuOpen}
-              >
-                <div style={{ width: 28, height: 28, borderRadius: 999, background: 'linear-gradient(135deg,#FF6B00,#FF9A3D)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>{(currentUser?.fullName || "A").charAt(0).toUpperCase()}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>Quản trị</span>
-                  <span style={{ fontSize: '10px', color: '#9CA3AF' }}>Admin</span>
-                </div>
-              </button>
-              {userMenuOpen && (
-                <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 220, background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 8px 24px rgba(2,6,23,0.12)', padding: 8, zIndex: 60 }}>
-                  <Link to="/admin/profile" className="w-full text-left px-3 py-2 rounded" style={{ display: 'block', color: '#111827', fontWeight: 700 }}>Hồ sơ</Link>
-                  <div style={{ height: 1, background: '#F1F5F9', margin: '6px 0' }} />
-                  <Link to="/admin-login" className="w-full text-left px-3 py-2 rounded" style={{ display: 'block', color: '#EF4444' }}>← Đăng xuất</Link>
-                </div>
-              )}
-            </div>
           </div>
         </header>
+
+        <div className="px-8 py-2.5 flex items-center justify-between" style={{ background: "#FFF7ED", borderBottom: "1px solid #FED7AA" }}>
+          <p style={{ fontSize: "11px", color: "#9A3412" }}>
+            Khung thời gian: <strong>{timeRange}</strong> · Đồng bộ lần cuối: <strong>{lastSync.toLocaleTimeString("vi-VN")}</strong>
+          </p>
+          <button
+            onClick={handleSync}
+            className="text-xs px-3 py-1 rounded-lg transition-all"
+            style={{ color: "#9A3412", border: "1px solid #FDBA74", background: "#FFEDD5" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#FED7AA"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#FFEDD5"; }}
+          >
+            Đồng bộ ngay
+          </button>
+        </div>
 
         {/* ── SCROLLABLE CONTENT ── */}
         <div className="flex-1 overflow-y-auto p-7">
@@ -1389,257 +1534,12 @@ export default function AdminDashboard() {
               {actionMessage}
             </div>
           )}
-          {(activeNav === "users" || activeNav === "users-management") && (
-            (showMgmtMain || activeNav === "users-management") ? (
-              <div>
-                <div className="space-y-4">
-                  {mgmtMessage && (
-                    <div className="px-4 py-2 rounded-xl text-sm" style={{ background: "#FFF7ED", border: "1px solid #FDBA74", color: "#9A3412" }}>
-                      {mgmtMessage}
-                    </div>
-                  )}
-
-                  <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#FFF7ED 100%)", border: "1px solid #FDE68A" }}>
-                    <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-                      <div>
-                        <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0F172A" }}>Quản lý người dùng</h2>
-                        <p style={{ margin: "4px 0 0", color: "#64748B", fontSize: "0.88rem" }}>Theo dõi người dùng, cập nhật trạng thái và phân quyền nhanh.</p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-3 py-1 rounded-full text-xs" style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#334155" }}>Tổng: {mgmtTotal}</span>
-                        <span className="px-3 py-1 rounded-full text-xs" style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#334155" }}>Trang: {mgmtPage + 1}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                    <div className="xl:col-span-2 rounded-2xl" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", overflow: "hidden" }}>
-                      <div className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3" style={{ borderBottom: "1px solid #F1F5F9" }}>
-                        <div className="relative w-full md:max-w-md">
-                          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
-                          <input
-                            value={mgmtSearch}
-                            onChange={(event) => setMgmtSearch(event.target.value)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                loadMgmt(0, mgmtSearch);
-                              }
-                            }}
-                            placeholder="Tìm theo email hoặc tên"
-                            className="w-full"
-                            style={{ height: 38, padding: "0 12px 0 34px", borderRadius: 10, border: "1px solid #E2E8F0", fontSize: "0.86rem" }}
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => loadMgmt(0, mgmtSearch)}
-                            className="px-3 py-2 rounded-lg text-xs font-semibold"
-                            style={{ background: "#111827", color: "#FFFFFF" }}
-                          >
-                            Tìm
-                          </button>
-                          <button
-                            onClick={() => {
-                              setMgmtSearch("");
-                              loadMgmt(0, "");
-                            }}
-                            className="px-3 py-2 rounded-lg text-xs font-semibold"
-                            style={{ background: "#FFFFFF", color: "#334155", border: "1px solid #E2E8F0" }}
-                          >
-                            Xóa lọc
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="overflow-x-auto">
-                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                          <thead>
-                            <tr style={{ background: "#FAFAFA", textAlign: "left", color: "#64748B", fontSize: "0.78rem" }}>
-                              <th style={{ padding: "12px 14px" }}>Người dùng</th>
-                              <th style={{ padding: "12px 14px" }}>Vai trò</th>
-                              <th style={{ padding: "12px 14px" }}>Trạng thái</th>
-                              <th style={{ padding: "12px 14px" }}>Cập nhật</th>
-                              <th style={{ padding: "12px 14px" }}>Hành động</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {!mgmtLoading && mgmtUsers.length === 0 && (
-                              <tr>
-                                <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#94A3B8" }}>
-                                  Không có người dùng phù hợp.
-                                </td>
-                              </tr>
-                            )}
-                            {mgmtUsers.map((user) => {
-                              const status = String(user.status || "UNKNOWN").toUpperCase();
-                              const badge = status === "ACTIVE"
-                                ? { bg: "rgba(34,197,94,0.10)", text: "#15803D", border: "rgba(34,197,94,0.28)" }
-                                : status === "LOCKED"
-                                  ? { bg: "rgba(239,68,68,0.10)", text: "#B91C1C", border: "rgba(239,68,68,0.28)" }
-                                  : { bg: "rgba(245,158,11,0.10)", text: "#B45309", border: "rgba(245,158,11,0.28)" };
-                              return (
-                                <tr key={user.id} style={{ borderTop: "1px solid #F1F5F9", background: mgmtSelected?.id === user.id ? "#FFF7ED" : "#FFFFFF" }}>
-                                  <td style={{ padding: "12px 14px" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                      <div style={{ width: 34, height: 34, borderRadius: 999, background: "#FFE7D1", color: "#C2410C", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>
-                                        {(user.fullName || user.email || "?").charAt(0).toUpperCase()}
-                                      </div>
-                                      <div>
-                                        <div style={{ fontWeight: 700, color: "#0F172A", fontSize: "0.84rem" }}>{user.fullName || "Chưa cập nhật tên"}</div>
-                                        <div style={{ color: "#64748B", fontSize: "0.78rem" }}>{user.email}</div>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td style={{ padding: "12px 14px", color: "#334155", fontSize: "0.82rem" }}>{user.role || "USER"}</td>
-                                  <td style={{ padding: "12px 14px" }}>
-                                    <span className="px-2 py-1 rounded-full text-[11px] font-semibold" style={{ background: badge.bg, color: badge.text, border: `1px solid ${badge.border}` }}>{status}</span>
-                                  </td>
-                                  <td style={{ padding: "12px 14px", color: "#64748B", fontSize: "0.78rem" }}>{user.updatedAt ? new Date(user.updatedAt).toLocaleString() : "-"}</td>
-                                  <td style={{ padding: "12px 14px" }}>
-                                    <button
-                                      onClick={() => openMgmtDetail(user.id)}
-                                      className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                                      style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#0F172A" }}
-                                    >
-                                      Chi tiết
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      <div className="px-4 py-3 flex items-center justify-between" style={{ borderTop: "1px solid #F1F5F9" }}>
-                        <span style={{ fontSize: "0.8rem", color: "#64748B" }}>Hiển thị {mgmtUsers.length} / {mgmtTotal}</span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => loadMgmt(Math.max(0, mgmtPage - 1), mgmtSearch)}
-                            disabled={mgmtPage === 0 || mgmtLoading}
-                            className="px-3 py-1.5 rounded-lg text-xs"
-                            style={{ border: "1px solid #E2E8F0", background: "#fff", color: "#334155", opacity: mgmtPage === 0 || mgmtLoading ? 0.5 : 1 }}
-                          >
-                            Prev
-                          </button>
-                          <button
-                            onClick={() => loadMgmt(mgmtPage + 1, mgmtSearch)}
-                            disabled={mgmtUsers.length < mgmtSize || mgmtLoading}
-                            className="px-3 py-1.5 rounded-lg text-xs"
-                            style={{ border: "1px solid #E2E8F0", background: "#fff", color: "#334155", opacity: mgmtUsers.length < mgmtSize || mgmtLoading ? 0.5 : 1 }}
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                      <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: "#0F172A" }}>Chi tiết & cập nhật</h3>
-                      {!mgmtSelected ? (
-                        <p style={{ marginTop: 12, fontSize: "0.82rem", color: "#94A3B8" }}>Chọn một người dùng từ bảng để xem chi tiết.</p>
-                      ) : (
-                        <div className="space-y-3 mt-3">
-                          <div className="rounded-xl p-3" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
-                            <p style={{ margin: 0, fontWeight: 700, fontSize: "0.85rem", color: "#0F172A" }}>{mgmtSelected.fullName || "Chưa cập nhật tên"}</p>
-                            <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "#64748B" }}>{mgmtSelected.email}</p>
-                            <p style={{ margin: "6px 0 0", fontSize: "0.74rem", color: "#94A3B8" }}>ID: {mgmtSelected.id}</p>
-                          </div>
-
-                          <div>
-                            <label style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 700 }}>Trạng thái</label>
-                            <select
-                              value={mgmtStatusDraft}
-                              onChange={(event) => setMgmtStatusDraft(event.target.value)}
-                              style={{ width: "100%", marginTop: 6, height: 36, borderRadius: 8, border: "1px solid #E2E8F0", padding: "0 10px", fontSize: "0.82rem" }}
-                            >
-                              <option value="ACTIVE">ACTIVE</option>
-                              <option value="INACTIVE">INACTIVE</option>
-                              <option value="LOCKED">LOCKED</option>
-                            </select>
-                            <button
-                              onClick={() => saveMgmtStatus(mgmtSelected.id, mgmtStatusDraft)}
-                              disabled={!mgmtStatusDraft || mgmtLoading}
-                              className="mt-2 w-full px-3 py-2 rounded-lg text-xs font-semibold"
-                              style={{ background: "#111827", color: "#fff", opacity: !mgmtStatusDraft || mgmtLoading ? 0.5 : 1 }}
-                            >
-                              Lưu trạng thái
-                            </button>
-                          </div>
-
-                          <div>
-                            <label style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 700 }}>Vai trò</label>
-                            <label style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 700 }}>Vai trò</label>
-                            <select
-                              value={mgmtRolesDraft}
-                              onChange={(event) => setMgmtRolesDraft(event.target.value)}
-                              style={{ width: "100%", marginTop: 6, height: 36, borderRadius: 8, border: "1px solid #E2E8F0", padding: "0 10px", fontSize: "0.82rem" }}
-                            >
-                              <option value="">-- Chọn vai trò --</option>
-                              <option value="ADMIN">Admin</option>
-                              <option value="LEARNER">Learner</option>
-                            </select>
-                            <button
-                              onClick={() => {
-                                // Đảm bảo chỉ gửi mảng có giá trị
-                                const rolesToUpdate = mgmtRolesDraft.trim() ? [mgmtRolesDraft.trim()] : [];
-                                saveMgmtRoles(mgmtSelected.id, rolesToUpdate);
-                              }}
-                              disabled={!mgmtRolesDraft.trim() || mgmtLoading}
-                              className="mt-2 w-full px-3 py-2 rounded-lg text-xs font-semibold"
-                              style={{
-                                background: "#EA580C",
-                                color: "#fff",
-                                opacity: (!mgmtRolesDraft.trim() || mgmtLoading) ? 0.5 : 1,
-                                cursor: (!mgmtRolesDraft.trim() || mgmtLoading) ? "not-allowed" : "pointer"
-                              }}
-                            >
-                              {mgmtLoading ? "Đang lưu..." : "Lưu vai trò"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <UsersView healthStatus={healthStatus} lastHealthPayload={lastHealthPayload} />
-            )
-          )}
+          {activeNav === "overview"   && <OverviewAdminView onNavigate={setActiveNav} visualMode={visualMode} />}
+          {activeNav === "users"      && <UsersView />}
           {activeNav === "financials" && <FinancialsView />}
-          {activeNav === "b2b" && <B2BView />}
+          {activeNav === "b2b"        && <B2BView />}
         </div>
       </main>
-
-
-
-      {showHealthPanel && (
-        <div
-          className="fixed z-40"
-          style={{
-            left: 'calc(224px + 12px)',
-            top: 64,
-            width: 'min(720px, calc(100vw - 260px))',
-            maxWidth: 720,
-            maxHeight: 'calc(100vh - 80px)',
-            overflow: 'visible',
-            animation: 'slideInFromRight 220ms ease',
-            boxShadow: '0 30px 60px rgba(15,23,42,0.12)',
-            borderRadius: 12,
-            backgroundClip: 'padding-box',
-          }}
-        >
-          <div style={{ padding: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-              <button onClick={() => setShowHealthPanel(false)} className="rounded p-1" style={{ background: '#ffffffaa', border: '1px solid #E5E7EB' }} aria-label="Close health panel"><X size={16} /></button>
-            </div>
-            <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 12, padding: 12, overflow: 'hidden' }}>
-              <AdminHealth />
-            </div>
-          </div>
-        </div>
-      )}
 
       {commandOpen && (
         <div
