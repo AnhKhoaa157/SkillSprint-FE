@@ -1,6 +1,5 @@
 import {
   LayoutDashboard,
-  UploadCloud,
   Sparkles,
   Map,
   Calendar,
@@ -43,7 +42,6 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
     label: "Học tập & AI",
     items: [
-      { path: "/app/syllabus", label: "Nhập syllabus", icon: UploadCloud },
       { path: "/app/roadmap", label: "Lộ trình AI", icon: Sparkles },
       { path: "/app/workspaces", label: "Workspaces", icon: Map, badge: true, match: "prefix" },
     ],

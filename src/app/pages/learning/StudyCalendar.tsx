@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, Clock, LoaderCircle, RefreshCw, Sparkles, Check, PlayCircle } from "lucide-react";
 import AIScheduleModal from "../../components/modals/AIScheduleModal";
+import useOnboardingProfile from "../../hooks/useOnboardingProfile";
 import workspaceService, { type WorkspaceResponse } from "../../../api/workspaceService";
 import calendarService, { type CalendarTaskResponse, type GenerateCalendarRequest, type WeekDay } from "../../../api/calendarService";
 import { useRoadmap } from "../../hooks/useRoadmap";
@@ -19,6 +20,29 @@ const BDR = "#E5E7EB";
 
 type CalendarTaskMap = Record<string, CalendarTaskResponse[]>;
 
+type ScheduleSeedConfig = {
+  dateRange: { start: string; end: string };
+  availableDays: string[];
+  timeSlots: { start: string; end: string }[];
+  duration: number | null;
+  goal: "current-step" | "full-roadmap" | null;
+};
+
+type OnboardingScheduleProfile = {
+  targetDeadline?: string | null;
+  preferredDays?: string[] | null;
+  preferredTimeSlots?: string[] | null;
+  studyHoursPerWeek?: number | null;
+};
+
+type ScheduleModalConfig = {
+  dateRange: { start: string; end: string } | null;
+  availableDays: string[];
+  timeSlots: { start: string; end: string }[];
+  duration: number | null;
+  goal: "current-step" | "full-roadmap" | null;
+};
+
 const DAY_LABELS: Record<string, WeekDay> = {
   mon: "MONDAY",
   tue: "TUESDAY",
@@ -28,6 +52,110 @@ const DAY_LABELS: Record<string, WeekDay> = {
   sat: "SATURDAY",
   sun: "SUNDAY",
 };
+
+const WEEKDAY_TO_DAY_ID = Object.entries(DAY_LABELS).reduce<Record<WeekDay, string>>((accumulator, [dayId, weekday]) => {
+  accumulator[weekday] = dayId;
+  return accumulator;
+}, {} as Record<WeekDay, string>);
+
+const DEFAULT_DAY_IDS = ["mon", "tue", "wed", "thu", "fri"];
+
+function normalizeDayId(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(DAY_LABELS, normalized) ? normalized : null;
+}
+
+function normalizeTimeToken(token: string) {
+  const trimmed = token.trim().toLowerCase();
+  const match = trimmed.match(/^(\d{1,2})(?::\d{2})?\s*(am|pm)?$/i);
+
+  if (!match) {
+    return trimmed;
+  }
+
+  const hour = Number(match[1]);
+  const suffix = match[2]?.toLowerCase() ?? "";
+
+  if (!Number.isFinite(hour)) {
+    return trimmed;
+  }
+
+  return `${hour}${suffix}`;
+}
+
+function parsePreferredTimeSlot(value: string) {
+  const [start, end] = value.split("-").map(part => part.trim());
+
+  if (!start || !end) {
+    return null;
+  }
+
+  return {
+    start: normalizeTimeToken(start),
+    end: normalizeTimeToken(end),
+  };
+}
+
+function createFallbackScheduleSeed(): ScheduleSeedConfig {
+  const today = toDateKey(new Date());
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + 30);
+
+  return {
+    dateRange: {
+      start: today,
+      end: toDateKey(endDate),
+    },
+    availableDays: DEFAULT_DAY_IDS,
+    timeSlots: [{ start: "9", end: "10" }],
+    duration: 60,
+    goal: "full-roadmap",
+  };
+}
+
+function createScheduleSeedFromProfile(profile?: OnboardingScheduleProfile | null): ScheduleSeedConfig {
+  const fallback = createFallbackScheduleSeed();
+  const today = fallback.dateRange.start;
+  const targetDeadlineDate = profile?.targetDeadline ? new Date(profile.targetDeadline) : null;
+  const endDate = targetDeadlineDate && !Number.isNaN(targetDeadlineDate.getTime()) ? toDateKey(targetDeadlineDate) : fallback.dateRange.end;
+  const preferredDays = profile?.preferredDays?.length
+    ? profile.preferredDays
+        .map(day => WEEKDAY_TO_DAY_ID[day.toUpperCase() as WeekDay] ?? normalizeDayId(day))
+        .filter((dayId): dayId is string => Boolean(dayId))
+    : fallback.availableDays;
+  const preferredTimeSlots = profile?.preferredTimeSlots?.length
+    ? profile.preferredTimeSlots
+        .map(parsePreferredTimeSlot)
+        .filter((slot): slot is { start: string; end: string } => Boolean(slot))
+    : fallback.timeSlots;
+
+  return {
+    dateRange: {
+      start: today,
+      end: endDate,
+    },
+    availableDays: preferredDays.length > 0 ? preferredDays : fallback.availableDays,
+    timeSlots: preferredTimeSlots.length > 0 ? preferredTimeSlots : fallback.timeSlots,
+    duration: profile?.studyHoursPerWeek ? Math.max(30, Math.min(120, Math.round((profile.studyHoursPerWeek * 60) / Math.max(1, preferredDays.length || 1)))) : fallback.duration,
+    goal: "full-roadmap",
+  };
+}
+
+function buildCalendarRequest(seed: ScheduleSeedConfig): GenerateCalendarRequest {
+  const studyDays = seed.availableDays
+    .map(dayId => DAY_LABELS[dayId])
+    .filter((day): day is WeekDay => Boolean(day));
+
+  return {
+    startDate: seed.dateRange.start,
+    endDate: seed.dateRange.end,
+    studyDays: studyDays.length > 0 ? studyDays : ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
+    dailyStartTime: parseSlotHour(seed.timeSlots[0]) || "09:00",
+    sessionMinutes: seed.duration || 60,
+    sessionsPerDay: Math.max(1, seed.timeSlots.length || 1),
+    includeReviewSessions: seed.goal === "full-roadmap",
+  };
+}
 
 function toDateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -79,6 +207,8 @@ export default function StudyCalendar() {
   const [calendarTasks, setCalendarTasks] = useState<CalendarTaskResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [lastScheduleSeed, setLastScheduleSeed] = useState<ScheduleSeedConfig | null>(null);
+  const { profile: onboardingProfile, fetchOnboardingProfile } = useOnboardingProfile(selectedWorkspaceId);
   const { roadmapData, isLoading: roadmapLoading, error: roadmapError } = useRoadmap(selectedWorkspaceId);
 
   const reloadCalendarTasks = async () => {
@@ -150,6 +280,14 @@ export default function StudyCalendar() {
     };
   }, [selectedWorkspaceId]);
 
+  useEffect(() => {
+    if (!selectedWorkspaceId) {
+      return;
+    }
+
+    void fetchOnboardingProfile();
+  }, [fetchOnboardingProfile, selectedWorkspaceId]);
+
   const cursorYear = cursor.getFullYear();
   const cursorMonth = cursor.getMonth();
   const firstWeekDay = new Date(cursorYear, cursorMonth, 1).getDay();
@@ -171,12 +309,17 @@ export default function StudyCalendar() {
     }, {});
   }, [calendarTasks]);
 
+  const hasExistingCalendar = Boolean(calendarTasks && calendarTasks.length > 0);
   const selectedKey = toDateKey(new Date(cursorYear, cursorMonth, selectedDay));
   const selectedTasks = tasksByDay[selectedKey] ?? [];
   const selectedWorkspace = workspaces.find(item => item.workspaceId === selectedWorkspaceId) ?? null;
   const hasRoadmap = Boolean(roadmapData?.steps?.length);
   const canGenerateCalendar = Boolean(selectedWorkspaceId) && hasRoadmap && !roadmapLoading;
   const todayKey = toDateKey(new Date());
+  const scheduleSeed = useMemo(
+    () => lastScheduleSeed ?? createScheduleSeedFromProfile(onboardingProfile as OnboardingScheduleProfile | null),
+    [lastScheduleSeed, onboardingProfile],
+  );
 
   const totalCompleted = calendarTasks.filter(task => String(task.status || "").toUpperCase() === "COMPLETED").length;
 
@@ -196,7 +339,7 @@ export default function StudyCalendar() {
     setSelectedDay(1);
   };
 
-  const handleGenerateSchedule = async (config: any) => {
+  const executeCalendarGeneration = async (seed: ScheduleSeedConfig) => {
     if (!selectedWorkspaceId) {
       setError("Chưa chọn workspace");
       return;
@@ -207,19 +350,11 @@ export default function StudyCalendar() {
       return;
     }
 
-    const request: GenerateCalendarRequest = {
-      startDate: config?.dateRange?.start || selectedKey,
-      studyDays: Array.isArray(config?.availableDays)
-        ? config.availableDays.map((dayId: string) => DAY_LABELS[dayId]).filter(Boolean)
-        : undefined,
-      dailyStartTime: parseSlotHour(config?.timeSlots?.[0]) || "09:00",
-      sessionMinutes: config?.duration || 60,
-      sessionsPerDay: Math.max(1, config?.timeSlots?.length || 1),
-      includeReviewSessions: config?.goal === "full-roadmap",
-    };
+    const request = buildCalendarRequest(seed);
 
     setSavingSchedule(true);
     setError(null);
+    setLastScheduleSeed(seed);
 
     try {
       const response = await calendarService.generateCalendarSchedule(selectedWorkspaceId, request);
@@ -230,6 +365,22 @@ export default function StudyCalendar() {
     } finally {
       setSavingSchedule(false);
     }
+  };
+
+  const handleGenerateSchedule = async (config: ScheduleModalConfig) => {
+    const normalizedSeed: ScheduleSeedConfig = {
+      dateRange: config.dateRange ?? scheduleSeed.dateRange,
+      availableDays: config.availableDays.length > 0 ? config.availableDays : scheduleSeed.availableDays,
+      timeSlots: config.timeSlots.length > 0 ? config.timeSlots : scheduleSeed.timeSlots,
+      duration: config.duration ?? scheduleSeed.duration,
+      goal: config.goal ?? scheduleSeed.goal,
+    };
+
+    await executeCalendarGeneration(normalizedSeed);
+  };
+
+  const handleAutoGenerate = async () => {
+    await executeCalendarGeneration(createScheduleSeedFromProfile(onboardingProfile as OnboardingScheduleProfile | null));
   };
 
   return (
@@ -254,26 +405,24 @@ export default function StudyCalendar() {
             </select>
 
             <button
-              onClick={() => setScheduleModalOpen(true)}
-              disabled={!canGenerateCalendar || savingSchedule}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "7px 12px",
-                borderRadius: "9px",
-                border: "none",
-                background: `linear-gradient(135deg, ${OG}, #FF8C3A)`,
-                color: "#fff",
-                cursor: canGenerateCalendar ? "pointer" : "not-allowed",
-                opacity: canGenerateCalendar ? 1 : 0.6,
-                fontWeight: 700,
-                fontSize: "0.75rem",
-                boxShadow: "0 2px 8px rgba(255, 107, 0, 0.3)",
+              type="button"
+              onClick={() => {
+                if (hasExistingCalendar) {
+                  setScheduleModalOpen(true);
+                  return;
+                }
+
+                void handleAutoGenerate();
               }}
+              disabled={savingSchedule || !canGenerateCalendar}
+              className={`inline-flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-[0.75rem] font-bold transition-colors ${
+                hasExistingCalendar
+                  ? "border border-orange-500 bg-white text-orange-600 shadow-[0_2px_8px_rgba(255,107,0,0.12)] hover:bg-orange-50"
+                  : "bg-orange-500 text-white shadow-[0_2px_8px_rgba(255,107,0,0.3)] hover:bg-orange-600"
+              } ${savingSchedule || (!hasExistingCalendar && !canGenerateCalendar) ? "opacity-60" : ""}`}
             >
-              {savingSchedule ? <LoaderCircle size={12} className="animate-spin" /> : <Sparkles size={12} />}
-              AI soạn lịch
+              {savingSchedule && !hasExistingCalendar ? <LoaderCircle size={12} className="animate-spin" /> : hasExistingCalendar ? <Check size={12} /> : <Sparkles size={12} />}
+              {savingSchedule && !hasExistingCalendar ? "⏳ Đang tạo lịch..." : hasExistingCalendar ? "⚙️ Tùy chỉnh & Tạo lại" : "✨ Tạo lịch AI tự động"}
             </button>
 
             <button
@@ -508,11 +657,12 @@ export default function StudyCalendar() {
       </div>
 
       <AIScheduleModal
-        isOpen={scheduleModalOpen}
+        isOpen={scheduleModalOpen && hasExistingCalendar}
         onClose={() => setScheduleModalOpen(false)}
         onConfirm={handleGenerateSchedule}
         subjectTitle={selectedWorkspace?.name || "Kế hoạch học tập"}
         currentPhase={1}
+        initialConfig={scheduleSeed}
       />
     </motion.div>
   );

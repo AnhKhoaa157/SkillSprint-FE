@@ -167,6 +167,34 @@ function formatRoadmapId(rawId: unknown): string {
   return `RM-${suffix}`;
 }
 
+function buildSmoothPath(points: Array<{ x: number; y: number }>): string {
+  if (points.length === 0) {
+    return "";
+  }
+
+  if (points.length === 1) {
+    return `M ${points[0].x} ${points[0].y}`;
+  }
+
+  let path = `M ${points[0].x} ${points[0].y}`;
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const previous = points[index - 1] ?? points[index];
+    const current = points[index];
+    const next = points[index + 1];
+    const afterNext = points[index + 2] ?? next;
+
+    const controlOneX = current.x + (next.x - previous.x) / 6;
+    const controlOneY = current.y + (next.y - previous.y) / 6;
+    const controlTwoX = next.x - (afterNext.x - current.x) / 6;
+    const controlTwoY = next.y - (afterNext.y - current.y) / 6;
+
+    path += ` C ${controlOneX} ${controlOneY}, ${controlTwoX} ${controlTwoY}, ${next.x} ${next.y}`;
+  }
+
+  return path;
+}
+
 export default function Roadmap() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const location = useLocation();
@@ -177,7 +205,8 @@ export default function Roadmap() {
   const [loading, setLoading] = useState(!navigationRoadmap);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStep, setSelectedStep] = useState<RoadmapStep | null>(null);
+const [selectedStep, setSelectedStep] = useState<RoadmapStep | null>(null);
+const [isStarting, setIsStarting] = useState(false);
 
   const steps = roadmapData?.steps || [];
   const resources = roadmapData?.resources || [];
@@ -262,6 +291,23 @@ export default function Roadmap() {
     navigate(`/app/workspaces/${workspaceId}`);
   };
 
+  const handleStartLearning = () => {
+    if (!selectedStep) {
+      console.warn("handleStartLearning called but no step selected");
+      return;
+    }
+
+    const matchedTask = tasks.find((task) => task.roadmapStepId === getStepKey(selectedStep));
+
+    if (matchedTask?.taskId) {
+      navigate(`/app/learning/course?taskId=${matchedTask.taskId}`);
+    } else {
+      console.warn("Missing taskId on selected step:", selectedStep);
+      // Fallback: try to navigate with step info anyway
+      console.warn("Matched task:", matchedTask);
+    }
+  };
+
   /* ==================================================================
      RIGHT PANEL: Step detail with close button
      ================================================================== */
@@ -277,7 +323,9 @@ export default function Roadmap() {
     const stepSummary = getStepSummary(step);
     const matchedTask = tasks.find((task) => task.roadmapStepId === getStepKey(step));
     const matchedTaskDate = matchedTask?.taskDate ? formatTaskDate(matchedTask.taskDate) : "";
-    const studyNowDisabled = !matchedTask;
+
+    // Button is always enabled when there's a matched task; date gating is handled inside CoursePlayer
+    const canStart = Boolean(matchedTask);
 
     // Placeholder for step completion percentage
     const stepCompletionPercent = Math.min(100, 20 + idx * 15);
@@ -325,20 +373,6 @@ export default function Roadmap() {
               Chưa có lịch học
             </span>
           )}
-
-          <button
-            type="button"
-            disabled={studyNowDisabled}
-            onClick={() => {
-              if (!matchedTask) return;
-              navigate("/app/learning/course", { state: { taskId: matchedTask.taskId } });
-            }}
-            title={matchedTask ? "Mở bài học" : "Chưa có lịch học"}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <PlayCircle className="h-3.5 w-3.5" />
-            Vào học
-          </button>
         </div>
 
         {/* Progress bar for the selected step */}
@@ -412,6 +446,30 @@ export default function Roadmap() {
               <p className="mt-1 text-xs text-slate-400">Chưa có tài liệu cho module này.</p>
             </div>
           )}
+        </div>
+
+        {/* Sticky Footer CTA */}
+        <div className="border-t border-slate-100 p-6 bg-white shrink-0 mt-auto">
+          <button
+            disabled={!canStart || isStarting}
+            onClick={handleStartLearning}
+            className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex justify-center items-center gap-2 ${
+              canStart && !isStarting
+                ? "bg-slate-900 text-white hover:bg-slate-800 shadow-lg hover:shadow-xl"
+                : "bg-slate-100 text-slate-400 cursor-not-allowed"
+            }`}
+          >
+            {isStarting ? (
+              <>
+                <LoaderCircle className="h-5 w-5 animate-spin" />
+                Đang khởi tạo...
+              </>
+            ) : canStart ? (
+              "🚀 Bắt đầu học ngay"
+            ) : (
+              "⏳ Chưa đến ngày học"
+            )}
+          </button>
         </div>
       </div>
     );
@@ -530,36 +588,36 @@ export default function Roadmap() {
      ==================================================================== */
   return (
     <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] bg-[radial-gradient(circle_at_top_left,_rgba(255,107,0,0.10),_transparent_30%),linear-gradient(180deg,_#F8FAFC_0%,_#F1F5F9_100%)] px-6 py-8 text-slate-900 lg:px-10">
-      <div className="h-[calc(100vh-120px)] overflow-hidden flex transition-all duration-500 ease-in-out">
+      <div className={`h-[calc(100vh-120px)] flex items-start overflow-hidden px-8 transition-all duration-700 ease-in-out ${selectedStep ? 'justify-start gap-0 lg:gap-12' : 'justify-center'}`}>
         {/* ==================== LEFT COLUMN: ROADMAP PATH ==================== */}
         <div
-          className={`h-full overflow-y-auto custom-scrollbar pr-4 transition-all duration-500 ease-in-out ${
-            selectedStep ? "w-full lg:w-[65%]" : "w-full max-w-4xl mx-auto"
+          className={`h-full overflow-y-auto custom-scrollbar px-4 transition-all duration-700 ease-in-out flex-shrink-0 ${
+            selectedStep ? "w-full lg:w-[55%]" : "w-full max-w-4xl"
           }`}
         >
           {/* Hero Header */}
-          <section className="mb-6 rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur lg:p-7">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <section className="mb-4 rounded-[1.5rem] border border-white/70 bg-white/90 p-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur lg:p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
                 <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
                   <Sparkles className="h-4 w-4" />
                   AI Roadmap
                 </div>
-                <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{roadmapTitle}</h1>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
+                <h1 className="mt-2 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">{roadmapTitle}</h1>
+                <p className="mt-1 text-xs leading-5 text-slate-400">
                   {roadmapDescription} <span className="font-semibold text-slate-700">{formatRoadmapId(roadmapData?.id || workspaceId)}</span>.
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-3">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
                   <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Trạng thái</div>
                   <div className="mt-0.5 text-sm font-semibold text-slate-800">{(roadmapData.status || "DONE").toUpperCase()}</div>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
                   <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Bước học</div>
                   <div className="mt-0.5 text-sm font-semibold text-slate-800">{steps.length}</div>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
                   <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Tài nguyên</div>
                   <div className="mt-0.5 text-sm font-semibold text-slate-800">{totalResources}</div>
                 </div>
@@ -579,161 +637,61 @@ export default function Roadmap() {
             </div>
           </section>
 
-          {/* Gamified curved roadmap */}
-          <div className="relative py-6">
-            {/* SVG for curved path and nodes */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 2000" preserveAspectRatio="xMidYMin slice">
-              {/* Placeholder for curved path - will draw a simple line for now */}
-              {steps.map((step, index) => {
-                if (index === 0) return null;
-                const prevStep = steps[index - 1];
-                // These coordinates are highly simplified and will need dynamic calculation
-                // For now, just drawing a vertical line between conceptual points
-                const startX = 500; // Center of the SVG
-                const startY = (index - 1) * 150 + 100; // Approximate Y for previous step
-                const endX = 500; // Center of the SVG
-                const endY = index * 150 + 100; // Approximate Y for current step
+          {/* Roadmap path with CSS connectors */}
+          <div className="relative py-12 flex flex-col items-center gap-10">
+            {steps.map((step, index) => {
+              const isLeft = index % 2 === 0;
+              const isLast = index === steps.length - 1;
+              const isActive = selectedStep?.id === step.id;
+              const stepId = getStepKey(step) || `step-${index}`;
+              const title = toText(step.title) || `Module ${index + 1}`;
 
-                return (
-                  <path
-                    key={`path-${index}`}
-                    d={`M ${startX} ${startY} L ${endX} ${endY}`}
-                    stroke="#FFB74D"
-                    strokeWidth="4"
-                    fill="none"
-                    className="opacity-50"
-                  />
-                );
-              })}
-            </svg>
-
-            <div className="relative z-10">
-              {steps.map((step, index) => {
-                const tone = getStepTone(step, index, steps.length);
-                const isActive = selectedStep?.id === step.id;
-                const stepId = getStepKey(step) || `step-${index}`;
-                const isLeft = index % 2 === 0; // For alternating text alignment
-                const matchedTask = tasks.find((task) => task.roadmapStepId === stepId);
-                const matchedTaskDate = matchedTask?.taskDate ? formatTaskDate(matchedTask.taskDate) : "";
-                const stepSummary = getStepSummary(step);
-
-                // Placeholder for step completion
-                const stepProgress = Math.min(100, 10 + index * 20);
-                const circumference = 2 * Math.PI * 20; // For a 40px diameter circle (radius 20)
-                const strokeDashoffset = circumference - (stepProgress / 100) * circumference;
-
-                return (
-                  <div
-                    key={stepId}
-                    className={`relative flex items-center mb-20 ${
-                      isLeft ? "justify-start md:justify-end md:pr-[calc(50%-100px)]" : "justify-start md:pl-[calc(50%-100px)]"
-                    }`}
-                  >
-                    {/* Phase Header - simple grouping */}
-                    {index % 3 === 0 && (
-                      <div className={`absolute -top-10 w-full text-center ${isLeft ? "md:text-right pr-40" : "md:text-left pl-40"}`}>
-                        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-                          GIAI ĐOẠN {Math.floor(index / 3) + 1}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Node and text container */}
-                    <div
-                      onClick={() => setSelectedStep(step)}
-                      className={`flex flex-col items-center gap-2 cursor-pointer transition-all duration-200 hover:scale-110 group ${
-                        isLeft ? "text-right" : "text-left"
-                      }`}
-                    >
-                      {/* Floating XP Badge */}
-                      <span className="absolute -top-8 px-2 py-0.5 rounded-full bg-orange-500 text-white text-[10px] font-bold shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        +100 XP
-                      </span>
-
-                      {/* Circular Node with Progress Ring */}
-                      <div className="relative w-12 h-12 flex items-center justify-center">
-                        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 44 44">
-                          <circle
-                            className="text-slate-200"
-                            strokeWidth="4"
-                            stroke="currentColor"
-                            fill="transparent"
-                            r="20"
-                            cx="22"
-                            cy="22"
-                          />
-                          <circle
-                            className={`${isActive ? "text-orange-500" : "text-emerald-500"} transition-colors duration-200`}
-                            strokeWidth="4"
-                            strokeDasharray={circumference}
-                            strokeDashoffset={strokeDashoffset}
-                            strokeLinecap="round"
-                            stroke="currentColor"
-                            fill="transparent"
-                            r="20"
-                            cx="22"
-                            cy="22"
-                            transform="rotate(-90 22 22)"
-                          />
-                        </svg>
-                        <span className={`absolute text-sm font-bold ${isActive ? "text-orange-700" : "text-slate-700"}`}>
-                          {index + 1}
-                        </span>
-                      </div>
-
-                      {/* Node Title */}
-                      <h4 className={`text-sm font-bold text-slate-800 group-hover:text-orange-600 transition-colors duration-200 max-w-[150px] ${isLeft ? "pr-2" : "pl-2"}`} title={toText(step.title) || `Module ${index + 1}`}>
-                        {toText(step.title) || `Module ${index + 1}`}
-                      </h4>
-                      <p className={`mt-1 max-w-[180px] text-xs leading-5 text-slate-500 line-clamp-2 ${isLeft ? "pr-2 text-right" : "pl-2 text-left"}`} title={stepSummary}>
-                        {stepSummary}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                        {matchedTask ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold text-sky-700 ring-1 ring-sky-200">
-                            <CalendarDays className="h-3 w-3" />
-                            Lịch học: {matchedTaskDate}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-500 ring-1 ring-slate-200">
-                            <CalendarDays className="h-3 w-3" />
-                            Chưa có lịch học
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          disabled={!matchedTask}
-                          title={matchedTask ? "Mở bài học" : "Chưa có lịch học"}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            if (!matchedTask) return;
-                            navigate("/app/learning/course", { state: { taskId: matchedTask.taskId } });
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <PlayCircle className="h-3 w-3" />
-                          Vào học
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
-                        <span>{getStepDurationMinutes(step) ? `${getStepDurationMinutes(step)} phút` : "Tự điều chỉnh"}</span>
-                        <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0 text-[9px] font-bold uppercase tracking-[0.15em] ${tone.dotClass}`}>
-                          <Layers3 className="h-2.5 w-2.5" />
-                          {tone.label}
-                        </span>
-                      </div>
+              return (
+                <div key={stepId} className="relative flex flex-col items-center w-full">
+                  {!isLast && (
+                    <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[240px] sm:w-[320px] h-[calc(100%+2.5rem)] z-0 pointer-events-none">
+                      <svg
+                        className="w-full h-full text-orange-300"
+                        preserveAspectRatio="none"
+                        viewBox="0 0 100 100"
+                      >
+                        <path
+                          d={isLeft ? "M 50 0 C 15 0, 15 100, 50 100" : "M 50 0 C 85 0, 85 100, 50 100"}
+                          stroke="currentColor"
+                          strokeWidth="6"
+                          strokeLinecap="round"
+                          fill="none"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      </svg>
                     </div>
-                  </div>
-                );
-              })}
+                  )}
 
-              {/* Finish node */}
-              <div className="relative flex justify-center mt-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg">
-                  <Sparkles className="h-6 w-6" />
+                  {/* Node Content */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStep(step)}
+                    className={`relative z-10 flex flex-col items-center transition-transform duration-200 hover:scale-105 ${isLeft ? '-translate-x-16 sm:-translate-x-24' : 'translate-x-16 sm:translate-x-24'}`}
+                  >
+                    <div className={`flex h-20 w-20 items-center justify-center rounded-full border-4 ${isActive ? 'border-orange-500 bg-orange-500 text-white shadow-lg shadow-orange-200' : 'border-orange-300 bg-white text-orange-600 shadow-md'}`}>
+                      <span className="text-xl font-black">{index + 1}</span>
+                    </div>
+                    <div className="mt-3 bg-white/95 px-4 py-2 rounded-xl relative z-10 w-36 sm:w-48 text-center shadow-sm border border-slate-50">
+                      <h3 className="text-sm font-semibold leading-5 text-slate-800 line-clamp-2">{title}</h3>
+                    </div>
+                  </button>
                 </div>
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">
-                  Hoàn thành
+              );
+            })}
+
+            {/* Final "Hoàn thành" node */}
+            <div className="relative flex flex-col items-center w-full">
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-orange-500 bg-orange-500 text-white shadow-lg shadow-orange-200">
+                  <Sparkles className="h-8 w-8" />
+                </div>
+                <div className="mt-3 bg-white/95 px-4 py-2 rounded-xl relative z-10 w-36 sm:w-48 text-center shadow-sm border border-slate-50">
+                  <h3 className="text-sm font-semibold leading-5 text-slate-800 line-clamp-2">Hoàn thành</h3>
                 </div>
               </div>
             </div>
@@ -798,7 +756,7 @@ export default function Roadmap() {
 
         {/* ==================== RIGHT COLUMN: LOCKED DETAIL PANEL ==================== */}
         {selectedStep && (
-          <div className="w-full lg:w-[35%] shrink-0 h-full overflow-y-auto custom-scrollbar border-l border-slate-100 bg-white transition-all duration-500 ease-in-out">
+          <div className="w-full lg:w-[45%] shrink-0 h-full overflow-y-auto custom-scrollbar border-l border-slate-100 bg-white transition-all duration-500 ease-in-out">
             {renderStepDetail()}
           </div>
         )}
