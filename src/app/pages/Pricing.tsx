@@ -18,7 +18,7 @@ const TW2  = "#9CA3AF";
 const OG   = "#FF6B00";
 const BDR  = "#E5E7EB";
 
-export default function PricingPage() {
+export default function Pricing() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
 
