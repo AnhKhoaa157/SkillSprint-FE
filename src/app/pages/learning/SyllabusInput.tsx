@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   FileText, UploadCloud, Sparkles, CheckCircle2,
@@ -55,13 +55,45 @@ const SUBJECTS = [
   "Machine Learning Basics",
 ];
 
+type SyllabusWorkspace = {
+  workspaceId?: string;
+  name?: string | null;
+  subject?: string | null;
+  onboardingConfig?: {
+    targetGoal?: string | null;
+    preferredDays?: string[] | null;
+    preferredTimeSlots?: string[] | null;
+    targetDeadline?: string | null;
+  } | null;
+};
+
+type SyllabusInputProps = {
+  workspaceId?: string | null;
+  workspace?: SyllabusWorkspace | null;
+};
+
 /* ════════════════════════════════════════════
    SUBJECT + DATE ROW
 ════════════════════════════════════════════ */
-function SubjectDeadlineRow() {
+function SubjectDeadlineRow({
+  workspace,
+  embedded,
+}: {
+  workspace?: SyllabusWorkspace | null;
+  embedded?: boolean;
+}) {
   const [subject, setSubject]   = useState("");
   const [date,    setDate]      = useState("");
   const [subOpen, setSubOpen]   = useState(false);
+
+  const workspaceSubject = workspace?.subject || workspace?.name || "";
+
+  useEffect(() => {
+    if (embedded) {
+      setSubject(workspaceSubject);
+      setSubOpen(false);
+    }
+  }, [embedded, workspaceSubject]);
 
   return (
     <div style={{
@@ -74,79 +106,103 @@ function SubjectDeadlineRow() {
       flexWrap: "wrap",
     }}>
 
-      {/* ── Subject Dropdown ── */}
+      {/* ── Subject / Workspace Context ── */}
       <div style={{ flex: "1 1 220px", minWidth: 200 }}>
         <label style={{
           display: "block", fontFamily: F, fontWeight: 700,
           fontSize: "0.72rem", color: "#374151", marginBottom: 7,
           letterSpacing: "0.02em",
         }}>
-          Select Subject
+          {embedded ? "Workspace context" : "Select Subject"}
         </label>
         <div style={{ position: "relative" }}>
-          <button
-            onClick={() => setSubOpen(p => !p)}
-            style={{
-              width: "100%", padding: "10px 38px 10px 14px",
-              borderRadius: 9, border: `1.5px solid ${subOpen ? OG : BDR}`,
-              background: subOpen ? OGL : WH,
-              fontFamily: F, fontSize: "0.875rem", color: subject ? T1 : T3,
-              textAlign: "left", cursor: "pointer",
-              boxShadow: subOpen ? `0 0 0 3px rgba(255,107,0,0.10)` : "none",
-              transition: "all 0.15s ease",
-              display: "flex", alignItems: "center",
-            }}
-          >
-            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {subject || "Choose your course subject…"}
-            </span>
-            <ChevronDown
-              size={15} color={subOpen ? OG : T3}
+          {embedded ? (
+            <div
               style={{
-                position: "absolute", right: 12, top: "50%",
-                transform: `translateY(-50%) rotate(${subOpen ? 180 : 0}deg)`,
-                transition: "transform 0.2s", flexShrink: 0,
+                width: "100%", padding: "10px 14px",
+                borderRadius: 9, border: `1.5px solid ${BDR}`,
+                background: OGL,
+                fontFamily: F, fontSize: "0.875rem", color: T1,
+                textAlign: "left",
+                boxShadow: "none",
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                minHeight: 42,
               }}
-            />
-          </button>
-
-          <AnimatePresence>
-            {subOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 6, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 4, scale: 0.97 }}
-                transition={{ duration: 0.16 }}
+            >
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {subject || workspaceSubject || "Workspace syllabus"}
+              </span>
+              <span style={{ fontSize: "0.72rem", color: OG, fontWeight: 700, flexShrink: 0 }}>
+                Locked
+              </span>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => setSubOpen(p => !p)}
                 style={{
-                  position: "absolute", top: "calc(100% + 5px)", left: 0, right: 0,
-                  background: WH, borderRadius: 10,
-                  border: `1.5px solid ${BDR}`,
-                  boxShadow: "0 4px 6px rgba(0,0,0,0.04), 0 12px 32px rgba(0,0,0,0.10)",
-                  overflow: "hidden", zIndex: 50,
+                  width: "100%", padding: "10px 38px 10px 14px",
+                  borderRadius: 9, border: `1.5px solid ${subOpen ? OG : BDR}`,
+                  background: subOpen ? OGL : WH,
+                  fontFamily: F, fontSize: "0.875rem", color: subject ? T1 : T3,
+                  textAlign: "left", cursor: "pointer",
+                  boxShadow: subOpen ? `0 0 0 3px rgba(255,107,0,0.10)` : "none",
+                  transition: "all 0.15s ease",
+                  display: "flex", alignItems: "center",
                 }}
               >
-                {SUBJECTS.map(s => (
-                  <div
-                    key={s}
-                    onClick={() => { setSubject(s); setSubOpen(false); }}
+                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {subject || "Choose your course subject…"}
+                </span>
+                <ChevronDown
+                  size={15} color={subOpen ? OG : T3}
+                  style={{
+                    position: "absolute", right: 12, top: "50%",
+                    transform: `translateY(-50%) rotate(${subOpen ? 180 : 0}deg)`,
+                    transition: "transform 0.2s", flexShrink: 0,
+                  }}
+                />
+              </button>
+
+              <AnimatePresence>
+                {subOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                    transition={{ duration: 0.16 }}
                     style={{
-                      padding: "10px 14px", cursor: "pointer",
-                      fontFamily: F, fontSize: "0.82rem",
-                      color: subject === s ? OG : T1,
-                      fontWeight: subject === s ? 700 : 400,
-                      background: subject === s ? OGL : "transparent",
-                      borderLeft: `3px solid ${subject === s ? OG : "transparent"}`,
-                      transition: "all 0.1s",
+                      position: "absolute", top: "calc(100% + 5px)", left: 0, right: 0,
+                      background: WH, borderRadius: 10,
+                      border: `1.5px solid ${BDR}`,
+                      boxShadow: "0 4px 6px rgba(0,0,0,0.04), 0 12px 32px rgba(0,0,0,0.10)",
+                      overflow: "hidden", zIndex: 50,
                     }}
-                    onMouseEnter={e => { if (subject !== s) (e.currentTarget as HTMLDivElement).style.background = "#F9FAFB"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = subject === s ? OGL : "transparent"; }}
                   >
-                    {s}
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                    {SUBJECTS.map(s => (
+                      <div
+                        key={s}
+                        onClick={() => { setSubject(s); setSubOpen(false); }}
+                        style={{
+                          padding: "10px 14px", cursor: "pointer",
+                          fontFamily: F, fontSize: "0.82rem",
+                          color: subject === s ? OG : T1,
+                          fontWeight: subject === s ? 700 : 400,
+                          background: subject === s ? OGL : "transparent",
+                          borderLeft: `3px solid ${subject === s ? OG : "transparent"}`,
+                          transition: "all 0.1s",
+                        }}
+                        onMouseEnter={e => { if (subject !== s) (e.currentTarget as HTMLDivElement).style.background = "#F9FAFB"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = subject === s ? OGL : "transparent"; }}
+                      >
+                        {s}
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
         </div>
       </div>
 
@@ -237,7 +293,17 @@ function SubjectDeadlineRow() {
 /* ════════════════════════════════════════════
    LEFT COLUMN — Input Card
 ════════════════════════════════════════════ */
-function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: boolean }) {
+function InputCard({
+  onAnalyse,
+  analysed,
+  workspaceLabel,
+  workspaceId,
+}: {
+  onAnalyse: () => void;
+  analysed: boolean;
+  workspaceLabel?: string;
+  workspaceId?: string | null;
+}) {
   const [tab, setTab]       = useState<"paste" | "upload">("paste");
   const [text, setText]     = useState("");
   const [loading, setLoading] = useState(false);
@@ -272,7 +338,9 @@ function InputCard({ onAnalyse, analysed }: { onAnalyse: () => void; analysed: b
                 Syllabus Content
               </p>
               <p style={{ fontFamily: F, fontSize: "0.72rem", color: T3, marginTop: 3 }}>
-                Paste or upload your university course syllabus
+                {workspaceLabel
+                  ? `Workspace: ${workspaceLabel}${workspaceId ? ` · ${workspaceId}` : ""}`
+                  : "Paste or upload your university course syllabus"}
               </p>
             </div>
           </div>
@@ -716,8 +784,10 @@ function TopicsCard() {
 /* ════════════════════════════════════════════
    MAIN PAGE (renders inside DashboardLayout)
 ════════════════════════════════════════════ */
-export default function SyllabusInput() {
+export default function SyllabusInput({ workspaceId = null, workspace = null }: SyllabusInputProps) {
   const [analysed, setAnalysed] = useState(false);
+  const isEmbedded = Boolean(workspaceId || workspace);
+  const workspaceLabel = workspace?.name || workspace?.subject || workspaceId || undefined;
 
   return (
     <motion.div
@@ -741,25 +811,26 @@ export default function SyllabusInput() {
         input[type="date"]::-webkit-inner-spin-button { display: none; }
       `}</style>
 
-      {/* ── Page heading ── */}
-      <div style={{ marginBottom: 18 }}>
-        <h1 style={{
-          fontFamily: F, fontWeight: 800, fontSize: "1.55rem",
-          color: T1, letterSpacing: "-0.035em", margin: 0, lineHeight: 1.2,
-        }}>
-          Syllabus Input 📑
-        </h1>
-        <p style={{
-          fontFamily: F, fontSize: "0.86rem", color: T2,
-          marginTop: 6, lineHeight: 1.6,
-        }}>
-          Subject: <strong style={{ color: T1 }}>PRJ301</strong> — Paste syllabus → AI will analyse and create your roadmap.
-        </p>
-      </div>
+      {!isEmbedded && (
+        <div style={{ marginBottom: 18 }}>
+          <h1 style={{
+            fontFamily: F, fontWeight: 800, fontSize: "1.55rem",
+            color: T1, letterSpacing: "-0.035em", margin: 0, lineHeight: 1.2,
+          }}>
+            Syllabus Input 📑
+          </h1>
+          <p style={{
+            fontFamily: F, fontSize: "0.86rem", color: T2,
+            marginTop: 6, lineHeight: 1.6,
+          }}>
+            Subject: <strong style={{ color: T1 }}>PRJ301</strong> — Paste syllabus → AI will analyse and create your roadmap.
+          </p>
+        </div>
+      )}
 
       {/* ── Subject + Deadline Row ── */}
       <div style={{ marginBottom: 16 }}>
-        <SubjectDeadlineRow />
+        <SubjectDeadlineRow workspace={workspace} embedded={isEmbedded} />
       </div>
 
       {/* ── 2-column grid ── */}
@@ -772,7 +843,12 @@ export default function SyllabusInput() {
 
         {/* ── LEFT: Input + tip banner ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <InputCard onAnalyse={() => setAnalysed(true)} analysed={analysed} />
+          <InputCard
+            onAnalyse={() => setAnalysed(true)}
+            analysed={analysed}
+            workspaceLabel={workspaceLabel}
+            workspaceId={workspaceId}
+          />
 
           {/* Light blue tip banner */}
           <div style={{
@@ -857,10 +933,9 @@ export default function SyllabusInput() {
             exit={{ opacity: 0, y: 10 }}
             transition={{ delay: 0.3, duration: 0.4, ease: [0.22,1,0.36,1] }}
             style={{
-              position: "sticky", bottom: 0, left: 0, right: 0,
-              padding: "12px 0 4px",
-              background: "linear-gradient(to bottom, transparent 0%, #F9FAFB 28%)",
               marginTop: 20,
+              padding: isEmbedded ? 0 : "12px 0 4px",
+              background: isEmbedded ? "transparent" : "linear-gradient(to bottom, transparent 0%, #F9FAFB 28%)",
             }}
           >
             <Link to="/app/roadmap" style={{ textDecoration: "none", display: "block" }}>

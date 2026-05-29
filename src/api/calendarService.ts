@@ -20,6 +20,7 @@ export type WeekDay =
 
 export type GenerateCalendarRequest = {
   startDate?: string | null;
+  endDate?: string | null;
   studyDays?: WeekDay[] | null;
   dailyStartTime?: string | null;
   sessionMinutes?: number | null;

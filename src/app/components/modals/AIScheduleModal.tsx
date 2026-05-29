@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo, type FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   X, ChevronRight, ChevronLeft, Calendar, Clock,
@@ -22,6 +22,14 @@ const T3 = "#9CA3AF";
 const GR = "#10B981";
 const RD = "#EF4444";
 
+const DEFAULT_DATE_FORMAT = () => new Date().toISOString().split('T')[0];
+
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
 type ScheduleStep =
   | "dateRange"
   | "availableDays"
@@ -39,12 +47,21 @@ interface ScheduleConfig {
   goal: "current-step" | "full-roadmap" | null;
 }
 
+interface ScheduleConfigInput {
+  dateRange: { start: string; end: string } | null;
+  availableDays: string[];
+  timeSlots: { start: string; end: string }[];
+  duration: number | null;
+  goal: "current-step" | "full-roadmap" | null;
+}
+
 interface AIScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (config: ScheduleConfig) => void;
+  onConfirm: (config: ScheduleConfigInput) => Promise<void> | void;
   subjectTitle?: string;
   currentPhase?: number;
+  initialConfig?: Partial<ScheduleConfig> | null;
 }
 
 const DAYS_OF_WEEK = [
@@ -83,6 +100,7 @@ function AIScheduleModalComponent({
   onConfirm,
   subjectTitle = "Mảng và đánh chỉ số",
   currentPhase = 3,
+  initialConfig = null,
 }: AIScheduleModalProps) {
   // Helper function to parse YYYY-MM-DD string to Date object safely
   const parseDate = (dateStr: string) => {
@@ -99,26 +117,71 @@ function AIScheduleModalComponent({
     });
   };
 
-  const [step, setStep] = useState<ScheduleStep>("dateRange");
-  const [config, setConfig] = useState<ScheduleConfig>({
-    dateRange: null,
-    availableDays: [],
-    timeSlots: [],
-    duration: null,
-    goal: null,
-  });
+  const normalizeDateInput = (value: string | null | undefined) => {
+    if (!value) {
+      return null;
+    }
 
-  const [tempDateStart, setTempDateStart] = useState(() => {
-    const today = new Date(2026, 4, 6); // May 6, 2026 (current date)
-    return today.toISOString().split('T')[0];
-  });
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().split('T')[0];
+  };
+
+  const getFallbackEndDate = (startDate: string) => {
+    return addDays(parseDate(startDate), 30).toISOString().split('T')[0];
+  };
+
+  const createDefaultConfig = (seed?: Partial<ScheduleConfig> | null): ScheduleConfig => {
+    const startDate = normalizeDateInput(seed?.dateRange?.start) || DEFAULT_DATE_FORMAT();
+    const endDate = normalizeDateInput(seed?.dateRange?.end) || getFallbackEndDate(startDate);
+
+    return {
+      dateRange: {
+        start: startDate,
+        end: endDate,
+      },
+      availableDays: seed?.availableDays?.length ? seed.availableDays : ["mon", "tue", "wed", "thu", "fri"],
+      timeSlots: seed?.timeSlots?.length
+        ? seed.timeSlots.map(slot => ({
+            start: slot.start.trim(),
+            end: slot.end.trim(),
+          }))
+        : [{ start: "9", end: "10" }],
+      duration: seed?.duration ?? 60,
+      goal: seed?.goal ?? "full-roadmap",
+    };
+  };
+
+  const [step, setStep] = useState<ScheduleStep>("dateRange");
+  const [config, setConfig] = useState<ScheduleConfig>(() => createDefaultConfig(initialConfig));
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const steps: ScheduleStep[] = ["dateRange", "availableDays", "timeSlots", "duration", "goal", "preview", "confirm"];
+
+  const [tempDateStart, setTempDateStart] = useState(() => createDefaultConfig(initialConfig).dateRange!.start);
   
-  const [tempDateEnd, setTempDateEnd] = useState(() => {
-    const today = new Date(2026, 4, 6);
-    const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + 30); // 30 days from today
-    return endDate.toISOString().split('T')[0];
-  });
+  const [tempDateEnd, setTempDateEnd] = useState(() => createDefaultConfig(initialConfig).dateRange!.end);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const nextConfig = createDefaultConfig(initialConfig);
+    setTempDateStart(nextConfig.dateRange!.start);
+    setTempDateEnd(nextConfig.dateRange!.end);
+    setStep("dateRange");
+    setConfig(nextConfig);
+    setIsSubmitting(false);
+  }, [initialConfig, isOpen]);
+
+  const currentStep = steps.indexOf(step);
+  const isLastStep = currentStep === steps.length - 1;
+  const onboardingTimeSlots = initialConfig?.timeSlots ?? [];
+
+  const formatTimeSlotLabel = (slot: { start: string; end: string }) => {
+    const start = slot.start.trim();
+    const end = slot.end.trim();
+    return `${start} - ${end}`;
+  };
 
   /* ── Generated preview schedule ── */
   const previewSchedule = useMemo(() => {
@@ -185,9 +248,6 @@ function AIScheduleModalComponent({
   };
 
   const handleNext = () => {
-    const steps: ScheduleStep[] = [
-      "dateRange", "availableDays", "timeSlots", "duration", "goal", "preview", "confirm"
-    ];
     const currentIndex = steps.indexOf(step);
     
     // Validate current step
@@ -219,9 +279,31 @@ function AIScheduleModalComponent({
     }
   };
 
-  const handleConfirm = () => {
-    onConfirm(config);
-    onClose();
+  const handleConfirm = async () => {
+    try {
+      setIsSubmitting(true);
+      await Promise.resolve(onConfirm(config));
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!isLastStep) {
+      setStep(steps[currentStep + 1]);
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await Promise.resolve(onConfirm(config));
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -232,31 +314,15 @@ function AIScheduleModalComponent({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.50)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 9999,
-        fontFamily: F,
-      }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 w-screen h-screen"
     >
-      <motion.div
-        initial={{ scale: 0.92, opacity: 0, y: 20 }}
+      <motion.form
+        onSubmit={onSubmit}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.92, opacity: 0, y: 20 }}
         onClick={e => e.stopPropagation()}
-        style={{
-          background: CARD,
-          borderRadius: 20,
-          width: "90%",
-          maxWidth: 680,
-          maxHeight: "85vh",
-          overflow: "auto",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.20)",
-        }}
+        className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-0 flex flex-col"
+        style={{ fontFamily: F }}
       >
         {/* Header */}
         <div style={{
@@ -373,7 +439,7 @@ function AIScheduleModalComponent({
                         display: "block",
                         marginBottom: 6,
                       }}>
-                        Ngày kết thúc
+                        Hạn chót hoàn thành (Target Deadline)
                       </label>
                       <input
                         type="date"
@@ -423,7 +489,7 @@ function AIScheduleModalComponent({
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.28 }}
               >
-                <div>
+                <div className="pb-4">
                   <label style={{
                     display: "block",
                     fontSize: "0.95rem",
@@ -525,6 +591,41 @@ function AIScheduleModalComponent({
                     Bạn có thể học vào những giờ nào? (Chọn 1-3 khung giờ ưu tiên)
                   </p>
 
+                  {onboardingTimeSlots.length > 0 && (
+                    <div className="mb-5 rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-lg">
+                          🕒
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-bold text-orange-900">Khung giờ mặc định (Từ Onboarding)</div>
+                          <p className="mt-1 text-xs leading-5 text-orange-800/80">
+                            Các khung giờ này đã được lấy từ dữ liệu onboarding và được chọn sẵn bên dưới. Bạn có thể giữ nguyên hoặc chỉnh lại.
+                          </p>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {onboardingTimeSlots.map((slot, index) => (
+                              <span
+                                key={`${slot.start}-${slot.end}-${index}`}
+                                className="inline-flex items-center rounded-full border border-orange-200 bg-white px-3 py-1 text-xs font-semibold text-orange-700"
+                              >
+                                {formatTimeSlotLabel(slot)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-slate-200" />
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Hoặc chọn lại khung giờ khác bên dưới
+                    </span>
+                    <div className="h-px flex-1 bg-slate-200" />
+                  </div>
+
                   <div style={{
                     display: "flex",
                     flexDirection: "column",
@@ -582,15 +683,7 @@ function AIScheduleModalComponent({
                   </div>
 
                   {config.timeSlots.length > 0 && (
-                    <div style={{
-                      marginTop: 16,
-                      padding: "12px 14px",
-                      borderRadius: 10,
-                      background: "rgba(16,185,129,0.10)",
-                      border: `1px solid rgba(16,185,129,0.22)`,
-                      fontSize: "0.82rem",
-                      color: "#059669",
-                    }}>
+                    <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 shadow-sm">
                       Bạn chọn {config.timeSlots.length} khung giờ
                     </div>
                   )}
@@ -1134,8 +1227,9 @@ function AIScheduleModalComponent({
 
           <div style={{ flex: 1 }} />
 
-          {step !== "confirm" && (
+          {!isLastStep && (
             <button
+              type="button"
               onClick={handleNext}
               disabled={!isStepValid()}
               style={{
@@ -1159,9 +1253,10 @@ function AIScheduleModalComponent({
             </button>
           )}
 
-          {step === "confirm" && (
+          {isLastStep && (
             <button
-              onClick={handleConfirm}
+              type="submit"
+              disabled={isSubmitting}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -1169,19 +1264,20 @@ function AIScheduleModalComponent({
                 padding: "10px 22px",
                 borderRadius: 10,
                 border: "none",
-                background: `linear-gradient(135deg, ${GR}, #34D399)`,
-                cursor: "pointer",
+                background: isSubmitting ? "#E5E7EB" : `linear-gradient(135deg, ${GR}, #34D399)`,
+                cursor: isSubmitting ? "not-allowed" : "pointer",
                 color: "#fff",
                 fontWeight: 600,
                 fontSize: "0.82rem",
+                opacity: isSubmitting ? 0.75 : 1,
               }}
             >
               <Check size={14} />
-              Lưu vào calendar
+              {isSubmitting ? "⏳ Đang xử lý..." : "✨ Tạo lịch học"}
             </button>
           )}
         </div>
-      </motion.div>
+      </motion.form>
     </motion.div>
   );
 }

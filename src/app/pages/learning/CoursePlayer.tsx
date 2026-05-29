@@ -144,7 +144,15 @@ export default function CoursePlayer() {
     task?.status?.toUpperCase() === "COMPLETED" ||
     roadmapStep?.status?.toUpperCase() === "COMPLETED";
   const hasStartedSession = Boolean(activeSessionId) && !isCompleted;
-  const canStart = Boolean(taskId) && (actions?.canStart ?? true) && !hasStartedSession && !isStarting && !isFinishing;
+
+  // Date bouncer: disable "Bắt đầu học" if today is strictly before the scheduled date
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const scheduledDate = new Date(task?.taskDate ?? "");
+  scheduledDate.setHours(0, 0, 0, 0);
+  const canStartByDate = Number.isNaN(scheduledDate.getTime()) ? true : today.getTime() >= scheduledDate.getTime();
+
+  const canStart = canStartByDate && Boolean(taskId) && (actions?.canStart ?? true) && !hasStartedSession && !isStarting && !isFinishing;
   const canFinish = Boolean(activeSessionId) && !isCompleted && (actions?.canFinish ?? true) && !isStarting && !isFinishing;
   const startButtonLabel = isStarting ? "Đang khởi tạo..." : hasStartedSession ? "Đã mở phiên học" : "Bắt đầu học";
   const finishButtonLabel = isFinishing ? "Đang hoàn thành..." : "Hoàn thành bài học";
@@ -570,9 +578,11 @@ export default function CoursePlayer() {
                         <div className="mt-5 space-y-4">
                           <div className="rounded-xl border border-orange-100 bg-orange-50 p-5">
                             <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-700">Ready to begin</p>
-                            <h4 className="mt-2 text-xl font-black tracking-tight text-slate-900">Bắt đầu học khi bạn sẵn sàng</h4>
+                        <h4 className="mt-2 text-xl font-black tracking-tight text-slate-900">Bắt đầu học khi bạn sẵn sàng</h4>
                             <p className="mt-2 text-sm leading-6 text-slate-600">
-                              Hệ thống sẽ tạo phiên học mới và giữ lại session đang mở để bạn quay lại tiếp tục.
+                              {canStartByDate
+                                ? "Hệ thống sẽ tạo phiên học mới và giữ lại session đang mở để bạn quay lại tiếp tục."
+                                : "Bài học này chưa đến ngày học theo lịch trình. Bạn sẽ mở được khi đến hạn."}
                             </p>
                           </div>
 
@@ -583,7 +593,7 @@ export default function CoursePlayer() {
                             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-4 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {isStarting ? <LoaderCircle size={16} className="animate-spin" /> : <PlayCircle size={16} />}
-                            🚀 Bắt đầu học
+                            {canStartByDate ? "🚀 Bắt đầu học" : "⏳ Chưa đến ngày học"}
                           </button>
                         </div>
                       ) : (
