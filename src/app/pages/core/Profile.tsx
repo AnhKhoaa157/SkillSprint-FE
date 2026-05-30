@@ -7,8 +7,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { clearAuthTokens, getStoredUserProfile, type StoredUserProfile } from "../../api/authService";
-import meService, { type MeResponse } from "../../api/meService";
+import { clearAuthTokens, getStoredUserProfile, type StoredUserProfile } from "../../../api/authService";
+import meService, { type MeResponse } from "../../../api/meService";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";

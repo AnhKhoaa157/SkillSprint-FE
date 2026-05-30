@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import workspaceService from "../../api/workspaceService";
+import workspaceService from "../../../api/workspaceService";
 import {
   AlertTriangle,
   ArrowRight,
@@ -13,7 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import WorkspaceCard from "../components/WorkspaceCard";
+import WorkspaceCard from "../../components/workspace/WorkspaceCard";
 
 type WorkspaceLearningStructure = {
   status?: "DRAFT" | "CONFIRMED" | string;
@@ -282,6 +282,7 @@ export default function Workspaces() {
       setWorkspaceName("");
       setShowCreateModal(false);
       addNotification("create", "Tạo workspace thành công");
+      window.dispatchEvent(new CustomEvent("workspace_created", { detail: { workspaceId: created?.id ?? null } }));
       navigate("/app/workspaces");
     } catch (error) {
       console.error(error);
@@ -326,6 +327,7 @@ export default function Workspaces() {
       setWorkspaceName("");
       setEditTarget(null);
       addNotification("update", "Cập nhật workspace thành công");
+      window.dispatchEvent(new CustomEvent("workspace_updated", { detail: { workspaceId: editTarget.id } }));
     } catch (error) {
       console.error(error);
       addNotification("error", error instanceof Error ? error.message : "Cập nhật workspace thất bại");
@@ -344,6 +346,7 @@ export default function Workspaces() {
       setWorkspaces((current) => current.filter((workspace) => workspace.id !== deleteTarget.id));
       setDeleteTarget(null);
       addNotification("delete", "Xóa workspace thành công");
+      window.dispatchEvent(new CustomEvent("workspace_deleted", { detail: { workspaceId: deleteTarget.id } }));
       navigate("/app/workspaces");
     } catch (error) {
       console.error(error);

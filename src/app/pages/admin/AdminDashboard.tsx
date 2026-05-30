@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router";
 import AdminHealth from "./AdminHealth";
-import healthService from "../../api/healthService";
-import adminUserService from "../../api/adminUserService";
+import healthService from "../../../api/healthService";
+import adminUserService from "../../../api/adminUserService";
 
 const ACCENT = "#FF6B00";
 const ACCENT_DEEP = "#EA580C";
@@ -196,7 +196,7 @@ function UnitEconBar(props: any) {
 /* ─────────────────────────────────────────────────────────
   Sidebar nav config
 ───────────────────────────────────────────────────────── */
-import { ADMIN_NAV } from "../config/nav";
+import { ADMIN_NAV } from "../../config/nav";
 const NAV_ITEMS = ADMIN_NAV;
 
 /* ─────────────────────────────────────────────────────────
@@ -1005,7 +1005,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let mounted = true;
-    import('../../api/meService').then(mod => mod.getMe().then((me: any) => {
+    import('../../../api/meService').then(mod => mod.getMe().then((me: any) => {
       if (!mounted) return;
       setCurrentUser(me);
     }).catch(() => { }));

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useLocation, useNavigate } from "react-router";
-import { PomodoroTimer } from "../components/PomodoroTimer";
+import { PomodoroTimer } from "../../components/tools/PomodoroTimer";
 import {
   Sparkles, Clock, Send, Brain, CheckCircle2,
   Youtube, FileText, ChevronRight, BookOpen,

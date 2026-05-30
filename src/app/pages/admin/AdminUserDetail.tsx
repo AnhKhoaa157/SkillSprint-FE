@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import adminUserService, { AdminUserDetail } from "../../api/adminUserService";
+import adminUserService, { AdminUserDetail } from "../../../api/adminUserService";
 
 const ROLE_OPTIONS = [
   { label: "Admin", value: "ADMIN" },

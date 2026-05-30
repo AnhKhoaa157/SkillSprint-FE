@@ -1,14 +1,15 @@
-import OnboardingModal from "../components/OnboardingModal.tsx";
-import useOnboardingProfile from "../hooks/useOnboardingProfile";
+import EditWorkspaceConfigModal from "../../components/modals/EditWorkspaceConfigModal";
+import useOnboardingProfile from "../../hooks/useOnboardingProfile";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
-import LearningStructureDisplay from "../components/LearningStructureDisplay.tsx";
-import WorkspaceProgress from "../components/WorkspaceProgress";
+import SyllabusInput from "../learning/SyllabusInput";
+import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
+import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
 import { ArrowLeft, ArrowRight, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle, Copy, SlidersHorizontal, Check } from "lucide-react";
-import { getStoredAuthSession } from "../../api/authService";
-import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../api/materialService.ts";
-import roadmapService from "../../api/roadmapService";
+import { getStoredAuthSession } from "../../../api/authService";
+import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/materialService.ts";
+import roadmapService from "../../../api/roadmapService";
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
 
@@ -16,15 +17,6 @@ const F = "'Inter','Plus Jakarta Sans',sans-serif";
 const CARD = "#FFFFFF";
 const BDR = "#E5E7EB";
 const T1 = "#111827";
-
-type UploadFile = {
-  id: string;
-  name: string;
-  progress: number;
-  status: "idle"|"processing"|"done";
-  jobStatus?: "PENDING" | "PROCESSING" | "FAILED" | "DONE" | string;
-  materialId?: string;
-};
 
 const PROCESSING_JOB_ACTIVE_STATES = new Set([
   "PENDING",
@@ -40,6 +32,15 @@ const PROCESSING_JOB_TERMINAL_STATES = new Set([
   "COMPLETED",
   "FAILED",
 ]);
+
+type UploadFile = {
+  id: string;
+  name: string;
+  progress: number;
+  status: "idle" | "processing" | "done";
+  jobStatus?: "PENDING" | "PROCESSING" | "FAILED" | "DONE" | string;
+  materialId?: string;
+};
 
 type LearningStructureTopic = {
   title: string;
@@ -79,7 +80,7 @@ type AnalysisTimeline = {
   [key: string]: unknown;
 };
 
-type WorkspaceDetailTab = "files" | "roadmap" | "progress" | "settings";
+type WorkspaceDetailTab = "files" | "syllabus" | "roadmap" | "progress" | "settings";
 
 function toWorkspaceCode(rawId?: string) {
   if (!rawId) return "WS-CHUA-CO";
@@ -509,15 +510,21 @@ export default function WorkspaceDetail(){
   const [roadmapGenerating, setRoadmapGenerating] = useState(false);
   const [roadmapError, setRoadmapError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceDetailTab>("files");
+  const currentWorkspace = {
+    workspaceId,
+    name: workspaceName,
+    onboardingConfig: onboarding.profile,
+  };
   const analysisDurationMs = getStructureTimeline(results);
   const liveAnalysisDurationMs = analysisStartedAtRef.current ? Date.now() - analysisStartedAtRef.current : null;
   const analysisDurationLabel = analysisDurationMs !== null ? formatDuration(analysisDurationMs) : (isGeneratingStructure || generateLoading ? formatDuration(liveAnalysisDurationMs) : '0s');
   const generating = isGeneratingStructure || generateLoading;
-  const workspaceTabs: Array<{ id: WorkspaceDetailTab; label: string; description: string }> = [
-    { id: "files", label: "Tài liệu", description: "Tải lên và xử lý nội dung" },
-    { id: "roadmap", label: "Roadmap", description: "Xem lộ trình học tập" },
-    { id: "progress", label: "Tiến độ", description: "Dashboard tiến độ" },
-    { id: "settings", label: "Cài đặt", description: "Cấu hình workspace" },
+  const workspaceTabs: Array<{ id: WorkspaceDetailTab; label: string; description: string; icon: typeof FileText }> = [
+    { id: "files", label: "Tài liệu", description: "Tải lên và xử lý nội dung", icon: FileText },
+    { id: "syllabus", label: "Nhập Syllabus", description: "Nhập syllabus và phân tích theo workspace", icon: FileText },
+    { id: "roadmap", label: "Roadmap", description: "Xem lộ trình học tập", icon: Layers3 },
+    { id: "progress", label: "Tiến độ", description: "Dashboard tiến độ", icon: Radar },
+    { id: "settings", label: "Cài đặt", description: "Cấu hình workspace", icon: SlidersHorizontal },
   ];
 
   async function reloadWorkspaceMaterials() {
@@ -541,30 +548,40 @@ export default function WorkspaceDetail(){
   }
 
   async function handleGenerate(){
+    await triggerStructureGeneration(false);
+  }
+
+  async function handleRegenerateStructure(){
+    await triggerStructureGeneration(true);
+  }
+
+  async function triggerStructureGeneration(isRegenerate: boolean) {
     if (!id) return;
-    try{
-      // Record the analysis start time when generation begins
+
+    try {
       analysisStartedAtRef.current = Date.now();
-      
-      // Show spinner immediately when user starts generation
+
       setStructureGenerationRequested(true);
       setIsGeneratingStructure(true);
       setGenerateLoading(true);
-      toast.loading('Bắt đầu phân tích AI...', { id: 'structure-generation' });
+      toast.loading(isRegenerate ? 'Đang tạo lại cấu trúc AI...' : 'Bắt đầu phân tích AI...', { id: 'structure-generation' });
+
       const headers = buildAuthHeaders(token);
       const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure/generate`, { method: 'POST', headers });
       if (!resp.ok) throw new Error('Generate failed');
-      // Keep loading visible for at least ~10s to give the backend time to start processing
+
       await new Promise(resolve => setTimeout(resolve, 10000));
       stopStructurePolling();
       startStructurePolling();
-    }catch(err:any){
+      await fetchLearningStructure();
+    } catch (err:any) {
       console.error('Generate error', err);
-      toast.error('Không thể bắt đầu phân tích', { id: 'structure-generation' });
+      toast.error(isRegenerate ? 'Không thể tạo lại cấu trúc' : 'Không thể bắt đầu phân tích', { id: 'structure-generation' });
       setIsGeneratingStructure(false);
       setStructureGenerationRequested(false);
+    } finally {
+      setGenerateLoading(false);
     }
-    finally{ setGenerateLoading(false); }
   }
 
   async function handleConfirm(){
@@ -728,55 +745,6 @@ export default function WorkspaceDetail(){
 
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => setIsConfigOpen(true)} 
-              className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
-            >
-              Cấu hình lộ trình
-            </button>
-
-            {visibleChapters.length > 0 ? (
-              normalizedStatus === 'CONFIRMED' ? (
-                hasRoadmapAlready ? (
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/app/workspaces/${id}/roadmap`)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-orange-600 animate-fade-in"
-                  >
-                    Xem Lộ trình
-                    <ArrowRight size={16} />
-                  </button>
-                ) : (
-                  <button
-                    disabled={roadmapGenerating}
-                    onClick={handleGenerateRoadmap}
-                    className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-orange-600 disabled:opacity-50 animate-fade-in"
-                  >
-                    {roadmapGenerating ? 'Đang khởi tạo lộ trình...' : '🎯 Tạo lộ trình AI'}
-                    <ArrowRight size={16} />
-                  </button>
-                )
-              ) : (
-                <button
-                  disabled={confirming}
-                  onClick={handleConfirm}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  <Check size={16} />
-                  {confirming ? "Đang lưu cấu trúc..." : "Chấp nhận lộ trình"}
-                </button>
-              )
-              ) : activeTab === "roadmap" ? (
-                <button
-                  disabled={generating}
-                  onClick={handleGenerate}
-                  className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-orange-700 disabled:opacity-50"
-                >
-                  <Sparkles size={14} />
-                  {generating ? "Đang xử lý AI..." : "Bắt đầu Phân tích AI"}
-                </button>
-              ) : null}
-
-            <button 
               type="button"
               onClick={() => navigate('/app/workspaces')}
               className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition flex items-center gap-1"
@@ -798,7 +766,10 @@ export default function WorkspaceDetail(){
                   onClick={() => setActiveTab(tab.id)}
                   className={`rounded-xl px-4 py-3 text-left transition ${selected ? "bg-orange-500 text-white shadow-md shadow-orange-500/20" : "bg-slate-50 text-slate-700 hover:bg-slate-100"}`}
                 >
-                  <div className="text-sm font-bold">{tab.label}</div>
+                  <div className="flex items-center gap-2 text-sm font-bold">
+                    <tab.icon className="h-4 w-4" />
+                    <span>{tab.label}</span>
+                  </div>
                   <div className={`mt-0.5 text-[11px] ${selected ? "text-orange-50" : "text-slate-400"}`}>{tab.description}</div>
                 </button>
               );
@@ -989,6 +960,52 @@ export default function WorkspaceDetail(){
           </div>
         </div>
 
+        <div className={`${activeTab === "syllabus" ? "mt-6" : "hidden"}`}>
+          {activeTab === "syllabus" && (
+            <SyllabusInput workspaceId={workspaceId} workspace={currentWorkspace} />
+          )}
+        </div>
+
+        <div className={`${activeTab === "settings" ? "mt-6" : "hidden"}`}>
+          {activeTab === "settings" && (
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Cấu hình lộ trình</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Điều chỉnh thông tin đầu vào, mục tiêu học và cấu trúc workspace để AI sinh roadmap chính xác hơn.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsConfigOpen(true)}
+                  className="inline-flex items-center justify-center rounded-xl border border-orange-500 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-600 transition hover:bg-orange-100"
+                >
+                  Cấu hình lộ trình
+                </button>
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Workspace</div>
+                  <div className="mt-2 text-sm font-semibold text-slate-900">{workspaceName}</div>
+                  <div className="mt-1 text-xs text-slate-500">{workspaceCode}</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Trạng thái AI</div>
+                  <div className="mt-2 text-sm font-semibold text-slate-900">{processingDocsCount > 0 ? "Processing" : "Online"}</div>
+                  <div className="mt-1 text-xs text-slate-500">Dựa trên tài liệu và cài đặt hiện tại</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Timeline</div>
+                  <div className="mt-2 text-sm font-semibold text-slate-900">{analysisDurationLabel}</div>
+                  <div className="mt-1 text-xs text-slate-500">Thời gian phân tích gần nhất</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* AI Results Preview - New Section */}
         <div className={`mt-6 ${activeTab === "roadmap" ? "" : "hidden"}`}>
           <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-100">
@@ -1004,7 +1021,6 @@ export default function WorkspaceDetail(){
                   </div>
                   <div className="text-sm font-semibold mb-1">Đang sinh lộ trình</div>
                   <div className="text-xs text-slate-400 mb-4">Hệ thống đang phân tích tài liệu và sinh lộ trình. Vui lòng chờ...</div>
-                  <button onClick={()=>setIsConfigOpen(true)} className="px-4 py-2 rounded-lg bg-white border border-orange-500 text-orange-500 hover:bg-orange-50">Cài đặt lộ trình</button>
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -1013,35 +1029,71 @@ export default function WorkspaceDetail(){
                   </div>
                   <div className="text-sm font-semibold mb-1">Chưa có cấu trúc</div>
                   <div className="text-xs text-slate-400 mb-4">Tải lên tài liệu và chờ xử lý để sinh lộ trình học.</div>
-                  <button onClick={()=>setIsConfigOpen(true)} className="px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600">Cài đặt lộ trình</button>
+                  <button
+                    type="button"
+                    onClick={handleRegenerateStructure}
+                    disabled={generating || confirming}
+                    className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-md transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {generating ? "⏳ Đang phân tích..." : "✨ Phân tích AI"}
+                  </button>
                 </div>
               )
             ) : (
               <div>
-                <div className="flex gap-2 mb-4">
+                <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between">
+                  <div className="inline-flex items-center gap-2">
+                    {normalizedStatus === 'CONFIRMED' ? (
+                      <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Cấu trúc đã xác nhận
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+                        <ShieldCheck className="w-4 h-4" />
+                        Cấu trúc đang chờ xác nhận
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {normalizedStatus === 'CONFIRMED' ? (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/app/workspaces/${id}/roadmap`)}
+                        className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-orange-600"
+                      >
+                        ✨ Xem lộ trình học tập chi tiết
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={handleRegenerateStructure}
+                          disabled={generating || confirming}
+                          className="inline-flex items-center gap-2 rounded-lg border border-orange-500 bg-white px-4 py-2 text-sm font-medium text-orange-600 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {generating ? '⏳ Đang tạo lại...' : '🔄 Tạo lại cấu trúc'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleConfirm}
+                          disabled={confirming || generating}
+                          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          <Check size={16} />
+                          {confirming ? 'Đang lưu cấu trúc...' : 'Chấp nhận lộ trình'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-3 flex gap-2">
                   <button className="px-3 py-1 rounded-md bg-orange-500 text-white text-sm font-medium">Chương có cấu trúc</button>
                 </div>
-                {normalizedStatus === 'CONFIRMED' ? (
-                  <>
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold mb-4">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Cấu trúc đã xác nhận
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/app/workspaces/${id}/roadmap`)}
-                      className="mt-4 inline-flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-orange-600 transition"
-                    >
-                      ✨ Xem lộ trình học tập chi tiết
-                    </button>
-                    <LearningStructureDisplay chapters={visibleChapters} />
-                  </>
-                ) : (
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-semibold mb-4">
-                    <ShieldCheck className="w-4 h-4" />
-                    Cấu trúc đang chờ xác nhận
-                  </div>
-                )}
+
+                <LearningStructureDisplay chapters={visibleChapters} />
               </div>
             )}
           </div>
@@ -1051,12 +1103,16 @@ export default function WorkspaceDetail(){
           {activeTab === "progress" && <WorkspaceProgress workspaceId={workspaceId} className="mt-0" />}
         </div>
 
-        <OnboardingModal
-          open={isConfigOpen}
-          onClose={()=>setIsConfigOpen(false)}
-          workspaceId={id ?? ''}
-          initialValues={onboarding.profile}
-        />
+        {activeTab === "settings" && (
+          <EditWorkspaceConfigModal
+            isOpen={isConfigOpen}
+            onClose={()=>setIsConfigOpen(false)}
+            workspaceId={id ?? ''}
+            workspaceName={workspaceName}
+            initialConfig={onboarding.profile}
+            onSaved={() => void onboarding.fetchOnboardingProfile()}
+          />
+        )}
       </div>
     </div>
   );

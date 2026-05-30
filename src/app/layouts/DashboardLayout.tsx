@@ -8,9 +8,9 @@ import {
 } from "lucide-react";
 import { APP_NAV_SECTIONS } from "../config/nav";
 import { motion, AnimatePresence } from "motion/react";
-import { PricingModal } from "../components/PricingModal";
-import { ReferralModal } from "../components/ReferralModal";
-import { BrandLogo } from "../components/BrandLogo";
+import { PricingModal } from "../components/modals/PricingModal";
+import { ReferralModal } from "../components/modals/ReferralModal";
+import { BrandLogo } from "../components/layout/BrandLogo";
 import meService from "../../api/meService";
 import workspaceService from "../../api/workspaceService";
 import { getStoredUserProfile } from "../../api/authService";
@@ -223,6 +223,23 @@ export default function DashboardLayout() {
     return pathname === normalizedPath || pathname.startsWith(`${normalizedPath}/`);
   };
 
+  const refreshRoadmapWorkspaces = async () => {
+    setRoadmapLoading(true);
+    try {
+      const payload = (await workspaceService.getMyWorkspaces()) as unknown;
+      const items = extractRoadmapCandidates(payload)
+        .map((workspace, index) => normalizeRoadmapSidebarItem(workspace, index))
+        .filter((item): item is RoadmapSidebarItem => Boolean(item))
+        .sort((left, right) => left.name.localeCompare(right.name, "vi"));
+
+      setRoadmapWorkspaces(items);
+    } catch {
+      setRoadmapWorkspaces([]);
+    } finally {
+      setRoadmapLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -257,34 +274,22 @@ export default function DashboardLayout() {
 
     window.addEventListener("skillSprint:profile-updated", handleProfileUpdated);
 
-    const loadRoadmapWorkspaces = async () => {
-      setRoadmapLoading(true);
-      try {
-        const payload = (await workspaceService.getMyWorkspaces()) as unknown;
-        const items = extractRoadmapCandidates(payload)
-          .map((workspace, index) => normalizeRoadmapSidebarItem(workspace, index))
-          .filter((item): item is RoadmapSidebarItem => Boolean(item))
-          .sort((left, right) => left.name.localeCompare(right.name, "vi"));
+    void refreshRoadmapWorkspaces();
 
-        if (mounted) {
-          setRoadmapWorkspaces(items);
-        }
-      } catch {
-        if (mounted) {
-          setRoadmapWorkspaces([]);
-        }
-      } finally {
-        if (mounted) {
-          setRoadmapLoading(false);
-        }
-      }
+    const handleWorkspaceChanged = () => {
+      void refreshRoadmapWorkspaces();
     };
 
-    loadRoadmapWorkspaces();
+    window.addEventListener("workspace_created", handleWorkspaceChanged);
+    window.addEventListener("workspace_updated", handleWorkspaceChanged);
+    window.addEventListener("workspace_deleted", handleWorkspaceChanged);
 
     return () => {
       mounted = false;
       window.removeEventListener("skillSprint:profile-updated", handleProfileUpdated);
+      window.removeEventListener("workspace_created", handleWorkspaceChanged);
+      window.removeEventListener("workspace_updated", handleWorkspaceChanged);
+      window.removeEventListener("workspace_deleted", handleWorkspaceChanged);
     };
   }, []);
 
@@ -362,7 +367,7 @@ export default function DashboardLayout() {
         <nav className="flex-1 overflow-y-auto px-3 py-2">
           {APP_NAV_SECTIONS.map(section => (
             <div key={section.label} className="mb-4 last:mb-0">
-              <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500/80">
+              <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 {section.label}
               </div>
               <div className="space-y-1">
@@ -439,7 +444,7 @@ export default function DashboardLayout() {
                           <div className="space-y-1 px-1 pb-1 pt-2">
                             {roadmapLoading ? (
                               Array.from({ length: 3 }).map((_, index) => (
-                                <div key={index} className="rounded-xl border border-white/5 bg-white/5 p-3">
+                                <div key={index} className="rounded-md border border-white/5 bg-white/5 px-3 py-2">
                                   <div className="h-3 w-24 animate-pulse rounded-full bg-white/15" />
                                   <div className="mt-2 h-2 w-36 animate-pulse rounded-full bg-white/10" />
                                 </div>
@@ -455,17 +460,18 @@ export default function DashboardLayout() {
                                     to={roadmapPath}
                                     onClick={() => setSideOpen(false)}
                                     className={() => [
-                                      "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
+                                      "group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors duration-200",
                                       "border-l-2 border-transparent",
                                       isActive
-                                        ? "border-l-orange-500 bg-orange-500/15 text-orange-300"
-                                        : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200",
+                                        ? "border-l-orange-500 bg-slate-800 text-orange-200"
+                                        : "text-slate-400 hover:bg-slate-800 hover:text-slate-100",
                                     ].join(" ")}
                                   >
                                     <div className="min-w-0 flex-1">
                                       <div className="truncate font-medium">{workspace.name}</div>
-                                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
-                                        {workspace.statusLabel || "READY"}
+                                      <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-green-400">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
+                                        <span className="uppercase tracking-[0.2em]">{workspace.statusLabel || "READY"}</span>
                                       </div>
                                     </div>
                                     <ChevronRight size={14} className="shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5" />
@@ -473,7 +479,7 @@ export default function DashboardLayout() {
                                 );
                               })
                             ) : (
-                              <div className="rounded-xl border border-dashed border-white/10 bg-white/5 px-3 py-3 text-xs leading-5 text-slate-400">
+                              <div className="rounded-md border border-dashed border-white/10 bg-white/5 px-3 py-2 text-xs leading-5 text-slate-400">
                                 Chưa có workspace nào có roadmap đã xác nhận.
                               </div>
                             )}
