@@ -8,7 +8,7 @@ import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPass
 
 /* ─── Tokens ─── */
 const F   = "'Inter','Plus Jakarta Sans',sans-serif";
-const OG  = "#FF6B00";
+const OG  = "#FF7A29";
 const NAV = "#0B1220";
 const NAV2= "#111827";
 
@@ -35,28 +35,33 @@ function Field({
 }) {
   return (
     <div className="mb-5">
-      <label className="block text-xs font-semibold text-gray-700 mb-2">
+      <label className="block text-[0.82rem] font-semibold text-gray-700 mb-2">
         {label}
       </label>
       <div className="relative flex items-center">
-        <Icon size={15} color="#9CA3AF" className="absolute left-3 pointer-events-none z-10"/>
+        <Icon size={16} color="#9CA3AF" className="absolute left-3.5 pointer-events-none z-10"/>
         <input
           type={type} value={value} onChange={e=>onChange(e.target.value)}
           placeholder={placeholder}
-          className={`w-full px-10 py-3 text-sm rounded-lg font-[${F}] outline-none transition-all duration-200 ${
+          className={`w-full pl-11 pr-11 py-3 text-sm bg-white rounded-xl outline-none transition-all duration-200 ${
             error 
-              ? 'border-1.5 border-red-500 focus:border-red-500' 
-              : 'border-1.5 border-gray-200 focus:border-orange-500'
-          } focus:ring-2 focus:ring-orange-100`}
+              ? 'border border-red-500 focus:border-red-500' 
+              : 'border border-gray-200 focus:border-[#FF7A29]'
+          }`}
+          style={{
+            fontFamily: F,
+          }}
           onFocus={e=>{
-            e.currentTarget.style.boxShadow="0 0 0 3px rgba(255,107,0,0.1)";
+            e.currentTarget.style.borderColor = "#FF7A29";
+            e.currentTarget.style.boxShadow = "0 0 0 4px rgba(255, 122, 41, 0.08)";
           }}
           onBlur={e=>{
-            e.currentTarget.style.boxShadow="none";
+            e.currentTarget.style.borderColor = error ? "#EF4444" : "#E5E7EB";
+            e.currentTarget.style.boxShadow = "none";
           }}
         />
         {right && (
-          <div className="absolute right-3 cursor-pointer">{right}</div>
+          <div className="absolute right-3.5 cursor-pointer z-10">{right}</div>
         )}
       </div>
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
@@ -66,112 +71,124 @@ function Field({
 
 /* ─── Feature list ─── */
 const FEATURES = [
-  "Lộ trình học cá nhân hóa bằng AI",
-  "Phân tích khoảng trống kỹ năng theo thời gian thực",
-  "Tối ưu hồ sơ nghề nghiệp và xuất portfolio",
-  "Hỗ trợ nâng cao hồ sơ nghề nghiệp",
+  "Học đến đâu, gạch đầu dòng đến đó",
+  "Phát hiện những phần kiến thức bị hổng",
+  "Mô phỏng phòng vấn để luyện phản xạ",
+  "Tổng hợp lại hồ sơ học tập cực xịn",
 ];
-
-const TESTIMONIAL = {
-  stars: 5,
-  text: '"Trước đây mình mất hàng giờ để chọn học gì trước. SkillSprint cho mình lộ trình rõ ràng và mình đã có internship tại VNG chỉ sau 3 tháng."',
-  name: "Linh Tran",
-  role: "CS @ RMIT Vietnam",
-  avatar: "L",
-};
 
 /* ═══════════════════════════════════════════
    LEFT PANEL
-═══════════════════════════════════════════ */
+ ═══════════════════════════════════════════ */
 function LeftPanel() {
-  const aiImage = ((import.meta as any).env?.VITE_LEFT_PANEL_IMAGE as string | undefined) || "/assets/left-ai-3.svg";
-
   return (
     <div
-      className="w-[40%] flex flex-col px-16 py-12 relative overflow-hidden flex-shrink-0"
+      className="w-[40%] flex flex-col pl-10 pr-12 py-12 relative overflow-hidden flex-shrink-0"
       style={{
-        backgroundImage: `linear-gradient(180deg, rgba(11,18,32,0.86), rgba(3,7,18,0.6)), url(${aiImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
+        background: "linear-gradient(180deg, #FAF6F2 0%, #F3ECE3 100%)",
       }}
     >
-      {/* Subtle glow effects */}
-      <div className="absolute -top-20 -right-16 w-56 h-56 rounded-full bg-gradient-to-b from-orange-500/15 to-transparent opacity-50 pointer-events-none blur-3xl"/>
-      <div className="absolute -bottom-10 -left-10 w-52 h-52 rounded-full bg-gradient-to-t from-indigo-500/12 to-transparent opacity-50 pointer-events-none blur-3xl"/>
-
-      {/* Logo */}
-      <BrandLogo size={32} textColor="#FFFFFF" textSize="0.95rem" className="mb-7"/>
+      {/* Brand logo */}
+      <BrandLogo size={32} align="left" className="mb-7" />
 
       {/* Badge */}
       <div style={{
-        display:"inline-flex",alignItems:"center",gap:"5px",
-        padding:"4px 10px",borderRadius:"99px",
-        background:"rgba(255,107,0,0.15)",border:"1px solid rgba(255,107,0,0.3)",
-        marginBottom:"20px",width:"fit-content",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "5px 14px",
+        borderRadius: "99px",
+        background: "#FFF3EB",
+        border: "1px solid #FFE0CC",
+        marginBottom: "28px",
+        width: "fit-content",
       }}>
-        <div style={{width:"5px",height:"5px",borderRadius:"50%",background:OG}}/>
-        <span style={{fontSize:"0.7rem",color:OG,fontWeight:700,fontFamily:F}}>
-          30.000+ sinh viên đang tăng tốc
+        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#FF7A29" }} />
+        <span style={{ fontSize: "0.75rem", color: "#FF7A29", fontWeight: 700, fontFamily: F }}>
+          Dự án sinh viên (Bản thử nghiệm Beta)
         </span>
       </div>
 
       {/* Headline */}
       <h1 style={{
-        fontSize:"1.6rem",fontWeight:900,lineHeight:1.2,
-        letterSpacing:"-0.03em",marginBottom:"12px",fontFamily:F,
+        fontSize: "2.2rem",
+        fontWeight: 900,
+        lineHeight: 1.25,
+        letterSpacing: "-0.03em",
+        color: "#1F2937",
+        marginBottom: "16px",
+        fontFamily: F,
       }}>
-        <span style={{color:"#FFFFFF"}}>Biến kỹ năng của bạn thành </span>
-        <span style={{color:OG}}>cơ hội nghề nghiệp.</span>
+        Đừng để kiến thức<br />làm bạn <span style={{ color: "#FF7A29" }}>quá tải.</span>
       </h1>
-      <p style={{fontSize:"0.78rem",color:"#94A3B8",lineHeight:1.65,marginBottom:"24px",fontFamily:F}}>
-        Nền tảng định hướng nghề nghiệp AI dành cho sinh viên Việt Nam. Cá nhân hóa lộ trình, tập trung vào kết quả thực tế.
+      
+      <p style={{
+        fontSize: "0.875rem",
+        color: "#4B5563",
+        lineHeight: 1.65,
+        marginBottom: "32px",
+        fontFamily: F,
+      }}>
+        Ứng dụng được tạo ra bởi sinh viên, dành cho sinh viên. Giúp bạn gom nhóm kiến thức, biết mình thiếu gì và cần học gì tiếp theo.
       </p>
 
       {/* Features */}
-      <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"auto"}}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "auto" }}>
         {FEATURES.map(f => (
-          <div key={f} style={{display:"flex",alignItems:"flex-start",gap:"9px"}}>
+          <div key={f} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{
-              width:"18px",height:"18px",borderRadius:"50%",
-              background:"rgba(255,107,0,0.15)",border:"1px solid rgba(255,107,0,0.3)",
-              display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:"1px",
+              width: "20px",
+              height: "20px",
+              borderRadius: "50%",
+              background: "#FFF3EB",
+              border: "1px solid #FFE0CC",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
             }}>
-              <Check size={10} color={OG} strokeWidth={3}/>
+              <Check size={11} color="#FF7A29" strokeWidth={3.5} />
             </div>
-            <span style={{fontSize:"0.78rem",color:"#CBD5E1",lineHeight:1.5,fontFamily:F}}>{f}</span>
+            <span style={{ fontSize: "0.875rem", color: "#374151", fontWeight: 600, fontFamily: F }}>
+              {f}
+            </span>
           </div>
         ))}
       </div>
 
-      {/* Testimonial */}
+      {/* Dev message card */}
       <div style={{
-        marginTop:"28px",padding:"16px",borderRadius:"12px",
-        background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",
+        marginTop: "40px",
+        padding: "20px 24px",
+        borderRadius: "16px",
+        background: "#FFFFFF",
+        border: "1px solid rgba(0, 0, 0, 0.04)",
+        boxShadow: "0 10px 25px rgba(0, 0, 0, 0.02)",
+        position: "relative",
       }}>
-        <div style={{display:"flex",gap:"2px",marginBottom:"10px"}}>
-          {Array.from({length:TESTIMONIAL.stars}).map((_,i)=>(
-            <span key={i} style={{color:"#FBBF24",fontSize:"11px"}}>★</span>
-          ))}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+          <span style={{ color: "#10B981", fontSize: "16px", lineHeight: 1 }}>•</span>
+          <span style={{
+            fontSize: "0.75rem",
+            fontWeight: 800,
+            color: "#10B981",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            fontFamily: F,
+          }}>
+            LỜI NHẮN TỪ TEAM DEV 💻
+          </span>
         </div>
         <p style={{
-          fontSize:"0.75rem",color:"#CBD5E1",lineHeight:1.65,
-          fontStyle:"italic",marginBottom:"12px",fontFamily:F,
+          fontSize: "0.82rem",
+          color: "#4B5563",
+          lineHeight: 1.6,
+          fontFamily: F,
+          fontWeight: 500,
+          margin: 0,
         }}>
-          {TESTIMONIAL.text}
+          "Tụi mình hiểu cảm giác hoang mang khi đứng trước núi tài liệu. SkillSprint được sinh ra không phải để 'hack' não, mà chỉ đơn giản là một công cụ giúp chúng ta đi từng bước vững chắc hơn."
         </p>
-        <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-          <div style={{
-            width:"28px",height:"28px",borderRadius:"50%",
-            background:"linear-gradient(135deg,#FF6B00,#FF9A3D)",
-            display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,
-          }}>
-            <span style={{fontSize:"11px",fontWeight:800,color:"#fff"}}>{TESTIMONIAL.avatar}</span>
-          </div>
-          <div>
-            <p style={{fontSize:"0.75rem",fontWeight:700,color:"#FFFFFF",fontFamily:F,lineHeight:1}}>{TESTIMONIAL.name}</p>
-            <p style={{fontSize:"0.68rem",color:"#94A3B8",fontFamily:F}}>{TESTIMONIAL.role}</p>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -638,31 +655,30 @@ export default function Auth() {
               >
                 {/* Heading */}
                 <h2 style={{
-                  fontWeight:900, fontSize:"1.75rem",
-                  letterSpacing:"-0.04em", color:"#111827",
-                  marginBottom:"8px", fontFamily:F, lineHeight:1.2,
-                  marginTop:"0px",
+                  fontWeight: 850, fontSize: "1.9rem",
+                  letterSpacing: "-0.04em", color: "#111827",
+                  marginBottom: "8px", fontFamily: F, lineHeight: 1.25,
+                  marginTop: "0px",
                 }}>
-                  {isSignup ? "Tạo tài khoản" : "Đăng nhập"}
+                  {isSignup ? "Tạo tài khoản mới ✨" : "Chào mừng trở lại 👋"}
                 </h2>
-                <p style={{fontSize:"0.875rem",color:"#6B7280",marginBottom:"24px",fontFamily:F}}>
+                <p style={{ fontSize: "0.875rem", color: "#6B7280", marginBottom: "24px", fontFamily: F }}>
                   {isSignup
-                    ? "Bắt đầu hành trình cá nhân hóa học tập của bạn."
-                    : "Tiếp tục từ nơi bạn đã dừng lại."}
+                    ? "Tham gia cùng các bạn sinh viên đang bứt phá."
+                    : "Đăng nhập để tiếp tục hành trình học tập"}
                 </p>
 
                 {/* Google button */}
                 <motion.button
-                  whileHover={{backgroundColor:"#F9FAFB",boxShadow:"0 2px 4px rgba(0,0,0,0.08)"}}
-                  whileTap={{scale:0.99}}
+                  whileHover={{ backgroundColor: "#F9FAFB", scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
                   style={{
-                    width:"100%",padding:"11px 14px",borderRadius:"10px",
-                    border:"1px solid #D1D5DB",background:"#FFFFFF",
-                    display:"flex",alignItems:"center",justifyContent:"center",gap:"10px",
-                    cursor:"pointer",fontSize:"0.875rem",fontWeight:600,
-                    color:"#374151",fontFamily:F,
-                    boxShadow:"0 1px 2px rgba(0,0,0,0.05)",
-                    transition:"all 0.2s ease",marginBottom:"18px",
+                    width: "100%", padding: "12px 14px", borderRadius: "12px",
+                    border: "1px solid #E5E7EB", background: "#FFFFFF",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
+                    cursor: "pointer", fontSize: "0.875rem", fontWeight: 600,
+                    color: "#374151", fontFamily: F,
+                    transition: "all 0.2s ease", marginBottom: "20px",
                   }}
                 >
                   <GoogleIcon/>
@@ -670,10 +686,12 @@ export default function Auth() {
                 </motion.button>
 
                 {/* Divider */}
-                <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"18px"}}>
-                  <div style={{flex:1,height:"1px",background:"#E5E7EB"}}/>
-                  <span style={{fontSize:"0.75rem",color:"#9CA3AF",fontFamily:F}}>hoặc</span>
-                  <div style={{flex:1,height:"1px",background:"#E5E7EB"}}/>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px", marginTop: "20px" }}>
+                  <div style={{ flex: 1, height: "1px", background: "#E5E7EB" }} />
+                  <span style={{ fontSize: "0.78rem", color: "#9CA3AF", fontFamily: F, whiteSpace: "nowrap" }}>
+                    hoặc tiếp tục với email
+                  </span>
+                  <div style={{ flex: 1, height: "1px", background: "#E5E7EB" }} />
                 </div>
 
                 {/* Fields */}
@@ -681,61 +699,62 @@ export default function Auth() {
                   <Field label="Họ và tên" placeholder="Nguyễn Văn A"
                     icon={User} value={name} onChange={setName}/>
                 )}
-                <Field label="Địa chỉ email" type="email" placeholder="student@gmail.com"
+                <Field label="Địa chỉ email" type="email" placeholder="student@university.edu"
                   icon={Mail} value={email} onChange={setEmail}/>
-                <div style={{marginBottom:"18px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:"6px",alignItems:"baseline"}}>
-                    <label style={{fontSize:"0.8rem",fontWeight:600,color:"#374151",fontFamily:F}}>Mật khẩu</label>
+                
+                <div style={{ marginBottom: "20px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", alignItems: "baseline" }}>
+                    <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#374151", fontFamily: F }}>Mật khẩu</label>
                     {!isSignup && (
-                      <button onClick={()=>setShowReset(true)}
-                        style={{fontSize:"0.78rem",color:OG,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontWeight:600,padding:0,transition:"opacity 0.2s"}}
-                        onMouseEnter={e=>{(e.target as HTMLButtonElement).style.opacity="0.8";}}
-                        onMouseLeave={e=>{(e.target as HTMLButtonElement).style.opacity="1";}}
+                      <button onClick={() => setShowReset(true)}
+                        style={{ fontSize: "0.82rem", color: OG, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 700, padding: 0, transition: "opacity 0.2s" }}
+                        onMouseEnter={e => { (e.target as HTMLButtonElement).style.opacity = "0.8"; }}
+                        onMouseLeave={e => { (e.target as HTMLButtonElement).style.opacity = "1"; }}
                       >
                         Quên mật khẩu?
                       </button>
                     )}
                   </div>
-                  <div style={{position:"relative",display:"flex",alignItems:"center"}}>
-                    <Lock size={15} color="#9CA3AF" style={{position:"absolute",left:"13px",pointerEvents:"none",zIndex:1}}/>
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <Lock size={16} color="#9CA3AF" style={{ position: "absolute", left: "14px", pointerEvents: "none", zIndex: 10 }} />
                     <input
-                      type={showPw?"text":"password"} value={password}
-                      onChange={e=>setPassword(e.target.value)}
-                      placeholder="Tối thiểu 8 ký tự"
+                      type={showPw ? "text" : "password"} value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="••••••••"
                       style={{
-                        width:"100%",padding:"11px 40px 11px 38px",
-                        border:"1.5px solid #E5E7EB",borderRadius:"10px",
-                        fontSize:"0.875rem",fontFamily:F,color:"#111827",
-                        background:"#FFFFFF",outline:"none",boxSizing:"border-box",
-                        transition:"all 0.2s ease",
+                        width: "100%", padding: "12px 44px 12px 44px",
+                        border: "1px solid #E5E7EB", borderRadius: "12px",
+                        fontSize: "0.875rem", fontFamily: F, color: "#111827",
+                        background: "#FFFFFF", outline: "none", boxSizing: "border-box",
+                        transition: "all 0.2s ease",
                       }}
-                      onFocus={e=>{
-                        e.target.style.borderColor=OG;
-                        e.target.style.boxShadow="0 0 0 3px rgba(255,107,0,0.1)";
+                      onFocus={e => {
+                        e.target.style.borderColor = "#FF7A29";
+                        e.target.style.boxShadow = "0 0 0 4px rgba(255, 122, 41, 0.08)";
                       }}
-                      onBlur={e=>{
-                        e.target.style.borderColor="#E5E7EB";
-                        e.target.style.boxShadow="none";
+                      onBlur={e => {
+                        e.target.style.borderColor = "#E5E7EB";
+                        e.target.style.boxShadow = "none";
                       }}
                     />
-                    <button onClick={()=>setShowPw(v=>!v)}
-                      style={{position:"absolute",right:"13px",background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",padding:0,display:"flex",alignItems:"center",transition:"color 0.2s"}}
-                      onMouseEnter={e=>{(e.target as HTMLButtonElement).style.color="#6B7280";}}
-                      onMouseLeave={e=>{(e.target as HTMLButtonElement).style.color="#9CA3AF";}}
+                    <button onClick={() => setShowPw(v => !v)}
+                      style={{ position: "absolute", right: "14px", background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: 0, display: "flex", alignItems: "center", transition: "color 0.2s", zIndex: 10 }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#6B7280"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF"; }}
                     >
-                      {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
+                      {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
 
                 {authError && (
                   <motion.div
-                    initial={{opacity:0,y:-4}}
-                    animate={{opacity:1,y:0}}
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
                     style={{
-                      padding:"10px 12px",borderRadius:"8px",
-                      background:"#FEE2E2",border:"1px solid #FECACA",
-                      fontSize:"0.8rem",color:"#991B1B",marginBottom:"14px",fontFamily:F,lineHeight:1.5,
+                      padding: "10px 12px", borderRadius: "8px",
+                      background: "#FEE2E2", border: "1px solid #FECACA",
+                      fontSize: "0.8rem", color: "#991B1B", marginBottom: "14px", fontFamily: F, lineHeight: 1.5,
                     }}
                   >
                     {authError}
@@ -744,44 +763,50 @@ export default function Auth() {
 
                 {/* CTA */}
                 <motion.button
-                  whileHover={{scale:1.02,boxShadow:"0 6px 20px rgba(255,107,0,0.45)"}}
-                  whileTap={{scale:0.97}}
+                  whileHover={{ scale: 1.01, backgroundColor: "#E6631B", boxShadow: "0 10px 25px rgba(255, 122, 41, 0.2)" }}
+                  whileTap={{ scale: 0.99 }}
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                   style={{
-                    width:"100%",padding:"13px",borderRadius:"10px",
-                    background:isSubmitting ? "#FDBA74" : OG,
-                    color:"#fff",border:"none",cursor:isSubmitting ? "not-allowed" : "pointer",
-                    fontFamily:F,fontWeight:700,fontSize:"0.95rem",
-                    display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",
-                    boxShadow:"0 4px 14px rgba(255,107,0,0.35)",
-                    marginBottom:"14px",opacity:isSubmitting ? 0.9 : 1,
-                    transition:"all 0.2s ease",
+                    width: "100%", padding: "13px 16px", borderRadius: "12px",
+                    background: isSubmitting ? "#FDBA74" : "#FF7A29",
+                    color: "#FFFFFF", border: "none", cursor: isSubmitting ? "not-allowed" : "pointer",
+                    fontFamily: F, fontWeight: 700, fontSize: "0.95rem",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                    boxShadow: "0 6px 20px rgba(255, 122, 41, 0.12)",
+                    marginBottom: "16px", opacity: isSubmitting ? 0.9 : 1,
+                    transition: "all 0.2s ease",
                   }}
                 >
-                  {isSubmitting ? (isSignup ? "Đang tạo..." : "Đang đăng nhập...") : (isSignup ? "Tạo tài khoản" : "Đăng nhập")}
-                  {!isSubmitting && <ArrowRight size={14}/>}
+                  {isSubmitting ? (
+                    isSignup ? "Đang tạo..." : "Đang đăng nhập..."
+                  ) : (
+                    <>
+                      {isSignup ? "Tạo tài khoản" : "Đăng nhập"}
+                      <ArrowRight size={16} strokeWidth={2.5} />
+                    </>
+                  )}
                 </motion.button>
 
                 {/* Start for free note */}
                 {isSignup && (
-                  <p style={{textAlign:"center",fontSize:"0.75rem",color:"#9CA3AF",fontFamily:F,marginBottom:"14px"}}>
+                  <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#9CA3AF", fontFamily: F, marginBottom: "14px" }}>
                     Bắt đầu miễn phí. Không cần thẻ tín dụng.
                   </p>
                 )}
 
                 {/* Switch mode */}
-                <p style={{textAlign:"center",fontSize:"0.82rem",color:"#6B7280",fontFamily:F,marginBottom:"24px"}}>
+                <p style={{ textAlign: "center", fontSize: "0.82rem", color: "#6B7280", fontFamily: F, marginBottom: "24px" }}>
                   {isSignup ? (
                     <>Đã có tài khoản?{" "}
-                      <button onClick={()=>{setTab("signin");setAuthError("");}} style={{color:OG,fontWeight:700,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontSize:"0.82rem",transition:"opacity 0.2s"}} onMouseEnter={e=>{(e.target as HTMLButtonElement).style.opacity="0.8";}} onMouseLeave={e=>{(e.target as HTMLButtonElement).style.opacity="1";}}
+                      <button onClick={() => { setTab("signin"); setAuthError(""); }} style={{ color: OG, fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: "0.82rem", transition: "opacity 0.2s" }} onMouseEnter={e => { (e.target as HTMLButtonElement).style.opacity = "0.8"; }} onMouseLeave={e => { (e.target as HTMLButtonElement).style.opacity = "1"; }}
                       >
                         Đăng nhập
                       </button>
                     </>
                   ) : (
                     <>Chưa có tài khoản?{" "}
-                      <button onClick={()=>{setTab("signup");setAuthError("");}} style={{color:OG,fontWeight:700,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontSize:"0.82rem",transition:"opacity 0.2s"}} onMouseEnter={e=>{(e.target as HTMLButtonElement).style.opacity="0.8";}} onMouseLeave={e=>{(e.target as HTMLButtonElement).style.opacity="1";}}
+                      <button onClick={() => { setTab("signup"); setAuthError(""); }} style={{ color: OG, fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: "0.82rem", transition: "opacity 0.2s" }} onMouseEnter={e => { (e.target as HTMLButtonElement).style.opacity = "0.8"; }} onMouseLeave={e => { (e.target as HTMLButtonElement).style.opacity = "1"; }}
                       >
                         Đăng ký miễn phí
                       </button>
@@ -789,22 +814,14 @@ export default function Auth() {
                   )}
                 </p>
 
-                {/* Trust badges */}
-                <div style={{borderTop:"1px solid #F3F4F6",paddingTop:"16px",textAlign:"center"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"16px",marginBottom:"6px"}}>
-                    {["AWS","Google Cloud","ISO 27001"].map(b=>(
-                      <span key={b} style={{fontSize:"0.68rem",color:"#9CA3AF",fontWeight:600,fontFamily:F}}>{b}</span>
-                    ))}
-                  </div>
-                  <p style={{fontSize:"0.68rem",color:"#9CA3AF",fontFamily:F}}>
-                    Ẩn danh dữ liệu 100%. Tuân thủ PDPA.
-                  </p>
-                </div>
-
                 {/* Admin link */}
-                <p style={{textAlign:"center",marginTop:"14px",fontSize:"0.72rem",color:"#9CA3AF",fontFamily:F}}>
-                  🏛 Bạn là đối tác trường đại học?{" "}
-                  <Link to="/admin-login" style={{color:"#6B7280",fontWeight:600}}>Đăng nhập quản trị</Link>
+                <p style={{ textAlign: "center", marginTop: "24px", fontSize: "0.78rem", color: "#9CA3AF", fontFamily: F }}>
+                  <Link to="/admin-login" style={{ color: "#9CA3AF", textDecoration: "none", transition: "color 0.2s" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#4B5563"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#9CA3AF"; }}
+                  >
+                    Đăng nhập cho đối tác trường ĐH
+                  </Link>
                 </p>
               </motion.div>
             </AnimatePresence>
