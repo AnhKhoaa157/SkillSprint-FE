@@ -1,17 +1,32 @@
-import { getStoredAuthSession } from "./authService";
-
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
-
-type ApiResponse<T> = {
-  success: boolean;
-  code: number;
-  message: string;
-  data: T | null;
-};
+import { requestJson, type ApiResponse } from "./apiClient";
 
 export type StudySessionStatus = "IN_PROGRESS" | "COMPLETED" | string;
 export type DifficultyLevel = "EASY" | "MEDIUM" | "HARD" | string;
 export type RoadmapStepStatus = "UPCOMING" | "CURRENT" | "COMPLETED" | "SKIPPED" | string;
+
+// ---- Pomodoro Timer Types ----
+
+export type PomodoroPhase = "FOCUS" | "SHORT_BREAK" | "LONG_BREAK" | string;
+export type PomodoroSessionStatus = "IN_PROGRESS" | "PAUSED" | "COMPLETED" | string;
+
+export type PomodoroTimerResponse = {
+  pomodoroId: string;
+  status: PomodoroSessionStatus;
+  currentPhase: PomodoroPhase;
+  currentCycle: number;
+  totalCycles: number;
+  focusMinutes: number;
+  shortBreakMinutes: number;
+  longBreakMinutes: number;
+  remainingSeconds: number;
+  phaseStartedAt: string | null;
+  phaseEndAt: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  completedFocusMinutes: number;
+};
+
+// ---- Existing Types ----
 
 export type CalendarTaskResponse = {
   taskId: string;
@@ -99,6 +114,9 @@ export type StudySessionResponse = {
   durationMinutes: number | null;
   notes: string | null;
   focusScore: number | null;
+  taskCompleted: boolean | null;
+  minimumRequiredMinutes: number | null;
+  pomodoro: PomodoroTimerResponse | null;
 };
 
 export type FinishStudySessionRequest = {
@@ -106,77 +124,129 @@ export type FinishStudySessionRequest = {
   focusScore?: number;
 };
 
-function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
-  const headers: Record<string, string> = {};
+// ------------------------------------------------------------------
+// NEW: Short response type for start/complete operations on the
+// workspace-based study session endpoints (Pomodoro from roadmap).
+// ------------------------------------------------------------------
+export type StartStudySessionResponse = {
+  sessionId: string;
+  workspaceId?: string;
+  roadmapStepId?: string;
+  status?: string;
+  startedAt?: string | null;
+  [key: string]: unknown;
+};
 
-  if (includeJsonContentType) {
-    headers["Content-Type"] = "application/json";
+// ------------------------------------------------------------------
+// Pomodoro config that can be passed when starting a study session.
+// ------------------------------------------------------------------
+export type StartStudySessionRequest = {
+  usePomodoro?: boolean;
+  focusMinutes?: number;
+  shortBreakMinutes?: number;
+  longBreakMinutes?: number;
+  totalCycles?: number;
+};
+
+// ==================================================================
+// Helper: Safely unwrap the unified backend response.
+// Uses `res?.data || res` to handle both wrapped and direct payloads.
+// ==================================================================
+function unwrapData<T>(res: ApiResponse<T> | unknown): T {
+  const cleanData = (res as any)?.data || res;
+  if (cleanData && typeof cleanData === "object") {
+    return cleanData as T;
   }
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  return headers;
+  throw new Error((res as any)?.message || "Operation failed");
 }
 
-async function requestJson<T>(path: string, opts: RequestInit = {}): Promise<ApiResponse<T>> {
-  const session = getStoredAuthSession();
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(opts.headers as Record<string, string> || {}),
-  };
-
-  if (session?.accessToken) {
-    headers["Authorization"] = `Bearer ${session.accessToken}`;
-  }
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...opts,
-    headers,
-  });
-
-  const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
-
-  if (!response.ok) {
-    const message = payload?.message || `Server error: ${response.status}`;
-    throw new Error(message);
-  }
-
-  if (!payload) {
-    throw new Error("Invalid response from server");
-  }
-
-  return payload;
-}
+// ==================================================================
+// EXISTING endpoints (refactored with the safe unwrap pattern)
+// ==================================================================
 
 export async function getStudySessionDetail(taskId: string): Promise<StudySessionDetailResponse> {
   const res = await requestJson<StudySessionDetailResponse>(`/api/calendar/tasks/${taskId}/study-session`, {
     method: "GET",
-    headers: buildAuthHeaders(getStoredAuthSession()?.accessToken ?? null),
   });
 
-  if (!res.data) {
-    throw new Error(res.message || "Failed to load study session detail");
-  }
-
-  return res.data;
+  return unwrapData<StudySessionDetailResponse>(res);
 }
 
-export async function startStudySession(taskId: string): Promise<StudySessionResponse> {
+export async function startStudySession(
+  taskId: string,
+  request?: StartStudySessionRequest,
+): Promise<StudySessionResponse> {
   const res = await requestJson<StudySessionResponse>(`/api/calendar/tasks/${taskId}/sessions/start`, {
     method: "POST",
-    headers: buildAuthHeaders(getStoredAuthSession()?.accessToken ?? null),
+    body: request ? JSON.stringify(request) : undefined,
   });
 
-  if (!res.data) {
-    throw new Error(res.message || "Failed to start study session");
+  const cleanData = unwrapData<StudySessionResponse>(res);
+  if (cleanData && typeof cleanData === "object" && cleanData.sessionId) {
+    return cleanData;
   }
-
-  return res.data;
+  throw new Error((res as any)?.message || "Operation failed");
 }
 
+export async function getStudySession(sessionId: string): Promise<StudySessionDetailResponse> {
+  const res = await requestJson<StudySessionDetailResponse>(`/api/study-sessions/${sessionId}`, {
+    method: "GET",
+  });
+
+  return unwrapData<StudySessionDetailResponse>(res);
+}
+
+// ==================================================================
+// POMODORO ENDPOINTS (with safe unwrap)
+// ==================================================================
+
+/**
+ * POST /api/study-sessions/{sessionId}/pomodoro/pause
+ */
+export async function pausePomodoro(sessionId: string): Promise<StudySessionResponse> {
+  const res = await requestJson<StudySessionResponse>(`/api/study-sessions/${sessionId}/pomodoro/pause`, {
+    method: "POST",
+  });
+
+  return unwrapData<StudySessionResponse>(res);
+}
+
+/**
+ * POST /api/study-sessions/{sessionId}/pomodoro/resume
+ */
+export async function resumePomodoro(sessionId: string): Promise<StudySessionResponse> {
+  const res = await requestJson<StudySessionResponse>(`/api/study-sessions/${sessionId}/pomodoro/resume`, {
+    method: "POST",
+  });
+
+  return unwrapData<StudySessionResponse>(res);
+}
+
+/**
+ * POST /api/study-sessions/{sessionId}/pomodoro/next-phase
+ */
+export async function nextPomodoroPhase(sessionId: string): Promise<StudySessionResponse> {
+  const res = await requestJson<StudySessionResponse>(`/api/study-sessions/${sessionId}/pomodoro/next-phase`, {
+    method: "POST",
+  });
+
+  return unwrapData<StudySessionResponse>(res);
+}
+
+/**
+ * POST /api/study-sessions/{sessionId}/pomodoro/finish
+ */
+export async function finishPomodoro(sessionId: string): Promise<StudySessionResponse> {
+  const res = await requestJson<StudySessionResponse>(`/api/study-sessions/${sessionId}/pomodoro/finish`, {
+    method: "POST",
+  });
+
+  return unwrapData<StudySessionResponse>(res);
+}
+
+/**
+ * POST /api/study-sessions/{sessionId}/finish
+ */
 export async function finishStudySession(
   sessionId: string,
   request?: FinishStudySessionRequest,
@@ -184,18 +254,68 @@ export async function finishStudySession(
   const res = await requestJson<StudySessionResponse>(`/api/study-sessions/${sessionId}/finish`, {
     method: "POST",
     body: request ? JSON.stringify(request) : JSON.stringify({}),
-    headers: buildAuthHeaders(getStoredAuthSession()?.accessToken ?? null),
   });
 
-  if (!res.data) {
-    throw new Error(res.message || "Failed to finish study session");
+  const cleanData = unwrapData<StudySessionResponse>(res);
+  if (cleanData && typeof cleanData === "object" && cleanData.sessionId) {
+    return cleanData;
   }
+  throw new Error((res as any)?.message || "Operation failed");
+}
 
-  return res.data;
+// ==================================================================
+// NEW endpoints: Workspace-based Pomodoro (start / complete)
+// These are used directly from the Roadmap page without a calendar task.
+// ==================================================================
+
+/**
+ * POST /api/workspaces/{workspaceId}/study-sessions/start
+ * Khởi động phiên Pomodoro từ Roadmap (không cần calendar task).
+ * Body: { roadmapStepId }
+ */
+export async function startRoadmapStudySession(
+  workspaceId: string,
+  roadmapStepId: string,
+): Promise<StartStudySessionResponse> {
+  const res = await requestJson<StartStudySessionResponse>(
+    `/api/workspaces/${workspaceId}/study-sessions/start`,
+    {
+      method: "POST",
+      body: JSON.stringify({ roadmapStepId }),
+    },
+  );
+
+  const cleanData = unwrapData<StartStudySessionResponse>(res);
+  if (cleanData && typeof cleanData === "object" && cleanData.sessionId) {
+    return cleanData;
+  }
+  throw new Error((res as any)?.message || "Operation failed");
+}
+
+/**
+ * POST /api/study-sessions/{studySessionId}/complete
+ * Kết thúc phiên Pomodoro đang chạy.
+ */
+export async function completeStudySession(
+  studySessionId: string,
+): Promise<StartStudySessionResponse> {
+  const res = await requestJson<StartStudySessionResponse>(
+    `/api/study-sessions/${studySessionId}/complete`,
+    { method: "POST" },
+  );
+
+  return unwrapData<StartStudySessionResponse>(res);
 }
 
 export default {
   getStudySessionDetail,
+  getStudySession,
   startStudySession,
+  startRoadmapStudySession,
+  completeStudySession,
+  pausePomodoro,
+  resumePomodoro,
+  nextPomodoroPhase,
+  finishPomodoro,
   finishStudySession,
 };

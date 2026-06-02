@@ -13,6 +13,8 @@ export type AuthTokens = {
   refreshToken: string;
   expiresIn: number;
   tokenType: string;
+  /** Unique session identifier used for SingleSessionFilter (Redis). */
+  sessionId?: string;
 };
 
 export type AuthRole = "ADMIN" | "LEARNER" | string;
@@ -32,6 +34,7 @@ export type StoredUserProfile = {
 type AuthPayload = AuthTokens & {
   challengeName?: string | null;
   session?: string | null;
+  sessionId?: string | null;
   role_name?: string | string[] | null;
   roleName?: string | string[] | null;
   role?: string | string[] | null;
@@ -164,6 +167,7 @@ function buildAuthSession(data: AuthPayload): AuthSession {
     refreshToken: data.refreshToken,
     expiresIn: data.expiresIn ?? 0,
     tokenType: data.tokenType ?? "Bearer",
+    sessionId: data.sessionId ?? undefined,
     role: extractRole(data),
   };
 }
@@ -186,16 +190,21 @@ export function getStoredAuthSession(): AuthSession | null {
   try {
     const parsed = JSON.parse(raw) as Partial<AuthSession>;
 
-    if (!parsed.accessToken || !parsed.idToken || !parsed.refreshToken) {
+    // Relaxed validation — only accessToken is required.
+    // The BE SingleSessionFilter uses the sessionId for Redis validation,
+    // not refreshToken, so we should not reject tokens just because
+    // refreshToken is missing (some token-response shapes omit it).
+    if (!parsed.accessToken) {
       return null;
     }
 
     return {
       accessToken: parsed.accessToken,
-      idToken: parsed.idToken,
-      refreshToken: parsed.refreshToken,
+      idToken: parsed.idToken ?? "",
+      refreshToken: parsed.refreshToken ?? "",
       expiresIn: parsed.expiresIn ?? 0,
       tokenType: parsed.tokenType ?? "Bearer",
+      sessionId: parsed.sessionId ?? undefined,
       role: extractRole(parsed as Partial<AuthPayload> & Record<string, unknown>),
     };
   } catch {
@@ -401,4 +410,10 @@ export function storeAuthTokens(tokens: AuthSession): void {
 
 export function clearAuthTokens(): void {
   localStorage.removeItem(AUTH_STORAGE_KEY);
+  try {
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem("skillSprint.auth.hydrated");
+  } catch {
+    // non-critical
+  }
 }
