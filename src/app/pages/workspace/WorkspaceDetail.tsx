@@ -7,9 +7,11 @@ import SyllabusInput from "../learning/SyllabusInput";
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
 import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
 import { ArrowLeft, ArrowRight, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle, Copy, SlidersHorizontal, Check } from "lucide-react";
+import { getAuthHeaders } from "../../../api/apiClient";
 import { getStoredAuthSession } from "../../../api/authService";
 import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/materialService.ts";
 import roadmapService from "../../../api/roadmapService";
+import { generateLearningStructure } from "../../../api/learningStructureService";
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
 
@@ -94,19 +96,6 @@ function toWorkspaceCode(rawId?: string) {
   return `WS-${compact.slice(-6).padStart(6, "0")}`;
 }
 
-function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
-  const headers: Record<string, string> = {};
-
-  if (includeJsonContentType) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  return headers;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -449,7 +438,7 @@ export default function WorkspaceDetail(){
 
     if (file.materialId && id) {
       try {
-        const headers = buildAuthHeaders(token, false); // buildAuthHeaders already adds Authorization if token exists
+        const headers = getAuthHeaders();
 
         const resp = await fetch(`${API_BASE}/api/workspaces/${id}/materials/${file.materialId}`, {
           method: 'DELETE',
@@ -477,7 +466,7 @@ export default function WorkspaceDetail(){
   async function fetchLearningStructure(): Promise<ApiResponse<LearningStructureResponse> | LearningStructureResponse | null>{
     if (!id) return null;
     try{
-      const headers = buildAuthHeaders(token);
+      const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
       const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure`, { method: 'GET', headers });
       if (resp.status === 404) {
         setResults(null);
@@ -566,17 +555,16 @@ export default function WorkspaceDetail(){
       setGenerateLoading(true);
       toast.loading(isRegenerate ? 'Đang tạo lại cấu trúc AI...' : 'Bắt đầu phân tích AI...', { id: 'structure-generation' });
 
-      const headers = buildAuthHeaders(token);
-      const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure/generate`, { method: 'POST', headers });
-      if (!resp.ok) throw new Error('Generate failed');
+      await generateLearningStructure(id);
 
       await new Promise(resolve => setTimeout(resolve, 10000));
       stopStructurePolling();
       startStructurePolling();
       await fetchLearningStructure();
-    } catch (err:any) {
+    } catch (err: any) {
+      const msg = err?.message || (isRegenerate ? 'Không thể tạo lại cấu trúc' : 'Không thể bắt đầu phân tích');
       console.error('Generate error', err);
-      toast.error(isRegenerate ? 'Không thể tạo lại cấu trúc' : 'Không thể bắt đầu phân tích', { id: 'structure-generation' });
+      toast.error(msg, { id: 'structure-generation' });
       setIsGeneratingStructure(false);
       setStructureGenerationRequested(false);
     } finally {
@@ -588,7 +576,7 @@ export default function WorkspaceDetail(){
     if (!id || !results) return; // Ensure results are present before confirming
     try{
       setConfirming(true);
-      const headers = buildAuthHeaders(token);
+      const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
       const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure/confirm`, { method: 'POST', headers, body: JSON.stringify({}) });
       if (!resp.ok) throw new Error('Confirm failed');
       const confPayload = await resp.json().catch(()=>null) as ApiResponse<LearningStructureResponse> | LearningStructureResponse | null;

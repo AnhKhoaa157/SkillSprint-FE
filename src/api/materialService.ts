@@ -1,13 +1,4 @@
-import { getStoredAuthSession } from "./authService";
-
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
-
-type ApiResponse<T> = {
-  success: boolean;
-  code: number;
-  message: string;
-  data: T | null;
-};
+import { requestJson, type ApiResponse } from "./apiClient";
 
 export type CreateMaterialUploadUrlRequest = {
   fileName: string;
@@ -81,51 +72,10 @@ export type UploadedMaterialResponse = {
   updatedAt: string;
 };
 
-function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
-  const headers: Record<string, string> = {};
-
-  if (includeJsonContentType) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  return headers;
-}
-
-async function requestJson<T>(path: string, opts: RequestInit = {}): Promise<ApiResponse<T>> {
-  const session = getStoredAuthSession();
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(opts.headers as Record<string, string> || {}),
-  };
-
-  if (session?.accessToken) {
-    headers["Authorization"] = `Bearer ${session.accessToken}`;
-  }
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...opts,
-    headers,
-  });
-
-  const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
-
-  if (!response.ok) {
-    const message = payload?.message || `Server error: ${response.status}`;
-    throw new Error(message);
-  }
-
-  if (!payload) {
-    throw new Error("Invalid response from server");
-  }
-
-  return payload;
-}
-
+/**
+ * Creates a pre-signed upload URL for a new material file.
+ * The backend returns an S3 upload URL, a public file URL, and object key.
+ */
 export async function createMaterialUploadUrl(workspaceId: string, request: CreateMaterialUploadUrlRequest): Promise<MaterialUploadUrlResponse> {
   const res = await requestJson<MaterialUploadUrlResponse>(`/api/workspaces/${workspaceId}/materials/upload-url`, {
     method: "POST",
@@ -139,6 +89,9 @@ export async function createMaterialUploadUrl(workspaceId: string, request: Crea
   return res.data;
 }
 
+/**
+ * Confirms a material upload after the file has been uploaded to S3.
+ */
 export async function confirmMaterialUpload(workspaceId: string, request: ConfirmMaterialUploadRequest): Promise<UploadedMaterialResponse> {
   const res = await requestJson<UploadedMaterialResponse>(`/api/workspaces/${workspaceId}/materials/confirm`, {
     method: "POST",
@@ -152,23 +105,30 @@ export async function confirmMaterialUpload(workspaceId: string, request: Confir
   return res.data;
 }
 
+/**
+ * Fetches all uploaded materials for a given workspace.
+ */
 export async function getWorkspaceMaterials(workspaceId: string): Promise<UploadedMaterialResponse[]> {
   const res = await requestJson<UploadedMaterialResponse[]>(`/api/workspaces/${workspaceId}/materials`, {
     method: "GET",
-    headers: buildAuthHeaders(getStoredAuthSession()?.accessToken ?? null),
   });
 
   return res.data || [];
 }
 
+/**
+ * Alias for getWorkspaceMaterials (backward compatibility).
+ */
 export async function getMaterials(workspaceId: string): Promise<UploadedMaterialResponse[]> {
   return getWorkspaceMaterials(workspaceId);
 }
 
+/**
+ * Fetches the current processing job for a specific material.
+ */
 export async function getMaterialProcessingJob(workspaceId: string, materialId: string): Promise<MaterialProcessingJobResponse> {
   const res = await requestJson<MaterialProcessingJobResponse>(`/api/workspaces/${workspaceId}/materials/${materialId}/processing-job`, {
     method: "GET",
-    headers: buildAuthHeaders(getStoredAuthSession()?.accessToken ?? null),
   });
 
   if (!res.data) {

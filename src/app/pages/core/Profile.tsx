@@ -3,12 +3,16 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   User, Award, Crown, Bell, Shield, Zap, LogOut,
   ChevronDown, AlertTriangle, Check, Trash2, Gift, CalendarClock, Loader2, MailCheck, BadgeCheck,
-  Copy, Eye, EyeOff,
+  Copy, Eye, EyeOff, BookOpenCheck, CheckCircle2, X, BellOff, Info, HardDrive, Layers, Upload,
+  Gem, Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { clearAuthTokens, getStoredUserProfile, type StoredUserProfile } from "../../../api/authService";
 import meService, { type MeResponse } from "../../../api/meService";
+import { getNotifications } from "../../../api/notificationsService";
+import { getCurrentSubscription, getQuotaStatus } from "../../../api/subscriptionsService";
+import type { NotificationResponse, CurrentSubscriptionResponse, QuotaStatusResponse, ServicePlanType } from "../../../api/skillSprintModels";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -24,12 +28,12 @@ const SH   = "0 1px 3px rgba(0,0,0,0.04), 0 6px 20px rgba(0,0,0,0.05)";
 
 /* ─── Sub-nav items ─── */
 const TABS = [
-  { id:"account",       label:"Account",       icon:User,   danger:false },
-  { id:"achievements",  label:"Achievements",  icon:Award,  danger:false },
-  { id:"subscription",  label:"Subscription",  icon:Crown,  danger:false },
-  { id:"notifications", label:"Notifications", icon:Bell,   danger:false },
-  { id:"privacy",       label:"Privacy",       icon:Shield, danger:false },
-  { id:"integrations",  label:"Integrations",  icon:Zap,    danger:false },
+  { id:"account",       label:"Tài khoản",            icon:User,   danger:false },
+  { id:"achievements",  label:"Thành tựu",            icon:Award,  danger:false },
+  { id:"subscription",  label:"Quản lý gói",          icon:Crown,  danger:false },
+  { id:"notifications", label:"Thông báo",            icon:Bell,   danger:false },
+  { id:"privacy",       label:"Bảo mật",              icon:Shield, danger:false },
+  { id:"integrations",  label:"Tiện ích tích hợp",    icon:Zap,    danger:false },
 ];
 
 type UserProfileViewModel = {
@@ -51,19 +55,19 @@ function emptyProfile(): UserProfileViewModel {
     userId: "",
     email: "",
     emailVerified: false,
-    fullName: "Learner",
+    fullName: "Học viên",
     firstName: "",
     lastName: "",
     avatarUrl: "",
     timeZone: "Asia/Ho_Chi_Minh (GMT+7)",
     status: "-",
     roles: [],
-    roleLabel: "Learner",
+    roleLabel: "Học viên",
   };
 }
 
 function mapStoredProfile(stored: StoredUserProfile): UserProfileViewModel {
-  const fallbackName = stored.fullName || [stored.firstName, stored.lastName].filter(Boolean).join(" ").trim() || "Learner";
+  const fallbackName = stored.fullName || [stored.firstName, stored.lastName].filter(Boolean).join(" ").trim() || "Học viên";
 
   return {
     userId: "",
@@ -76,7 +80,7 @@ function mapStoredProfile(stored: StoredUserProfile): UserProfileViewModel {
     timeZone: "Asia/Ho_Chi_Minh (GMT+7)",
     status: "-",
     roles: stored.role ? [stored.role] : [],
-    roleLabel: stored.role === "ADMIN" ? "Admin" : "Learner",
+    roleLabel: stored.role === "ADMIN" ? "Admin" : "Học viên",
   };
 }
 
@@ -86,14 +90,14 @@ function mapMeResponse(me: MeResponse): UserProfileViewModel {
     userId: me.userId,
     email: me.email,
     emailVerified: me.emailVerified,
-    fullName: me.fullName || "Learner",
+    fullName: me.fullName || "Học viên",
     firstName: parts[0] || "",
     lastName: parts.slice(1).join(" "),
     avatarUrl: me.avatarUrl || "",
     timeZone: me.timeZone || "Asia/Ho_Chi_Minh (GMT+7)",
     status: me.status || "-",
     roles: me.roles || [],
-    roleLabel: me.roles?.includes("ADMIN") ? "Admin" : "Learner",
+    roleLabel: me.roles?.includes("ADMIN") ? "Admin" : "Học viên",
   };
 }
 
@@ -232,11 +236,11 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
     <>
       {/* Personal Information */}
       <div style={{ marginBottom:"28px" }}>
-        <SectionHeading title="Personal Information"/>
+        <SectionHeading title="Thông tin cá nhân"/>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3, minmax(0, 1fr))", gap:"10px", marginBottom:"14px" }}>
           <div style={{ padding:"10px 12px", borderRadius:"10px", border:`1px solid ${BDR}`, background:"#F9FAFB" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"8px", marginBottom:"3px" }}>
-              <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F }}>User ID</p>
+              <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F }}>Mã người dùng</p>
               <div style={{ display:"flex", alignItems:"center", gap:"4px" }}>
                 <button
                   type="button"
@@ -276,43 +280,43 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
             <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Email</p>
             <p style={{ fontSize:"0.82rem", fontWeight:700, color:T1, fontFamily:F, display:"flex", alignItems:"center", gap:"6px" }}>
               {profile.emailVerified ? <MailCheck size={13} color="#059669" /> : <AlertTriangle size={13} color="#F97316" />}
-              {profile.emailVerified ? "Verified" : "Unverified"}
+              {profile.emailVerified ? "Đã xác minh" : "Chưa xác minh"}
             </p>
           </div>
           <div style={{ padding:"10px 12px", borderRadius:"10px", border:`1px solid ${BDR}`, background:"#F9FAFB" }}>
-            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Status</p>
+            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Trạng thái</p>
             <p style={{ fontSize:"0.82rem", fontWeight:700, color:T1, fontFamily:F }}>{profile.status || "-"}</p>
           </div>
           <div style={{ padding:"10px 12px", borderRadius:"10px", border:`1px solid ${BDR}`, background:"#F9FAFB" }}>
-            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Role(s)</p>
+            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Vai trò</p>
             <p style={{ fontSize:"0.82rem", fontWeight:700, color:T1, fontFamily:F }}>{profile.roles?.length ? profile.roles.join(", ") : profile.roleLabel}</p>
           </div>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:"14px", marginBottom:"14px" }}>
-          <Input label="Full Name" value={fullName} onChange={setFullName} placeholder="Full name"/>
+          <Input label="Họ và tên" value={fullName} onChange={setFullName} placeholder="Họ và tên"/>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px" }}>
-          <Input label="Email Address" value={email} onChange={setEmail}
+          <Input label="Địa chỉ Email" value={email} onChange={setEmail}
             type="email" placeholder="student@gmail.com" disabled
-            hint="Email is managed by the backend profile."/>
-          <Input label="Time Zone" value={timeZone} onChange={setTimeZone}
+            hint="Email được quản lý bởi hệ thống máy chủ."/>
+          <Input label="Múi giờ" value={timeZone} onChange={setTimeZone}
             placeholder="Asia/Ho_Chi_Minh (GMT+7)" disabled
-            hint="Read from /api/me and displayed for reference."/>
+            hint="Dữ liệu được đồng bộ từ hệ thống (chỉ xem)."/>
         </div>
       </div>
 
       {/* University Details */}
       <div style={{ marginBottom:"28px" }}>
-        <SectionHeading title="University Details"/>
+        <SectionHeading title="Thông tin học vấn"/>
           <div style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
-            <Select label="University" value={university} onChange={setUniversity} options={UNIVERSITIES}/>
-            <Input  label="Major"      value={major}      onChange={setMajor}      placeholder="e.g. Software Engineering"/>
+            <Select label="Trường đại học" value={university} onChange={setUniversity} options={UNIVERSITIES}/>
+            <Input  label="Chuyên ngành"      value={major}      onChange={setMajor}      placeholder="VD: Công nghệ phần mềm"/>
           </div>
       </div>
 
       {/* Danger Zone */}
       <div style={{ marginBottom:"24px" }}>
-        <SectionHeading title="Danger Zone"/>
+        <SectionHeading title="Vùng nguy hiểm"/>
         <div style={{
           display:"flex", alignItems:"center", justifyContent:"space-between",
           padding:"14px 16px", borderRadius:"10px",
@@ -321,9 +325,9 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
           <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
             <AlertTriangle size={16} color="#EF4444"/>
             <div>
-              <p style={{ fontWeight:700, fontSize:"0.875rem", color:"#991B1B", fontFamily:F }}>Delete Account</p>
+              <p style={{ fontWeight:700, fontSize:"0.875rem", color:"#991B1B", fontFamily:F }}>Xóa tài khoản</p>
               <p style={{ fontSize:"0.75rem", color:"#EF4444", fontFamily:F }}>
-                Permanently deletes all your data. This action cannot be undone.
+                Xóa vĩnh viễn toàn bộ dữ liệu. Không thể khôi phục sau khi xóa.
               </p>
             </div>
           </div>
@@ -335,7 +339,7 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
               cursor:"pointer", fontFamily:F, fontWeight:700, fontSize:"0.78rem",
               flexShrink:0,
             }}>
-            <Trash2 size={12}/> Delete Account
+            <Trash2 size={12}/> Xóa tài khoản
           </button>
         </div>
       </div>
@@ -361,7 +365,7 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
             opacity: saving ? 0.75 : 1,
           }}
         >
-          {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <><Check size={15}/> Saved!</> : "Save Changes"}
+          {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <><Check size={15}/> Đã lưu!</> : "Lưu thay đổi"}
         </motion.button>
       </div>
 
@@ -375,17 +379,17 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
               <div style={{ width:"44px", height:"44px", borderRadius:"12px", background:"#FFF1F2", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"16px" }}>
                 <Trash2 size={20} color="#EF4444"/>
               </div>
-              <h3 style={{ fontWeight:900, fontSize:"1.1rem", color:T1, fontFamily:F, marginBottom:"8px" }}>Delete your account?</h3>
+              <h3 style={{ fontWeight:900, fontSize:"1.1rem", color:T1, fontFamily:F, marginBottom:"8px" }}>Xóa tài khoản của bạn?</h3>
               <p style={{ fontSize:"0.875rem", color:T2, lineHeight:1.65, marginBottom:"20px", fontFamily:F }}>
-                This will permanently delete all your data, progress, roadmaps and CV files. This action cannot be undone.
+                Hành động này sẽ xóa vĩnh viễn toàn bộ dữ liệu, tiến độ, lộ trình và tệp CV. Không thể khôi phục.
               </p>
               <div style={{ display:"flex", gap:"10px" }}>
                 <button onClick={()=>setDeleteModal(false)}
                   style={{ flex:1, padding:"10px", borderRadius:"9px", border:`1px solid ${BDR}`, background:CARD, color:T2, fontFamily:F, fontWeight:600, cursor:"pointer" }}>
-                  Cancel
+                  Hủy
                 </button>
                 <button style={{ flex:1, padding:"10px", borderRadius:"9px", background:"#EF4444", border:"none", color:"#fff", fontFamily:F, fontWeight:700, cursor:"pointer" }}>
-                  Yes, Delete
+                  Xác nhận xóa
                 </button>
               </div>
             </motion.div>
@@ -402,7 +406,7 @@ function PlaceholderTab({ label }:{ label:string }) {
     <div style={{ textAlign:"center", padding:"60px 20px" }}>
       <div style={{ fontSize:"36px", marginBottom:"12px" }}>🚧</div>
       <h3 style={{ fontWeight:700, fontSize:"1rem", color:T1, marginBottom:"6px", fontFamily:F }}>{label}</h3>
-      <p style={{ color:T3, fontSize:"0.875rem", fontFamily:F }}>This section is coming soon.</p>
+      <p style={{ color:T3, fontSize:"0.875rem", fontFamily:F }}>Mục này đang được phát triển.</p>
     </div>
   );
 }
@@ -419,180 +423,383 @@ function PlanFeature({ text, color="#374151" }: { text: string; color?: string }
   );
 }
 
+function QuotaProgressBar({ label, used, total, icon: IconComponent }: { label: string; used: number; total: number; icon: React.ElementType }) {
+  const percentage = total > 0 ? Math.min((used / total) * 100, 100) : 0;
+  const isNearLimit = percentage >= 80;
+  const isAtLimit = percentage >= 100;
+  const fillColor = isAtLimit ? "#EF4444" : isNearLimit ? "#F59E0B" : "#FF6B00";
+
+  return (
+    <div style={{ marginBottom: "12px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <IconComponent size={14} color={T2} />
+          <span style={{ fontFamily: F, fontWeight: 600, fontSize: "0.80rem", color: T1 }}>{label}</span>
+        </div>
+        <span style={{ fontFamily: F, fontWeight: 700, fontSize: "0.75rem", color: fillColor }}>
+          {used}/{total}
+        </span>
+      </div>
+      <div style={{
+        width: "100%", height: "8px", borderRadius: "99px",
+        background: "#E5E7EB", overflow: "hidden",
+      }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            height: "100%", borderRadius: "99px",
+            background: `linear-gradient(90deg, ${fillColor}, ${fillColor}DD)`,
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2)`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   SUBSCRIPTION TAB  — SYNCED WITH GLOBAL BRANDING
+   Dynamic plan detection, orange theme, correct
+   button logic for Starter / Skill Builder / Career Premium
+═══════════════════════════════════════════════════ */
 function SubscriptionTab() {
-  const PLANS = [
+  const [subData, setSubData] = useState<CurrentSubscriptionResponse | null>(null);
+  const [quotaData, setQuotaData] = useState<QuotaStatusResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadData = async () => {
+      try {
+        const [sub, quota] = await Promise.all([
+          getCurrentSubscription(),
+          getQuotaStatus(),
+        ]);
+        if (!mounted) return;
+        setSubData(sub);
+        setQuotaData(quota);
+      } catch {
+        // silently handle – subscription data is non-critical
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    loadData();
+    return () => { mounted = false; };
+  }, []);
+
+  // ── DYNAMIC currentPlan (reads from backend, falls back to mock) ──
+  const currentPlan: "FREE" | "SKILL_BUILDER" | "PREMIUM" = (subData?.plan?.planType as any) || "SKILL_BUILDER";
+
+  // ── Plan registry with all display / pricing info ──
+  type PlanId = "starter" | "skill_builder" | "career_premium";
+  const planTierOrder: PlanId[] = ["starter", "skill_builder", "career_premium"];
+
+  const planValue: Record<PlanId, number> = {
+    starter:         0,
+    skill_builder:   1,
+    career_premium:  2,
+  };
+
+  const planLabel: Record<PlanId, string> = {
+    starter:         "Starter",
+    skill_builder:   "Skill Builder",
+    career_premium:  "Career Premium",
+  };
+
+  const planDisplayPrice: Record<PlanId, string> = {
+    starter:         "Miễn phí",
+    skill_builder:   "89.000",
+    career_premium:  "199.000",
+  };
+
+  const planPriceSub: Record<PlanId, string | null> = {
+    starter:         null,
+    skill_builder:   "VND / tháng",
+    career_premium:  "VND / tháng",
+  };
+
+  const planFeatureList: Record<PlanId, string[]> = {
+    starter:         ["Tối đa 3 lộ trình", "Công cụ Pomodoro cơ bản", "Tham gia cộng đồng"],
+    skill_builder:   ["Không giới hạn lộ trình", "Phân tích học tập chuyên sâu", "Hỗ trợ ưu tiên"],
+    career_premium:  ["Toàn bộ quyền lợi gói Skill Builder", "Xuất CV & Minh chứng năng lực", "Gia sư AI định hướng kỹ năng", "Ghép cặp Mentor chuyên gia"],
+  };
+
+  // Derive the current PlanId from the backend type
+  const currentPlanId: PlanId = currentPlan === "PREMIUM"       ? "career_premium"
+                              : currentPlan === "SKILL_BUILDER" ? "skill_builder"
+                              :                                   "starter";
+
+  const currentPlanIndex = planValue[currentPlanId];
+
+  // ── Button config for each card ──
+  function getButtonConfig(planId: PlanId): {
+    label: string;
+    disabled: boolean;
+    bg: string;
+    border: string;
+    color: string;
+    shadow: string;
+  } {
+    const cardIndex = planValue[planId];
+    if (cardIndex === currentPlanIndex) {
+      return {
+        label:    "Gói hiện tại",
+        disabled: true,
+        bg:       "#F3F4F6",
+        border:   "#D1D5DB",
+        color:    "#9CA3AF",
+        shadow:   "none",
+      };
+    }
+    if (cardIndex < currentPlanIndex) {
+      return {
+        label:    "Hạ cấp xuống Starter",
+        border:   OG,
+        color:    OG,
+        bg:       "transparent",
+        disabled: false,
+        shadow:   "none",
+      };
+    }
+    // Higher tier → Upgrade
+    return {
+      label:    `Nâng cấp ${planLabel[planId]}`,
+      disabled: false,
+      bg:       OG,
+      border:   OG,
+      color:    "#FFFFFF",
+      shadow:   "0 4px 14px rgba(255,107,0,0.28)",
+    };
+  }
+
+  // ── Plan cards data ──
+  const PLANS: {
+    id: PlanId;
+    accent: string;
+    bg: string;
+    border: string;
+    badge: string | null;
+  }[] = [
     {
-      id:       "free",
-      tier:     "Free",
-      price:    "Free",
-      priceSub: null,
-      desc:     null,
-      accent:   "#6B7280",
-      bg:       "#F9FAFB",
-      border:   BDR,
-      btnBg:    "transparent",
-      btnBorder:"#D1D5DB",
-      btnColor: "#9CA3AF",
-      btnLabel: "Current Plan",
-      btnDisabled: true,
-      badge:    null,
-      features: ["3 Active Roadmaps","Basic Pomodoro","Community Access"],
+      id:     "starter",
+      accent: "#6B7280",
+      bg:     currentPlanId === "starter"         ? OGL : "#F9FAFB",
+      border: currentPlanId === "starter"         ? `1px solid ${OG}` : BDR,
+      badge:  null,
     },
     {
-      id:       "basic",
-      tier:     "Basic",
-      price:    "89k",
-      priceSub: "đ/mo",
-      desc:     null,
-      accent:   "#0F766E",
-      bg:       "#F0FDFA",
-      border:   "rgba(15,118,110,0.18)",
-      btnBg:    "#0F766E",
-      btnBorder:"#0F766E",
-      btnColor: "#FFFFFF",
-      btnLabel: "Upgrade to Basic",
-      btnDisabled: false,
-      badge:    null,
-      features: ["Unlimited Roadmaps","Advanced Analytics","Priority Support"],
+      id:     "skill_builder",
+      accent: OG,
+      bg:     currentPlanId === "skill_builder"   ? OGL : "#F9FAFB",
+      border: currentPlanId === "skill_builder"   ? `1px solid ${OG}` : BDR,
+      badge:  currentPlanId !== "skill_builder" && currentPlanId !== "career_premium" ? "MOST POPULAR" : null,
     },
     {
-      id:       "premium",
-      tier:     "Premium",
-      price:    "199k",
-      priceSub: "đ/mo",
-      desc:     null,
-      accent:   OG,
-      bg:       "#FFF7ED",
-      border:   "rgba(255,107,0,0.18)",
-      btnBg:    OG,
-      btnBorder:OG,
-      btnColor: "#FFFFFF",
-      btnLabel: "Upgrade to Premium",
-      btnDisabled: false,
-      badge:    "MOST POPULAR",
-      features: ["Everything in Basic","CV Export & Evidence","AI Skill Mentor","1-on-1 Tutor Match"],
+      id:     "career_premium",
+      accent: OG,
+      bg:     currentPlanId === "career_premium"  ? OGL : "#F9FAFB",
+      border: currentPlanId === "career_premium"  ? `1px solid ${OG}` : BDR,
+      badge:  currentPlanId === "career_premium"  ? null : "ĐỀ XUẤT",
     },
   ];
 
+  // ── Banner info ──
+  const bannerIcon = currentPlanId === "career_premium"  ? <Crown size={16} color={OG} />
+                   : currentPlanId === "skill_builder"   ? <Zap size={16} color={OG} />
+                   :                                       <Zap size={16} color="#9CA3AF" />;
+
+  const bannerTitle = `${planLabel[currentPlanId]} Plan`;
+  const bannerPrice = currentPlanId === "starter"
+    ? "0 VND / tháng · Miễn phí"
+    : `${planDisplayPrice[currentPlanId]} VND / tháng`;
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 0" }}>
+        <Loader2 size={20} className="animate-spin" style={{ color: T3 }} />
+        <span style={{ fontFamily: F, fontSize: "0.85rem", color: T3, marginLeft: "8px" }}>Đang tải dữ liệu gói...</span>
+      </div>
+    );
+  }
+
   return (
     <div>
-      {/* ─ Current Plan Banner ─ */}
+      {/* ─── Current Plan Banner (DYNAMIC, ORANGE THEME) ─── */}
       <div style={{
         display:"flex", alignItems:"center", gap:"12px",
         padding:"14px 16px", borderRadius:"12px",
-        background:"#F9FAFB", border:`1px solid ${BDR}`,
+        background: currentPlanId === "starter" ? "#F9FAFB" : OGL,
+        border: `1px solid ${currentPlanId === "starter" ? BDR : `rgba(255,107,0,0.18)`}`,
         marginBottom:"20px",
       }}>
         <div style={{
           width:"36px", height:"36px", borderRadius:"9px",
-          background:"#F3F4F6", border:`1px solid ${BDR}`,
+          background: OGL,
+          border: `1px solid rgba(255,107,0,0.25)`,
           display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0,
         }}>
-          <Zap size={16} color="#9CA3AF"/>
+          {bannerIcon}
         </div>
         <div style={{ flex:1 }}>
-          <p style={{ fontWeight:700, fontSize:"0.9rem", color:T1, fontFamily:F, lineHeight:1 }}>Free Plan</p>
+          <p style={{ fontWeight:700, fontSize:"0.9rem", color:T1, fontFamily:F, lineHeight:1 }}>{bannerTitle}</p>
           <p style={{ fontSize:"0.75rem", color:T3, fontFamily:F, marginTop:"2px" }}>
-            0 VND / month · No card required
+            {bannerPrice}
           </p>
         </div>
+        {/* Orange Active badge */}
         <div style={{
           padding:"4px 12px", borderRadius:"99px",
-          background:"transparent", border:"1.5px solid #10B981",
+          background: "rgba(255,107,0,0.12)",
+          border: "1.5px solid rgba(255,107,0,0.35)",
           display:"flex", alignItems:"center", gap:"5px",
         }}>
-          <div style={{ width:"5px", height:"5px", borderRadius:"50%", background:"#10B981" }}/>
-          <span style={{ fontSize:"0.75rem", color:"#10B981", fontWeight:700, fontFamily:F }}>Active</span>
+          <div style={{ width:"5px", height:"5px", borderRadius:"50%", background: OG }}/>
+          <span style={{ fontSize:"0.75rem", color: OG, fontWeight:700, fontFamily:F }}>
+            Đang sử dụng
+          </span>
         </div>
       </div>
 
-      {/* ─ Plans Grid ─ */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"12px" }}>
-        {PLANS.map(plan => (
-          <motion.div key={plan.id}
-            whileHover={!plan.btnDisabled ? { y:-2 } : {}}
-            style={{
-              background: plan.bg,
-              borderRadius:"14px",
-              border:`1px solid ${plan.border}`,
-              padding:"20px 18px",
-              display:"flex", flexDirection:"column",
-              boxShadow:"0 1px 4px rgba(0,0,0,0.04)",
-              position:"relative", overflow:"hidden",
-            }}
-          >
-            {/* MOST POPULAR badge */}
-            {plan.badge && (
-              <div style={{
-                display:"flex", alignItems:"center", gap:"5px",
-                marginBottom:"8px",
-              }}>
-                <span style={{
-                  fontSize:"0.62rem", fontWeight:800, color:OG,
-                  letterSpacing:"0.1em", textTransform:"uppercase",
-                }}>
-                  {plan.badge}
-                </span>
-                <Crown size={11} color="#FBBF24" fill="#FBBF24"/>
-              </div>
+      {/* ─── Usage & Limits (DYNAMICALLY MAPPED) ─── */}
+      {quotaData && (
+        <div style={{
+          padding: "16px 18px", borderRadius: "12px",
+          border: `1px solid ${BDR}`, background: "#FAFBFC",
+          marginBottom: "20px",
+        }}>
+          <SectionHeading title="Mức sử dụng & Giới hạn" />
+          <div style={{ display: "grid", gap: "4px" }}>
+            {quotaData.usedWorkspaces !== undefined && (
+              <QuotaProgressBar
+                label="Lộ trình đang học"
+                used={quotaData.usedWorkspaces ?? 0}
+                total={quotaData.maxWorkspaces ?? 3}
+                icon={Layers}
+              />
             )}
+            {quotaData.usedStorageMb !== undefined && (
+              <QuotaProgressBar
+                label="Dung lượng lưu trữ (MB)"
+                used={quotaData.usedStorageMb ?? 0}
+                total={quotaData.maxWorkspaceMb ?? 100}
+                icon={HardDrive}
+              />
+            )}
+            {quotaData.usedAiGenerate !== undefined && (
+              <QuotaProgressBar
+                label="Lượt hỏi AI (tháng này)"
+                used={quotaData.usedAiGenerate ?? 0}
+                total={quotaData.aiGenerateLimit ?? 50}
+                icon={Zap}
+              />
+            )}
+            {quotaData.usedUploads !== undefined && (
+              <QuotaProgressBar
+                label="Tệp đã tải lên"
+                used={quotaData.usedUploads ?? 0}
+                total={quotaData.maxUploads ?? 20}
+                icon={Upload}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
-            {/* Title */}
-            <p style={{
-              fontSize:"1rem", fontWeight:700,
-              color: plan.badge ? T1 : plan.accent,
-              fontFamily:F, marginBottom:"6px",
-              marginTop: plan.badge ? "0" : "18px", // align with others
-            }}>
-              {plan.tier}
-            </p>
-
-            {/* Price */}
-            <div style={{ display:"flex", alignItems:"baseline", gap:"2px", marginBottom:"14px" }}>
-              <span style={{
-                fontSize:"1.8rem", fontWeight:900, letterSpacing:"-0.04em",
-                color: plan.id==="free" ? T1 : plan.accent,
-              }}>
-                {plan.price}
-              </span>
-              {plan.priceSub && (
-                <span style={{ fontSize:"0.75rem", color:T3, marginLeft:"1px" }}>{plan.priceSub}</span>
-              )}
-            </div>
-
-            {/* Features */}
-            <ul style={{
-              listStyle:"none", margin:"0 0 auto", padding:0,
-              display:"flex", flexDirection:"column", gap:"8px",
-              marginBottom:"18px",
-            }}>
-              {plan.features.map(f => (
-                <PlanFeature key={f} text={f} color={plan.id==="free" ? T2 : T1}/>
-              ))}
-            </ul>
-
-            {/* CTA */}
-            <motion.button
-              whileHover={!plan.btnDisabled ? { scale:1.02 } : {}}
-              whileTap={!plan.btnDisabled ? { scale:0.97 } : {}}
-              disabled={plan.btnDisabled}
+      {/* ─── Pricing Cards Grid ─── */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"12px" }}>
+        {PLANS.map(plan => {
+          const btn = getButtonConfig(plan.id);
+          return (
+            <motion.div key={plan.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: planValue[plan.id] * 0.06 }}
+              whileHover={!btn.disabled ? { y:-2 } : {}}
               style={{
-                width:"100%", padding:"11px 0", borderRadius:"10px",
-                background: plan.btnBg,
-                border:`1.5px solid ${plan.btnBorder}`,
-                color: plan.btnColor,
-                fontFamily:F, fontWeight:700, fontSize:"0.875rem",
-                cursor: plan.btnDisabled ? "default" : "pointer",
-                boxShadow: plan.id==="premium" ? "0 4px 14px rgba(255,107,0,0.28)"
-                          : plan.id==="basic"   ? "0 4px 14px rgba(15,118,110,0.2)"
-                          : "none",
-                transition:"all 0.15s",
+                background: plan.bg,
+                borderRadius:"14px",
+                border:`${plan.border}`,
+                padding:"20px 18px",
+                display:"flex", flexDirection:"column",
+                boxShadow: plan.id === currentPlanId ? "0 0 0 2px rgba(255,107,0,0.15)" : "0 1px 4px rgba(0,0,0,0.04)",
+                position:"relative", overflow:"hidden",
               }}
             >
-              {plan.btnLabel}
-            </motion.button>
-          </motion.div>
-        ))}
+              {/* Badge */}
+              {plan.badge && (
+                <div style={{
+                  display:"flex", alignItems:"center", gap:"5px",
+                  marginBottom:"8px",
+                }}>
+                  <span style={{
+                    fontSize:"0.62rem", fontWeight:800, color:OG,
+                    letterSpacing:"0.1em", textTransform:"uppercase",
+                  }}>
+                    {plan.badge}
+                  </span>
+                  <Crown size={11} color="#FBBF24" fill="#FBBF24"/>
+                </div>
+              )}
+
+              {/* Title */}
+              <p style={{
+                fontSize:"1rem", fontWeight:700,
+                color: plan.id === currentPlanId ? OG : plan.accent,
+                fontFamily:F, marginBottom:"6px",
+                marginTop: plan.badge ? "0" : "18px",
+              }}>
+                {planLabel[plan.id]}
+              </p>
+
+              {/* Price */}
+              <div style={{ display:"flex", alignItems:"baseline", gap:"2px", marginBottom:"14px" }}>
+                <span style={{
+                  fontSize:"1.8rem", fontWeight:900, letterSpacing:"-0.04em",
+                  color: plan.id === "starter" ? T1 : plan.accent,
+                }}>
+                  {planDisplayPrice[plan.id]}
+                </span>
+                {planPriceSub[plan.id] && (
+                  <span style={{ fontSize:"0.75rem", color:T3, marginLeft:"1px" }}>{planPriceSub[plan.id]}</span>
+                )}
+              </div>
+
+              {/* Features */}
+              <ul style={{
+                listStyle:"none", margin:"0 0 auto", padding:0,
+                display:"flex", flexDirection:"column", gap:"8px",
+                marginBottom:"18px",
+              }}>
+                {planFeatureList[plan.id].map(f => (
+                  <PlanFeature key={f} text={f} color={plan.id === currentPlanId ? T1 : T2}/>
+                ))}
+              </ul>
+
+              {/* CTA Button */}
+              <motion.button
+                whileHover={!btn.disabled ? { scale:1.02 } : {}}
+                whileTap={!btn.disabled ? { scale:0.97 } : {}}
+                disabled={btn.disabled}
+                style={{
+                  width:"100%", padding:"11px 0", borderRadius:"10px",
+                  background: btn.bg,
+                  border:`1.5px solid ${btn.border}`,
+                  color: btn.color,
+                  fontFamily:F, fontWeight:700, fontSize:"0.875rem",
+                  cursor: btn.disabled ? "not-allowed" : "pointer",
+                  opacity: btn.disabled ? 0.65 : 1,
+                  boxShadow: btn.shadow,
+                  transition:"all 0.15s",
+                }}
+              >
+                {btn.label}
+              </motion.button>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
@@ -675,29 +882,29 @@ function NotificationsTab() {
 
   return (
     <div>
-      <SectionHeading title="Notification Preferences" />
+      <SectionHeading title="Tùy chọn thông báo" />
       <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
         <ToggleRow
-          title="Email reminders"
-          description="Receive plan reminders before each study session."
+          title="Nhắc nhở qua Email"
+          description="Nhận lời nhắc trước mỗi buổi học."
           checked={emailReminders}
           onChange={setEmailReminders}
         />
         <ToggleRow
-          title="Pomodoro alerts"
-          description="Notify when focus time ends and break starts."
+          title="Cảnh báo Pomodoro"
+          description="Thông báo khi kết thúc thời gian tập trung."
           checked={pomodoroAlert}
           onChange={setPomodoroAlert}
         />
         <ToggleRow
-          title="Weekly digest"
-          description="Summary of progress, streak and completed tasks every Sunday."
+          title="Tổng kết tuần"
+          description="Tóm tắt tiến độ, chuỗi học và nhiệm vụ vào mỗi Chủ nhật."
           checked={weeklyDigest}
           onChange={setWeeklyDigest}
         />
         <ToggleRow
-          title="Deadline nudge"
-          description="Extra reminders 24h before upcoming exams or deadlines."
+          title="Nhắc hạn chót"
+          description="Nhắc nhở 24 giờ trước kỳ thi hoặc hạn chót."
           checked={deadlineNudge}
           onChange={setDeadlineNudge}
         />
@@ -724,7 +931,7 @@ function NotificationsTab() {
             boxShadow: saved ? "0 4px 14px rgba(5,150,105,0.25)" : "0 4px 14px rgba(255,107,0,0.28)",
           }}
         >
-          {saved ? <><Check size={14} /> Saved</> : "Save Notification Settings"}
+          {saved ? <><Check size={14} /> Đã lưu</> : "Lưu tùy chọn thông báo"}
         </motion.button>
       </div>
     </div>
@@ -747,23 +954,23 @@ function PrivacyTab() {
 
   return (
     <div>
-      <SectionHeading title="Privacy & Visibility" />
+      <SectionHeading title="Quyền riêng tư & Hiển thị" />
       <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
         <ToggleRow
-          title="Public profile"
-          description="Allow others to view your learning profile page."
+          title="Hồ sơ công khai"
+          description="Cho phép người khác xem trang hồ sơ học tập."
           checked={publicProfile}
           onChange={setPublicProfile}
         />
         <ToggleRow
-          title="Show name on leaderboard"
-          description="Display your name and streak rank publicly."
+          title="Hiển thị tên trên bảng xếp hạng"
+          description="Hiển thị tên và thứ hạng chuỗi học công khai."
           checked={showLeaderboardName}
           onChange={setShowLeaderboardName}
         />
         <ToggleRow
-          title="Product analytics"
-          description="Share anonymized usage data to improve AI recommendations."
+          title="Phân tích sản phẩm"
+          description="Chia sẻ dữ liệu ẩn danh để cải thiện đề xuất AI."
           checked={allowAnalytics}
           onChange={setAllowAnalytics}
         />
@@ -777,10 +984,10 @@ function PrivacyTab() {
         marginBottom: "18px",
       }}>
         <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.8rem", color: "#4338CA" }}>
-          2FA and security logs will be added in backend phase.
+          Xác thực 2FA và nhật ký bảo mật sẽ được thêm trong giai đoạn backend.
         </p>
         <p style={{ fontFamily: F, fontSize: "0.74rem", color: "#6366F1", marginTop: "4px" }}>
-          UI is ready now, API integration will be attached later.
+          Giao diện đã sẵn sàng, tích hợp API sẽ được gắn sau.
         </p>
       </div>
 
@@ -805,7 +1012,7 @@ function PrivacyTab() {
             boxShadow: saved ? "0 4px 14px rgba(5,150,105,0.25)" : "0 4px 14px rgba(255,107,0,0.28)",
           }}
         >
-          {saved ? <><Check size={14} /> Saved</> : "Save Privacy Settings"}
+          {saved ? <><Check size={14} /> Đã lưu</> : "Lưu tùy chọn bảo mật"}
         </motion.button>
       </div>
     </div>
@@ -828,7 +1035,7 @@ function IntegrationsTab() {
 
   return (
     <div>
-      <SectionHeading title="System Integrations" />
+      <SectionHeading title="Tiện ích tích hợp" />
 
       <div style={{
         display: "flex",
@@ -842,18 +1049,18 @@ function IntegrationsTab() {
       }}>
         <CalendarClock size={16} color={OG} style={{ marginTop: "2px", flexShrink: 0 }} />
         <div>
-          <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.84rem", color: T1 }}>
-            Date source mode (so bo)
-          </p>
-          <p style={{ fontFamily: F, fontSize: "0.75rem", color: T3, marginTop: "3px" }}>
-            Current app uses browser time. Switch to Server Time after backend launch.
-          </p>
+            <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.84rem", color: T1 }}>
+              Chế độ nguồn ngày
+            </p>
+            <p style={{ fontFamily: F, fontSize: "0.75rem", color: T3, marginTop: "3px" }}>
+              Ứng dụng hiện dùng thời gian trình duyệt. Chuyển sang thời gian máy chủ sau khi backend ra mắt.
+            </p>
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
         <Select
-          label="Date Source"
+          label="Nguồn ngày"
           value={dateSource}
           onChange={setDateSource}
           options={["Client (Browser Time)", "Mock API", "Server Time (Coming soon)"]}
@@ -868,8 +1075,8 @@ function IntegrationsTab() {
 
       <div style={{ marginBottom: "18px" }}>
         <ToggleRow
-          title="Auto-sync every minute"
-          description="Refresh date and status data automatically in dashboard modules."
+          title="Tự động đồng bộ mỗi phút"
+          description="Làm mới dữ liệu ngày và trạng thái trong các module dashboard."
           checked={autoSync}
           onChange={setAutoSync}
         />
@@ -882,9 +1089,9 @@ function IntegrationsTab() {
         background: "#EFF6FF",
         marginBottom: "18px",
       }}>
-        <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.8rem", color: "#1D4ED8" }}>Backend status: Not connected</p>
+        <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.8rem", color: "#1D4ED8" }}>Trạng thái backend: Chưa kết nối</p>
         <p style={{ fontFamily: F, fontSize: "0.74rem", color: "#3B82F6", marginTop: "4px" }}>
-          This tab is UI-ready. When backend is enabled, it will read live health/date endpoints.
+          Tab này đã sẵn sàng giao diện. Khi backend được kích hoạt, nó sẽ đọc các endpoint dữ liệu.
         </p>
       </div>
 
@@ -909,7 +1116,7 @@ function IntegrationsTab() {
             boxShadow: saved ? "0 4px 14px rgba(5,150,105,0.25)" : "0 4px 14px rgba(255,107,0,0.28)",
           }}
         >
-          {saved ? <><Check size={14} /> Saved</> : "Save Integration Settings"}
+          {saved ? <><Check size={14} /> Đã lưu</> : "Lưu tùy chọn tích hợp"}
         </motion.button>
       </div>
     </div>
@@ -928,18 +1135,36 @@ export default function Profile() {
   });
   const [profileLoading, setProfileLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [subData, setSubData] = useState<CurrentSubscriptionResponse | null>(null);
 
   const LEVEL    = 7;
   const STREAK   = 12;
+
+  // ── Derive current plan info from subscription data ──
+  const planType: ServicePlanType = subData?.plan?.planType || "FREE";
+  const planDisplayName =
+    planType === "PREMIUM"       ? "Career Premium"
+    : planType === "SKILL_BUILDER" ? "Skill Builder"
+    :                                "Starter";
+  const planBadgeStyle: { bg: string; color: string; border: string; icon: React.ReactNode } =
+    planType === "PREMIUM"
+      ? { bg: "#FEF3C7", color: "#92400E", border: "#FDE68A", icon: <Gem size={12} /> }
+      : planType === "SKILL_BUILDER"
+        ? { bg: "#FFF7ED", color: "#C2410C", border: "#FED7AA", icon: <Sparkles size={12} /> }
+        : { bg: "#F3F4F6", color: "#6B7280", border: "#E5E7EB", icon: <Crown size={12} color="#9CA3AF" /> };
 
   useEffect(() => {
     let mounted = true;
 
     const loadProfile = async () => {
       try {
-        const me = await meService.getMe();
+        const [me, sub] = await Promise.all([
+          meService.getMe(),
+          getCurrentSubscription().catch(() => null),
+        ]);
         if (!mounted) return;
         setProfile(mapMeResponse(me));
+        setSubData(sub);
       } catch (error: any) {
         if (!mounted) return;
 
@@ -1027,53 +1252,47 @@ export default function Profile() {
             {profile.fullName}
           </h2>
           <p style={{ fontSize:"0.82rem", color:T2, marginBottom:"8px", fontFamily:F }}>
-            {profile.email || "No email in session"} · {profile.roleLabel}
+            {profile.email || "Không có email trong phiên"} · {profile.roleLabel}
           </p>
           <div style={{ display:"flex", gap:"7px", flexWrap:"wrap" }}>
             <span style={{
               fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
-              background:"#F3F4F6", color:T2, fontWeight:600,
-            }}>Free Plan</span>
+              background: planBadgeStyle.bg,
+              color: planBadgeStyle.color,
+              border: `1px solid ${planBadgeStyle.border}`,
+              fontWeight:700,
+              display:"inline-flex", alignItems:"center", gap:"4px",
+            }}>
+              {planBadgeStyle.icon} {planDisplayName}
+            </span>
             <span style={{
               fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
               background: profile.emailVerified ? "#ECFDF5" : "#FFF7ED",
               color: profile.emailVerified ? "#065F46" : "#C2410C",
               border: `1px solid ${profile.emailVerified ? "#A7F3D0" : "#FED7AA"}`, fontWeight:700,
               display:"inline-flex", alignItems:"center", gap:"5px",
-            }}>{profile.emailVerified ? <><BadgeCheck size={12} /> Email verified</> : <><AlertTriangle size={12} /> Email not verified</>}</span>
+              }}>{profile.emailVerified ? <><BadgeCheck size={12} /> Email đã xác minh</> : <><AlertTriangle size={12} /> Email chưa xác minh</>}</span>
             <span style={{
               fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
               background:"#FFF9C4", color:"#92400E",
               border:"1px solid #FDE68A", fontWeight:700,
-            }}>⭐ Level {LEVEL}</span>
+            }}>⭐ Cấp độ {LEVEL}</span>
             <span style={{
               fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
               background:"#ECFDF5", color:"#065F46",
               border:"1px solid #A7F3D0", fontWeight:700,
-            }}>🔥 {STREAK}-Day Streak</span>
+            }}>🔥 {STREAK} ngày liên tiếp</span>
             {profileLoading && (
               <span style={{
                 fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
                 background:"#EFF6FF", color:"#1D4ED8",
                 border:"1px solid #BFDBFE", fontWeight:700,
                 display:"inline-flex", alignItems:"center", gap:"5px",
-              }}><Loader2 size={12} className="animate-spin" /> Syncing profile</span>
+              }}><Loader2 size={12} className="animate-spin" /> Đang đồng bộ hồ sơ</span>
             )}
           </div>
         </div>
 
-        <motion.button
-          whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-          style={{
-            display:"flex", alignItems:"center", gap:"6px",
-            padding:"9px 18px", borderRadius:"10px",
-            background:OG, color:"#fff", border:"none", cursor:"pointer",
-            fontFamily:F, fontWeight:700, fontSize:"0.82rem", flexShrink:0,
-            boxShadow:"0 4px 14px rgba(255,107,0,0.32)",
-          }}
-        >
-          <Gift size={13}/> Refer &amp; Get Premium
-        </motion.button>
       </div>
 
       {/* ── Two-column: sub-nav + form ── */}
@@ -1088,7 +1307,7 @@ export default function Profile() {
             fontSize:"0.62rem", color:T3, fontWeight:700,
             letterSpacing:"0.14em", textTransform:"uppercase",
             padding:"6px 10px 8px", fontFamily:F,
-          }}>Settings</p>
+          }}>Cài đặt</p>
 
           {TABS.map(tab=>{
             const isActive = activeTab === tab.id;
@@ -1130,7 +1349,7 @@ export default function Profile() {
             onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="transparent";}}
           >
             <LogOut size={14} color="#EF4444" strokeWidth={1.8}/>
-            Sign Out
+            Đăng xuất
           </button>
         </div>
 
@@ -1152,7 +1371,7 @@ export default function Profile() {
               {activeTab === "privacy"       && <PrivacyTab/>}
               {activeTab === "integrations"  && <IntegrationsTab/>}
               {activeTab !== "account" && activeTab !== "subscription" && activeTab !== "notifications" && activeTab !== "privacy" && activeTab !== "integrations" && (
-                <PlaceholderTab label={TABS.find(t=>t.id===activeTab)?.label ?? "Settings"}/>
+                <PlaceholderTab label={TABS.find(t=>t.id===activeTab)?.label ?? "Cài đặt"}/>
               )}
             </motion.div>
           </AnimatePresence>

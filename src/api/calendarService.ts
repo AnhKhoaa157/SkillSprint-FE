@@ -1,13 +1,4 @@
-import { getStoredAuthSession } from "./authService";
-
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
-
-type ApiResponse<T> = {
-  success: boolean;
-  code: number;
-  message: string;
-  data: T | null;
-};
+import { requestJson, type ApiResponse } from "./apiClient";
 
 export type WeekDay =
   | "MONDAY"
@@ -71,51 +62,6 @@ export type UpdateCalendarTaskRequest = {
   endTime?: string | null;
 };
 
-function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
-  const headers: Record<string, string> = {};
-
-  if (includeJsonContentType) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  return headers;
-}
-
-async function requestJson<T>(path: string, opts: RequestInit = {}): Promise<ApiResponse<T>> {
-  const session = getStoredAuthSession();
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(opts.headers as Record<string, string> || {}),
-  };
-
-  if (session?.accessToken) {
-    headers["Authorization"] = `Bearer ${session.accessToken}`;
-  }
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...opts,
-    headers,
-  });
-
-  const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
-
-  if (!response.ok) {
-    const message = payload?.message || `Server error: ${response.status}`;
-    throw new Error(message);
-  }
-
-  if (!payload) {
-    throw new Error("Invalid response from server");
-  }
-
-  return payload;
-}
-
 export async function generateCalendarSchedule(workspaceId: string, body: GenerateCalendarRequest): Promise<CalendarScheduleRunResponse> {
   const res = await requestJson<CalendarScheduleRunResponse>(`/api/workspaces/${workspaceId}/calendar/generate`, {
     method: "POST",
@@ -132,7 +78,6 @@ export async function generateCalendarSchedule(workspaceId: string, body: Genera
 export async function getCalendarTasks(workspaceId: string): Promise<CalendarTaskResponse[]> {
   const res = await requestJson<CalendarTaskResponse[]>(`/api/workspaces/${workspaceId}/calendar/tasks`, {
     method: "GET",
-    headers: buildAuthHeaders(getStoredAuthSession()?.accessToken ?? null),
   });
 
   return res.data || [];
@@ -154,7 +99,6 @@ export async function updateCalendarTask(taskId: string, body: UpdateCalendarTas
 export async function completeCalendarTask(taskId: string): Promise<CalendarTaskResponse> {
   const res = await requestJson<CalendarTaskResponse>(`/api/calendar/tasks/${taskId}/complete`, {
     method: "PATCH",
-    headers: buildAuthHeaders(getStoredAuthSession()?.accessToken ?? null),
   });
 
   if (!res.data) {

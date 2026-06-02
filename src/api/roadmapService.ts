@@ -1,120 +1,132 @@
-import { getStoredAuthSession } from "./authService";
+import { requestJson } from "./apiClient";
 
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
-
-type ApiResponse<T> = {
-  success: boolean;
-  code: number;
-  message: string;
-  data: T | null;
+export type GenerateRoadmapRequest = {
+  targetGoal: string;
+  studyHoursPerWeek?: number | null;
+  targetDeadline?: string | null;  // YYYY-MM-DD
+  confidence: "HIGH" | "MEDIUM" | "LOW";
 };
 
-export type RoadmapResource = {
-  title?: string;
-  url?: string;
-  type?: string;
-  description?: string;
-  [key: string]: unknown;
-};
-
-export type RoadmapStep = {
-  title?: string;
-  description?: string;
-  summary?: string;
-  difficulty?: string;
-  complexity?: string;
-  durationMinutes?: number | string;
-  duration?: number | string;
-  minutes?: number | string;
-  resources?: RoadmapResource[];
-  [key: string]: unknown;
+export type RoadmapStepResponse = {
+  stepId: string;
+  roadmapId: string;
+  title: string;
+  description?: string | null;
+  sequenceNo: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type RoadmapResponse = {
-  id?: string;
-  workspaceId?: string;
-  status?: string;
-  title?: string;
-  description?: string;
-  steps?: RoadmapStep[];
-  resources?: RoadmapResource[];
-  createdAt?: string;
-  updatedAt?: string;
-  [key: string]: unknown;
+  roadmapId: string;
+  workspaceId: string;
+  targetGoal: string;
+  confidence: string;
+  studyHoursPerWeek?: number | null;
+  targetDeadline?: string | null;
+  status: string;
+  progressPercent: number;
+  steps: RoadmapStepResponse[];
+  createdAt: string;
+  updatedAt: string;
 };
 
-function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
-  const headers: Record<string, string> = {};
+export type GenerateRoadmapResponse = {
+  roadmapId: string;
+  status: string;
+  message: string;
+};
 
-  if (includeJsonContentType) {
-    headers["Content-Type"] = "application/json";
-  }
+export const ROADMAP_STEPS_KEY = "skillSprint.roadmap.steps";
+export const ROADMAP_GENERATION_STATUS_KEY = "skillSprint.roadmap.generationStatus";
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  return headers;
-}
-
-async function requestJson<T>(path: string, opts: RequestInit = {}): Promise<ApiResponse<T>> {
-  const session = getStoredAuthSession();
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(opts.headers as Record<string, string> || {}),
-  };
-
-  if (session?.accessToken) {
-    headers["Authorization"] = `Bearer ${session.accessToken}`;
-  }
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...opts,
-    headers,
-  });
-
-  const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
-
-  if (!response.ok) {
-    const message = payload?.message || `Server error: ${response.status}`;
-    throw new Error(message);
-  }
-
-  if (!payload) {
-    throw new Error("Invalid response from server");
-  }
-
-  return payload;
-}
-
-export async function getRoadmap(workspaceId: string): Promise<RoadmapResponse | null> {
-  if (!workspaceId) {
-    return null;
-  }
-
-  const res = await requestJson<RoadmapResponse>(`/api/workspaces/${workspaceId}/roadmaps/current`, {
-    method: "GET",
-    headers: buildAuthHeaders(getStoredAuthSession()?.accessToken ?? null),
-  });
-
-  return res.data || null;
-}
-
-export async function generateRoadmap(workspaceId: string): Promise<RoadmapResponse> {
-  const res = await requestJson<RoadmapResponse>(`/api/workspaces/${workspaceId}/roadmaps/generate`, {
+/**
+ * POST /api/workspaces/{workspaceId}/roadmaps/generate
+ * Yêu cầu backend sinh lộ trình học từ learning structure đã confirmed.
+ */
+export async function generateRoadmap(workspaceId: string): Promise<GenerateRoadmapResponse> {
+  const res = await requestJson<GenerateRoadmapResponse>(`/api/workspaces/${workspaceId}/roadmaps/generate`, {
     method: "POST",
-    headers: buildAuthHeaders(getStoredAuthSession()?.accessToken ?? null),
   });
 
-  if (!res.data) {
-    throw new Error(res.message || "Failed to generate roadmap");
+  // Safely unwrap the unified backend response: res?.data or res itself.
+  const cleanData = res?.data || res;
+
+  // If cleanData contains a roadmapId, return it immediately.
+  if (cleanData && typeof cleanData === "object" && (cleanData as any).roadmapId) {
+    return cleanData as GenerateRoadmapResponse;
   }
 
-  return res.data;
+  // Reject with a clear error from the backend or a fallback message.
+  throw new Error((res as any)?.message || "Operation failed");
+}
+
+/**
+ * GET /api/workspaces/{workspaceId}/roadmaps/current
+ * Lấy lộ trình hiện tại (đã generate) của workspace.
+ */
+export async function getMyRoadmap(workspaceId: string): Promise<RoadmapResponse> {
+  const res = await requestJson<RoadmapResponse>(`/api/workspaces/${workspaceId}/roadmaps/current`, { 
+    method: "GET" 
+  });
+
+  // Safely unwrap the unified backend response.
+  const cleanData = res?.data || res;
+
+  // If cleanData contains a steps array or roadmapId, return it immediately.
+  if (cleanData && typeof cleanData === "object" && (Array.isArray((cleanData as any).steps) || (cleanData as any).roadmapId)) {
+    return cleanData as RoadmapResponse;
+  }
+
+  throw new Error((res as any)?.message || "Operation failed");
+}
+
+// 👇 Alias export — MUST be declared BELOW the actual function to avoid hoisting issues.
+export const getRoadmap = getMyRoadmap;
+
+/**
+ * PATCH /api/roadmap/steps/{stepId}
+ * Cập nhật trạng thái của một step trong roadmap.
+ */
+export async function updateRoadmapStep(stepId: string, body: { status: string }): Promise<RoadmapStepResponse> {
+  const res = await requestJson<RoadmapStepResponse>(`/api/roadmap/steps/${stepId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+  const cleanData = res?.data || res;
+
+  if (cleanData && typeof cleanData === "object" && (cleanData as any).stepId) {
+    return cleanData as RoadmapStepResponse;
+  }
+
+  throw new Error((res as any)?.message || "Operation failed");
+}
+
+/**
+ * PATCH /api/workspaces/{workspaceId}/roadmaps
+ * Cập nhật thông tin roadmap (ví dụ: thay đổi status).
+ */
+export async function updateRoadmap(workspaceId: string, body: { status: string }): Promise<RoadmapResponse> {
+  const res = await requestJson<RoadmapResponse>(`/api/workspaces/${workspaceId}/roadmaps`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+  const cleanData = res?.data || res;
+
+  if (cleanData && typeof cleanData === "object" && ((cleanData as any).roadmapId || Array.isArray((cleanData as any).steps))) {
+    return cleanData as RoadmapResponse;
+  }
+
+  throw new Error((res as any)?.message || "Operation failed");
 }
 
 export default {
-  getRoadmap,
   generateRoadmap,
+  getRoadmap,
+  getMyRoadmap,
+  updateRoadmapStep,
+  updateRoadmap,
 };
