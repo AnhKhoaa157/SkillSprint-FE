@@ -10,12 +10,14 @@ import { APP_NAV_SECTIONS } from "../config/nav";
 import { motion, AnimatePresence } from "motion/react";
 import { PricingModal } from "../components/modals/PricingModal";
 import { ReferralModal } from "../components/modals/ReferralModal";
+import { SessionKickoutModal } from "../components/auth/SessionKickoutModal";
 import { BrandLogo } from "../components/layout/BrandLogo";
 import meService from "../../api/meService";
 import workspaceService from "../../api/workspaceService";
 import { getStoredUserProfile } from "../../api/authService";
 import { getUnreadNotifications, getNotifications } from "../../api/notificationsService";
 import type { NotificationResponse } from "../../api/skillSprintModels";
+import { useSubscription } from "../../hooks/useSubscription";
 
 /* ─── Sidebar Design Tokens ─── */
 const F      = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -184,7 +186,17 @@ function normalizeRoadmapSidebarItem(workspace: RoadmapSidebarWorkspace, index: 
   };
 }
 
+/** Two-letter initials from a display name — mirrors getInitials in Profile.tsx */
+function getNavInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "L";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export default function DashboardLayout() {
+  const { planId, planMeta, refresh: refreshSubscription } = useSubscription();
+
   const [sideOpen, setSideOpen]       = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
@@ -195,15 +207,17 @@ export default function DashboardLayout() {
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
-  const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarLetter: string }>(() => {
+  const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarInitials: string; avatarUrl: string }>(() => {
     const stored = getStoredUserProfile();
     const fullName = stored?.fullName || "Learner";
     return {
       fullName,
       roleLabel: stored?.role === "ADMIN" ? "Admin" : "Learner",
-      avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
+      avatarInitials: getNavInitials(fullName),
+      avatarUrl: "",
     };
   });
+  const [navAvatarError, setNavAvatarError] = useState(false);
   const navigate = useNavigate();
   const loc   = useLocation();
   const pathname = loc.pathname.replace(/\/+$/, "") || "/";
@@ -278,7 +292,8 @@ export default function DashboardLayout() {
         setProfile({
           fullName,
           roleLabel: me.roles?.includes("ADMIN") ? "Admin" : "Learner",
-          avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
+          avatarInitials: getNavInitials(fullName),
+          avatarUrl: me.avatarUrl || "",
         });
       } catch {
         if (!mounted) return;
@@ -287,7 +302,8 @@ export default function DashboardLayout() {
         setProfile({
           fullName,
           roleLabel: stored?.role === "ADMIN" ? "Admin" : "Learner",
-          avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
+          avatarInitials: getNavInitials(fullName),
+          avatarUrl: "",
         });
       }
     };
@@ -382,7 +398,7 @@ export default function DashboardLayout() {
                 fontSize:"9px",padding:"1px 6px",borderRadius:"3px",marginTop:"3px",
                 display:"inline-block",background:"rgba(255,107,0,0.2)",
                 color:OG,fontWeight:700,letterSpacing:"0.06em",
-              }}>FREE</span>
+              }}>{planMeta.badge}</span>
             </div>
           </Link>
           <button className="lg:hidden" onClick={()=>setSideOpen(false)}
@@ -535,11 +551,11 @@ export default function DashboardLayout() {
             onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.background="rgba(255,107,0,0.08)";}}
           >
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2px"}}>
-              <span style={{fontSize:"8.5px",fontWeight:700,color:OG,letterSpacing:"0.08em",textTransform:"uppercase"}}>GÓI MIỄN PHÍ</span>
+              <span style={{fontSize:"8.5px",fontWeight:700,color:OG,letterSpacing:"0.08em",textTransform:"uppercase"}}>GÓI {planMeta.badge}</span>
               <Crown size={12} color="#F59E0B"/>
             </div>
-            <p style={{fontWeight:700,fontSize:"0.8rem",color:"#FFFFFF",marginBottom:"1px"}}>Nâng cấp lên Pro</p>
-            <p style={{color:STXT,fontSize:"0.7rem"}}>Mở khóa tính năng AI và nhiều hơn</p>
+            <p style={{fontWeight:700,fontSize:"0.8rem",color:"#FFFFFF",marginBottom:"1px"}}>{planMeta.upgradeLabel}</p>
+            <p style={{color:STXT,fontSize:"0.7rem"}}>{planMeta.upgradeSubtext}</p>
           </div>
 
           <button className="ss-referral mb-3" onClick={()=>setReferralOpen(true)}
@@ -557,9 +573,18 @@ export default function DashboardLayout() {
           <div className="border-t border-slate-800/60 pt-3">
             <Link to="/app/profile" className="block rounded-xl transition hover:bg-slate-800/30" style={{ textDecoration: "none" }}>
               <div className="flex items-center gap-3 px-3 py-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-sm font-bold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-                {profile.avatarLetter}
-              </div>
+              {profile.avatarUrl && !navAvatarError ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt={profile.fullName}
+                  onError={() => setNavAvatarError(true)}
+                  className="h-9 w-9 rounded-full object-cover flex-shrink-0 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+                />
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-xs font-bold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)] flex-shrink-0 tracking-tight">
+                  {profile.avatarInitials}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-slate-200">{profile.fullName}</p>
                 <p className="text-xs text-slate-500">{profile.roleLabel}</p>
@@ -795,9 +820,14 @@ export default function DashboardLayout() {
       <PricingModal
         isOpen={pricingOpen}
         onClose={()=>setPricingOpen(false)}
-        onSuccess={(plan) => navigate("/app/upgraded", { state: { plan } })}
+        currentPlan={planId}
+        onSuccess={async (plan) => {
+          await refreshSubscription();
+          navigate("/app/upgraded", { state: { plan } });
+        }}
       />
       <ReferralModal isOpen={referralOpen} onClose={()=>setReferralOpen(false)}/>
+      <SessionKickoutModal loginPath="/auth" />
     </div>
   );
 }
