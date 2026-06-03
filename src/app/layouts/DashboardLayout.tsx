@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Outlet, NavLink, useLocation, Link, useNavigate } from "react-router";
 import {
   LayoutDashboard, Map, Mic,
@@ -821,9 +822,10 @@ export default function DashboardLayout() {
         isOpen={pricingOpen}
         onClose={()=>setPricingOpen(false)}
         currentPlan={planId}
-        onSuccess={async (plan) => {
+        onSuccess={async () => {
           await refreshSubscription();
-          navigate("/app/upgraded", { state: { plan } });
+          toast.success("🚀 Nâng cấp Career Premium thành công! Toàn bộ không gian học tập AI đã được mở khóa.");
+          navigate("/app/dashboard", { replace: true });
         }}
       />
       <ReferralModal isOpen={referralOpen} onClose={()=>setReferralOpen(false)}/>

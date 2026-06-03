@@ -1,4 +1,4 @@
-import { requestJson, type ApiResponse } from "./apiClient";
+import { requestJson } from "./apiClient";
 
 export type CreateMaterialUploadUrlRequest = {
   fileName: string;
@@ -138,10 +138,25 @@ export async function getMaterialProcessingJob(workspaceId: string, materialId: 
   return res.data;
 }
 
+/**
+ * Permanently deletes an uploaded material and its associated processing data.
+ * DELETE /api/workspaces/{workspaceId}/materials/{materialId}
+ */
+export async function deleteMaterial(workspaceId: string, materialId: string): Promise<void> {
+  const res = await requestJson<null>(`/api/workspaces/${workspaceId}/materials/${materialId}`, {
+    method: "DELETE",
+  });
+
+  if (!res.success) {
+    throw new Error(res.message || "Failed to delete material");
+  }
+}
+
 export default {
   createMaterialUploadUrl,
   confirmMaterialUpload,
   getWorkspaceMaterials,
   getMaterials,
   getMaterialProcessingJob,
+  deleteMaterial,
 };

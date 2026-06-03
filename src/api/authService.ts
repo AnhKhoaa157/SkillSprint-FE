@@ -388,6 +388,35 @@ export async function confirmForgotPassword(email: string, confirmationCode: str
   });
 }
 
+/**
+ * Step 2 of the forgot-password flow: verifies the 6-digit code sent to the
+ * user's email. Called before the new password is submitted.
+ * POST /api/auth/confirm-forgot-password  Body: { email, code }
+ */
+export async function verifyPasswordResetCode(email: string, code: string): Promise<void> {
+  await requestJson<EmptyPayload>("/api/auth/confirm-forgot-password", {
+    email,
+    code,
+  });
+}
+
+/**
+ * Step 3 of the forgot-password flow: sets the new password using the verified
+ * code. This is separate from the challenge-based completeNewPassword flow.
+ * POST /api/auth/complete-new-password  Body: { email, code, newPassword }
+ */
+export async function completePasswordReset(
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<void> {
+  await requestJson<EmptyPayload>("/api/auth/complete-new-password", {
+    email,
+    code,
+    newPassword,
+  });
+}
+
 export async function completeNewPassword(email: string, newPassword: string, session: string): Promise<AuthSession> {
   const response = await requestJson<AuthPayload>("/api/auth/complete-new-password", {
     email,

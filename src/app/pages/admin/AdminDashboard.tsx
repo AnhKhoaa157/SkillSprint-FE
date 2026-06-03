@@ -1554,8 +1554,7 @@ export default function AdminDashboard() {
                               style={{ width: "100%", marginTop: 6, height: 36, borderRadius: 8, border: "1px solid #E2E8F0", padding: "0 10px", fontSize: "0.82rem" }}
                             >
                               <option value="ACTIVE">ACTIVE</option>
-                              <option value="INACTIVE">INACTIVE</option>
-                              <option value="LOCKED">LOCKED</option>
+                              <option value="DISABLED">DISABLED</option>
                             </select>
                             <button
                               onClick={() => saveMgmtStatus(mgmtSelected.id, mgmtStatusDraft)}

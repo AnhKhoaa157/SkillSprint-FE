@@ -239,7 +239,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
       const detail = await getPaymentDetail(pid);
       setPaymentDetail(detail);
 
-      if (detail?.status === "SUCCESS" || detail?.status === "COMPLETED") {
+      if (detail?.status === "SUCCESS" || detail?.status === "COMPLETED" || detail?.status === "PAID" || detail?.status?.toUpperCase() === "PAID") {
         stopPolling();
         setStep("success");
         onSuccess?.(selectedPlan);
@@ -313,7 +313,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
       const detail = await getPaymentDetail(pid);
       setPaymentDetail(detail);
 
-      if (detail?.status === "SUCCESS" || detail?.status === "COMPLETED") {
+      if (detail?.status === "SUCCESS" || detail?.status === "COMPLETED" || detail?.status === "PAID" || detail?.status?.toUpperCase() === "PAID") {
         stopPolling();
         setStep("success");
         onSuccess?.(selectedPlan);

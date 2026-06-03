@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   User, Award, Crown, Bell, Shield, Zap, LogOut,
@@ -101,6 +101,19 @@ function mapMeResponse(me: MeResponse): UserProfileViewModel {
   };
 }
 
+/**
+ * Returns up to two initials from a display name.
+ * Single-word names → first two characters ("UIAKhoa" → "UK" is first+last if multi-word,
+ * but "UIAKhoa" alone → "UI").
+ * Multi-word names → first character of first word + first character of last word.
+ */
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 function compactUserId(userId: string): string {
   if (!userId) return "-";
 
@@ -187,16 +200,72 @@ function SectionHeading({ title }: { title:string }) {
 /* ═══════════════════════════════════════════════
    ACCOUNT TAB
 ═══════════════════════════════════════════════ */
-function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel; onSave: (fullName: string) => Promise<void>; saving: boolean; }) {
+interface AccountTabProps {
+  profile: UserProfileViewModel;
+  onSave: (fullName: string) => Promise<void>;
+  saving: boolean;
+  onAvatarUploaded: (updated: MeResponse) => void;
+}
+
+function AccountTab({ profile, onSave, saving, onAvatarUploaded }: AccountTabProps) {
   const [fullName,   setFullName]   = useState(profile.fullName);
   const [email,      setEmail]      = useState(profile.email);
   const [university, setUniversity] = useState("FPT University");
   const [major,      setMajor]      = useState("Software Engineering");
   const [timeZone,   setTimeZone]   = useState(profile.timeZone || "Asia/Ho_Chi_Minh (GMT+7)");
   const [showUserId, setShowUserId] = useState(false);
-  
-  const [saved,      setSaved]      = useState(false);
-  const [deleteModal,setDeleteModal]= useState(false);
+
+  const [saved,          setSaved]          = useState(false);
+  const [deleteModal,    setDeleteModal]    = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [previewImgError, setPreviewImgError] = useState(false);
+
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const avatarInitials = getInitials(profile.fullName || profile.email || "U");
+
+  async function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!e.target) return;
+    e.target.value = "";          // reset so the same file can be re-selected
+    if (!file) return;
+
+    const MAX_MB = 5;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      toast.error(`Ảnh đại diện không được vượt quá ${MAX_MB} MB.`);
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      // Step 1 — get pre-signed S3 URL from backend
+      const { uploadUrl, objectKey } = await meService.getAvatarUploadUrl(
+        file.name,
+        file.type || "image/jpeg",
+      );
+
+      // Step 2 — PUT binary directly to S3 (no auth headers — pre-signed URL)
+      const s3Res = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type || "image/jpeg" },
+      });
+      if (!s3Res.ok) throw new Error(`S3 upload failed (${s3Res.status})`);
+
+      // Step 3 — confirm with backend and get updated profile
+      const updated = await meService.confirmAvatarUpload(objectKey);
+      onAvatarUploaded(updated);
+      toast.success("Ảnh đại diện đã được cập nhật.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Không thể tải ảnh lên. Vui lòng thử lại.",
+      );
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
 
   useEffect(() => {
     setFullName(profile.fullName);
@@ -234,6 +303,73 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
 
   return (
     <>
+      {/* ── Avatar Upload ─────────────────────────────────────────────────── */}
+      <div style={{ marginBottom:"28px" }}>
+        <SectionHeading title="Ảnh đại diện"/>
+
+        {/* Hidden file input — triggered by the button below */}
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarFileChange}
+        />
+
+        <div style={{ display:"flex", alignItems:"center", gap:"20px" }}>
+          {/* Preview — falls back to initials on broken S3 links */}
+          {profile.avatarUrl && !previewImgError ? (
+            <img
+              src={profile.avatarUrl}
+              alt={profile.fullName}
+              onError={() => setPreviewImgError(true)}
+              style={{
+                width:"72px", height:"72px", borderRadius:"50%",
+                objectFit:"cover", border:`3px solid ${OGLT}`,
+                flexShrink:0,
+              }}
+            />
+          ) : (
+            <div style={{
+              width:"72px", height:"72px", borderRadius:"50%", flexShrink:0,
+              background:"linear-gradient(135deg,#FF6B00,#6366F1)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+            }}>
+              <span style={{ fontSize:"22px", fontWeight:900, color:"#fff", letterSpacing:"-0.03em" }}>
+                {avatarInitials}
+              </span>
+            </div>
+          )}
+
+          {/* Upload control */}
+          <div style={{ display:"flex", flexDirection:"column", gap:"6px" }}>
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              disabled={uploadingAvatar}
+              onClick={() => avatarInputRef.current?.click()}
+              style={{
+                display:"inline-flex", alignItems:"center", gap:"7px",
+                padding:"9px 18px", borderRadius:"9px",
+                background: uploadingAvatar ? "#F3F4F6" : OG,
+                color: uploadingAvatar ? T2 : "#fff",
+                border:"none", cursor: uploadingAvatar ? "not-allowed" : "pointer",
+                fontFamily:F, fontWeight:700, fontSize:"0.82rem",
+                transition:"background 0.2s",
+              }}
+            >
+              {uploadingAvatar
+                ? <><Loader2 size={14} className="animate-spin" /> Đang tải lên...</>
+                : <><Upload size={14} /> Đổi ảnh đại diện</>}
+            </motion.button>
+            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F }}>
+              JPG, PNG, WEBP · Tối đa 5 MB
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Personal Information */}
       <div style={{ marginBottom:"28px" }}>
         <SectionHeading title="Thông tin cá nhân"/>
@@ -1209,7 +1345,8 @@ export default function Profile() {
     }
   };
 
-  const avatarLetter = (profile.fullName.trim().charAt(0) || profile.email.charAt(0) || "U").toUpperCase();
+  const avatarInitials = getInitials(profile.fullName || profile.email || "U");
+  const [bannerImgError, setBannerImgError] = useState(false);
 
   const handleSignOut = () => {
     clearAuthTokens();
@@ -1226,11 +1363,12 @@ export default function Profile() {
         display:"flex", alignItems:"center", gap:"16px",
         marginBottom:"20px",
       }}>
-        {/* Avatar */}
-        {profile.avatarUrl ? (
+        {/* Avatar — onError catches broken S3 URLs and shows two-letter initials */}
+        {profile.avatarUrl && !bannerImgError ? (
           <img
             src={profile.avatarUrl}
             alt={profile.fullName}
+            onError={() => setBannerImgError(true)}
             style={{ width:"58px", height:"58px", borderRadius:"50%", flexShrink:0, objectFit:"cover", border:`2px solid ${OGLT}` }}
           />
         ) : (
@@ -1240,7 +1378,7 @@ export default function Profile() {
             display:"flex", alignItems:"center", justifyContent:"center",
             boxShadow:"0 4px 16px rgba(99,102,241,0.3)",
           }}>
-            <span style={{ fontSize:"22px", fontWeight:900, color:"#fff" }}>{avatarLetter}</span>
+            <span style={{ fontSize:"20px", fontWeight:900, color:"#fff", letterSpacing:"-0.03em" }}>{avatarInitials}</span>
           </div>
         )}
 
@@ -1365,7 +1503,7 @@ export default function Profile() {
               exit={{opacity:0,y:-6}}
               transition={{duration:0.2}}
             >
-              {activeTab === "account"       && <AccountTab profile={profile} onSave={handleUpdateProfile} saving={savingProfile}/>} 
+              {activeTab === "account"       && <AccountTab profile={profile} onSave={handleUpdateProfile} saving={savingProfile} onAvatarUploaded={(updated) => setProfile(mapMeResponse(updated))}/>}
               {activeTab === "subscription"  && <SubscriptionTab/>}
               {activeTab === "notifications" && <NotificationsTab/>}
               {activeTab === "privacy"       && <PrivacyTab/>}

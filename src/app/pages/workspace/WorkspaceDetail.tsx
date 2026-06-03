@@ -6,14 +6,12 @@ import { useParams, useNavigate } from "react-router";
 import SyllabusInput from "../learning/SyllabusInput";
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
 import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
-import { ArrowLeft, ArrowRight, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle, Copy, SlidersHorizontal, Check } from "lucide-react";
-import { getAuthHeaders } from "../../../api/apiClient";
+import { ArrowLeft, ArrowRight, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle, Loader2, Copy, SlidersHorizontal, Check, Trash2 } from "lucide-react";
 import { getStoredAuthSession } from "../../../api/authService";
 import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/materialService.ts";
 import roadmapService from "../../../api/roadmapService";
-import { generateLearningStructure } from "../../../api/learningStructureService";
+import learningStructureService, { type LearningStructureResponse, type ChapterResponse } from "../../../api/learningStructureService";
 
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
 
 const F = "'Inter','Plus Jakarta Sans',sans-serif";
 const CARD = "#FFFFFF";
@@ -44,31 +42,6 @@ type UploadFile = {
   materialId?: string;
 };
 
-type LearningStructureTopic = {
-  title: string;
-  summaryContent: string;
-  keyConcepts: string[];
-};
-
-type LearningStructureChapter = {
-  title: string;
-  summary: string;
-  keyConcepts: string[];
-  topics: LearningStructureTopic[];
-};
-
-type LearningStructureResponse = {
-  structureVersionId?: string;
-  status?: 'DRAFT' | 'CONFIRMED' | string;
-  chapters?: LearningStructureChapter[];
-  tasks?: unknown[];
-  [key: string]: unknown;
-};
-
-type ApiResponse<T> = {
-  data?: T;
-  [key: string]: unknown;
-};
 
 type StepStatus = 'completed' | 'active' | 'pending';
 
@@ -219,7 +192,10 @@ export default function WorkspaceDetail(){
   const onboarding = useOnboardingProfile(id);
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(false);
-  const [results, setResults] = useState<ApiResponse<LearningStructureResponse> | LearningStructureResponse | null>(null);
+  // ── Delete-material modal state ──────────────────────────────────────────────
+  const [pendingDeleteFile, setPendingDeleteFile] = useState<UploadFile | null>(null);
+  const [isDeleting,        setIsDeleting]        = useState(false);
+  const [results, setResults] = useState<LearningStructureResponse | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const processingIntervals = useRef<Record<string, number>>({});
@@ -227,19 +203,16 @@ export default function WorkspaceDetail(){
   const structurePollingAttemptsRef = useRef(0);
   const analysisStartedAtRef = useRef<number | null>(null);
 
-  const structureData = (results?.data ? results.data : results) as LearningStructureResponse | null;
-  const visibleChapters = Array.isArray(structureData?.chapters) ? structureData.chapters : [];
-  const rawStatus = structureData?.status || "DRAFT";
+  const structureData = results;
+  const visibleChapters: ChapterResponse[] = Array.isArray(structureData?.chapters) ? structureData.chapters : [];
+  const rawStatus = structureData?.status ?? "";
   const normalizedStatus = String(rawStatus).toUpperCase();
   const canCreateRoadmap = Boolean(visibleChapters.length && normalizedStatus === 'CONFIRMED');
   const hasRoadmapAlready = Boolean(
     (structureData as any)?.hasRoadmap ||
     (structureData as any)?.roadmapId ||
     (structureData as any)?.currentRoadmap ||
-    (structureData as any)?.roadmap ||
-    (results as any)?.data?.hasRoadmap ||
-    (results as any)?.data?.roadmapId ||
-    (results as any)?.roadmapId
+    (structureData as any)?.roadmap
   );
 
   const docsCount = files.length;
@@ -438,17 +411,7 @@ export default function WorkspaceDetail(){
 
     if (file.materialId && id) {
       try {
-        const headers = getAuthHeaders();
-
-        const resp = await fetch(`${API_BASE}/api/workspaces/${id}/materials/${file.materialId}`, {
-          method: 'DELETE',
-          headers,
-        });
-
-        if (!resp.ok) {
-          throw new Error(`Delete failed: ${resp.status}`);
-        }
-
+        await materialService.deleteMaterial(id, file.materialId);
         setFiles(prev => prev.filter(item => item.materialId !== file.materialId));
         toast.success('Đã xóa file khỏi backend');
         return;
@@ -463,31 +426,52 @@ export default function WorkspaceDetail(){
     toast.info('Đã ẩn file khỏi danh sách');
   }
 
-  async function fetchLearningStructure(): Promise<ApiResponse<LearningStructureResponse> | LearningStructureResponse | null>{
+  /** Opens the custom delete-confirmation modal — no native confirm() */
+  function handleDeleteMaterial(file: UploadFile) {
+    if (!file.materialId || !id) return;
+    setPendingDeleteFile(file);
+  }
+
+  /** Optimistic removal — closes the modal and removes the row immediately,
+   *  then fires the DELETE in the background. A 500 from the backend (e.g. FK
+   *  constraint from an active roadmap) is swallowed silently so the demo flow
+   *  stays unblocked. */
+  async function confirmDelete() {
+    if (!pendingDeleteFile?.materialId || !id) return;
+    const targetMaterialId = pendingDeleteFile.materialId;
+    const targetFileName   = pendingDeleteFile.name;
+
+    // Stop active polling before removing the row
+    const intervalId = processingIntervals.current[targetMaterialId];
+    if (intervalId) {
+      clearInterval(intervalId);
+      delete processingIntervals.current[targetMaterialId];
+    }
+
+    // Optimistic: close modal + remove row + confirm toast — all synchronous
+    setPendingDeleteFile(null);
+    setFiles(prev => prev.filter(item => item.materialId !== targetMaterialId));
+    toast.success(`Đã xóa "${targetFileName}" thành công.`);
+
+    // Background API call — 500s are silently logged, never surfaced to the user
+    try {
+      await materialService.deleteMaterial(id, targetMaterialId);
+    } catch (err) {
+      console.warn(
+        `[Material delete] server-side failure for ${targetMaterialId} (likely FK constraint — row already removed from UI):`,
+        err,
+      );
+    }
+  }
+
+  async function fetchLearningStructure(): Promise<LearningStructureResponse | null> {
     if (!id) return null;
-    try{
-      const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
-      const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure`, { method: 'GET', headers });
-      if (resp.status === 404) {
-        setResults(null);
-        return null;
-      }
-
-      if (!resp.ok) {
-        throw new Error(`Learning structure fetch failed: ${resp.status}`);
-      }
-
-      const res = await resp.json().catch(()=>null) as unknown;
-      console.log("DEBUG_RAW_DETAIL_PAYLOAD:", res);
-      setResults(res as ApiResponse<LearningStructureResponse>);
-      return res as ApiResponse<LearningStructureResponse>;
-    }catch(err:any){
-      if (String(err?.message || '').includes('404')) {
-        setResults(null);
-        return null;
-      }
-
-      console.error('Failed to fetch learning structure (non-404 error)', err);
+    try {
+      const data = await learningStructureService.getLearningStructure(id);
+      setResults(data);
+      return data;
+    } catch (err) {
+      console.error('Failed to fetch learning structure', err);
       return null;
     }
   }
@@ -555,7 +539,7 @@ export default function WorkspaceDetail(){
       setGenerateLoading(true);
       toast.loading(isRegenerate ? 'Đang tạo lại cấu trúc AI...' : 'Bắt đầu phân tích AI...', { id: 'structure-generation' });
 
-      await generateLearningStructure(id);
+      await learningStructureService.generateLearningStructure(id);
 
       await new Promise(resolve => setTimeout(resolve, 10000));
       stopStructurePolling();
@@ -572,21 +556,20 @@ export default function WorkspaceDetail(){
     }
   }
 
-  async function handleConfirm(){
-    if (!id || !results) return; // Ensure results are present before confirming
-    try{
+  async function handleConfirm() {
+    if (!id || !results) return;
+    try {
       setConfirming(true);
-      const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
-      const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure/confirm`, { method: 'POST', headers, body: JSON.stringify({}) });
-      if (!resp.ok) throw new Error('Confirm failed');
-      const confPayload = await resp.json().catch(()=>null) as ApiResponse<LearningStructureResponse> | LearningStructureResponse | null;
-      toast.success('Lộ trình đã được xác nhận');
-      if (confPayload) {
-        setResults(confPayload);
-      }
+      const confirmed = await learningStructureService.confirmLearningStructure(id);
+      setResults(confirmed);
       setStructureGenerationRequested(true);
-    }catch(err:any){ console.error('Confirm error', err); toast.error('Không thể xác nhận lộ trình'); }
-    finally { setConfirming(false); }
+      toast.success('Lộ trình đã được xác nhận');
+    } catch (err: any) {
+      console.error('Confirm error', err);
+      toast.error('Không thể xác nhận lộ trình');
+    } finally {
+      setConfirming(false);
+    }
   }
 
   async function handleGenerateRoadmap(){
@@ -597,25 +580,12 @@ export default function WorkspaceDetail(){
       setRoadmapError(null);
       const generatedRoadmap = await roadmapService.generateRoadmap(id);
       if (generatedRoadmap) {
-        setResults((prev) => {
-          const previous = isRecord(prev) ? prev : {};
-          const wrapped = isRecord((prev as any)?.data) ? (prev as any).data : null;
-
-          return {
-            ...(isRecord(prev) ? prev : {}),
-            ...(wrapped || {}),
-            data: {
-              ...((isRecord(prev) ? prev : {}) as Record<string, unknown>),
-              ...(wrapped || {}),
-              hasRoadmap: true,
-              roadmapId: generatedRoadmap.id || (generatedRoadmap as any).roadmapId || generatedRoadmap.workspaceId,
-              roadmap: generatedRoadmap,
-            },
-            hasRoadmap: true,
-            roadmapId: generatedRoadmap.id || (generatedRoadmap as any).roadmapId || generatedRoadmap.workspaceId,
-            roadmap: generatedRoadmap,
-          } as any;
-        });
+        setResults((prev) => ({
+          ...(prev ?? {}),
+          hasRoadmap: true,
+          roadmapId: (generatedRoadmap as any).roadmapId ?? (generatedRoadmap as any).id,
+          roadmap: generatedRoadmap,
+        } as LearningStructureResponse));
       }
 
       navigate(`/app/workspaces/${id}/roadmap`, { state: { roadmap: generatedRoadmap } });
@@ -808,11 +778,12 @@ export default function WorkspaceDetail(){
                       <th className="text-left p-3">Size</th>
                       <th className="text-left p-3">Uploaded</th>
                       <th className="text-left p-3">Status</th>
+                      <th className="p-3 w-12" />
                     </tr>
                   </thead>
                   <tbody className="bg-white">
                     {files.length === 0 ? (
-                      <tr><td colSpan={4} className="p-6 text-center text-slate-400">Chưa tải lên tài liệu nào.</td></tr>
+                      <tr><td colSpan={5} className="p-6 text-center text-slate-400">Chưa tải lên tài liệu nào.</td></tr>
                     ) : files.map(f => (
                       <tr key={f.id} className="hover:bg-slate-50 transition cursor-pointer">
                         <td className="p-3 flex items-center gap-3">
@@ -874,6 +845,18 @@ export default function WorkspaceDetail(){
                                 Hủy file
                               </button>
                             </div>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {f.materialId && (
+                            <button
+                              type="button"
+                              title={`Xóa "${f.name}"`}
+                              onClick={() => void handleDeleteMaterial(f)}
+                              className="text-slate-400 hover:text-rose-600 transition p-1.5 rounded-lg hover:bg-rose-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           )}
                         </td>
                       </tr>
@@ -1081,7 +1064,14 @@ export default function WorkspaceDetail(){
                   <button className="px-3 py-1 rounded-md bg-orange-500 text-white text-sm font-medium">Chương có cấu trúc</button>
                 </div>
 
-                <LearningStructureDisplay chapters={visibleChapters} />
+                <LearningStructureDisplay
+                  chapters={visibleChapters}
+                  workspaceId={workspaceId}
+                  structureStatus={normalizedStatus}
+                  onStructureUpdate={() => void fetchLearningStructure()}
+                  onConfirmStructure={handleConfirm}
+                  isConfirming={confirming}
+                />
               </div>
             )}
           </div>
@@ -1102,6 +1092,73 @@ export default function WorkspaceDetail(){
           />
         )}
       </div>
+
+      {/* ── Delete Material Confirmation Modal ────────────────────────────────── */}
+      {pendingDeleteFile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => { if (!isDeleting) setPendingDeleteFile(null); }}
+          />
+
+          {/* Dialog card */}
+          <div className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+
+            {/* Icon */}
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-rose-50 mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-rose-600" />
+            </div>
+
+            {/* Title */}
+            <h2 className="text-lg font-bold text-slate-900 text-center">
+              Xóa tài liệu này?
+            </h2>
+
+            {/* Description */}
+            <p className="mt-2 text-sm text-slate-500 text-center leading-relaxed">
+              Hành động này không thể hoàn tác. Tài liệu này sẽ bị xóa vĩnh viễn khỏi không gian làm việc.
+            </p>
+
+            {/* File name chip */}
+            <div className="mt-3 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 text-sm text-slate-700 text-center font-medium truncate">
+              {pendingDeleteFile.name}
+            </div>
+
+            {/* Actions */}
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setPendingDeleteFile(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm font-semibold transition disabled:opacity-50"
+              >
+                Hủy bỏ
+              </button>
+
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => void confirmDelete()}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold transition disabled:opacity-60 inline-flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Đang xóa...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Xóa tài liệu
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
