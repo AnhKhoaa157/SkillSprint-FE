@@ -23,6 +23,16 @@ export const skillSprintApiClient: AxiosInstance = axios.create({
   },
 });
 
+skillSprintApiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      window.dispatchEvent(new Event("session-kickout-triggered"));
+    }
+    return Promise.reject(error);
+  },
+);
+
 skillSprintApiClient.interceptors.request.use((config) => {
   const token = getAuthToken();
   const sessionId = getSessionId();

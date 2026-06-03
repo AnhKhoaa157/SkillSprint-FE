@@ -548,6 +548,23 @@ export default function Auth() {
     if (mode === "login") setTab("signin");
   }, [location.search]);
 
+  const onLoginSuccess = async (tokens: Parameters<typeof storeAuthTokens>[0]) => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+
+      storeAuthTokens(tokens);
+
+      console.log("[Auth] Fresh session stored. Initiating routing cooldown...");
+
+      setTimeout(() => {
+        window.location.href = getPostLoginPath(tokens.role);
+      }, 100);
+    } catch (error) {
+      console.error("Login session initialization failed:", error);
+    }
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setAuthError("");
@@ -587,11 +604,7 @@ export default function Auth() {
             return;
           }
 
-          // store tokens and navigate immediately; dashboard will show loader
-          storeAuthTokens(result.tokens);
-          const to = getPostLoginPath(result.tokens.role);
-          // navigate to a dedicated loading page which will forward to the final target
-          navigate(`/loading`, { replace: true, state: { to } });
+          await onLoginSuccess(result.tokens);
         } else if (result.status === "new-password-required") {
           setChallengeSession(result.session);
           setChallengeRole(result.role);
