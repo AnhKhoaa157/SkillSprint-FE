@@ -1,14 +1,18 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   User, Award, Crown, Bell, Shield, Zap, LogOut,
-  ChevronDown, AlertTriangle, Check, Trash2, Gift, CalendarClock, Loader2, MailCheck, BadgeCheck,
-  Copy, Eye, EyeOff,
+  ChevronDown, AlertTriangle, Check, Trash2, CalendarClock, Loader2, MailCheck, BadgeCheck,
+  Copy, Eye, EyeOff, HardDrive, Layers, Upload,
+  Gem, Sparkles, RefreshCw, AlertCircle, ArrowUp, ArrowDown, X,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { clearAuthTokens, getStoredUserProfile, type StoredUserProfile } from "../../../api/authService";
 import meService, { type MeResponse } from "../../../api/meService";
+import { getCurrentSubscription, getQuotaStatus, cancelSubscription } from "../../../api/subscriptionsService";
+import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
+import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse, CurrentSubscriptionResponse, QuotaStatusResponse, ServicePlanType } from "../../../api/skillSprintModels";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -24,12 +28,12 @@ const SH   = "0 1px 3px rgba(0,0,0,0.04), 0 6px 20px rgba(0,0,0,0.05)";
 
 /* ─── Sub-nav items ─── */
 const TABS = [
-  { id:"account",       label:"Account",       icon:User,   danger:false },
-  { id:"achievements",  label:"Achievements",  icon:Award,  danger:false },
-  { id:"subscription",  label:"Subscription",  icon:Crown,  danger:false },
-  { id:"notifications", label:"Notifications", icon:Bell,   danger:false },
-  { id:"privacy",       label:"Privacy",       icon:Shield, danger:false },
-  { id:"integrations",  label:"Integrations",  icon:Zap,    danger:false },
+  { id:"account",       label:"Tài khoản",            icon:User,   danger:false },
+  { id:"achievements",  label:"Thành tựu",            icon:Award,  danger:false },
+  { id:"subscription",  label:"Quản lý gói",          icon:Crown,  danger:false },
+  { id:"notifications", label:"Thông báo",            icon:Bell,   danger:false },
+  { id:"privacy",       label:"Bảo mật",              icon:Shield, danger:false },
+  { id:"integrations",  label:"Tiện ích tích hợp",    icon:Zap,    danger:false },
 ];
 
 type UserProfileViewModel = {
@@ -51,19 +55,19 @@ function emptyProfile(): UserProfileViewModel {
     userId: "",
     email: "",
     emailVerified: false,
-    fullName: "Learner",
+    fullName: "Học viên",
     firstName: "",
     lastName: "",
     avatarUrl: "",
     timeZone: "Asia/Ho_Chi_Minh (GMT+7)",
     status: "-",
     roles: [],
-    roleLabel: "Learner",
+    roleLabel: "Học viên",
   };
 }
 
 function mapStoredProfile(stored: StoredUserProfile): UserProfileViewModel {
-  const fallbackName = stored.fullName || [stored.firstName, stored.lastName].filter(Boolean).join(" ").trim() || "Learner";
+  const fallbackName = stored.fullName || [stored.firstName, stored.lastName].filter(Boolean).join(" ").trim() || "Học viên";
 
   return {
     userId: "",
@@ -76,7 +80,7 @@ function mapStoredProfile(stored: StoredUserProfile): UserProfileViewModel {
     timeZone: "Asia/Ho_Chi_Minh (GMT+7)",
     status: "-",
     roles: stored.role ? [stored.role] : [],
-    roleLabel: stored.role === "ADMIN" ? "Admin" : "Learner",
+    roleLabel: stored.role === "ADMIN" ? "Admin" : "Học viên",
   };
 }
 
@@ -86,15 +90,28 @@ function mapMeResponse(me: MeResponse): UserProfileViewModel {
     userId: me.userId,
     email: me.email,
     emailVerified: me.emailVerified,
-    fullName: me.fullName || "Learner",
+    fullName: me.fullName || "Học viên",
     firstName: parts[0] || "",
     lastName: parts.slice(1).join(" "),
     avatarUrl: me.avatarUrl || "",
     timeZone: me.timeZone || "Asia/Ho_Chi_Minh (GMT+7)",
     status: me.status || "-",
     roles: me.roles || [],
-    roleLabel: me.roles?.includes("ADMIN") ? "Admin" : "Learner",
+    roleLabel: me.roles?.includes("ADMIN") ? "Admin" : "Học viên",
   };
+}
+
+/**
+ * Returns up to two initials from a display name.
+ * Single-word names → first two characters ("UIAKhoa" → "UK" is first+last if multi-word,
+ * but "UIAKhoa" alone → "UI").
+ * Multi-word names → first character of first word + first character of last word.
+ */
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function compactUserId(userId: string): string {
@@ -183,16 +200,72 @@ function SectionHeading({ title }: { title:string }) {
 /* ═══════════════════════════════════════════════
    ACCOUNT TAB
 ═══════════════════════════════════════════════ */
-function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel; onSave: (fullName: string) => Promise<void>; saving: boolean; }) {
+interface AccountTabProps {
+  profile: UserProfileViewModel;
+  onSave: (fullName: string) => Promise<void>;
+  saving: boolean;
+  onAvatarUploaded: (updated: MeResponse) => void;
+}
+
+function AccountTab({ profile, onSave, saving, onAvatarUploaded }: AccountTabProps) {
   const [fullName,   setFullName]   = useState(profile.fullName);
   const [email,      setEmail]      = useState(profile.email);
   const [university, setUniversity] = useState("FPT University");
   const [major,      setMajor]      = useState("Software Engineering");
   const [timeZone,   setTimeZone]   = useState(profile.timeZone || "Asia/Ho_Chi_Minh (GMT+7)");
   const [showUserId, setShowUserId] = useState(false);
-  
-  const [saved,      setSaved]      = useState(false);
-  const [deleteModal,setDeleteModal]= useState(false);
+
+  const [saved,          setSaved]          = useState(false);
+  const [deleteModal,    setDeleteModal]    = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [previewImgError, setPreviewImgError] = useState(false);
+
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const avatarInitials = getInitials(profile.fullName || profile.email || "U");
+
+  async function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!e.target) return;
+    e.target.value = "";          // reset so the same file can be re-selected
+    if (!file) return;
+
+    const MAX_MB = 5;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      toast.error(`Ảnh đại diện không được vượt quá ${MAX_MB} MB.`);
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      // Step 1 — get pre-signed S3 URL from backend
+      const { uploadUrl, objectKey } = await meService.getAvatarUploadUrl(
+        file.name,
+        file.type || "image/jpeg",
+      );
+
+      // Step 2 — PUT binary directly to S3 (no auth headers — pre-signed URL)
+      const s3Res = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type || "image/jpeg" },
+      });
+      if (!s3Res.ok) throw new Error(`S3 upload failed (${s3Res.status})`);
+
+      // Step 3 — confirm with backend and get updated profile
+      const updated = await meService.confirmAvatarUpload(objectKey);
+      onAvatarUploaded(updated);
+      toast.success("Ảnh đại diện đã được cập nhật.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Không thể tải ảnh lên. Vui lòng thử lại.",
+      );
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
 
   useEffect(() => {
     setFullName(profile.fullName);
@@ -230,13 +303,80 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
 
   return (
     <>
+      {/* ── Avatar Upload ─────────────────────────────────────────────────── */}
+      <div style={{ marginBottom:"28px" }}>
+        <SectionHeading title="Ảnh đại diện"/>
+
+        {/* Hidden file input — triggered by the button below */}
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarFileChange}
+        />
+
+        <div style={{ display:"flex", alignItems:"center", gap:"20px" }}>
+          {/* Preview — falls back to initials on broken S3 links */}
+          {profile.avatarUrl && !previewImgError ? (
+            <img
+              src={profile.avatarUrl}
+              alt={profile.fullName}
+              onError={() => setPreviewImgError(true)}
+              style={{
+                width:"72px", height:"72px", borderRadius:"50%",
+                objectFit:"cover", border:`3px solid ${OGLT}`,
+                flexShrink:0,
+              }}
+            />
+          ) : (
+            <div style={{
+              width:"72px", height:"72px", borderRadius:"50%", flexShrink:0,
+              background:"linear-gradient(135deg,#FF6B00,#6366F1)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+            }}>
+              <span style={{ fontSize:"22px", fontWeight:900, color:"#fff", letterSpacing:"-0.03em" }}>
+                {avatarInitials}
+              </span>
+            </div>
+          )}
+
+          {/* Upload control */}
+          <div style={{ display:"flex", flexDirection:"column", gap:"6px" }}>
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              disabled={uploadingAvatar}
+              onClick={() => avatarInputRef.current?.click()}
+              style={{
+                display:"inline-flex", alignItems:"center", gap:"7px",
+                padding:"9px 18px", borderRadius:"9px",
+                background: uploadingAvatar ? "#F3F4F6" : OG,
+                color: uploadingAvatar ? T2 : "#fff",
+                border:"none", cursor: uploadingAvatar ? "not-allowed" : "pointer",
+                fontFamily:F, fontWeight:700, fontSize:"0.82rem",
+                transition:"background 0.2s",
+              }}
+            >
+              {uploadingAvatar
+                ? <><Loader2 size={14} className="animate-spin" /> Đang tải lên...</>
+                : <><Upload size={14} /> Đổi ảnh đại diện</>}
+            </motion.button>
+            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F }}>
+              JPG, PNG, WEBP · Tối đa 5 MB
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Personal Information */}
       <div style={{ marginBottom:"28px" }}>
-        <SectionHeading title="Personal Information"/>
+        <SectionHeading title="Thông tin cá nhân"/>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3, minmax(0, 1fr))", gap:"10px", marginBottom:"14px" }}>
           <div style={{ padding:"10px 12px", borderRadius:"10px", border:`1px solid ${BDR}`, background:"#F9FAFB" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"8px", marginBottom:"3px" }}>
-              <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F }}>User ID</p>
+              <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F }}>Mã người dùng</p>
               <div style={{ display:"flex", alignItems:"center", gap:"4px" }}>
                 <button
                   type="button"
@@ -276,43 +416,43 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
             <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Email</p>
             <p style={{ fontSize:"0.82rem", fontWeight:700, color:T1, fontFamily:F, display:"flex", alignItems:"center", gap:"6px" }}>
               {profile.emailVerified ? <MailCheck size={13} color="#059669" /> : <AlertTriangle size={13} color="#F97316" />}
-              {profile.emailVerified ? "Verified" : "Unverified"}
+              {profile.emailVerified ? "Đã xác minh" : "Chưa xác minh"}
             </p>
           </div>
           <div style={{ padding:"10px 12px", borderRadius:"10px", border:`1px solid ${BDR}`, background:"#F9FAFB" }}>
-            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Status</p>
+            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Trạng thái</p>
             <p style={{ fontSize:"0.82rem", fontWeight:700, color:T1, fontFamily:F }}>{profile.status || "-"}</p>
           </div>
           <div style={{ padding:"10px 12px", borderRadius:"10px", border:`1px solid ${BDR}`, background:"#F9FAFB" }}>
-            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Role(s)</p>
+            <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F, marginBottom:"3px" }}>Vai trò</p>
             <p style={{ fontSize:"0.82rem", fontWeight:700, color:T1, fontFamily:F }}>{profile.roles?.length ? profile.roles.join(", ") : profile.roleLabel}</p>
           </div>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:"14px", marginBottom:"14px" }}>
-          <Input label="Full Name" value={fullName} onChange={setFullName} placeholder="Full name"/>
+          <Input label="Họ và tên" value={fullName} onChange={setFullName} placeholder="Họ và tên"/>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px" }}>
-          <Input label="Email Address" value={email} onChange={setEmail}
+          <Input label="Địa chỉ Email" value={email} onChange={setEmail}
             type="email" placeholder="student@gmail.com" disabled
-            hint="Email is managed by the backend profile."/>
-          <Input label="Time Zone" value={timeZone} onChange={setTimeZone}
+            hint="Email được quản lý bởi hệ thống máy chủ."/>
+          <Input label="Múi giờ" value={timeZone} onChange={setTimeZone}
             placeholder="Asia/Ho_Chi_Minh (GMT+7)" disabled
-            hint="Read from /api/me and displayed for reference."/>
+            hint="Dữ liệu được đồng bộ từ hệ thống (chỉ xem)."/>
         </div>
       </div>
 
       {/* University Details */}
       <div style={{ marginBottom:"28px" }}>
-        <SectionHeading title="University Details"/>
+        <SectionHeading title="Thông tin học vấn"/>
           <div style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
-            <Select label="University" value={university} onChange={setUniversity} options={UNIVERSITIES}/>
-            <Input  label="Major"      value={major}      onChange={setMajor}      placeholder="e.g. Software Engineering"/>
+            <Select label="Trường đại học" value={university} onChange={setUniversity} options={UNIVERSITIES}/>
+            <Input  label="Chuyên ngành"      value={major}      onChange={setMajor}      placeholder="VD: Công nghệ phần mềm"/>
           </div>
       </div>
 
       {/* Danger Zone */}
       <div style={{ marginBottom:"24px" }}>
-        <SectionHeading title="Danger Zone"/>
+        <SectionHeading title="Vùng nguy hiểm"/>
         <div style={{
           display:"flex", alignItems:"center", justifyContent:"space-between",
           padding:"14px 16px", borderRadius:"10px",
@@ -321,9 +461,9 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
           <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
             <AlertTriangle size={16} color="#EF4444"/>
             <div>
-              <p style={{ fontWeight:700, fontSize:"0.875rem", color:"#991B1B", fontFamily:F }}>Delete Account</p>
+              <p style={{ fontWeight:700, fontSize:"0.875rem", color:"#991B1B", fontFamily:F }}>Xóa tài khoản</p>
               <p style={{ fontSize:"0.75rem", color:"#EF4444", fontFamily:F }}>
-                Permanently deletes all your data. This action cannot be undone.
+                Xóa vĩnh viễn toàn bộ dữ liệu. Không thể khôi phục sau khi xóa.
               </p>
             </div>
           </div>
@@ -335,7 +475,7 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
               cursor:"pointer", fontFamily:F, fontWeight:700, fontSize:"0.78rem",
               flexShrink:0,
             }}>
-            <Trash2 size={12}/> Delete Account
+            <Trash2 size={12}/> Xóa tài khoản
           </button>
         </div>
       </div>
@@ -361,7 +501,7 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
             opacity: saving ? 0.75 : 1,
           }}
         >
-          {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <><Check size={15}/> Saved!</> : "Save Changes"}
+          {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <><Check size={15}/> Đã lưu!</> : "Lưu thay đổi"}
         </motion.button>
       </div>
 
@@ -375,17 +515,17 @@ function AccountTab({ profile, onSave, saving }: { profile: UserProfileViewModel
               <div style={{ width:"44px", height:"44px", borderRadius:"12px", background:"#FFF1F2", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"16px" }}>
                 <Trash2 size={20} color="#EF4444"/>
               </div>
-              <h3 style={{ fontWeight:900, fontSize:"1.1rem", color:T1, fontFamily:F, marginBottom:"8px" }}>Delete your account?</h3>
+              <h3 style={{ fontWeight:900, fontSize:"1.1rem", color:T1, fontFamily:F, marginBottom:"8px" }}>Xóa tài khoản của bạn?</h3>
               <p style={{ fontSize:"0.875rem", color:T2, lineHeight:1.65, marginBottom:"20px", fontFamily:F }}>
-                This will permanently delete all your data, progress, roadmaps and CV files. This action cannot be undone.
+                Hành động này sẽ xóa vĩnh viễn toàn bộ dữ liệu, tiến độ, lộ trình và tệp CV. Không thể khôi phục.
               </p>
               <div style={{ display:"flex", gap:"10px" }}>
                 <button onClick={()=>setDeleteModal(false)}
                   style={{ flex:1, padding:"10px", borderRadius:"9px", border:`1px solid ${BDR}`, background:CARD, color:T2, fontFamily:F, fontWeight:600, cursor:"pointer" }}>
-                  Cancel
+                  Hủy
                 </button>
                 <button style={{ flex:1, padding:"10px", borderRadius:"9px", background:"#EF4444", border:"none", color:"#fff", fontFamily:F, fontWeight:700, cursor:"pointer" }}>
-                  Yes, Delete
+                  Xác nhận xóa
                 </button>
               </div>
             </motion.div>
@@ -402,13 +542,13 @@ function PlaceholderTab({ label }:{ label:string }) {
     <div style={{ textAlign:"center", padding:"60px 20px" }}>
       <div style={{ fontSize:"36px", marginBottom:"12px" }}>🚧</div>
       <h3 style={{ fontWeight:700, fontSize:"1rem", color:T1, marginBottom:"6px", fontFamily:F }}>{label}</h3>
-      <p style={{ color:T3, fontSize:"0.875rem", fontFamily:F }}>This section is coming soon.</p>
+      <p style={{ color:T3, fontSize:"0.875rem", fontFamily:F }}>Mục này đang được phát triển.</p>
     </div>
   );
 }
 
 /* ════════════════════════════════════════════════
-   SUBSCRIPTION TAB  ← matches reference image exactly
+   SUBSCRIPTION TAB
 ════════════════════════════════════════════════ */
 function PlanFeature({ text, color="#374151" }: { text: string; color?: string }) {
   return (
@@ -419,181 +559,522 @@ function PlanFeature({ text, color="#374151" }: { text: string; color?: string }
   );
 }
 
+function QuotaProgressBar({ label, used, total, icon: IconComponent }: { label: string; used: number; total: number; icon: React.ElementType }) {
+  const percentage = total > 0 ? Math.min((used / total) * 100, 100) : 0;
+  const isNearLimit = percentage >= 80;
+  const isAtLimit   = percentage >= 100;
+  const fillColor   = isAtLimit ? "#EF4444" : isNearLimit ? "#F59E0B" : OG;
+
+  return (
+    <div style={{ marginBottom:"12px" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"6px" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+          <IconComponent size={14} color={T2} />
+          <span style={{ fontFamily:F, fontWeight:600, fontSize:"0.80rem", color:T1 }}>{label}</span>
+        </div>
+        <span style={{ fontFamily:F, fontWeight:700, fontSize:"0.75rem", color:fillColor }}>{used}/{total}</span>
+      </div>
+      <div style={{ width:"100%", height:"8px", borderRadius:"99px", background:"#E5E7EB", overflow:"hidden" }}>
+        <motion.div
+          initial={{ width:0 }}
+          animate={{ width:`${percentage}%` }}
+          transition={{ duration:0.8, ease:[0.22,1,0.36,1] }}
+          style={{ height:"100%", borderRadius:"99px", background:`linear-gradient(90deg,${fillColor},${fillColor}DD)` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+const POLL_INTERVAL_MS  = 5000;
+const MAX_POLL_ATTEMPTS = 120;
+
+function formatVnd(amount: number) {
+  return new Intl.NumberFormat("vi-VN", { style:"currency", currency:"VND" }).format(amount);
+}
+
 function SubscriptionTab() {
+  /* ── Server data ── */
+  const [subData,   setSubData]   = useState<CurrentSubscriptionResponse | null>(null);
+  const [quotaData, setQuotaData] = useState<QuotaStatusResponse | null>(null);
+  const [loading,   setLoading]   = useState(true);
+
+  /* ── Checkout (upgrade) flow ── */
+  const [checkoutOpen,    setCheckoutOpen]    = useState(false);
+  const [checkoutStep,    setCheckoutStep]    = useState<"checkout"|"success"|"error">("checkout");
+  const [paymentData,     setPaymentData]     = useState<SepayPaymentCreateResponse | null>(null);
+  const [paymentDetail,   setPaymentDetail]   = useState<SepayPaymentDetailResponse | null>(null);
+  const [creatingPayment, setCreatingPayment] = useState(false);
+  const [createError,     setCreateError]     = useState<string | null>(null);
+  const [pollingActive,   setPollingActive]   = useState(false);
+  const [pollStatusText,  setPollStatusText]  = useState("");
+  const [pollError,       setPollError]       = useState<string | null>(null);
+  const [copied,          setCopied]          = useState(false);
+  const [qrLoaded,        setQrLoaded]        = useState(false);
+
+  /* ── Cancel flow ── */
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [cancelLoading,     setCancelLoading]     = useState(false);
+
+  const pollingRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollAttemptRef = useRef(0);
+  const paymentIdRef   = useRef<string | null>(null);
+
+  /* ── Load subscription & quota ── */
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [sub, quota] = await Promise.all([
+        getCurrentSubscription(),
+        getQuotaStatus(),
+      ]);
+      setSubData(sub);
+      setQuotaData(quota);
+    } catch {
+      // non-critical
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadData(); }, [loadData]);
+  useEffect(() => () => { if (pollingRef.current) clearInterval(pollingRef.current); }, []);
+
+  /* ── Plan registry ── */
+  type PlanId = "starter"|"skill_builder"|"career_premium";
+  const planValue: Record<PlanId,number> = { starter:0, skill_builder:1, career_premium:2 };
+  const planLabel: Record<PlanId,string> = { starter:"Starter", skill_builder:"Skill Builder", career_premium:"Career Premium" };
+  const planApiType: Record<PlanId,string> = { starter:"FREE", skill_builder:"SKILL_BUILDER", career_premium:"PREMIUM" };
+  const planDisplayPrice: Record<PlanId,string> = { starter:"Miễn phí", skill_builder:"89.000", career_premium:"199.000" };
+  const planPriceSub: Record<PlanId,string|null> = { starter:null, skill_builder:"VND / tháng", career_premium:"VND / tháng" };
+  const planFeatureList: Record<PlanId,string[]> = {
+    starter:        ["Tối đa 3 lộ trình","Công cụ Pomodoro cơ bản","Tham gia cộng đồng"],
+    skill_builder:  ["Không giới hạn lộ trình","Phân tích học tập chuyên sâu","Hỗ trợ ưu tiên"],
+    career_premium: ["Toàn bộ quyền lợi Skill Builder","Xuất CV & Minh chứng","Gia sư AI 24/7","Ghép cặp Mentor"],
+  };
+
+  const rawPlan = subData?.plan?.planType;
+  const currentPlanId: PlanId = rawPlan === "PREMIUM" ? "career_premium"
+    : rawPlan === "SKILL_BUILDER" ? "skill_builder" : "starter";
+  const currentPlanIndex = planValue[currentPlanId];
+
+  /* ── Polling ── */
+  const stopPolling = useCallback(() => {
+    setPollingActive(false);
+    if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+  }, []);
+
+  const doPollingCheck = useCallback(async () => {
+    const pid = paymentIdRef.current;
+    if (!pid) return;
+    try {
+      const detail = await getPaymentDetail(pid);
+      setPaymentDetail(detail);
+      const s = detail.status?.toUpperCase();
+      if (s === "SUCCESS" || s === "COMPLETED" || s === "PAID") {
+        stopPolling();
+        setCheckoutStep("success");
+        void loadData(); // refresh subscription after payment confirmed
+        return;
+      }
+      if (s === "FAILED" || s === "EXPIRED" || s === "CANCELED") {
+        stopPolling();
+        setPollError(`Giao dịch ${detail.status?.toLowerCase()}. Vui lòng thử lại.`);
+        setCheckoutStep("error");
+        return;
+      }
+      pollAttemptRef.current += 1;
+      setPollStatusText(`Đang kiểm tra giao dịch... (${pollAttemptRef.current})`);
+      if (pollAttemptRef.current >= MAX_POLL_ATTEMPTS) {
+        stopPolling();
+        setPollError("Hết thời gian xác nhận. Vui lòng kiểm tra lại hoặc liên hệ hỗ trợ.");
+        setCheckoutStep("error");
+      }
+    } catch {
+      setPollStatusText(`Lỗi kết nối, thử lại... (${pollAttemptRef.current})`);
+    }
+  }, [stopPolling, loadData]);
+
+  const startPolling = useCallback((paymentId: string) => {
+    paymentIdRef.current   = paymentId;
+    pollAttemptRef.current = 0;
+    setPollingActive(true);
+    setPollStatusText("Đang chờ xác nhận thanh toán...");
+    void doPollingCheck();
+    pollingRef.current = setInterval(doPollingCheck, POLL_INTERVAL_MS);
+  }, [doPollingCheck]);
+
+  /* ── Upgrade: create Sepay transaction ── */
+  const handleUpgrade = async (planId: PlanId) => {
+    setCreatingPayment(true);
+    setCreateError(null);
+    setPollError(null);
+    setPaymentData(null);
+    setPaymentDetail(null);
+    setCopied(false);
+    setQrLoaded(false);
+    pollAttemptRef.current = 0;
+    if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+
+    try {
+      const result = await createSepayPayment({ planType: planApiType[planId] });
+      setPaymentData(result);
+      setCheckoutStep("checkout");
+      setCheckoutOpen(true);
+      startPolling(result.paymentId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Không thể tạo giao dịch. Vui lòng thử lại.";
+      setCreateError(msg);
+      setCheckoutStep("error");
+      setCheckoutOpen(true);
+    } finally {
+      setCreatingPayment(false);
+    }
+  };
+
+  /* ── Plan card click dispatcher ── */
+  const handlePlanAction = (planId: PlanId) => {
+    const idx = planValue[planId];
+    if (idx === currentPlanIndex) return;
+    if (idx < currentPlanIndex) { setCancelConfirmOpen(true); return; }
+    void handleUpgrade(planId);
+  };
+
+  /* ── Manual payment verify ── */
+  const handleManualVerify = async () => {
+    const pid = paymentIdRef.current;
+    if (!pid) return;
+    setPollStatusText("Đang kiểm tra thủ công...");
+    try {
+      const detail = await getPaymentDetail(pid);
+      setPaymentDetail(detail);
+      const s = detail.status?.toUpperCase();
+      if (s === "SUCCESS" || s === "COMPLETED" || s === "PAID") {
+        stopPolling();
+        setCheckoutStep("success");
+        void loadData();
+      } else {
+        toast.info("Hệ thống chưa nhận được thanh toán. Vui lòng đợi thêm vài giây.");
+        setPollStatusText(`Đang chờ xác nhận... (${pollAttemptRef.current})`);
+      }
+    } catch {
+      toast.error("Không thể kết nối máy chủ. Thử lại sau.");
+      setPollStatusText(`Đang chờ xác nhận... (${pollAttemptRef.current})`);
+    }
+  };
+
+  /* ── Copy payment code ── */
+  const handleCopy = async (code: string) => {
+    try { await navigator.clipboard.writeText(code); } catch {
+      const ta = document.createElement("textarea");
+      ta.value = code; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); document.body.removeChild(ta);
+    }
+    setCopied(true);
+    toast.success("Đã sao chép mã thanh toán!");
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  /* ── Close checkout modal ── */
+  const closeCheckout = () => {
+    stopPolling();
+    setCheckoutOpen(false);
+    setCheckoutStep("checkout");
+    setPaymentData(null);
+    setPaymentDetail(null);
+    setCreateError(null);
+    setPollError(null);
+  };
+
+  /* ── Cancel subscription ── */
+  const handleCancelSubscription = async () => {
+    setCancelLoading(true);
+    try {
+      await cancelSubscription();
+      setCancelConfirmOpen(false);
+      toast.success("Đã hủy gói thành công. Gói của bạn sẽ hết hạn vào cuối kỳ thanh toán.");
+      void loadData();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Không thể hủy gói. Vui lòng thử lại.");
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  /* ── Button style per card ── */
+  function getButtonConfig(planId: PlanId) {
+    const idx = planValue[planId];
+    if (idx === currentPlanIndex) return { label:"Gói hiện tại", disabled:true, bg:"#F3F4F6", border:"#D1D5DB", color:"#9CA3AF", shadow:"none", icon:null };
+    if (idx < currentPlanIndex)   return { label:"Hạ cấp", disabled:false, bg:"transparent", border:OG, color:OG, shadow:"none", icon:<ArrowDown size={13}/> };
+    return { label:`Nâng cấp ${planLabel[planId]}`, disabled:false, bg:OG, border:OG, color:"#fff", shadow:"0 4px 14px rgba(255,107,0,0.28)", icon:<ArrowUp size={13}/> };
+  }
+
   const PLANS = [
-    {
-      id:       "free",
-      tier:     "Free",
-      price:    "Free",
-      priceSub: null,
-      desc:     null,
-      accent:   "#6B7280",
-      bg:       "#F9FAFB",
-      border:   BDR,
-      btnBg:    "transparent",
-      btnBorder:"#D1D5DB",
-      btnColor: "#9CA3AF",
-      btnLabel: "Current Plan",
-      btnDisabled: true,
-      badge:    null,
-      features: ["3 Active Roadmaps","Basic Pomodoro","Community Access"],
-    },
-    {
-      id:       "basic",
-      tier:     "Basic",
-      price:    "89k",
-      priceSub: "đ/mo",
-      desc:     null,
-      accent:   "#0F766E",
-      bg:       "#F0FDFA",
-      border:   "rgba(15,118,110,0.18)",
-      btnBg:    "#0F766E",
-      btnBorder:"#0F766E",
-      btnColor: "#FFFFFF",
-      btnLabel: "Upgrade to Basic",
-      btnDisabled: false,
-      badge:    null,
-      features: ["Unlimited Roadmaps","Advanced Analytics","Priority Support"],
-    },
-    {
-      id:       "premium",
-      tier:     "Premium",
-      price:    "199k",
-      priceSub: "đ/mo",
-      desc:     null,
-      accent:   OG,
-      bg:       "#FFF7ED",
-      border:   "rgba(255,107,0,0.18)",
-      btnBg:    OG,
-      btnBorder:OG,
-      btnColor: "#FFFFFF",
-      btnLabel: "Upgrade to Premium",
-      btnDisabled: false,
-      badge:    "MOST POPULAR",
-      features: ["Everything in Basic","CV Export & Evidence","AI Skill Mentor","1-on-1 Tutor Match"],
-    },
+    { id:"starter" as PlanId,        accent:"#6B7280", bg: currentPlanId==="starter"        ? OGL:"#F9FAFB", border:currentPlanId==="starter"        ? `1px solid ${OG}`:BDR, badge:null },
+    { id:"skill_builder" as PlanId,  accent:OG,        bg: currentPlanId==="skill_builder"  ? OGL:"#F9FAFB", border:currentPlanId==="skill_builder"  ? `1px solid ${OG}`:BDR, badge:currentPlanId==="starter"?"MOST POPULAR":null },
+    { id:"career_premium" as PlanId, accent:OG,        bg: currentPlanId==="career_premium" ? OGL:"#F9FAFB", border:currentPlanId==="career_premium" ? `1px solid ${OG}`:BDR, badge:currentPlanId!=="career_premium"?"ĐỀ XUẤT":null },
   ];
+
+  const bannerIcon  = currentPlanId==="career_premium" ? <Crown size={16} color={OG}/> : currentPlanId==="skill_builder" ? <Zap size={16} color={OG}/> : <Zap size={16} color="#9CA3AF"/>;
+  const bannerTitle = `${planLabel[currentPlanId]} Plan`;
+  const bannerPrice = currentPlanId==="starter" ? "0 VND / tháng · Miễn phí" : `${planDisplayPrice[currentPlanId]} VND / tháng`;
+
+  if (loading) return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:"40px 0" }}>
+      <Loader2 size={20} className="animate-spin" style={{ color:T3 }}/>
+      <span style={{ fontFamily:F, fontSize:"0.85rem", color:T3, marginLeft:"8px" }}>Đang tải dữ liệu gói...</span>
+    </div>
+  );
 
   return (
     <div>
-      {/* ─ Current Plan Banner ─ */}
-      <div style={{
-        display:"flex", alignItems:"center", gap:"12px",
-        padding:"14px 16px", borderRadius:"12px",
-        background:"#F9FAFB", border:`1px solid ${BDR}`,
-        marginBottom:"20px",
-      }}>
-        <div style={{
-          width:"36px", height:"36px", borderRadius:"9px",
-          background:"#F3F4F6", border:`1px solid ${BDR}`,
-          display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0,
-        }}>
-          <Zap size={16} color="#9CA3AF"/>
+      {/* ─── Current Plan Banner ─── */}
+      <div style={{ display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px", borderRadius:"12px", background:currentPlanId==="starter"?"#F9FAFB":OGL, border:`1px solid ${currentPlanId==="starter"?BDR:"rgba(255,107,0,0.18)"}`, marginBottom:"20px" }}>
+        <div style={{ width:"36px", height:"36px", borderRadius:"9px", background:OGL, border:"1px solid rgba(255,107,0,0.25)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+          {bannerIcon}
         </div>
         <div style={{ flex:1 }}>
-          <p style={{ fontWeight:700, fontSize:"0.9rem", color:T1, fontFamily:F, lineHeight:1 }}>Free Plan</p>
-          <p style={{ fontSize:"0.75rem", color:T3, fontFamily:F, marginTop:"2px" }}>
-            0 VND / month · No card required
-          </p>
+          <p style={{ fontWeight:700, fontSize:"0.9rem", color:T1, fontFamily:F, lineHeight:1 }}>{bannerTitle}</p>
+          <p style={{ fontSize:"0.75rem", color:T3, fontFamily:F, marginTop:"2px" }}>{bannerPrice}</p>
         </div>
-        <div style={{
-          padding:"4px 12px", borderRadius:"99px",
-          background:"transparent", border:"1.5px solid #10B981",
-          display:"flex", alignItems:"center", gap:"5px",
-        }}>
-          <div style={{ width:"5px", height:"5px", borderRadius:"50%", background:"#10B981" }}/>
-          <span style={{ fontSize:"0.75rem", color:"#10B981", fontWeight:700, fontFamily:F }}>Active</span>
-        </div>
-      </div>
-
-      {/* ─ Plans Grid ─ */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"12px" }}>
-        {PLANS.map(plan => (
-          <motion.div key={plan.id}
-            whileHover={!plan.btnDisabled ? { y:-2 } : {}}
-            style={{
-              background: plan.bg,
-              borderRadius:"14px",
-              border:`1px solid ${plan.border}`,
-              padding:"20px 18px",
-              display:"flex", flexDirection:"column",
-              boxShadow:"0 1px 4px rgba(0,0,0,0.04)",
-              position:"relative", overflow:"hidden",
-            }}
-          >
-            {/* MOST POPULAR badge */}
-            {plan.badge && (
-              <div style={{
-                display:"flex", alignItems:"center", gap:"5px",
-                marginBottom:"8px",
-              }}>
-                <span style={{
-                  fontSize:"0.62rem", fontWeight:800, color:OG,
-                  letterSpacing:"0.1em", textTransform:"uppercase",
-                }}>
-                  {plan.badge}
-                </span>
-                <Crown size={11} color="#FBBF24" fill="#FBBF24"/>
-              </div>
-            )}
-
-            {/* Title */}
-            <p style={{
-              fontSize:"1rem", fontWeight:700,
-              color: plan.badge ? T1 : plan.accent,
-              fontFamily:F, marginBottom:"6px",
-              marginTop: plan.badge ? "0" : "18px", // align with others
-            }}>
-              {plan.tier}
-            </p>
-
-            {/* Price */}
-            <div style={{ display:"flex", alignItems:"baseline", gap:"2px", marginBottom:"14px" }}>
-              <span style={{
-                fontSize:"1.8rem", fontWeight:900, letterSpacing:"-0.04em",
-                color: plan.id==="free" ? T1 : plan.accent,
-              }}>
-                {plan.price}
-              </span>
-              {plan.priceSub && (
-                <span style={{ fontSize:"0.75rem", color:T3, marginLeft:"1px" }}>{plan.priceSub}</span>
-              )}
-            </div>
-
-            {/* Features */}
-            <ul style={{
-              listStyle:"none", margin:"0 0 auto", padding:0,
-              display:"flex", flexDirection:"column", gap:"8px",
-              marginBottom:"18px",
-            }}>
-              {plan.features.map(f => (
-                <PlanFeature key={f} text={f} color={plan.id==="free" ? T2 : T1}/>
-              ))}
-            </ul>
-
-            {/* CTA */}
-            <motion.button
-              whileHover={!plan.btnDisabled ? { scale:1.02 } : {}}
-              whileTap={!plan.btnDisabled ? { scale:0.97 } : {}}
-              disabled={plan.btnDisabled}
-              style={{
-                width:"100%", padding:"11px 0", borderRadius:"10px",
-                background: plan.btnBg,
-                border:`1.5px solid ${plan.btnBorder}`,
-                color: plan.btnColor,
-                fontFamily:F, fontWeight:700, fontSize:"0.875rem",
-                cursor: plan.btnDisabled ? "default" : "pointer",
-                boxShadow: plan.id==="premium" ? "0 4px 14px rgba(255,107,0,0.28)"
-                          : plan.id==="basic"   ? "0 4px 14px rgba(15,118,110,0.2)"
-                          : "none",
-                transition:"all 0.15s",
-              }}
+        <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+          {/* Active badge */}
+          <div style={{ padding:"4px 12px", borderRadius:"99px", background:"rgba(255,107,0,0.12)", border:"1.5px solid rgba(255,107,0,0.35)", display:"flex", alignItems:"center", gap:"5px" }}>
+            <div style={{ width:"5px", height:"5px", borderRadius:"50%", background:OG }}/>
+            <span style={{ fontSize:"0.75rem", color:OG, fontWeight:700, fontFamily:F }}>Đang sử dụng</span>
+          </div>
+          {/* Cancel button — only for paid plans */}
+          {currentPlanId !== "starter" && (
+            <button
+              onClick={() => setCancelConfirmOpen(true)}
+              style={{ display:"flex", alignItems:"center", gap:"5px", padding:"5px 12px", borderRadius:"8px", background:"transparent", border:"1.5px solid #FECDD3", color:"#EF4444", fontFamily:F, fontWeight:600, fontSize:"0.75rem", cursor:"pointer" }}
             >
-              {plan.btnLabel}
-            </motion.button>
-          </motion.div>
-        ))}
+              <X size={12}/> Hủy gói
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* ─── Usage & Limits ─── */}
+      {quotaData && (
+        <div style={{ padding:"16px 18px", borderRadius:"12px", border:`1px solid ${BDR}`, background:"#FAFBFC", marginBottom:"20px" }}>
+          <SectionHeading title="Mức sử dụng & Giới hạn"/>
+          <div style={{ display:"grid", gap:"4px" }}>
+            {quotaData.usedWorkspaces  !== undefined && <QuotaProgressBar label="Lộ trình đang học"       used={quotaData.usedWorkspaces ??0} total={quotaData.maxWorkspaces ??3}  icon={Layers}   />}
+            {quotaData.usedStorageMb   !== undefined && <QuotaProgressBar label="Dung lượng lưu trữ (MB)" used={quotaData.usedStorageMb  ??0} total={quotaData.maxWorkspaceMb??100} icon={HardDrive} />}
+            {quotaData.usedAiGenerate  !== undefined && <QuotaProgressBar label="Lượt hỏi AI (tháng này)" used={quotaData.usedAiGenerate  ??0} total={quotaData.aiGenerateLimit??50} icon={Zap}      />}
+            {quotaData.usedUploads     !== undefined && <QuotaProgressBar label="Tệp đã tải lên"           used={quotaData.usedUploads     ??0} total={quotaData.maxUploads    ??20} icon={Upload}   />}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Plan Cards Grid ─── */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"12px" }}>
+        {PLANS.map(plan => {
+          const btn = getButtonConfig(plan.id);
+          const isCreating = creatingPayment;
+          return (
+            <motion.div key={plan.id}
+              initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+              transition={{ duration:0.3, delay:planValue[plan.id]*0.06 }}
+              whileHover={!btn.disabled ? { y:-2 } : {}}
+              style={{ background:plan.bg, borderRadius:"14px", border:plan.border, padding:"20px 18px", display:"flex", flexDirection:"column", boxShadow:plan.id===currentPlanId?"0 0 0 2px rgba(255,107,0,0.15)":"0 1px 4px rgba(0,0,0,0.04)", position:"relative", overflow:"hidden" }}
+            >
+              {plan.badge && (
+                <div style={{ display:"flex", alignItems:"center", gap:"5px", marginBottom:"8px" }}>
+                  <span style={{ fontSize:"0.62rem", fontWeight:800, color:OG, letterSpacing:"0.1em", textTransform:"uppercase" }}>{plan.badge}</span>
+                  <Crown size={11} color="#FBBF24" fill="#FBBF24"/>
+                </div>
+              )}
+              <p style={{ fontSize:"1rem", fontWeight:700, color:plan.id===currentPlanId?OG:plan.accent, fontFamily:F, marginBottom:"6px", marginTop:plan.badge?"0":"18px" }}>
+                {planLabel[plan.id]}
+              </p>
+              <div style={{ display:"flex", alignItems:"baseline", gap:"2px", marginBottom:"14px" }}>
+                <span style={{ fontSize:"1.8rem", fontWeight:900, letterSpacing:"-0.04em", color:plan.id==="starter"?T1:plan.accent }}>{planDisplayPrice[plan.id]}</span>
+                {planPriceSub[plan.id] && <span style={{ fontSize:"0.75rem", color:T3, marginLeft:"1px" }}>{planPriceSub[plan.id]}</span>}
+              </div>
+              <ul style={{ listStyle:"none", margin:"0 0 auto", padding:0, display:"flex", flexDirection:"column", gap:"8px", marginBottom:"18px" }}>
+                {planFeatureList[plan.id].map(f => <PlanFeature key={f} text={f} color={plan.id===currentPlanId?T1:T2}/>)}
+              </ul>
+              <motion.button
+                whileHover={!btn.disabled ? { scale:1.02 } : {}}
+                whileTap={!btn.disabled ? { scale:0.97 } : {}}
+                disabled={btn.disabled || isCreating}
+                onClick={() => handlePlanAction(plan.id)}
+                style={{ width:"100%", padding:"11px 0", borderRadius:"10px", background:btn.bg, border:`1.5px solid ${btn.border}`, color:btn.color, fontFamily:F, fontWeight:700, fontSize:"0.875rem", cursor:btn.disabled||isCreating?"not-allowed":"pointer", opacity:btn.disabled?0.65:1, boxShadow:btn.shadow, transition:"all 0.15s", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px" }}
+              >
+                {isCreating && !btn.disabled && planValue[plan.id]>currentPlanIndex
+                  ? <Loader2 size={13} className="animate-spin"/>
+                  : btn.icon}
+                {isCreating && !btn.disabled && planValue[plan.id]>currentPlanIndex ? "Đang xử lý..." : btn.label}
+              </motion.button>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* ════════════════════════════════════════
+          CHECKOUT MODAL (upgrade payment QR)
+      ════════════════════════════════════════ */}
+      <AnimatePresence>
+        {checkoutOpen && (
+          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+            onClick={closeCheckout}
+            style={{ position:"fixed", inset:0, zIndex:60, background:"rgba(0,0,0,0.7)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center", padding:"24px" }}
+          >
+            <motion.div initial={{ opacity:0, scale:0.95, y:14 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0, scale:0.95 }}
+              onClick={e => e.stopPropagation()}
+              style={{ width:"100%", maxWidth:checkoutStep==="checkout"?"860px":"480px", background:checkoutStep==="checkout"?"#F7F9FC":"#111115", borderRadius:"20px", overflow:"hidden", boxShadow:"0 40px 90px rgba(0,0,0,0.55)", fontFamily:F, position:"relative" }}
+            >
+              {/* Close */}
+              <button onClick={closeCheckout} style={{ position:"absolute", top:"14px", right:"14px", width:"30px", height:"30px", borderRadius:"50%", background:"rgba(255,255,255,0.12)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10 }}>
+                <X size={14} color={checkoutStep==="checkout"?"#4A5568":"rgba(255,255,255,0.6)"}/>
+              </button>
+
+              {/* ── CHECKOUT STEP ── */}
+              {checkoutStep === "checkout" && paymentData && (
+                <div style={{ display:"flex", minHeight:"500px" }}>
+                  {/* Left — order summary */}
+                  <div style={{ width:"38%", background:"#1A1B23", padding:"32px 28px", display:"flex", flexDirection:"column" }}>
+                    <h3 style={{ fontSize:"1.2rem", fontWeight:850, color:"#fff", marginBottom:"16px", letterSpacing:"-0.02em" }}>Thanh toán đơn hàng</h3>
+                    <p style={{ fontSize:"2rem", fontWeight:900, color:OG, letterSpacing:"-0.03em", marginBottom:"4px" }}>{formatVnd(paymentData.amount)}</p>
+                    <p style={{ fontSize:"0.78rem", color:"rgba(255,255,255,0.4)", marginBottom:"20px" }}>Thanh toán một lần bảo mật</p>
+
+                    {/* Payment code */}
+                    <div style={{ background:"#FFF5EC", border:"1px solid #FFE0C2", borderRadius:"12px", padding:"14px", marginBottom:"18px" }}>
+                      <p style={{ fontSize:"0.7rem", color:"#AA4700", marginBottom:"6px", fontWeight:700, letterSpacing:"0.06em" }}>MÃ THANH TOÁN (MEMO)</p>
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"10px" }}>
+                        <code style={{ fontSize:"1rem", fontWeight:900, color:"#1A202C", fontFamily:"monospace", wordBreak:"break-all", flex:1 }}>{paymentData.paymentCode}</code>
+                        <button onClick={() => handleCopy(paymentData.paymentCode)} style={{ background:"#fff", border:"1px solid #FFE0C2", borderRadius:"7px", width:"32px", height:"32px", minWidth:"32px", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:OG, flexShrink:0 }}>
+                          {copied ? <Check size={14} color={OG}/> : <Copy size={14}/>}
+                        </button>
+                      </div>
+                      <p style={{ fontSize:"0.68rem", color:OG, marginTop:"6px", fontWeight:600 }}>⚠️ Nhập chính xác mã này khi chuyển khoản</p>
+                    </div>
+
+                    {/* Bank info */}
+                    <p style={{ fontSize:"0.68rem", fontWeight:700, color:"rgba(255,255,255,0.4)", letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:"10px" }}>Tài khoản thụ hưởng</p>
+                    {[
+                      ["Ngân hàng",      paymentData.bank?.bankCode],
+                      ["Số tài khoản",   paymentData.bank?.accountNumber],
+                      ["Chủ tài khoản",  paymentData.bank?.accountName],
+                    ].map(([lbl, val]) => (
+                      <div key={lbl} style={{ display:"flex", justifyContent:"space-between", paddingBottom:"8px", borderBottom:"1px solid rgba(255,255,255,0.07)", marginBottom:"8px" }}>
+                        <span style={{ fontSize:"0.78rem", color:"rgba(255,255,255,0.45)" }}>{lbl}</span>
+                        <span style={{ fontSize:"0.82rem", color:"#fff", fontWeight:600, fontFamily:lbl==="Số tài khoản"?"monospace":F }}>{val ?? "—"}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Right — QR + instructions */}
+                  <div style={{ flex:1, padding:"32px 36px", display:"flex", flexDirection:"column", alignItems:"center", gap:"20px" }}>
+                    {pollingActive && (
+                      <div style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"5px 12px", borderRadius:"99px", background:"rgba(255,107,0,0.1)", border:"1px solid rgba(255,107,0,0.2)" }}>
+                        <Loader2 size={12} className="animate-spin" color={OG}/>
+                        <span style={{ fontSize:"0.72rem", color:OG, fontWeight:600 }}>{pollStatusText}</span>
+                      </div>
+                    )}
+                    <div>
+                      <h3 style={{ fontSize:"1rem", fontWeight:800, color:"#1A202C", marginBottom:"4px", textAlign:"center" }}>Quét mã QR để thanh toán</h3>
+                      <p style={{ fontSize:"0.78rem", color:"#718096", marginBottom:"14px", textAlign:"center" }}>Mở app Ngân hàng hoặc Ví điện tử</p>
+                      <div style={{ width:"200px", height:"200px", borderRadius:"16px", overflow:"hidden", background:"#fff", padding:"10px", boxShadow:"0 16px 40px rgba(0,0,0,0.08)", border:"1px solid #E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+                        {!qrLoaded && <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"#fff" }}><Loader2 size={24} className="animate-spin" color={OG}/></div>}
+                        <img src={paymentData.qrUrl} alt="QR thanh toán" onLoad={() => setQrLoaded(true)} style={{ width:"100%", height:"100%", objectFit:"contain", display:qrLoaded?"block":"none" }}/>
+                      </div>
+                    </div>
+
+                    <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"12px", padding:"16px", width:"100%", maxWidth:"320px" }}>
+                      <p style={{ fontSize:"0.78rem", fontWeight:800, color:OG, marginBottom:"8px", display:"flex", alignItems:"center", gap:"5px" }}><AlertCircle size={13}/> Hướng dẫn nhanh</p>
+                      <ol style={{ margin:0, paddingLeft:"16px", display:"flex", flexDirection:"column", gap:"5px" }}>
+                        {["Quét QR hoặc chuyển khoản thủ công.", `Số tiền: ${formatVnd(paymentData.amount)}`, `Nội dung: ${paymentData.paymentCode}`, "Bấm xác nhận sau khi ngân hàng trừ tiền."].map((t,i) => (
+                          <li key={i} style={{ fontSize:"0.76rem", color:"#4A5568", lineHeight:1.5 }}>{t}</li>
+                        ))}
+                      </ol>
+                    </div>
+
+                    <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} onClick={handleManualVerify}
+                      style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"7px", width:"100%", maxWidth:"320px", padding:"13px", borderRadius:"10px", background:OG, border:"none", color:"#fff", fontFamily:F, fontWeight:800, fontSize:"0.875rem", cursor:"pointer", boxShadow:"0 6px 18px rgba(255,107,0,0.28)" }}
+                    >
+                      <RefreshCw size={14}/> Xác Nhận Đã Chuyển Khoản
+                    </motion.button>
+                    <p style={{ fontSize:"0.7rem", color:"#718096" }}>Hệ thống tự động kiểm tra mỗi 5 giây.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── SUCCESS STEP ── */}
+              {checkoutStep === "success" && (
+                <div style={{ minHeight:"360px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", padding:"40px 28px", background:"radial-gradient(circle at top, rgba(255,107,0,0.18) 0%, #111115 55%)" }}>
+                  <motion.div initial={{ scale:0 }} animate={{ scale:1 }} transition={{ type:"spring", stiffness:200, damping:12 }}
+                    style={{ width:"76px", height:"76px", borderRadius:"50%", background:"rgba(255,107,0,0.15)", border:"1px solid rgba(255,107,0,0.4)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"16px", boxShadow:"0 0 0 10px rgba(255,107,0,0.07)" }}
+                  >
+                    <Check size={32} color={OG} strokeWidth={3}/>
+                  </motion.div>
+                  <p style={{ fontSize:"0.78rem", color:OG, fontWeight:800, letterSpacing:"0.12em", marginBottom:"8px" }}>THANH TOÁN THÀNH CÔNG</p>
+                  <h3 style={{ fontSize:"1.5rem", fontWeight:900, color:"#fff", marginBottom:"8px" }}>Gói đã được kích hoạt!</h3>
+                  <p style={{ fontSize:"0.88rem", color:"rgba(255,255,255,0.55)", marginBottom:"24px" }}>
+                    Mã giao dịch: <span style={{ fontFamily:"monospace", color:"rgba(255,255,255,0.75)" }}>{paymentData?.paymentCode}</span>
+                  </p>
+                  <button onClick={closeCheckout} style={{ padding:"11px 28px", borderRadius:"10px", border:"none", background:OG, color:"#fff", fontFamily:F, fontWeight:700, cursor:"pointer", boxShadow:"0 6px 18px rgba(255,107,0,0.32)" }}>
+                    Đóng
+                  </button>
+                </div>
+              )}
+
+              {/* ── ERROR STEP ── */}
+              {checkoutStep === "error" && (
+                <div style={{ minHeight:"320px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", padding:"40px 28px", background:"radial-gradient(circle at top, rgba(239,68,68,0.1) 0%, #111115 55%)" }}>
+                  <div style={{ width:"68px", height:"68px", borderRadius:"50%", background:"rgba(239,68,68,0.15)", border:"1px solid rgba(239,68,68,0.35)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"14px" }}>
+                    <AlertCircle size={30} color="#EF4444"/>
+                  </div>
+                  <p style={{ fontSize:"0.78rem", color:"#EF4444", fontWeight:800, letterSpacing:"0.12em", marginBottom:"6px" }}>THANH TOÁN THẤT BẠI</p>
+                  <h3 style={{ fontSize:"1.3rem", fontWeight:900, color:"#fff", marginBottom:"8px" }}>{createError ? "Không thể tạo giao dịch" : "Giao dịch chưa hoàn tất"}</h3>
+                  <p style={{ fontSize:"0.85rem", color:"rgba(255,255,255,0.5)", maxWidth:"320px", lineHeight:1.6, marginBottom:"22px" }}>{createError || pollError || "Đã xảy ra lỗi. Vui lòng thử lại."}</p>
+                  <div style={{ display:"flex", gap:"10px" }}>
+                    <button onClick={closeCheckout} style={{ padding:"10px 20px", borderRadius:"9px", border:"1px solid rgba(255,255,255,0.18)", background:"transparent", color:"rgba(255,255,255,0.8)", fontFamily:F, fontWeight:600, cursor:"pointer" }}>Đóng</button>
+                    <button onClick={() => { closeCheckout(); }} style={{ padding:"10px 20px", borderRadius:"9px", border:"none", background:OG, color:"#fff", fontFamily:F, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:"6px" }}><RefreshCw size={13}/> Thử lại</button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ════════════════════════════════════════
+          CANCEL CONFIRMATION MODAL
+      ════════════════════════════════════════ */}
+      <AnimatePresence>
+        {cancelConfirmOpen && (
+          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+            onClick={() => !cancelLoading && setCancelConfirmOpen(false)}
+            style={{ position:"fixed", inset:0, zIndex:60, background:"rgba(0,0,0,0.5)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:"16px" }}
+          >
+            <motion.div initial={{ scale:0.92, opacity:0 }} animate={{ scale:1, opacity:1 }} exit={{ scale:0.92, opacity:0 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background:CARD, borderRadius:"16px", padding:"28px", maxWidth:"420px", width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.18)", fontFamily:F }}
+            >
+              <div style={{ width:"44px", height:"44px", borderRadius:"12px", background:"#FFF1F2", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"14px" }}>
+                <AlertTriangle size={20} color="#EF4444"/>
+              </div>
+              <h3 style={{ fontWeight:900, fontSize:"1.05rem", color:T1, marginBottom:"8px" }}>Hủy gói {planLabel[currentPlanId]}?</h3>
+              <p style={{ fontSize:"0.875rem", color:T2, lineHeight:1.65, marginBottom:"20px" }}>
+                Gói của bạn sẽ tiếp tục hoạt động đến cuối kỳ thanh toán hiện tại. Sau đó tài khoản sẽ chuyển về gói <strong>Starter</strong> (miễn phí).
+              </p>
+              <div style={{ display:"flex", gap:"10px" }}>
+                <button onClick={() => setCancelConfirmOpen(false)} disabled={cancelLoading}
+                  style={{ flex:1, padding:"10px", borderRadius:"9px", border:`1px solid ${BDR}`, background:CARD, color:T2, fontFamily:F, fontWeight:600, cursor:cancelLoading?"not-allowed":"pointer" }}>
+                  Giữ gói
+                </button>
+                <button onClick={handleCancelSubscription} disabled={cancelLoading}
+                  style={{ flex:1, padding:"10px", borderRadius:"9px", background:cancelLoading?"#F87171":"#EF4444", border:"none", color:"#fff", fontFamily:F, fontWeight:700, cursor:cancelLoading?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px" }}>
+                  {cancelLoading ? <><Loader2 size={14} className="animate-spin"/> Đang hủy...</> : "Xác nhận hủy gói"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -675,29 +1156,29 @@ function NotificationsTab() {
 
   return (
     <div>
-      <SectionHeading title="Notification Preferences" />
+      <SectionHeading title="Tùy chọn thông báo" />
       <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
         <ToggleRow
-          title="Email reminders"
-          description="Receive plan reminders before each study session."
+          title="Nhắc nhở qua Email"
+          description="Nhận lời nhắc trước mỗi buổi học."
           checked={emailReminders}
           onChange={setEmailReminders}
         />
         <ToggleRow
-          title="Pomodoro alerts"
-          description="Notify when focus time ends and break starts."
+          title="Cảnh báo Pomodoro"
+          description="Thông báo khi kết thúc thời gian tập trung."
           checked={pomodoroAlert}
           onChange={setPomodoroAlert}
         />
         <ToggleRow
-          title="Weekly digest"
-          description="Summary of progress, streak and completed tasks every Sunday."
+          title="Tổng kết tuần"
+          description="Tóm tắt tiến độ, chuỗi học và nhiệm vụ vào mỗi Chủ nhật."
           checked={weeklyDigest}
           onChange={setWeeklyDigest}
         />
         <ToggleRow
-          title="Deadline nudge"
-          description="Extra reminders 24h before upcoming exams or deadlines."
+          title="Nhắc hạn chót"
+          description="Nhắc nhở 24 giờ trước kỳ thi hoặc hạn chót."
           checked={deadlineNudge}
           onChange={setDeadlineNudge}
         />
@@ -724,7 +1205,7 @@ function NotificationsTab() {
             boxShadow: saved ? "0 4px 14px rgba(5,150,105,0.25)" : "0 4px 14px rgba(255,107,0,0.28)",
           }}
         >
-          {saved ? <><Check size={14} /> Saved</> : "Save Notification Settings"}
+          {saved ? <><Check size={14} /> Đã lưu</> : "Lưu tùy chọn thông báo"}
         </motion.button>
       </div>
     </div>
@@ -747,23 +1228,23 @@ function PrivacyTab() {
 
   return (
     <div>
-      <SectionHeading title="Privacy & Visibility" />
+      <SectionHeading title="Quyền riêng tư & Hiển thị" />
       <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
         <ToggleRow
-          title="Public profile"
-          description="Allow others to view your learning profile page."
+          title="Hồ sơ công khai"
+          description="Cho phép người khác xem trang hồ sơ học tập."
           checked={publicProfile}
           onChange={setPublicProfile}
         />
         <ToggleRow
-          title="Show name on leaderboard"
-          description="Display your name and streak rank publicly."
+          title="Hiển thị tên trên bảng xếp hạng"
+          description="Hiển thị tên và thứ hạng chuỗi học công khai."
           checked={showLeaderboardName}
           onChange={setShowLeaderboardName}
         />
         <ToggleRow
-          title="Product analytics"
-          description="Share anonymized usage data to improve AI recommendations."
+          title="Phân tích sản phẩm"
+          description="Chia sẻ dữ liệu ẩn danh để cải thiện đề xuất AI."
           checked={allowAnalytics}
           onChange={setAllowAnalytics}
         />
@@ -777,10 +1258,10 @@ function PrivacyTab() {
         marginBottom: "18px",
       }}>
         <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.8rem", color: "#4338CA" }}>
-          2FA and security logs will be added in backend phase.
+          Xác thực 2FA và nhật ký bảo mật sẽ được thêm trong giai đoạn backend.
         </p>
         <p style={{ fontFamily: F, fontSize: "0.74rem", color: "#6366F1", marginTop: "4px" }}>
-          UI is ready now, API integration will be attached later.
+          Giao diện đã sẵn sàng, tích hợp API sẽ được gắn sau.
         </p>
       </div>
 
@@ -805,7 +1286,7 @@ function PrivacyTab() {
             boxShadow: saved ? "0 4px 14px rgba(5,150,105,0.25)" : "0 4px 14px rgba(255,107,0,0.28)",
           }}
         >
-          {saved ? <><Check size={14} /> Saved</> : "Save Privacy Settings"}
+          {saved ? <><Check size={14} /> Đã lưu</> : "Lưu tùy chọn bảo mật"}
         </motion.button>
       </div>
     </div>
@@ -828,7 +1309,7 @@ function IntegrationsTab() {
 
   return (
     <div>
-      <SectionHeading title="System Integrations" />
+      <SectionHeading title="Tiện ích tích hợp" />
 
       <div style={{
         display: "flex",
@@ -842,18 +1323,18 @@ function IntegrationsTab() {
       }}>
         <CalendarClock size={16} color={OG} style={{ marginTop: "2px", flexShrink: 0 }} />
         <div>
-          <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.84rem", color: T1 }}>
-            Date source mode (so bo)
-          </p>
-          <p style={{ fontFamily: F, fontSize: "0.75rem", color: T3, marginTop: "3px" }}>
-            Current app uses browser time. Switch to Server Time after backend launch.
-          </p>
+            <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.84rem", color: T1 }}>
+              Chế độ nguồn ngày
+            </p>
+            <p style={{ fontFamily: F, fontSize: "0.75rem", color: T3, marginTop: "3px" }}>
+              Ứng dụng hiện dùng thời gian trình duyệt. Chuyển sang thời gian máy chủ sau khi backend ra mắt.
+            </p>
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
         <Select
-          label="Date Source"
+          label="Nguồn ngày"
           value={dateSource}
           onChange={setDateSource}
           options={["Client (Browser Time)", "Mock API", "Server Time (Coming soon)"]}
@@ -868,8 +1349,8 @@ function IntegrationsTab() {
 
       <div style={{ marginBottom: "18px" }}>
         <ToggleRow
-          title="Auto-sync every minute"
-          description="Refresh date and status data automatically in dashboard modules."
+          title="Tự động đồng bộ mỗi phút"
+          description="Làm mới dữ liệu ngày và trạng thái trong các module dashboard."
           checked={autoSync}
           onChange={setAutoSync}
         />
@@ -882,9 +1363,9 @@ function IntegrationsTab() {
         background: "#EFF6FF",
         marginBottom: "18px",
       }}>
-        <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.8rem", color: "#1D4ED8" }}>Backend status: Not connected</p>
+        <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.8rem", color: "#1D4ED8" }}>Trạng thái backend: Chưa kết nối</p>
         <p style={{ fontFamily: F, fontSize: "0.74rem", color: "#3B82F6", marginTop: "4px" }}>
-          This tab is UI-ready. When backend is enabled, it will read live health/date endpoints.
+          Tab này đã sẵn sàng giao diện. Khi backend được kích hoạt, nó sẽ đọc các endpoint dữ liệu.
         </p>
       </div>
 
@@ -909,7 +1390,7 @@ function IntegrationsTab() {
             boxShadow: saved ? "0 4px 14px rgba(5,150,105,0.25)" : "0 4px 14px rgba(255,107,0,0.28)",
           }}
         >
-          {saved ? <><Check size={14} /> Saved</> : "Save Integration Settings"}
+          {saved ? <><Check size={14} /> Đã lưu</> : "Lưu tùy chọn tích hợp"}
         </motion.button>
       </div>
     </div>
@@ -928,18 +1409,36 @@ export default function Profile() {
   });
   const [profileLoading, setProfileLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [subData, setSubData] = useState<CurrentSubscriptionResponse | null>(null);
 
   const LEVEL    = 7;
   const STREAK   = 12;
+
+  // ── Derive current plan info from subscription data ──
+  const planType: ServicePlanType = subData?.plan?.planType || "FREE";
+  const planDisplayName =
+    planType === "PREMIUM"       ? "Career Premium"
+    : planType === "SKILL_BUILDER" ? "Skill Builder"
+    :                                "Starter";
+  const planBadgeStyle: { bg: string; color: string; border: string; icon: React.ReactNode } =
+    planType === "PREMIUM"
+      ? { bg: "#FEF3C7", color: "#92400E", border: "#FDE68A", icon: <Gem size={12} /> }
+      : planType === "SKILL_BUILDER"
+        ? { bg: "#FFF7ED", color: "#C2410C", border: "#FED7AA", icon: <Sparkles size={12} /> }
+        : { bg: "#F3F4F6", color: "#6B7280", border: "#E5E7EB", icon: <Crown size={12} color="#9CA3AF" /> };
 
   useEffect(() => {
     let mounted = true;
 
     const loadProfile = async () => {
       try {
-        const me = await meService.getMe();
+        const [me, sub] = await Promise.all([
+          meService.getMe(),
+          getCurrentSubscription().catch(() => null),
+        ]);
         if (!mounted) return;
         setProfile(mapMeResponse(me));
+        setSubData(sub);
       } catch (error: any) {
         if (!mounted) return;
 
@@ -984,7 +1483,8 @@ export default function Profile() {
     }
   };
 
-  const avatarLetter = (profile.fullName.trim().charAt(0) || profile.email.charAt(0) || "U").toUpperCase();
+  const avatarInitials = getInitials(profile.fullName || profile.email || "U");
+  const [bannerImgError, setBannerImgError] = useState(false);
 
   const handleSignOut = () => {
     clearAuthTokens();
@@ -1001,11 +1501,12 @@ export default function Profile() {
         display:"flex", alignItems:"center", gap:"16px",
         marginBottom:"20px",
       }}>
-        {/* Avatar */}
-        {profile.avatarUrl ? (
+        {/* Avatar — onError catches broken S3 URLs and shows two-letter initials */}
+        {profile.avatarUrl && !bannerImgError ? (
           <img
             src={profile.avatarUrl}
             alt={profile.fullName}
+            onError={() => setBannerImgError(true)}
             style={{ width:"58px", height:"58px", borderRadius:"50%", flexShrink:0, objectFit:"cover", border:`2px solid ${OGLT}` }}
           />
         ) : (
@@ -1015,7 +1516,7 @@ export default function Profile() {
             display:"flex", alignItems:"center", justifyContent:"center",
             boxShadow:"0 4px 16px rgba(99,102,241,0.3)",
           }}>
-            <span style={{ fontSize:"22px", fontWeight:900, color:"#fff" }}>{avatarLetter}</span>
+            <span style={{ fontSize:"20px", fontWeight:900, color:"#fff", letterSpacing:"-0.03em" }}>{avatarInitials}</span>
           </div>
         )}
 
@@ -1027,53 +1528,47 @@ export default function Profile() {
             {profile.fullName}
           </h2>
           <p style={{ fontSize:"0.82rem", color:T2, marginBottom:"8px", fontFamily:F }}>
-            {profile.email || "No email in session"} · {profile.roleLabel}
+            {profile.email || "Không có email trong phiên"} · {profile.roleLabel}
           </p>
           <div style={{ display:"flex", gap:"7px", flexWrap:"wrap" }}>
             <span style={{
               fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
-              background:"#F3F4F6", color:T2, fontWeight:600,
-            }}>Free Plan</span>
+              background: planBadgeStyle.bg,
+              color: planBadgeStyle.color,
+              border: `1px solid ${planBadgeStyle.border}`,
+              fontWeight:700,
+              display:"inline-flex", alignItems:"center", gap:"4px",
+            }}>
+              {planBadgeStyle.icon} {planDisplayName}
+            </span>
             <span style={{
               fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
               background: profile.emailVerified ? "#ECFDF5" : "#FFF7ED",
               color: profile.emailVerified ? "#065F46" : "#C2410C",
               border: `1px solid ${profile.emailVerified ? "#A7F3D0" : "#FED7AA"}`, fontWeight:700,
               display:"inline-flex", alignItems:"center", gap:"5px",
-            }}>{profile.emailVerified ? <><BadgeCheck size={12} /> Email verified</> : <><AlertTriangle size={12} /> Email not verified</>}</span>
+              }}>{profile.emailVerified ? <><BadgeCheck size={12} /> Email đã xác minh</> : <><AlertTriangle size={12} /> Email chưa xác minh</>}</span>
             <span style={{
               fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
               background:"#FFF9C4", color:"#92400E",
               border:"1px solid #FDE68A", fontWeight:700,
-            }}>⭐ Level {LEVEL}</span>
+            }}>⭐ Cấp độ {LEVEL}</span>
             <span style={{
               fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
               background:"#ECFDF5", color:"#065F46",
               border:"1px solid #A7F3D0", fontWeight:700,
-            }}>🔥 {STREAK}-Day Streak</span>
+            }}>🔥 {STREAK} ngày liên tiếp</span>
             {profileLoading && (
               <span style={{
                 fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
                 background:"#EFF6FF", color:"#1D4ED8",
                 border:"1px solid #BFDBFE", fontWeight:700,
                 display:"inline-flex", alignItems:"center", gap:"5px",
-              }}><Loader2 size={12} className="animate-spin" /> Syncing profile</span>
+              }}><Loader2 size={12} className="animate-spin" /> Đang đồng bộ hồ sơ</span>
             )}
           </div>
         </div>
 
-        <motion.button
-          whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-          style={{
-            display:"flex", alignItems:"center", gap:"6px",
-            padding:"9px 18px", borderRadius:"10px",
-            background:OG, color:"#fff", border:"none", cursor:"pointer",
-            fontFamily:F, fontWeight:700, fontSize:"0.82rem", flexShrink:0,
-            boxShadow:"0 4px 14px rgba(255,107,0,0.32)",
-          }}
-        >
-          <Gift size={13}/> Refer &amp; Get Premium
-        </motion.button>
       </div>
 
       {/* ── Two-column: sub-nav + form ── */}
@@ -1088,7 +1583,7 @@ export default function Profile() {
             fontSize:"0.62rem", color:T3, fontWeight:700,
             letterSpacing:"0.14em", textTransform:"uppercase",
             padding:"6px 10px 8px", fontFamily:F,
-          }}>Settings</p>
+          }}>Cài đặt</p>
 
           {TABS.map(tab=>{
             const isActive = activeTab === tab.id;
@@ -1130,7 +1625,7 @@ export default function Profile() {
             onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="transparent";}}
           >
             <LogOut size={14} color="#EF4444" strokeWidth={1.8}/>
-            Sign Out
+            Đăng xuất
           </button>
         </div>
 
@@ -1146,13 +1641,13 @@ export default function Profile() {
               exit={{opacity:0,y:-6}}
               transition={{duration:0.2}}
             >
-              {activeTab === "account"       && <AccountTab profile={profile} onSave={handleUpdateProfile} saving={savingProfile}/>} 
+              {activeTab === "account"       && <AccountTab profile={profile} onSave={handleUpdateProfile} saving={savingProfile} onAvatarUploaded={(updated) => setProfile(mapMeResponse(updated))}/>}
               {activeTab === "subscription"  && <SubscriptionTab/>}
               {activeTab === "notifications" && <NotificationsTab/>}
               {activeTab === "privacy"       && <PrivacyTab/>}
               {activeTab === "integrations"  && <IntegrationsTab/>}
               {activeTab !== "account" && activeTab !== "subscription" && activeTab !== "notifications" && activeTab !== "privacy" && activeTab !== "integrations" && (
-                <PlaceholderTab label={TABS.find(t=>t.id===activeTab)?.label ?? "Settings"}/>
+                <PlaceholderTab label={TABS.find(t=>t.id===activeTab)?.label ?? "Cài đặt"}/>
               )}
             </motion.div>
           </AnimatePresence>

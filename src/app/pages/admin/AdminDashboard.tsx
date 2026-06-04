@@ -12,9 +12,18 @@ import {
   ChevronDown, Search, AlertTriangle, Command, X, ChevronRight,
 } from "lucide-react";
 import { Link } from "react-router";
+import { toast } from "sonner";
 import AdminHealth from "./AdminHealth";
 import healthService from "../../../api/healthService";
 import adminUserService from "../../../api/adminUserService";
+import {
+  getAdminDashboardAnalytics,
+  getAdminPayments,
+} from "../../../api/adminDashboardService";
+import type {
+  AdminDashboardResponse,
+  PaymentTransactionResponse,
+} from "../../../api/adminDashboardService";
 
 const ACCENT = "#FF6B00";
 const ACCENT_DEEP = "#EA580C";
@@ -660,25 +669,179 @@ function UsersView({ healthStatus, lastHealthPayload }: { healthStatus: 'unknown
    ── FINANCIALS view ──
 ───────────────────────────────────────────────────────── */
 function FinancialsView() {
-  const totalMRR = CAMPUS_DATA.reduce((s, c) => s + c.mrr, 0);
-  const totalUsers = USER_GROWTH_DATA[USER_GROWTH_DATA.length - 1].total;
+  const [dashData, setDashData] = useState<AdminDashboardResponse | null>(null);
+  const [dashLoading, setDashLoading] = useState(true);
+  const [dashError, setDashError] = useState("");
 
+  function fetchDash() {
+    setDashLoading(true);
+    setDashError("");
+    getAdminDashboardAnalytics()
+      .then(setDashData)
+      .catch((err: Error) => {
+        const msg = err.message || "Không tải được dữ liệu tài chính";
+        setDashError(msg);
+        toast.error(msg);
+      })
+      .finally(() => setDashLoading(false));
+  }
+
+  useEffect(() => {
+    let mounted = true;
+    setDashLoading(true);
+    getAdminDashboardAnalytics()
+      .then((d) => { if (mounted) setDashData(d); })
+      .catch((err: Error) => {
+        if (!mounted) return;
+        const msg = err.message || "Không tải được dữ liệu tài chính";
+        setDashError(msg);
+        toast.error(msg);
+      })
+      .finally(() => { if (mounted) setDashLoading(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  /* ---------- loading skeleton ---------- */
+  if (dashLoading) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-2xl p-5 animate-pulse"
+              style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", height: 130 }}>
+              <div className="h-3 rounded w-1/2 mb-3" style={{ background: "#F3F4F6" }} />
+              <div className="h-7 rounded w-3/4 mb-2" style={{ background: "#F3F4F6" }} />
+              <div className="h-2 rounded w-full" style={{ background: "#F3F4F6" }} />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
+          <div className="xl:col-span-3 animate-pulse rounded-2xl"
+            style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", height: 420 }} />
+          <div className="xl:col-span-2 animate-pulse rounded-2xl"
+            style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", height: 420 }} />
+        </div>
+      </motion.div>
+    );
+  }
+
+  /* ---------- error state ---------- */
+  if (dashError && !dashData) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        className="rounded-2xl p-10 text-center"
+        style={{ background: "#FFFFFF", border: "1px solid #FCA5A5" }}>
+        <p style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 4 }}>Không tải được dữ liệu tài chính</p>
+        <p style={{ color: "#6B7280", fontSize: "0.82rem", marginBottom: 16 }}>{dashError}</p>
+        <button onClick={fetchDash}
+          className="px-4 py-2 rounded-xl text-xs font-semibold"
+          style={{ background: ACCENT, color: "#fff" }}>
+          Thử lại
+        </button>
+      </motion.div>
+    );
+  }
+
+  /* ---------- derived KPI cards ---------- */
+  const kpiCards = dashData ? [
+    {
+      id: "total-revenue",
+      label: "Tổng doanh thu",
+      value: `${(dashData.overview.totalRevenue / 1_000_000).toFixed(1)}M ₫`,
+      sub: `Hôm nay: ${(dashData.overview.todayRevenue / 1_000).toFixed(0)}K ₫`,
+      delta: `${dashData.overview.paidUsers} trả phí`,
+      color: "#FF6B00",
+      icon: DollarSign,
+      sparkline: dashData.charts.revenueByDay.slice(-9).map(d => d.revenue ?? 0),
+    },
+    {
+      id: "month-revenue",
+      label: "Doanh thu tháng này",
+      value: `${(dashData.payments.revenueThisMonth / 1_000_000).toFixed(1)}M ₫`,
+      sub: `${dashData.payments.paid}/${dashData.payments.total} giao dịch`,
+      delta: `+${dashData.payments.paid} OK`,
+      color: "#FB923C",
+      icon: TrendingUp,
+      sparkline: dashData.charts.revenueByDay.slice(-9).map(d => (d.revenue ?? 0) * 0.85),
+    },
+    {
+      id: "active-subs",
+      label: "Subscription hoạt động",
+      value: dashData.overview.activeSubscriptions.toLocaleString(),
+      sub: `Premium: ${dashData.subscriptions.premium} · Builder: ${dashData.subscriptions.skillBuilder}`,
+      delta: `Free: ${dashData.subscriptions.free}`,
+      color: "#F97316",
+      icon: Repeat,
+      sparkline: [
+        dashData.subscriptions.free,
+        dashData.subscriptions.skillBuilder,
+        dashData.subscriptions.premium,
+        dashData.subscriptions.active,
+      ],
+    },
+    {
+      id: "paid-users",
+      label: "Người dùng trả phí",
+      value: dashData.overview.paidUsers.toLocaleString(),
+      sub: `Tổng tài khoản: ${dashData.overview.totalUsers.toLocaleString()}`,
+      delta: `${dashData.overview.activeUsers} đang hoạt động`,
+      color: "#EA580C",
+      icon: Activity,
+      sparkline: dashData.charts.newUsersByDay.slice(-9).map(d => d.count ?? 0),
+    },
+  ] : [];
+
+  const revenueChartData = (dashData?.charts.revenueByDay ?? []).map(d => ({
+    date: d.date?.slice(5) ?? d.date,
+    revenue: d.revenue ?? 0,
+  }));
+
+  const usersChartData = (dashData?.charts.newUsersByDay ?? []).map(d => ({
+    date: d.date?.slice(5) ?? d.date,
+    count: d.count ?? 0,
+  }));
+
+  const summaryStats = dashData ? [
+    {
+      label: "Tổng doanh thu",
+      value: `${(dashData.payments.revenueTotal / 1_000_000).toFixed(1)}M ₫`,
+      color: "#22c55e",
+      sub: `Hôm nay: ${(dashData.payments.revenueToday / 1_000).toFixed(0)}K ₫`,
+    },
+    {
+      label: "Người dùng hoạt động",
+      value: dashData.overview.activeUsers.toLocaleString(),
+      color: "#06b6d4",
+      sub: `Tổng: ${dashData.overview.totalUsers.toLocaleString()} tài khoản`,
+    },
+    {
+      label: "Thanh toán đang chờ",
+      value: String(dashData.overview.pendingPayments),
+      color: dashData.overview.pendingPayments > 0 ? "#f59e0b" : "#FF6B00",
+      sub: `Thất bại: ${dashData.overview.failedPayments}`,
+    },
+    {
+      label: "Tháng này",
+      value: `${(dashData.payments.revenueThisMonth / 1_000_000).toFixed(1)}M ₫`,
+      color: "#d97706",
+      sub: `${dashData.payments.paid} giao dịch thành công`,
+    },
+  ] : [];
+
+  /* ---------- render ---------- */
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {KPI_DATA.map((kpi, i) => {
+        {kpiCards.map((kpi, i) => {
           const Icon = kpi.icon;
+          const sparkData = kpi.sparkline.length >= 2 ? kpi.sparkline : [0, 1];
           return (
-            <motion.div
-              key={kpi.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.07 }}
+            <motion.div key={kpi.id}
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
               className="relative rounded-2xl p-5 overflow-hidden"
-              style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
-            >
+              style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
               <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none"
                 style={{ background: `radial-gradient(circle, ${kpi.color}10 0%, transparent 70%)`, transform: "translate(30%,-30%)" }} />
               <div className="flex items-start justify-between mb-3 relative z-10">
@@ -691,18 +854,14 @@ function FinancialsView() {
                   <ArrowUpRight size={10} /> {kpi.delta}
                 </div>
               </div>
-              <p className="relative z-10 mb-0.5" style={{ fontWeight: 800, fontSize: "1.6rem", letterSpacing: "-0.05em", lineHeight: 1, color: "#111827" }}>
+              <p className="relative z-10 mb-0.5"
+                style={{ fontWeight: 800, fontSize: "1.5rem", letterSpacing: "-0.05em", lineHeight: 1, color: "#111827" }}>
                 {kpi.value}
               </p>
               <p className="relative z-10 text-xs mb-3" style={{ color: "#6B7280" }}>{kpi.label}</p>
               <div className="relative z-10 flex items-end justify-between">
-                <Sparkline data={kpi.sparkline} color={kpi.color} width={75} height={26} />
-                <div>
-                  <p style={{ fontSize: "9px", color: "#9CA3AF", textAlign: "right" }}>Target</p>
-                  <p style={{ fontSize: "9px", color: kpi.passing ? "#16a34a" : "#ef4444", fontWeight: 700, textAlign: "right" }}>
-                    {kpi.target} {kpi.passing ? "✓" : "✗"}
-                  </p>
-                </div>
+                <Sparkline data={sparkData} color={kpi.color} width={75} height={26} />
+                <p style={{ fontSize: "9px", color: "#9CA3AF", textAlign: "right", maxWidth: 80 }}>{kpi.sub}</p>
               </div>
             </motion.div>
           );
@@ -710,78 +869,99 @@ function FinancialsView() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
-        {/* Unit Economics + Growth Chart */}
         <div className="xl:col-span-3 space-y-5">
-          {/* Unit Economics */}
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-            className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-            <div className="flex items-start justify-between mb-5">
-              <div>
-                <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>Hiệu quả đơn vị</p>
-                <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>CAC vs LTV</p>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full"
-                style={{ background: "rgba(34,197,94,0.08)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.2)", fontWeight: 700 }}>
-                LTV/CAC: 10.2×
-              </div>
-            </div>
-            <div style={{ height: "180px" }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[{ label: "CAC", value: 40000, name: "CAC" }, { label: "LTV", value: 408000, name: "LTV" }]} margin={{ top: 10, right: 20, left: 10, bottom: 5 }} barCategoryGap="50%">
-                  <CartesianGrid key="grid" strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-                  <XAxis key="x" dataKey="label" stroke="#E5E7EB" tick={{ fill: "#6B7280", fontSize: 12, fontWeight: 600 }} />
-                  <YAxis key="y" stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
-                  <Tooltip key="tooltip" content={<CustomTooltip />} />
-                  <Bar key="bar" dataKey="value" name="value" shape={<UnitEconBar />} radius={[6, 6, 0, 0]}>
-                    {UNIT_ECON_DATA.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
 
-          {/* User Growth Area Chart */}
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
-            className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-            <div className="flex items-start justify-between mb-5">
-              <div>
-                <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>Thu hút người dùng</p>
-                <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>Tăng trưởng theo kênh — 12 tuần</p>
+          {/* Revenue by Day */}
+          {revenueChartData.length > 0 ? (
+            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+              className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>Doanh thu theo ngày</p>
+                  <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>Biểu đồ doanh thu</p>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full"
-                style={{ background: "rgba(6,182,212,0.08)", color: "#0891b2", border: "1px solid rgba(6,182,212,0.2)", fontWeight: 700 }}>
-                <ArrowUpRight size={11} /> {totalUsers.toLocaleString()} total
+              <div style={{ height: "180px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={revenueChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+                    <XAxis dataKey="date" stroke="#E5E7EB" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
+                    <YAxis stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={(v) => `${(v / 1_000).toFixed(0)}K`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="revenue" name="Doanh thu (₫)"
+                      stroke={ACCENT} strokeWidth={2} fill={ACCENT} fillOpacity={0.12} />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-            </div>
-            <div style={{ height: "200px" }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={USER_GROWTH_DATA} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid key="grid" strokeDasharray="3 3" stroke="#F3F4F6" />
-                  <XAxis key="x" dataKey="week" stroke="#E5E7EB" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
-                  <YAxis key="y" stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
-                  <Tooltip key="tooltip" content={<CustomTooltip />} />
-                  <Legend key="legend" wrapperStyle={{ fontSize: "11px", paddingTop: "10px", color: "#6B7280" }} />
-                  <Area key="total" type="monotone" dataKey="total" name="Tổng" stroke="#06b6d4" strokeWidth={2} fill="#06b6d4" fillOpacity={0.1} />
-                  <Area key="organic" type="monotone" dataKey="organic" name="Tự nhiên" stroke="#22c55e" strokeWidth={1.5} fill="#22c55e" fillOpacity={0.08} />
-                  <Area key="referral" type="monotone" dataKey="referral" name="Giới thiệu" stroke="#a78bfa" strokeWidth={1.5} fill="#a78bfa" fillOpacity={0.08} strokeDasharray="4 2" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
+            </motion.div>
+          ) : (
+            /* Fallback: static CAC/LTV when no time-series data yet */
+            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+              className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>Hiệu quả đơn vị</p>
+                  <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>CAC vs LTV</p>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full"
+                  style={{ background: "rgba(34,197,94,0.08)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.2)", fontWeight: 700 }}>
+                  LTV/CAC: 10.2×
+                </div>
+              </div>
+              <div style={{ height: "180px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={[{ label: "CAC", value: 40000, name: "CAC" }, { label: "LTV", value: 408000, name: "LTV" }]}
+                    margin={{ top: 10, right: 20, left: 10, bottom: 5 }} barCategoryGap="50%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                    <XAxis dataKey="label" stroke="#E5E7EB" tick={{ fill: "#6B7280", fontSize: 12, fontWeight: 600 }} />
+                    <YAxis stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="value" name="value" shape={<UnitEconBar />} radius={[6, 6, 0, 0]}>
+                      {UNIT_ECON_DATA.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+          )}
+
+          {/* New Users by Day */}
+          {usersChartData.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
+              className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>Người dùng mới</p>
+                  <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>Đăng ký theo ngày</p>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full"
+                  style={{ background: "rgba(6,182,212,0.08)", color: "#0891b2", border: "1px solid rgba(6,182,212,0.2)", fontWeight: 700 }}>
+                  <ArrowUpRight size={11} /> {dashData?.overview.totalUsers.toLocaleString()} total
+                </div>
+              </div>
+              <div style={{ height: "200px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={usersChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+                    <XAxis dataKey="date" stroke="#E5E7EB" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
+                    <YAxis stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="count" name="Người dùng mới"
+                      stroke="#06b6d4" strokeWidth={2} fill="#06b6d4" fillOpacity={0.1} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+          )}
         </div>
 
-        {/* Summary stats */}
+        {/* Summary stats + subscription breakdown */}
         <div className="xl:col-span-2 space-y-5">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="grid grid-cols-2 gap-3">
-            {[
-              { label: "MRR tổng", value: `${(totalMRR / 1000000).toFixed(1)}M ₫`, color: "#22c55e", sub: "↑ 24% so với tháng trước" },
-              { label: "Campus đang hoạt động", value: `${CAMPUS_DATA.filter(c => c.health !== "gray").length}`, color: "#06b6d4", sub: "1 campus đang dùng thử" },
-              { label: "Phiên học trung bình", value: "47 phút", color: "#FF6B00", sub: "Trên mỗi người học/ngày" },
-              { label: "Điểm NPS", value: "72", color: "#d97706", sub: "Mức hài lòng rất tốt" },
-            ].map(s => (
+            {summaryStats.map(s => (
               <div key={s.label} className="rounded-xl p-4"
                 style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <p style={{ fontSize: "9px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>{s.label}</p>
@@ -790,6 +970,34 @@ function FinancialsView() {
               </div>
             ))}
           </motion.div>
+
+          {/* Subscription plan breakdown */}
+          {dashData && (
+            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+              className="rounded-xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+              <p style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Phân bổ gói</p>
+              {[
+                { label: "Free", value: dashData.subscriptions.free, color: "#94A3B8" },
+                { label: "Skill Builder", value: dashData.subscriptions.skillBuilder, color: "#FB923C" },
+                { label: "Premium", value: dashData.subscriptions.premium, color: ACCENT },
+              ].map(tier => {
+                const tierTotal = dashData.subscriptions.free + dashData.subscriptions.skillBuilder + dashData.subscriptions.premium || 1;
+                const pct = Math.round((tier.value / tierTotal) * 100);
+                return (
+                  <div key={tier.label} className="mb-3">
+                    <div className="flex justify-between mb-1">
+                      <span style={{ fontSize: "12px", color: "#374151", fontWeight: 600 }}>{tier.label}</span>
+                      <span style={{ fontSize: "12px", color: "#6B7280" }}>{tier.value.toLocaleString()} ({pct}%)</span>
+                    </div>
+                    <div className="h-1.5 rounded-full" style={{ background: "#F3F4F6" }}>
+                      <div className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%`, background: tier.color }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </motion.div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -889,11 +1097,217 @@ function B2BView() {
 }
 
 /* ─────────────────────────────────────────────────────────
+   ── PAYMENTS view ──
+───────────────────────────────────────────────────────── */
+const PAYMENT_STATUS_BADGE: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  PAID:      { bg: "rgba(34,197,94,0.08)",  text: "#15803D", border: "rgba(34,197,94,0.28)",  label: "Thành công" },
+  COMPLETED: { bg: "rgba(34,197,94,0.08)",  text: "#15803D", border: "rgba(34,197,94,0.28)",  label: "Hoàn thành" },
+  PENDING:   { bg: "rgba(245,158,11,0.10)", text: "#B45309", border: "rgba(245,158,11,0.28)", label: "Đang chờ"   },
+  FAILED:    { bg: "rgba(239,68,68,0.10)",  text: "#B91C1C", border: "rgba(239,68,68,0.28)",  label: "Thất bại"   },
+  CANCELED:  { bg: "#F3F4F6",               text: "#6B7280", border: "#E5E7EB",                label: "Đã hủy"     },
+  EXPIRED:   { bg: "#F3F4F6",               text: "#9CA3AF", border: "#E5E7EB",                label: "Hết hạn"    },
+};
+
+function paymentBadge(status: string) {
+  return (
+    PAYMENT_STATUS_BADGE[status.toUpperCase()] ?? {
+      bg: "#F3F4F6", text: "#6B7280", border: "#E5E7EB", label: status,
+    }
+  );
+}
+
+const PLAN_LABEL: Record<string, string> = {
+  FREE: "Free",
+  SKILL_BUILDER: "Skill Builder",
+  PREMIUM: "Premium",
+};
+
+const PAYMENTS_COLS = "2fr 1.2fr 1.2fr 1.4fr 1.3fr 1.5fr";
+
+function PaymentsView() {
+  const [payments, setPayments] = useState<PaymentTransactionResponse[]>([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const PAGE_SIZE = 10;
+
+  async function load(p: number) {
+    setLoading(true);
+    try {
+      const result = await getAdminPayments(p, PAGE_SIZE);
+      const items = result.items ?? (result as any).content ?? [];
+      const total = result.totalItems ?? (result as any).totalElements ?? 0;
+      const pages = result.totalPages ?? Math.ceil(total / PAGE_SIZE);
+      setPayments(items);
+      setTotalItems(total);
+      setTotalPages(pages);
+      setPage(p);
+    } catch (err) {
+      toast.error((err as Error).message || "Không tải được danh sách thanh toán");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(0); }, []);
+
+  const formatVnd = (amount: number) =>
+    amount >= 1_000_000
+      ? `${(amount / 1_000_000).toFixed(1)}M ₫`
+      : `${(amount / 1_000).toFixed(0)}K ₫`;
+
+  const formatDate = (iso: string | null) =>
+    iso
+      ? new Date(iso).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })
+      : "—";
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+
+      {/* Header banner */}
+      <div className="rounded-2xl p-5"
+        style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#FFF7ED 100%)", border: "1px solid #FDE68A" }}>
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+          <div>
+            <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0F172A" }}>Quản lý thanh toán</h2>
+            <p style={{ margin: "4px 0 0", color: "#64748B", fontSize: "0.88rem" }}>Lịch sử giao dịch · Phân tích thanh toán</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-3 py-1 rounded-full text-xs"
+              style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#334155" }}>
+              Tổng: {totalItems.toLocaleString()}
+            </span>
+            <span className="px-3 py-1 rounded-full text-xs"
+              style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#334155" }}>
+              Trang: {page + 1} / {totalPages || 1}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+        className="rounded-2xl overflow-hidden"
+        style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+
+        {/* Column headers */}
+        <div className="grid px-6 py-2.5"
+          style={{ gridTemplateColumns: PAYMENTS_COLS, borderBottom: "1px solid #F3F4F6", background: "#FAFAFA" }}>
+          {["Mã giao dịch", "Gói", "Số tiền", "Trạng thái", "Thanh toán lúc", "Tạo lúc"].map(col => (
+            <span key={col}
+              style={{ color: "#9CA3AF", fontSize: "0.68rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              {col}
+            </span>
+          ))}
+        </div>
+
+        {/* Loading skeleton rows */}
+        {loading && Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="grid px-6 py-4 animate-pulse"
+            style={{ gridTemplateColumns: PAYMENTS_COLS, borderBottom: "1px solid #F9FAFB", alignItems: "center" }}>
+            {[0.8, 0.6, 0.5, 0.55, 0.6, 0.7].map((w, j) => (
+              <div key={j} className="h-3 rounded" style={{ background: "#F3F4F6", width: `${w * 100}%` }} />
+            ))}
+          </div>
+        ))}
+
+        {/* Empty state */}
+        {!loading && payments.length === 0 && (
+          <div className="py-16 text-center">
+            <DollarSign size={32} style={{ color: "#E5E7EB", margin: "0 auto 8px" }} />
+            <p style={{ color: "#9CA3AF", fontSize: "0.85rem" }}>Không có giao dịch nào</p>
+          </div>
+        )}
+
+        {/* Data rows */}
+        {!loading && payments.map((tx, i) => {
+          const badge = paymentBadge(tx.status);
+          return (
+            <motion.div key={tx.paymentId}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.025 }}
+              className="grid px-6 py-3.5"
+              style={{ gridTemplateColumns: PAYMENTS_COLS, borderBottom: "1px solid #F9FAFB", alignItems: "center" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "#F9FAFB"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}>
+
+              {/* Transaction ID */}
+              <div>
+                <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#111827", fontFamily: "monospace" }}>
+                  {tx.paymentId.slice(0, 8).toUpperCase()}…
+                </p>
+                {tx.paymentCode && (
+                  <p style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{tx.paymentCode}</p>
+                )}
+              </div>
+
+              {/* Plan */}
+              <span style={{ fontSize: "0.78rem", color: "#374151", fontWeight: 500 }}>
+                {PLAN_LABEL[tx.plan] ?? tx.plan}
+              </span>
+
+              {/* Amount */}
+              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#16a34a" }}>
+                {formatVnd(tx.amount)}
+              </span>
+
+              {/* Status badge */}
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full font-semibold"
+                style={{ background: badge.bg, color: badge.text, border: `1px solid ${badge.border}`, fontSize: "10px", width: "fit-content" }}>
+                {badge.label}
+              </span>
+
+              {/* Paid at */}
+              <span style={{ fontSize: "0.72rem", color: "#6B7280" }}>{formatDate(tx.paidAt)}</span>
+
+              {/* Created at */}
+              <span style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>{formatDate(tx.createdAt)}</span>
+            </motion.div>
+          );
+        })}
+
+        {/* Pagination footer */}
+        <div className="px-6 py-3 flex items-center justify-between"
+          style={{ borderTop: "1px solid #F3F4F6", background: "#FAFAFA" }}>
+          <span style={{ fontSize: "0.8rem", color: "#64748B" }}>
+            Trang {page + 1} · {totalItems.toLocaleString()} giao dịch
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => load(Math.max(0, page - 1))}
+              disabled={page === 0 || loading}
+              className="px-3 py-1.5 rounded-lg text-xs"
+              style={{
+                border: "1px solid #E2E8F0", background: "#fff", color: "#334155",
+                opacity: page === 0 || loading ? 0.4 : 1,
+                cursor: page === 0 || loading ? "not-allowed" : "pointer",
+              }}>
+              ← Trước
+            </button>
+            <button
+              onClick={() => load(page + 1)}
+              disabled={page + 1 >= totalPages || loading}
+              className="px-3 py-1.5 rounded-lg text-xs"
+              style={{
+                border: "1px solid #E2E8F0", background: "#fff", color: "#334155",
+                opacity: page + 1 >= totalPages || loading ? 0.4 : 1,
+                cursor: page + 1 >= totalPages || loading ? "not-allowed" : "pointer",
+              }}>
+              Tiếp →
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
    Main Admin Dashboard
 ───────────────────────────────────────────────────────── */
 export default function AdminDashboard() {
   const USER_MANAGEMENT_NAV_MODE: "item" | "dropdown" = (globalThis as any).__ADMIN_USER_MGMT_NAV_MODE__ === "item" ? "item" : "dropdown";
-  const [activeNav, setActiveNav] = useState<"users" | "financials" | "b2b" | "users-management">("users");
+  const [activeNav, setActiveNav] = useState<"users" | "financials" | "b2b" | "payments" | "users-management">("users");
   const [timeRange, setTimeRange] = useState("90d");
   const [lastSync, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
@@ -1000,6 +1414,7 @@ export default function AdminDashboard() {
     "users-management": { title: "Quản lý người dùng", sub: "Quản lý người dùng và phân quyền" },
     financials: { title: "Tài chính", sub: "Chỉ số doanh thu · Unit economics" },
     b2b: { title: "Đối tác B2B", sub: "Tài khoản trường · Sức khỏe đối tác" },
+    payments: { title: "Quản lý thanh toán", sub: "Lịch sử giao dịch · Phân tích thanh toán" },
   };
   const current = headerLabels[activeNav];
 
@@ -1041,6 +1456,11 @@ export default function AdminDashboard() {
       return;
     }
 
+    if (activeNav === "payments") {
+      setActionMessage("Xuất CSV giao dịch: sử dụng nút Xuất trong tab Quản lý thanh toán.");
+      return;
+    }
+
     downloadCsv("admin-b2b-partners.csv", CAMPUS_DATA.map((campus) => ({
       name: campus.name,
       users: campus.users,
@@ -1066,6 +1486,7 @@ export default function AdminDashboard() {
     { id: "goto-users-management", label: "Mở Quản lý người dùng", keywords: "quản lý người dùng phân quyền", action: () => openUserManagement() },
     { id: "goto-financials", label: "Đi tới Tài chính", keywords: "finance revenue mrr", action: () => setActiveNav("financials") },
     { id: "goto-b2b", label: "Đi tới Đối tác B2B", keywords: "b2b partners campus", action: () => setActiveNav("b2b") },
+    { id: "goto-payments", label: "Đi tới Quản lý thanh toán", keywords: "payments transactions giao dịch thanh toán", action: () => { setActiveNav("payments"); setShowMgmtMain(false); } },
     { id: "export", label: "Xuất dữ liệu màn hình hiện tại", keywords: "export csv download", action: handleExport },
     { id: "sync", label: "Đồng bộ dữ liệu admin", keywords: "sync refresh", action: handleSync },
     { id: "summary", label: "Gửi báo cáo tổng hợp", keywords: "summary report send", action: handleSendSummary },
@@ -1201,7 +1622,7 @@ export default function AdminDashboard() {
                       return;
                     }
                     setActiveNav(item.id as any);
-                    if (item.id === "financials" || item.id === "b2b") {
+                    if (item.id === "financials" || item.id === "b2b" || item.id === "payments") {
                       setShowMgmtMain(false);
                       setUsersNavOpen(false);
                     }
@@ -1554,8 +1975,7 @@ export default function AdminDashboard() {
                               style={{ width: "100%", marginTop: 6, height: 36, borderRadius: 8, border: "1px solid #E2E8F0", padding: "0 10px", fontSize: "0.82rem" }}
                             >
                               <option value="ACTIVE">ACTIVE</option>
-                              <option value="INACTIVE">INACTIVE</option>
-                              <option value="LOCKED">LOCKED</option>
+                              <option value="DISABLED">DISABLED</option>
                             </select>
                             <button
                               onClick={() => saveMgmtStatus(mgmtSelected.id, mgmtStatusDraft)}
@@ -1609,6 +2029,7 @@ export default function AdminDashboard() {
           )}
           {activeNav === "financials" && <FinancialsView />}
           {activeNav === "b2b" && <B2BView />}
+          {activeNav === "payments" && <PaymentsView />}
         </div>
       </main>
 

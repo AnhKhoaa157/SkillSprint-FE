@@ -13,6 +13,8 @@ export type AuthTokens = {
   refreshToken: string;
   expiresIn: number;
   tokenType: string;
+  /** Unique session identifier used for SingleSessionFilter (Redis). */
+  sessionId?: string;
 };
 
 export type AuthRole = "ADMIN" | "LEARNER" | string;
@@ -32,6 +34,7 @@ export type StoredUserProfile = {
 type AuthPayload = AuthTokens & {
   challengeName?: string | null;
   session?: string | null;
+  sessionId?: string | null;
   role_name?: string | string[] | null;
   roleName?: string | string[] | null;
   role?: string | string[] | null;
@@ -164,6 +167,7 @@ function buildAuthSession(data: AuthPayload): AuthSession {
     refreshToken: data.refreshToken,
     expiresIn: data.expiresIn ?? 0,
     tokenType: data.tokenType ?? "Bearer",
+    sessionId: data.sessionId ?? undefined,
     role: extractRole(data),
   };
 }
@@ -186,16 +190,21 @@ export function getStoredAuthSession(): AuthSession | null {
   try {
     const parsed = JSON.parse(raw) as Partial<AuthSession>;
 
-    if (!parsed.accessToken || !parsed.idToken || !parsed.refreshToken) {
+    // Relaxed validation — only accessToken is required.
+    // The BE SingleSessionFilter uses the sessionId for Redis validation,
+    // not refreshToken, so we should not reject tokens just because
+    // refreshToken is missing (some token-response shapes omit it).
+    if (!parsed.accessToken) {
       return null;
     }
 
     return {
       accessToken: parsed.accessToken,
-      idToken: parsed.idToken,
-      refreshToken: parsed.refreshToken,
+      idToken: parsed.idToken ?? "",
+      refreshToken: parsed.refreshToken ?? "",
       expiresIn: parsed.expiresIn ?? 0,
       tokenType: parsed.tokenType ?? "Bearer",
+      sessionId: parsed.sessionId ?? undefined,
       role: extractRole(parsed as Partial<AuthPayload> & Record<string, unknown>),
     };
   } catch {
@@ -379,6 +388,35 @@ export async function confirmForgotPassword(email: string, confirmationCode: str
   });
 }
 
+/**
+ * Step 2 of the forgot-password flow: verifies the 6-digit code sent to the
+ * user's email. Called before the new password is submitted.
+ * POST /api/auth/confirm-forgot-password  Body: { email, code }
+ */
+export async function verifyPasswordResetCode(email: string, code: string): Promise<void> {
+  await requestJson<EmptyPayload>("/api/auth/confirm-forgot-password", {
+    email,
+    code,
+  });
+}
+
+/**
+ * Step 3 of the forgot-password flow: sets the new password using the verified
+ * code. This is separate from the challenge-based completeNewPassword flow.
+ * POST /api/auth/complete-new-password  Body: { email, code, newPassword }
+ */
+export async function completePasswordReset(
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<void> {
+  await requestJson<EmptyPayload>("/api/auth/complete-new-password", {
+    email,
+    code,
+    newPassword,
+  });
+}
+
 export async function completeNewPassword(email: string, newPassword: string, session: string): Promise<AuthSession> {
   const response = await requestJson<AuthPayload>("/api/auth/complete-new-password", {
     email,
@@ -401,4 +439,10 @@ export function storeAuthTokens(tokens: AuthSession): void {
 
 export function clearAuthTokens(): void {
   localStorage.removeItem(AUTH_STORAGE_KEY);
+  try {
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem("skillSprint.auth.hydrated");
+  } catch {
+    // non-critical
+  }
 }

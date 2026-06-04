@@ -1,5 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Play, Pause, RotateCcw } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import {
+  pausePomodoro,
+  resumePomodoro,
+  nextPomodoroPhase,
+} from "../../../api/studySessionService";
 
 const F = "'Plus Jakarta Sans', Inter, sans-serif";
 const OG = "#FF6B00";
@@ -13,32 +19,66 @@ interface PomodoroTimerProps {
   className?: string;
   style?: React.CSSProperties;
   onModeChange?: (mode: "focus" | "shortBreak" | "longBreak") => void;
+  /** When provided, pause/resume/phase-change actions are synced to the backend. */
+  sessionId?: string;
 }
 
-export function PomodoroTimer({ className = "", style = {}, onModeChange }: PomodoroTimerProps) {
+const MODES = [
+  { id: "focus" as const, label: "Tập trung", duration: 25 * 60 },
+  { id: "shortBreak" as const, label: "Nghỉ ngắn", duration: 5 * 60 },
+  { id: "longBreak" as const, label: "Nghỉ dài", duration: 15 * 60 },
+];
+
+export function PomodoroTimer({ className = "", style = {}, onModeChange, sessionId }: PomodoroTimerProps) {
   const [mode, setMode] = useState<"focus" | "shortBreak" | "longBreak">("focus");
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
+  const [isApiLoading, setIsApiLoading] = useState(false);
 
-  const modes = [
-    { id: "focus", label: "Tập trung", duration: 25 * 60 },
-    { id: "shortBreak", label: "Nghỉ ngắn", duration: 5 * 60 },
-    { id: "longBreak", label: "Nghỉ dài", duration: 15 * 60 },
-  ];
+  // Tracks completed focus sessions to determine when to take a long break (every 4 focus sessions).
+  const focusCountRef = useRef(0);
+
+  // Refs so the timer effect always sees the latest sessionId / onModeChange without needing them in deps.
+  const sessionIdRef = useRef(sessionId);
+  sessionIdRef.current = sessionId;
+  const onModeChangeRef = useRef(onModeChange);
+  onModeChangeRef.current = onModeChange;
 
   useEffect(() => {
     if (!isRunning) return;
+
     if (timeLeft <= 0) {
       setIsRunning(false);
+
+      // Determine the next Pomodoro phase
+      let nextMode: "focus" | "shortBreak" | "longBreak";
+      if (mode === "focus") {
+        focusCountRef.current += 1;
+        // Every 4 completed focus sessions take a long break
+        nextMode = focusCountRef.current % 4 === 0 ? "longBreak" : "shortBreak";
+      } else {
+        if (mode === "longBreak") focusCountRef.current = 0;
+        nextMode = "focus";
+      }
+
+      const duration = MODES.find(m => m.id === nextMode)?.duration ?? 25 * 60;
+      setMode(nextMode);
+      setTimeLeft(duration);
+      onModeChangeRef.current?.(nextMode);
+
+      // Notify backend of phase transition (fire-and-forget; local state already updated)
+      const sid = sessionIdRef.current;
+      if (sid) {
+        nextPomodoroPhase(sid).catch(() => {});
+      }
       return;
     }
 
     const timer = setInterval(() => {
       setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
     }, 1000);
-
     return () => clearInterval(timer);
-  }, [isRunning, timeLeft]);
+  }, [isRunning, timeLeft, mode]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -49,18 +89,39 @@ export function PomodoroTimer({ className = "", style = {}, onModeChange }: Pomo
   const handleModeChange = (newMode: "focus" | "shortBreak" | "longBreak") => {
     setMode(newMode);
     setIsRunning(false);
-    const duration = modes.find(m => m.id === newMode)?.duration || 25 * 60;
+    const duration = MODES.find(m => m.id === newMode)?.duration ?? 25 * 60;
     setTimeLeft(duration);
     onModeChange?.(newMode);
   };
 
-  const handlePlayPause = () => {
-    setIsRunning(!isRunning);
+  const handlePlayPause = async () => {
+    const willRun = !isRunning;
+    const sid = sessionIdRef.current;
+
+    if (!sid) {
+      // No active session — run purely locally
+      setIsRunning(willRun);
+      return;
+    }
+
+    setIsApiLoading(true);
+    try {
+      if (willRun) {
+        await resumePomodoro(sid);
+      } else {
+        await pausePomodoro(sid);
+      }
+    } catch {
+      // API failed — still update local state so the timer keeps working
+    } finally {
+      setIsApiLoading(false);
+    }
+    setIsRunning(willRun);
   };
 
   const handleReset = () => {
     setIsRunning(false);
-    const duration = modes.find(m => m.id === mode)?.duration || 25 * 60;
+    const duration = MODES.find(m => m.id === mode)?.duration ?? 25 * 60;
     setTimeLeft(duration);
   };
 
@@ -94,10 +155,10 @@ export function PomodoroTimer({ className = "", style = {}, onModeChange }: Pomo
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: "6px" }}>
-        {modes.map(m => (
+        {MODES.map(m => (
           <button
             key={m.id}
-            onClick={() => handleModeChange(m.id as any)}
+            onClick={() => handleModeChange(m.id)}
             style={{
               flex: 1,
               padding: "6px 8px",
@@ -179,20 +240,24 @@ export function PomodoroTimer({ className = "", style = {}, onModeChange }: Pomo
         </button>
         <button
           onClick={handlePlayPause}
+          disabled={isApiLoading}
           style={{
             width: "38px",
             height: "38px",
             borderRadius: "8px",
             border: "none",
             background: OG,
-            cursor: "pointer",
+            cursor: isApiLoading ? "not-allowed" : "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             transition: "all 0.18s",
+            opacity: isApiLoading ? 0.7 : 1,
           }}
         >
-          {isRunning ? (
+          {isApiLoading ? (
+            <Loader2 size={16} color="#fff" className="animate-spin" />
+          ) : isRunning ? (
             <Pause size={16} color="#fff" fill="#fff" />
           ) : (
             <Play size={16} color="#fff" fill="#fff" style={{ marginLeft: "2px" }} />
@@ -211,7 +276,9 @@ export function PomodoroTimer({ className = "", style = {}, onModeChange }: Pomo
           lineHeight: 1.4,
         }}
       >
-        Bắt đầu 25 phút tập trung, sau đó nghỉ ngắn
+        {sessionId
+          ? "Đồng bộ trạng thái với phiên học đang hoạt động"
+          : "Bắt đầu 25 phút tập trung, sau đó nghỉ ngắn"}
       </p>
     </div>
   );

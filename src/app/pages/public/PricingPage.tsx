@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Link } from "react-router";
-import { Check, X, Sparkles, Zap, HelpCircle, Plus } from "lucide-react";
+import { Link, useNavigate } from "react-router";
+import { Check, X, Sparkles, Zap, HelpCircle, Plus, LogIn, UserPlus } from "lucide-react";
 import { Footer as PublicFooter } from "../components/Footer";
 import { PublicNavbar } from "../components/PublicNavbar";
 import CursorSpotlight from "../components/CursorSpotlight";
+import { useAuth } from "../../contexts/AuthContext";
 
 /* ─── Design Tokens ─── */
 const F    = "'Plus Jakarta Sans', Inter, sans-serif";
@@ -21,6 +22,26 @@ const BDR  = "#E5E7EB";
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
+  const [authGateOpen, setAuthGateOpen] = useState(false);
+  const [pendingAuthPlan, setPendingAuthPlan] = useState<"SKILL_BUILDER" | "PREMIUM" | null>(null);
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  const handlePlanCTA = (plan: "SKILL_BUILDER" | "PREMIUM") => {
+    if (isAuthenticated) {
+      navigate(`/app?pricing=${plan}`);
+      return;
+    }
+    // Guest: intercept and show auth-gate popup instead of navigating away
+    setPendingAuthPlan(plan);
+    setAuthGateOpen(true);
+  };
+
+  const handleAuthGateNavigate = (mode: "login" | "register") => {
+    if (pendingAuthPlan) sessionStorage.setItem("pendingPlan", pendingAuthPlan);
+    setAuthGateOpen(false);
+    navigate(`/auth?mode=${mode}`);
+  };
 
   return (
     <div style={{ background:BG, minHeight:"100vh", fontFamily:F, position:"relative" }}>
@@ -96,6 +117,7 @@ export default function PricingPage() {
                 </div>
 
                 <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }}
+                  onClick={() => handlePlanCTA("SKILL_BUILDER")}
                   style={{ width:"100%", padding:"16px", borderRadius:"16px", background:"#F3F4F6", color:T1, fontFamily:F, fontWeight:800, fontSize:"1.05rem", border:"1px solid #E5E7EB", cursor:"pointer", marginBottom:"40px", transition:"background 0.2s" }}>
                   Bắt đầu miễn phí
                 </motion.button>
@@ -153,6 +175,7 @@ export default function PricingPage() {
                   </div>
 
                   <motion.button whileHover={{ scale:1.02, boxShadow:"0 10px 25px rgba(255,107,0,0.4)" }} whileTap={{ scale:0.98 }}
+                    onClick={() => handlePlanCTA("PREMIUM")}
                     style={{ width:"100%", padding:"16px", borderRadius:"16px", background:OG, color:TW, fontFamily:F, fontWeight:800, fontSize:"1.05rem", border:"none", cursor:"pointer", marginBottom:"40px", boxShadow:"0 6px 15px rgba(255,107,0,0.25)", transition:"box-shadow 0.2s" }}>
                     Nâng cấp lên Premium
                   </motion.button>
@@ -331,6 +354,110 @@ export default function PricingPage() {
 
         <PublicFooter />
       </div>
+
+      {/* ── Auth-gate popup (guest clicks a plan button) ── */}
+      <AnimatePresence>
+        {authGateOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setAuthGateOpen(false)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 50,
+              background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "24px",
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              transition={{ type: "spring", stiffness: 280, damping: 22 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: "#fff", borderRadius: "24px",
+                padding: "36px 32px 28px",
+                maxWidth: "420px", width: "100%",
+                boxShadow: "0 30px 80px rgba(0,0,0,0.22)",
+                fontFamily: F, textAlign: "center", position: "relative",
+              }}
+            >
+              {/* Close */}
+              <button
+                onClick={() => setAuthGateOpen(false)}
+                style={{
+                  position: "absolute", top: "14px", right: "14px",
+                  width: "30px", height: "30px", borderRadius: "50%",
+                  background: "#F3F4F6", border: "none", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
+                <X size={14} color={T2} />
+              </button>
+
+              {/* Icon */}
+              <div style={{
+                width: "56px", height: "56px", borderRadius: "16px",
+                background: `linear-gradient(135deg, ${OG}, #FF3B00)`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 18px",
+                boxShadow: "0 8px 20px rgba(255,107,0,0.32)",
+              }}>
+                <Sparkles size={24} color="#fff" />
+              </div>
+
+              <h3 style={{ fontWeight: 900, fontSize: "1.25rem", color: T1, marginBottom: "8px", letterSpacing: "-0.03em" }}>
+                Bạn cần đăng nhập để tiếp tục
+              </h3>
+              <p style={{ fontSize: "0.9rem", color: T2, lineHeight: 1.6, marginBottom: "28px" }}>
+                Tạo tài khoản miễn phí hoặc đăng nhập để mở khoá gói{" "}
+                <strong style={{ color: OG }}>
+                  {pendingAuthPlan === "PREMIUM" ? "Career Premium" : "Skill Builder"}
+                </strong>{" "}
+                và bắt đầu học tập ngay.
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => handleAuthGateNavigate("register")}
+                  style={{
+                    width: "100%", padding: "13px", borderRadius: "12px",
+                    background: OG, border: "none", color: "#fff",
+                    fontFamily: F, fontWeight: 800, fontSize: "0.95rem",
+                    cursor: "pointer", display: "flex", alignItems: "center",
+                    justifyContent: "center", gap: "8px",
+                    boxShadow: "0 6px 18px rgba(255,107,0,0.32)",
+                  }}
+                >
+                  <UserPlus size={16} /> Đăng ký miễn phí
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => handleAuthGateNavigate("login")}
+                  style={{
+                    width: "100%", padding: "13px", borderRadius: "12px",
+                    background: "transparent",
+                    border: `1.5px solid ${BDR}`,
+                    color: T1, fontFamily: F, fontWeight: 700, fontSize: "0.95rem",
+                    cursor: "pointer", display: "flex", alignItems: "center",
+                    justifyContent: "center", gap: "8px",
+                  }}
+                >
+                  <LogIn size={16} /> Đăng nhập
+                </motion.button>
+              </div>
+
+              <p style={{ fontSize: "0.75rem", color: T2, marginTop: "16px" }}>
+                Không cần thẻ tín dụng để tạo tài khoản.
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

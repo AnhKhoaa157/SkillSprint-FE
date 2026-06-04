@@ -1,4 +1,4 @@
-import { getStoredAuthSession } from "./authService";
+import { getAuthHeaders } from "./apiClient";
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
 
@@ -23,9 +23,10 @@ export type AdminUserDetail = AdminUserSummary & {
 };
 
 async function authFetch<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
-  const session = getStoredAuthSession();
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (session?.accessToken) headers["Authorization"] = `Bearer ${session.accessToken}`;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...getAuthHeaders(),
+  };
   // Debug logging (development): do not remove — helps trace missing API data
   try {
     const safeHeaders = { ...headers } as Record<string,string>;
@@ -40,6 +41,9 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<ApiRespon
     console.log("[adminUserService] response:", res.status, payload);
 
     if (!res.ok) {
+      if (res.status === 401) {
+        window.dispatchEvent(new Event("session-kickout-triggered"));
+      }
       const message = payload?.message || `Server error ${res.status}`;
       throw new Error(message);
     }

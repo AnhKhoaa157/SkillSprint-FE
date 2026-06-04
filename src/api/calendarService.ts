@@ -1,13 +1,4 @@
-import { getStoredAuthSession } from "./authService";
-
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
-
-type ApiResponse<T> = {
-  success: boolean;
-  code: number;
-  message: string;
-  data: T | null;
-};
+import { requestJson } from "./apiClient";
 
 export type WeekDay =
   | "MONDAY"
@@ -71,51 +62,6 @@ export type UpdateCalendarTaskRequest = {
   endTime?: string | null;
 };
 
-function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
-  const headers: Record<string, string> = {};
-
-  if (includeJsonContentType) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  return headers;
-}
-
-async function requestJson<T>(path: string, opts: RequestInit = {}): Promise<ApiResponse<T>> {
-  const session = getStoredAuthSession();
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(opts.headers as Record<string, string> || {}),
-  };
-
-  if (session?.accessToken) {
-    headers["Authorization"] = `Bearer ${session.accessToken}`;
-  }
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...opts,
-    headers,
-  });
-
-  const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
-
-  if (!response.ok) {
-    const message = payload?.message || `Server error: ${response.status}`;
-    throw new Error(message);
-  }
-
-  if (!payload) {
-    throw new Error("Invalid response from server");
-  }
-
-  return payload;
-}
-
 export async function generateCalendarSchedule(workspaceId: string, body: GenerateCalendarRequest): Promise<CalendarScheduleRunResponse> {
   const res = await requestJson<CalendarScheduleRunResponse>(`/api/workspaces/${workspaceId}/calendar/generate`, {
     method: "POST",
@@ -132,7 +78,6 @@ export async function generateCalendarSchedule(workspaceId: string, body: Genera
 export async function getCalendarTasks(workspaceId: string): Promise<CalendarTaskResponse[]> {
   const res = await requestJson<CalendarTaskResponse[]>(`/api/workspaces/${workspaceId}/calendar/tasks`, {
     method: "GET",
-    headers: buildAuthHeaders(getStoredAuthSession()?.accessToken ?? null),
   });
 
   return res.data || [];
@@ -154,7 +99,6 @@ export async function updateCalendarTask(taskId: string, body: UpdateCalendarTas
 export async function completeCalendarTask(taskId: string): Promise<CalendarTaskResponse> {
   const res = await requestJson<CalendarTaskResponse>(`/api/calendar/tasks/${taskId}/complete`, {
     method: "PATCH",
-    headers: buildAuthHeaders(getStoredAuthSession()?.accessToken ?? null),
   });
 
   if (!res.data) {
@@ -164,9 +108,109 @@ export async function completeCalendarTask(taskId: string): Promise<CalendarTask
   return res.data;
 }
 
+// ─── Eisenhower Matrix ────────────────────────────────────────────────────────
+
+export type EisenhowerQuadrant = "DO_NOW" | "SCHEDULE" | "DELAY_OR_DELEGATE" | "ELIMINATE";
+
+export type EisenhowerTask = {
+  taskId: string;
+  title: string;
+  description?: string | null;
+  quadrant: EisenhowerQuadrant;
+  status?: string | null;
+  priority?: string | null;
+  taskDate?: string | null;
+  durationMinutes?: number | null;
+  source?: string | null;
+};
+
+export type EisenhowerBoardResponse = Record<EisenhowerQuadrant, EisenhowerTask[]>;
+
+export type CreateEisenhowerTaskRequest = {
+  title: string;
+  quadrant: EisenhowerQuadrant;
+  status: string;
+};
+
+export type UpdateTaskStatusRequest = {
+  status: string;
+};
+
+type EisenhowerRawQuadrantItem = {
+  quadrant: string;
+  tasks: EisenhowerTask[];
+};
+
+type EisenhowerRawApiData = {
+  workspaceId: string;
+  date: string;
+  quadrants: EisenhowerRawQuadrantItem[];
+};
+
+/**
+ * GET /api/workspaces/{workspaceId}/eisenhower-tasks
+ * Returns tasks grouped into the four Eisenhower priority quadrants.
+ * Normalizes the quadrants[] array response into a keyed board object.
+ */
+export async function getEisenhowerTasks(
+  workspaceId: string,
+): Promise<EisenhowerBoardResponse> {
+  const res = await requestJson<EisenhowerRawApiData>(
+    `/api/workspaces/${workspaceId}/eisenhower-tasks`,
+    { method: "GET" },
+  );
+
+  const board: EisenhowerBoardResponse = { DO_NOW: [], SCHEDULE: [], DELAY_OR_DELEGATE: [], ELIMINATE: [] };
+
+  for (const item of res.data?.quadrants ?? []) {
+    const key = item.quadrant as EisenhowerQuadrant;
+    if (key in board) {
+      board[key] = item.tasks ?? [];
+    }
+  }
+
+  return board;
+}
+
+/**
+ * POST /api/workspaces/{workspaceId}/calendar/tasks
+ * Creates a new calendar task assigned to an Eisenhower quadrant.
+ */
+export async function createCalendarTask(
+  workspaceId: string,
+  body: CreateEisenhowerTaskRequest,
+): Promise<CalendarTaskResponse> {
+  const res = await requestJson<CalendarTaskResponse>(
+    `/api/workspaces/${workspaceId}/calendar/tasks`,
+    { method: "POST", body: JSON.stringify(body) },
+  );
+  if (!res.data) throw new Error(res.message || "Failed to create task");
+  return res.data;
+}
+
+/**
+ * PATCH /api/workspaces/{workspaceId}/calendar/tasks/{taskId}/status
+ * Updates only the status field of a calendar task.
+ */
+export async function updateCalendarTaskStatus(
+  workspaceId: string,
+  taskId: string,
+  body: UpdateTaskStatusRequest,
+): Promise<CalendarTaskResponse> {
+  const res = await requestJson<CalendarTaskResponse>(
+    `/api/workspaces/${workspaceId}/calendar/tasks/${taskId}/status`,
+    { method: "PATCH", body: JSON.stringify(body) },
+  );
+  if (!res.data) throw new Error(res.message || "Failed to update task status");
+  return res.data;
+}
+
 export default {
   generateCalendarSchedule,
   getCalendarTasks,
   updateCalendarTask,
   completeCalendarTask,
+  getEisenhowerTasks,
+  createCalendarTask,
+  updateCalendarTaskStatus,
 };
