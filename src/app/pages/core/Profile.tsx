@@ -118,24 +118,15 @@ function Input({
   placeholder?:string; type?:string; disabled?:boolean; hint?:string;
 }) {
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:"6px" }}>
-      <label style={{ fontSize:"0.8rem", fontWeight:600, color:T1, fontFamily:F }}>{label}</label>
+    <div className="flex flex-col gap-1.5 w-full">
+      <label className="text-xs font-bold text-slate-700">{label}</label>
       <input
         type={type} value={value} disabled={disabled}
         onChange={e=>onChange(e.target.value)}
         placeholder={placeholder}
-        style={{
-          padding:"10px 14px", borderRadius:"9px",
-          border:`1.5px solid ${BDR}`,
-          background: disabled ? "#F9FAFB" : CARD,
-          fontFamily:F, fontSize:"0.875rem", color:T1,
-          outline:"none", transition:"border-color 0.15s",
-          cursor: disabled ? "not-allowed" : "text",
-        }}
-        onFocus={e=>{ if(!disabled) e.target.style.borderColor=OG; }}
-        onBlur={e=>{ e.target.style.borderColor=BDR; }}
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-[#FF6B00]/40 focus:ring-4 focus:ring-[#FFF7ED] disabled:bg-slate-50/50 disabled:text-slate-400 disabled:cursor-not-allowed"
       />
-      {hint && <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F }}>{hint}</p>}
+      {hint && <p className="text-[11px] text-slate-400 leading-normal">{hint}</p>}
     </div>
   );
 }
@@ -148,23 +139,15 @@ function Select({
   onChange:(v:string)=>void; options:string[];
 }) {
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:"6px" }}>
-      <label style={{ fontSize:"0.8rem", fontWeight:600, color:T1, fontFamily:F }}>{label}</label>
-      <div style={{ position:"relative" }}>
+    <div className="flex flex-col gap-1.5 w-full">
+      <label className="text-xs font-bold text-slate-700">{label}</label>
+      <div className="relative">
         <select value={value} onChange={e=>onChange(e.target.value)}
-          style={{
-            width:"100%", padding:"10px 36px 10px 14px",
-            borderRadius:"9px", border:`1.5px solid ${BDR}`,
-            background:CARD, fontFamily:F, fontSize:"0.875rem", color:T1,
-            outline:"none", appearance:"none", cursor:"pointer",
-            transition:"border-color 0.15s",
-          }}
-          onFocus={e=>{ e.target.style.borderColor=OG; }}
-          onBlur={e=>{ e.target.style.borderColor=BDR; }}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium outline-none transition focus:border-[#FF6B00]/40 focus:ring-4 focus:ring-[#FFF7ED] appearance-none cursor-pointer"
         >
           {options.map(o=><option key={o}>{o}</option>)}
         </select>
-        <ChevronDown size={15} color={T3} style={{ position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }}/>
+        <ChevronDown size={15} className="text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"/>
       </div>
     </div>
   );
@@ -173,10 +156,7 @@ function Select({
 /* ─── Section heading ─── */
 function SectionHeading({ title }: { title:string }) {
   return (
-    <h3 style={{
-      fontWeight:700, fontSize:"0.975rem", color:T1, marginBottom:"16px",
-      paddingBottom:"10px", borderBottom:`1px solid ${BDR}`, fontFamily:F,
-    }}>{title}</h3>
+    <h3 className="text-sm font-extrabold text-slate-800 border-b border-slate-100 pb-3 mb-5">{title}</h3>
   );
 }
 
@@ -613,48 +593,22 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "12px 14px",
-        borderRadius: "10px",
-        border: `1px solid ${BDR}`,
-        background: CARD,
-      }}
-    >
-      <div style={{ paddingRight: "10px" }}>
-        <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.84rem", color: T1 }}>{title}</p>
-        <p style={{ fontFamily: F, fontSize: "0.75rem", color: T3, marginTop: "3px" }}>{description}</p>
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50/30 p-4 transition hover:bg-white hover:shadow-sm">
+      <div>
+        <p className="text-sm font-bold text-slate-800">{title}</p>
+        <p className="text-xs text-slate-500 mt-1">{description}</p>
       </div>
 
       <button
         onClick={() => onChange(!checked)}
-        style={{
-          width: "42px",
-          height: "24px",
-          borderRadius: "999px",
-          border: "none",
-          cursor: "pointer",
-          position: "relative",
-          background: checked ? OG : "#E5E7EB",
-          transition: "all 0.18s",
-          flexShrink: 0,
-        }}
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${
+          checked ? "bg-[#FF6B00]" : "bg-slate-200"
+        }`}
       >
         <span
-          style={{
-            position: "absolute",
-            top: "3px",
-            left: checked ? "21px" : "3px",
-            width: "18px",
-            height: "18px",
-            borderRadius: "50%",
-            background: "#fff",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
-            transition: "left 0.18s",
-          }}
+          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+            checked ? "translate-x-5" : "translate-x-0"
+          }`}
         />
       </button>
     </div>
@@ -992,159 +946,115 @@ export default function Profile() {
   };
 
   return (
-    <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.28}} style={{fontFamily:F}}>
+    <div className="relative min-h-screen bg-[#F9FAFB] px-1 py-1 text-slate-900 overflow-hidden animate-fade-in" style={{ fontFamily: F }}>
+      {/* Premium ambient decorative background glow circles */}
+      <div className="absolute left-[-10%] top-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-[#FF6B00]/5 to-transparent blur-[120px] pointer-events-none" />
+      <div className="absolute right-[-10%] bottom-[-10%] -z-10 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-[#6366F1]/5 to-transparent blur-[150px] pointer-events-none" />
 
       {/* ── Profile Banner ── */}
-      <div style={{
-        background:CARD, borderRadius:"14px", padding:"20px 24px",
-        boxShadow:SH, border:`1px solid ${BDR}`,
-        display:"flex", alignItems:"center", gap:"16px",
-        marginBottom:"20px",
-      }}>
-        {/* Avatar */}
-        {profile.avatarUrl ? (
-          <img
-            src={profile.avatarUrl}
-            alt={profile.fullName}
-            style={{ width:"58px", height:"58px", borderRadius:"50%", flexShrink:0, objectFit:"cover", border:`2px solid ${OGLT}` }}
-          />
-        ) : (
-          <div style={{
-            width:"58px", height:"58px", borderRadius:"50%", flexShrink:0,
-            background:"linear-gradient(135deg,#FF6B00,#6366F1)",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            boxShadow:"0 4px 16px rgba(99,102,241,0.3)",
-          }}>
-            <span style={{ fontSize:"22px", fontWeight:900, color:"#fff" }}>{avatarLetter}</span>
-          </div>
-        )}
+      <div className="relative flex flex-col justify-between gap-6 overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_2px_8px_-3px_rgba(15,23,42,0.05),0_12px_24px_-4px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:p-8 mb-6">
+        <div className="absolute -left-20 -top-20 h-48 w-48 rounded-full bg-[#FF6B00]/5 blur-[80px]" />
+        
+        <div className="relative flex flex-col sm:flex-row items-center gap-5 flex-1 min-w-0">
+          {/* Avatar */}
+          {profile.avatarUrl ? (
+            <img
+              src={profile.avatarUrl}
+              alt={profile.fullName}
+              className="w-16 h-16 rounded-full flex-shrink-0 object-cover border-2 border-orange-100 shadow-md"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full flex-shrink-0 bg-gradient-to-br from-[#FF6B00] to-amber-500 flex items-center justify-center shadow-lg shadow-[#FF6B00]/20">
+              <span className="text-2xl font-black text-white">{avatarLetter}</span>
+            </div>
+          )}
 
-        <div style={{ flex:1, minWidth:0 }}>
-          <h2 style={{
-            fontWeight:900, fontSize:"1.1rem", color:T1,
-            letterSpacing:"-0.03em", marginBottom:"2px", fontFamily:F,
-          }}>
-            {profile.fullName}
-          </h2>
-          <p style={{ fontSize:"0.82rem", color:T2, marginBottom:"8px", fontFamily:F }}>
-            {profile.email || "No email in session"} · {profile.roleLabel}
-          </p>
-          <div style={{ display:"flex", gap:"7px", flexWrap:"wrap" }}>
-            <span style={{
-              fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
-              background:"#F3F4F6", color:T2, fontWeight:600,
-            }}>Free Plan</span>
-            <span style={{
-              fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
-              background: profile.emailVerified ? "#ECFDF5" : "#FFF7ED",
-              color: profile.emailVerified ? "#065F46" : "#C2410C",
-              border: `1px solid ${profile.emailVerified ? "#A7F3D0" : "#FED7AA"}`, fontWeight:700,
-              display:"inline-flex", alignItems:"center", gap:"5px",
-            }}>{profile.emailVerified ? <><BadgeCheck size={12} /> Email verified</> : <><AlertTriangle size={12} /> Email not verified</>}</span>
-            <span style={{
-              fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
-              background:"#FFF9C4", color:"#92400E",
-              border:"1px solid #FDE68A", fontWeight:700,
-            }}>⭐ Level {LEVEL}</span>
-            <span style={{
-              fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
-              background:"#ECFDF5", color:"#065F46",
-              border:"1px solid #A7F3D0", fontWeight:700,
-            }}>🔥 {STREAK}-Day Streak</span>
-            {profileLoading && (
-              <span style={{
-                fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
-                background:"#EFF6FF", color:"#1D4ED8",
-                border:"1px solid #BFDBFE", fontWeight:700,
-                display:"inline-flex", alignItems:"center", gap:"5px",
-              }}><Loader2 size={12} className="animate-spin" /> Syncing profile</span>
-            )}
+          <div className="min-w-0 text-center sm:text-left">
+            <h2 className="text-xl font-extrabold tracking-tight text-slate-800">
+              {profile.fullName}
+            </h2>
+            <p className="text-xs font-semibold text-slate-500 mt-1 mb-3">
+              {profile.email || "No email in session"} · {profile.roleLabel}
+            </p>
+            <div className="flex flex-wrap justify-center sm:justify-start gap-1.5">
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold text-slate-600 border border-slate-200">
+                Free Plan
+              </span>
+              <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-bold ${
+                profile.emailVerified ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-orange-50 text-orange-700 border-orange-200"
+              }`}>
+                {profile.emailVerified ? <><BadgeCheck size={11} /> Email verified</> : <><AlertTriangle size={11} /> Email not verified</>}
+              </span>
+              <span className="rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 text-[10px] font-bold">
+                ⭐ Level {LEVEL}
+              </span>
+              <span className="rounded-full bg-orange-50 text-[#FF6B00] border border-orange-200 px-3 py-1 text-[10px] font-bold">
+                🔥 {STREAK}-Day Streak
+              </span>
+              {profileLoading && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200 px-3 py-1 text-[10px] font-bold">
+                  <Loader2 size={10} className="animate-spin" /> Syncing profile
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
         <motion.button
           whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-          style={{
-            display:"flex", alignItems:"center", gap:"6px",
-            padding:"9px 18px", borderRadius:"10px",
-            background:OG, color:"#fff", border:"none", cursor:"pointer",
-            fontFamily:F, fontWeight:700, fontSize:"0.82rem", flexShrink:0,
-            boxShadow:"0 4px 14px rgba(255,107,0,0.32)",
-          }}
+          className="relative inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF6B00] to-amber-500 px-5 py-3.5 text-xs font-bold text-white shadow-lg shadow-[#FF6B00]/25 transition duration-150 self-center sm:self-auto"
         >
-          <Gift size={13}/> Refer &amp; Get Premium
+          <Gift size={13}/> Mời bạn &amp; Nhận Premium
         </motion.button>
       </div>
 
-      {/* ── Two-column: sub-nav + form ── */}
-      <div style={{ display:"grid", gridTemplateColumns:"200px 1fr", gap:"16px", alignItems:"start" }}>
+      {/* ── Two-column Layout ── */}
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-[210px_1fr] items-start">
 
-        {/* Left sub-nav */}
-        <div style={{
-          background:CARD, borderRadius:"14px", padding:"12px 8px",
-          boxShadow:SH, border:`1px solid ${BDR}`,
-        }}>
-          <p style={{
-            fontSize:"0.62rem", color:T3, fontWeight:700,
-            letterSpacing:"0.14em", textTransform:"uppercase",
-            padding:"6px 10px 8px", fontFamily:F,
-          }}>Settings</p>
+        {/* Sidebar sub-nav */}
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white p-3.5 shadow-[0_2px_8px_-3px_rgba(15,23,42,0.05),0_12px_24px_-4px_rgba(15,23,42,0.04)]">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3.5 py-2 mb-2">Cấu hình</p>
 
-          {TABS.map(tab=>{
-            const isActive = activeTab === tab.id;
-            return (
-              <button key={tab.id}
-                onClick={()=>setActiveTab(tab.id)}
-                style={{
-                  display:"flex", alignItems:"center", gap:"9px",
-                  width:"100%", padding:"9px 10px", borderRadius:"8px",
-                  background: isActive ? OGL : "transparent",
-                  border:"none", cursor:"pointer",
-                  color: isActive ? OG : T2,
-                  fontFamily:F, fontWeight: isActive ? 700 : 400,
-                  fontSize:"0.848rem", transition:"all 0.12s",
-                  textAlign:"left",
-                }}
-                onMouseEnter={e=>{if(!isActive)(e.currentTarget as HTMLButtonElement).style.background="#F9FAFB";}}
-                onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLButtonElement).style.background="transparent";}}
-              >
-                <tab.icon size={14} color={isActive ? OG : T3} strokeWidth={isActive?2.2:1.8}/>
-                <span style={{ flex:1 }}>{tab.label}</span>
-                {isActive && <div style={{ width:"6px", height:"6px", borderRadius:"50%", background:OG }}/>}
-              </button>
-            );
-          })}
+          <div className="space-y-1">
+            {TABS.map(tab => {
+              const isActive = activeTab === tab.id;
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-3 w-full px-3.5 py-3 rounded-2xl text-xs font-bold transition-all duration-200 ${
+                    isActive ? "bg-orange-50 text-[#FF6B00]" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                  }`}
+                >
+                  <Icon size={14} className={isActive ? "text-[#FF6B00]" : "text-slate-400"} />
+                  <span className="flex-1 text-left">{tab.label}</span>
+                  {isActive && <div className="h-1.5 w-1.5 rounded-full bg-[#FF6B00]" />}
+                </button>
+              );
+            })}
+          </div>
 
-          <div style={{ height:"1px", background:BDR, margin:"8px 6px" }}/>
+          <div className="h-px bg-slate-100 my-3.5 mx-2" />
 
           <button
             onClick={handleSignOut}
-            style={{
-              display:"flex", alignItems:"center", gap:"9px",
-              width:"100%", padding:"9px 10px", borderRadius:"8px",
-              background:"transparent", border:"none", cursor:"pointer",
-              color:"#EF4444", fontFamily:F, fontWeight:500, fontSize:"0.848rem",
-              textAlign:"left", transition:"background 0.12s",
-            }}
-            onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="#FFF1F2";}}
-            onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="transparent";}}
+            className="flex items-center gap-3 w-full px-3.5 py-3 rounded-2xl text-xs font-bold text-rose-600 transition-colors duration-200 hover:bg-rose-50"
           >
-            <LogOut size={14} color="#EF4444" strokeWidth={1.8}/>
-            Sign Out
+            <LogOut size={14} className="text-rose-500" />
+            <span className="flex-1 text-left">Sign Out</span>
           </button>
         </div>
 
-        {/* Right form content */}
-        <div style={{
-          background:CARD, borderRadius:"14px", padding:"24px",
-          boxShadow:SH, border:`1px solid ${BDR}`,
-        }}>
+        {/* Form Container */}
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-[0_2px_8px_-3px_rgba(15,23,42,0.05),0_12px_24px_-4px_rgba(15,23,42,0.04)]">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
-              initial={{opacity:0,y:6}} animate={{opacity:1,y:0}}
-              exit={{opacity:0,y:-6}}
-              transition={{duration:0.2}}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
             >
               {activeTab === "account"       && <AccountTab profile={profile} onSave={handleUpdateProfile} saving={savingProfile}/>} 
               {activeTab === "subscription"  && <SubscriptionTab/>}
@@ -1158,6 +1068,6 @@ export default function Profile() {
           </AnimatePresence>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

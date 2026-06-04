@@ -41,6 +41,10 @@ async function requestJson<T>(path: string, opts: RequestInit = {}): Promise<Api
     headers["Authorization"] = `Bearer ${session.accessToken}`;
   }
 
+  if (session?.sessionId) {
+    headers["X-Session-Id"] = session.sessionId;
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     ...opts,
     headers,

@@ -37,6 +37,7 @@ async function request<T>(path: string, opts: RequestInit = {}) {
   const session = getStoredAuthSession();
   const headers: Record<string, string> = { "Content-Type": "application/json", ...(opts.headers as any || {}) };
   if (session?.accessToken) headers["Authorization"] = `Bearer ${session.accessToken}`;
+  if (session?.sessionId) headers["X-Session-Id"] = session.sessionId;
 
   const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });
   const payload = await res.json().catch(() => null) as ApiResponse<T> | null;
@@ -53,6 +54,7 @@ export async function fetchOnboardingProfile(workspaceId: string) {
   const session = getStoredAuthSession();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (session?.accessToken) headers["Authorization"] = `Bearer ${session.accessToken}`;
+  if (session?.sessionId) headers["X-Session-Id"] = session.sessionId;
 
   const res = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/onboarding`, { method: "GET", headers });
   const payload = await res.json().catch(() => null) as ApiResponse<OnboardingProfileResponse> | null;

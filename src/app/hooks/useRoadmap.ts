@@ -36,6 +36,11 @@ function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  const session = getStoredAuthSession();
+  if (session?.sessionId) {
+    headers["X-Session-Id"] = session.sessionId;
+  }
+
   return headers;
 }
 

@@ -34,12 +34,6 @@ export const ADMIN_NAV = [
 
 export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
-    label: "Tổng quan",
-    items: [
-      { path: "/app", label: "Trung tâm điều khiển", icon: LayoutDashboard, end: true },
-    ],
-  },
-  {
     label: "Học tập & AI",
     items: [
       { path: "/app/roadmap", label: "Lộ trình AI", icon: Sparkles },

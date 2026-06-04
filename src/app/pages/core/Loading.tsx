@@ -5,7 +5,7 @@ import { BrandLogo } from "../../components/layout/BrandLogo";
 export default function LoadingPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const to = (location.state as any)?.to || "/app";
+  const to = (location.state as any)?.to || "/app/workspaces";
 
   useEffect(() => {
     let cancelled = false;
@@ -27,7 +27,7 @@ export default function LoadingPage() {
           <BrandLogo size={48} textSize="1rem" />
         </div>
         <h2 style={{ marginTop: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827', textAlign: 'center' }}>Đang chuẩn bị giao diện...</h2>
-        <p style={{ marginTop: 8, color: '#6B7280', textAlign: 'center' }}>Chuyển đến trung tâm điều khiển</p>
+        <p style={{ marginTop: 8, color: '#6B7280', textAlign: 'center' }}>Chuyển đến trang workspaces...</p>
 
         <div style={{ marginTop: 22, display: 'flex', justifyContent: 'center' }}>
           <div style={{ width: 420, maxWidth: '90%', background: '#F3F4F6', borderRadius: 999, height: 14, overflow: 'hidden', position: 'relative' }}>

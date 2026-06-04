@@ -8,7 +8,7 @@ import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPass
 
 /* ─── Tokens ─── */
 const F   = "'Inter','Plus Jakarta Sans',sans-serif";
-const OG  = "#FF7A29";
+const OG  = "#FF6B00";
 const NAV = "#0B1220";
 const NAV2= "#111827";
 
@@ -46,14 +46,14 @@ function Field({
           className={`w-full pl-11 pr-11 py-3 text-sm bg-white rounded-xl outline-none transition-all duration-200 ${
             error 
               ? 'border border-red-500 focus:border-red-500' 
-              : 'border border-gray-200 focus:border-[#FF7A29]'
+              : 'border border-gray-200 focus:border-[#FF6B00]'
           }`}
           style={{
             fontFamily: F,
           }}
           onFocus={e=>{
-            e.currentTarget.style.borderColor = "#FF7A29";
-            e.currentTarget.style.boxShadow = "0 0 0 4px rgba(255, 122, 41, 0.08)";
+            e.currentTarget.style.borderColor = "#FF6B00";
+            e.currentTarget.style.boxShadow = "0 0 0 4px rgba(255, 107, 0, 0.08)";
           }}
           onBlur={e=>{
             e.currentTarget.style.borderColor = error ? "#EF4444" : "#E5E7EB";
@@ -98,13 +98,13 @@ function LeftPanel() {
         gap: "6px",
         padding: "5px 14px",
         borderRadius: "99px",
-        background: "#FFF3EB",
-        border: "1px solid #FFE0CC",
+        background: "#FFF7ED",
+        border: "1px solid #FFEDD5",
         marginBottom: "28px",
         width: "fit-content",
       }}>
-        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#FF7A29" }} />
-        <span style={{ fontSize: "0.75rem", color: "#FF7A29", fontWeight: 700, fontFamily: F }}>
+        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#FF6B00" }} />
+        <span style={{ fontSize: "0.75rem", color: "#FF6B00", fontWeight: 700, fontFamily: F }}>
           Dự án sinh viên (Bản thử nghiệm Beta)
         </span>
       </div>
@@ -119,7 +119,7 @@ function LeftPanel() {
         marginBottom: "16px",
         fontFamily: F,
       }}>
-        Đừng để kiến thức<br />làm bạn <span style={{ color: "#FF7A29" }}>quá tải.</span>
+        Đừng để kiến thức<br />làm bạn <span style={{ color: "#FF6B00" }}>quá tải.</span>
       </h1>
       
       <p style={{
@@ -140,14 +140,14 @@ function LeftPanel() {
               width: "20px",
               height: "20px",
               borderRadius: "50%",
-              background: "#FFF3EB",
-              border: "1px solid #FFE0CC",
+              background: "#FFF7ED",
+              border: "1px solid #FFEDD5",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
             }}>
-              <Check size={11} color="#FF7A29" strokeWidth={3.5} />
+              <Check size={11} color="#FF6B00" strokeWidth={3.5} />
             </div>
             <span style={{ fontSize: "0.875rem", color: "#374151", fontWeight: 600, fontFamily: F }}>
               {f}
@@ -729,8 +729,8 @@ export default function Auth() {
                         transition: "all 0.2s ease",
                       }}
                       onFocus={e => {
-                        e.target.style.borderColor = "#FF7A29";
-                        e.target.style.boxShadow = "0 0 0 4px rgba(255, 122, 41, 0.08)";
+                        e.target.style.borderColor = "#FF6B00";
+                        e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 0, 0.08)";
                       }}
                       onBlur={e => {
                         e.target.style.borderColor = "#E5E7EB";
@@ -763,17 +763,17 @@ export default function Auth() {
 
                 {/* CTA */}
                 <motion.button
-                  whileHover={{ scale: 1.01, backgroundColor: "#E6631B", boxShadow: "0 10px 25px rgba(255, 122, 41, 0.2)" }}
+                  whileHover={{ scale: 1.01, backgroundColor: "#E05E00", boxShadow: "0 10px 25px rgba(255, 107, 0, 0.2)" }}
                   whileTap={{ scale: 0.99 }}
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                   style={{
                     width: "100%", padding: "13px 16px", borderRadius: "12px",
-                    background: isSubmitting ? "#FDBA74" : "#FF7A29",
+                    background: isSubmitting ? "#FDBA74" : "#FF6B00",
                     color: "#FFFFFF", border: "none", cursor: isSubmitting ? "not-allowed" : "pointer",
                     fontFamily: F, fontWeight: 700, fontSize: "0.95rem",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-                    boxShadow: "0 6px 20px rgba(255, 122, 41, 0.12)",
+                    boxShadow: "0 6px 20px rgba(255, 107, 0, 0.12)",
                     marginBottom: "16px", opacity: isSubmitting ? 0.9 : 1,
                     transition: "all 0.2s ease",
                   }}

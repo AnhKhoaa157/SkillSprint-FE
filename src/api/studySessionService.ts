@@ -117,6 +117,11 @@ function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  const session = getStoredAuthSession();
+  if (session?.sessionId) {
+    headers["X-Session-Id"] = session.sessionId;
+  }
+
   return headers;
 }
 
@@ -130,6 +135,10 @@ async function requestJson<T>(path: string, opts: RequestInit = {}): Promise<Api
 
   if (session?.accessToken) {
     headers["Authorization"] = `Bearer ${session.accessToken}`;
+  }
+
+  if (session?.sessionId) {
+    headers["X-Session-Id"] = session.sessionId;
   }
 
   const response = await fetch(`${API_BASE}${path}`, {

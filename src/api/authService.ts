@@ -19,6 +19,7 @@ export type AuthRole = "ADMIN" | "LEARNER" | string;
 
 export type AuthSession = AuthTokens & {
   role: AuthRole | null;
+  sessionId: string | null;
 };
 
 export type StoredUserProfile = {
@@ -32,6 +33,7 @@ export type StoredUserProfile = {
 type AuthPayload = AuthTokens & {
   challengeName?: string | null;
   session?: string | null;
+  sessionId?: string | null;
   role_name?: string | string[] | null;
   roleName?: string | string[] | null;
   role?: string | string[] | null;
@@ -165,6 +167,7 @@ function buildAuthSession(data: AuthPayload): AuthSession {
     expiresIn: data.expiresIn ?? 0,
     tokenType: data.tokenType ?? "Bearer",
     role: extractRole(data),
+    sessionId: data.sessionId ?? null,
   };
 }
 
@@ -197,6 +200,7 @@ export function getStoredAuthSession(): AuthSession | null {
       expiresIn: parsed.expiresIn ?? 0,
       tokenType: parsed.tokenType ?? "Bearer",
       role: extractRole(parsed as Partial<AuthPayload> & Record<string, unknown>),
+      sessionId: parsed.sessionId ?? null,
     };
   } catch {
     return null;

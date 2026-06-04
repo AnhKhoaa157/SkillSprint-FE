@@ -17,13 +17,13 @@ import { getStoredUserProfile } from "../../api/authService";
 
 /* ─── Sidebar Design Tokens ─── */
 const F      = "'Inter','Plus Jakarta Sans',sans-serif";
-const SBG    = "#0B1220";   // sidebar dark navy
-const SBDR   = "rgba(255,255,255,0.06)";
-const STXT   = "#94A3B8";   // inactive text
-const STXT_A = "#FFFFFF";   // active text
+const SBG    = "#FFFFFF";   // sidebar white
+const SBDR   = "rgba(15,23,42,0.06)";
+const STXT   = "#64748B";   // inactive text
+const STXT_A = "#0F172A";   // active text
 const OG     = "#FF6B00";
-const OGL    = "rgba(255,107,0,0.12)";
-const SHOVER = "rgba(255,255,255,0.05)";
+const OGL    = "rgba(255,107,0,0.08)";
+const SHOVER = "rgba(15,23,42,0.03)";
 /* content area tokens */
 const BG     = "#F9FAFB";
 const CARD   = "#FFFFFF";
@@ -320,43 +320,32 @@ export default function DashboardLayout() {
         )}
       </AnimatePresence>
 
-      {/* ════════════════ DARK NAVY SIDEBAR ════════════════ */}
       <aside
         className={`fixed top-0 left-0 z-50 h-full flex flex-col
           lg:relative lg:translate-x-0 transition-transform duration-300
           ${sideOpen?"translate-x-0":"-translate-x-full"}`}
         style={{
           width:"228px", flexShrink:0,
-          background:"linear-gradient(180deg, #0A1223 0%, #07132B 100%)",
-          borderRight:`1px solid ${SBDR}`,
-          boxShadow:"inset -1px 0 0 rgba(255,255,255,0.03)",
+          background:"linear-gradient(180deg, #FFFDFB 0%, #FAF7F2 100%)",
+          borderRight:"1px solid rgba(255,107,0,0.08)",
+          boxShadow:"4px 0 24px rgba(255,107,0,0.02), 1px 0 5px rgba(0,0,0,0.01)",
         }}
       >
         {/* Logo */}
         <div style={{
           display:"flex", alignItems:"center", justifyContent:"space-between",
-          padding:"18px 16px 16px",
-          borderBottom:`1px solid ${SBDR}`,
+          padding:"16px",
+          borderBottom:"1px solid rgba(255,107,0,0.08)",
         }}>
-          <Link to="/" style={{display:"flex",alignItems:"center",gap:"9px",textDecoration:"none"}}>
-            <div style={{
-              width:"32px",height:"32px",borderRadius:"8px",
-              background:OG,display:"flex",alignItems:"center",justifyContent:"center",
-              boxShadow:"0 4px 12px rgba(255,107,0,0.35)",flexShrink:0,
-            }}>
-              <Zap size={15} color="#fff" fill="#fff"/>
-            </div>
-            <div>
-              <p style={{fontWeight:800,fontSize:"0.96rem",color:"#FFFFFF",letterSpacing:"-0.02em",lineHeight:1}}>
-                SkillSprint
-              </p>
-              <span style={{
-                fontSize:"9px",padding:"1px 6px",borderRadius:"3px",marginTop:"3px",
-                display:"inline-block",background:"rgba(255,107,0,0.2)",
-                color:OG,fontWeight:700,letterSpacing:"0.06em",
-              }}>FREE</span>
-            </div>
-          </Link>
+          <div style={{display:"flex",alignItems:"center",gap:"24px"}}>
+            <BrandLogo size={20} align="left" />
+            <span style={{
+              fontSize:"9px",padding:"1px 6px",borderRadius:"4px",
+              display:"inline-block",background:"rgba(255,107,0,0.1)",
+              color:OG,fontWeight:700,letterSpacing:"0.06em",
+              flexShrink:0
+            }}>FREE</span>
+          </div>
           <button className="lg:hidden" onClick={()=>setSideOpen(false)}
             style={{background:"none",border:"none",cursor:"pointer",color:STXT}}>
             <X size={16}/>
@@ -364,132 +353,124 @@ export default function DashboardLayout() {
         </div>
 
         {/* Navigation groups */}
-        <nav className="flex-1 overflow-y-auto px-3 py-2">
-          {APP_NAV_SECTIONS.map(section => (
-            <div key={section.label} className="mb-4 last:mb-0">
-              <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                {section.label}
-              </div>
-              <div className="space-y-1">
-                {section.items
-                  .filter(item => !(section.label === "Học tập & AI" && item.path === "/app/roadmap"))
-                  .map(item => {
-                    const isActive = isNavItemActive(item.path, item.end, item.match);
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+          {APP_NAV_SECTIONS.map((section, idx) => (
+            <div key={section.label} className="space-y-1">
+              {idx > 0 && <div className="my-2 border-t border-orange-100/40" />}
+              {section.items
+                .filter(item => !(section.label === "Học tập & AI" && item.path === "/app/roadmap"))
+                .map(item => {
+                  const isActive = isNavItemActive(item.path, item.end, item.match);
 
-                    return (
-                      <NavLink
-                        key={item.path}
-                        to={item.path}
-                        end={item.end}
-                        onClick={() => setSideOpen(false)}
-                        className={() => [
-                          "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
-                          "border-l-2 border-transparent",
-                          isActive
-                            ? "border-l-orange-500 bg-gradient-to-r from-orange-500/15 to-orange-500/5 text-orange-500"
-                            : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200",
-                        ].join(" ")}
-                      >
-                        <>
-                          <item.icon
-                            size={18}
-                            strokeWidth={2}
-                            className={[
-                              "shrink-0 transition-transform duration-200 group-hover:scale-105",
-                              isActive ? "text-orange-500" : "text-current",
-                            ].join(" ")}
-                          />
-                          <span className="flex-1 font-medium">{item.label}</span>
-                          {item.badge && (
-                            <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
-                              <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
-                              <span className="relative h-2.5 w-2.5 rounded-full bg-orange-500" />
-                            </span>
-                          )}
-                        </>
-                      </NavLink>
-                    );
-                  })}
-
-                {section.label === "Học tập & AI" && (
-                  <div className="mt-2 rounded-2xl border border-white/10 bg-white/5 p-2">
-                    <button
-                      type="button"
-                      onClick={() => setRoadmapMenuOpen((value) => !value)}
-                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition hover:bg-white/5"
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      end={item.end}
+                      onClick={() => setSideOpen(false)}
+                      className={() => [
+                        "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition-all duration-200",
+                        "border-l-4 border-transparent",
+                        isActive
+                          ? "border-l-[#FF6B00] bg-gradient-to-r from-orange-500/8 to-amber-500/4 text-[#FF6B00] font-bold shadow-[0_4px_12px_rgba(255,107,0,0.03)]"
+                          : "text-slate-500 hover:bg-orange-500/4 hover:text-slate-800",
+                      ].join(" ")}
                     >
-                      <span className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-                        <Sparkles size={16} className="text-orange-400" />
-                        Lộ trình AI theo workspace
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[11px] font-bold text-orange-300">
-                          {roadmapLoading ? "..." : roadmapWorkspaces.length}
-                        </span>
-                        <ChevronRight
-                          size={14}
-                          className={`text-slate-400 transition-transform ${roadmapMenuOpen ? "rotate-90" : ""}`}
+                      <>
+                        <item.icon
+                          size={18}
+                          strokeWidth={isActive ? 2.5 : 2}
+                          className={[
+                            "shrink-0 transition-transform duration-200 group-hover:scale-105",
+                            isActive ? "text-[#FF6B00]" : "text-slate-400 group-hover:text-slate-600",
+                          ].join(" ")}
                         />
+                        <span className="flex-1 font-medium">{item.label}</span>
+                        {item.badge && (
+                          <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
+                            <span className="relative h-2 w-2 rounded-full bg-orange-500" />
+                          </span>
+                        )}
+                      </>
+                    </NavLink>
+                  );
+                })}
+
+              {section.label === "Học tập & AI" && (
+                <div className="mt-1 pl-4 border-l border-orange-100/80 ml-3 space-y-1 py-1">
+                  <button
+                    type="button"
+                    onClick={() => setRoadmapMenuOpen((value) => !value)}
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold text-slate-500 hover:bg-orange-500/4 hover:text-[#FF6B00] transition"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Sparkles size={14} className="text-[#FF6B00]" />
+                      Lộ trình AI theo workspace
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="rounded-full bg-orange-500/10 px-1.5 py-0.2 text-[9px] font-bold text-[#FF6B00]">
+                        {roadmapLoading ? "..." : roadmapWorkspaces.length}
                       </span>
-                    </button>
+                      <ChevronRight
+                        size={12}
+                        className={`text-slate-400 transition-transform ${roadmapMenuOpen ? "rotate-90" : ""}`}
+                      />
+                    </span>
+                  </button>
 
-                    <AnimatePresence initial={false}>
-                      {roadmapMenuOpen ? (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="space-y-1 px-1 pb-1 pt-2">
-                            {roadmapLoading ? (
-                              Array.from({ length: 3 }).map((_, index) => (
-                                <div key={index} className="rounded-md border border-white/5 bg-white/5 px-3 py-2">
-                                  <div className="h-3 w-24 animate-pulse rounded-full bg-white/15" />
-                                  <div className="mt-2 h-2 w-36 animate-pulse rounded-full bg-white/10" />
-                                </div>
-                              ))
-                            ) : roadmapWorkspaces.length > 0 ? (
-                              roadmapWorkspaces.map((workspace) => {
-                                const roadmapPath = `/app/workspaces/${workspace.id}/roadmap`;
-                                const isActive = pathname === roadmapPath || pathname.startsWith(`${roadmapPath}/`);
+                  <AnimatePresence initial={false}>
+                    {roadmapMenuOpen ? (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-1 py-1">
+                          {roadmapLoading ? (
+                            Array.from({ length: 2 }).map((_, index) => (
+                              <div key={index} className="h-7 w-full animate-pulse rounded-md bg-slate-100/60" />
+                            ))
+                          ) : roadmapWorkspaces.length > 0 ? (
+                            roadmapWorkspaces.map((workspace) => {
+                              const roadmapPath = `/app/workspaces/${workspace.id}/roadmap`;
+                              const isActive = pathname === roadmapPath || pathname.startsWith(`${roadmapPath}/`);
 
-                                return (
-                                  <NavLink
-                                    key={workspace.id}
-                                    to={roadmapPath}
-                                    onClick={() => setSideOpen(false)}
-                                    className={() => [
-                                      "group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors duration-200",
-                                      "border-l-2 border-transparent",
-                                      isActive
-                                        ? "border-l-orange-500 bg-slate-800 text-orange-200"
-                                        : "text-slate-400 hover:bg-slate-800 hover:text-slate-100",
-                                    ].join(" ")}
-                                  >
-                                    <div className="min-w-0 flex-1">
-                                      <div className="truncate font-medium">{workspace.name}</div>
-                                      <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-green-400">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                                        <span className="uppercase tracking-[0.2em]">{workspace.statusLabel || "READY"}</span>
-                                      </div>
+                              return (
+                                <NavLink
+                                  key={workspace.id}
+                                  to={roadmapPath}
+                                  onClick={() => setSideOpen(false)}
+                                  className={() => [
+                                    "group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] transition-colors duration-200",
+                                    isActive
+                                      ? "bg-orange-500/8 text-[#FF6B00] font-bold"
+                                      : "text-slate-400 hover:bg-orange-500/4 hover:text-slate-700",
+                                  ].join(" ")}
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate font-medium">{workspace.name}</div>
+                                    <div className="mt-0.5 flex items-center gap-1 text-[9px] text-green-600/80">
+                                      <span className="h-1 w-1 rounded-full bg-green-500" />
+                                      <span className="uppercase tracking-wider">{workspace.statusLabel || "READY"}</span>
                                     </div>
-                                    <ChevronRight size={14} className="shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5" />
-                                  </NavLink>
-                                );
-                              })
-                            ) : (
-                              <div className="rounded-md border border-dashed border-white/10 bg-white/5 px-3 py-2 text-xs leading-5 text-slate-400">
-                                Chưa có workspace nào có roadmap đã xác nhận.
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      ) : null}
-                    </AnimatePresence>
-                  </div>
-                )}
-              </div>
+                                  </div>
+                                  <ChevronRight size={12} className="shrink-0 opacity-50 transition-transform group-hover:translate-x-0.5" />
+                                </NavLink>
+                              );
+                            })
+                          ) : (
+                            <div className="rounded-lg border border-dashed border-orange-100/40 bg-orange-50/10 px-2.5 py-2 text-[10px] leading-relaxed text-slate-400">
+                              Chưa có workspace nào có roadmap đã xác nhận.
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
           ))}
         </nav>
@@ -510,8 +491,8 @@ export default function DashboardLayout() {
               <span style={{fontSize:"8.5px",fontWeight:700,color:OG,letterSpacing:"0.08em",textTransform:"uppercase"}}>GÓI MIỄN PHÍ</span>
               <Crown size={12} color="#F59E0B"/>
             </div>
-            <p style={{fontWeight:700,fontSize:"0.8rem",color:"#FFFFFF",marginBottom:"1px"}}>Nâng cấp lên Pro</p>
-            <p style={{color:STXT,fontSize:"0.7rem"}}>Mở khóa tính năng AI và nhiều hơn</p>
+            <p style={{fontWeight:700,fontSize:"0.8rem",color:"#0F172A",marginBottom:"1px"}}>Nâng cấp lên Pro</p>
+            <p style={{color:"#64748B",fontSize:"0.7rem"}}>Mở khóa tính năng AI và nhiều hơn</p>
           </div>
 
           <button className="ss-referral mb-3" onClick={()=>setReferralOpen(true)}
@@ -519,23 +500,23 @@ export default function DashboardLayout() {
               display:"flex",alignItems:"center",gap:"7px",padding:"8px 10px",
               borderRadius:"8px",cursor:"pointer",width:"100%",
               background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.2)",
-              color:"#FBBF24",fontFamily:F,fontWeight:600,fontSize:"0.78rem",
+              color:"#D97706",fontFamily:F,fontWeight:600,fontSize:"0.78rem",
               transition:"background 0.15s ease",
             }}>
             <Gift size={12}/>
             Mời bạn &amp; nhận Premium
           </button>
 
-          <div className="border-t border-slate-800/60 pt-3">
-            <Link to="/app/profile" className="block rounded-xl transition hover:bg-slate-800/30" style={{ textDecoration: "none" }}>
+          <div className="border-t border-slate-100 pt-3">
+            <Link to="/app/profile" className="block rounded-xl transition hover:bg-slate-100" style={{ textDecoration: "none" }}>
               <div className="flex items-center gap-3 px-3 py-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-sm font-bold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-                {profile.avatarLetter}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-slate-200">{profile.fullName}</p>
-                <p className="text-xs text-slate-500">{profile.roleLabel}</p>
-              </div>
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-sm font-bold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
+                  {profile.avatarLetter}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-800">{profile.fullName}</p>
+                  <p className="text-xs text-slate-500">{profile.roleLabel}</p>
+                </div>
               </div>
             </Link>
           </div>

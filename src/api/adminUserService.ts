@@ -26,6 +26,7 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<ApiRespon
   const session = getStoredAuthSession();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (session?.accessToken) headers["Authorization"] = `Bearer ${session.accessToken}`;
+  if (session?.sessionId) headers["X-Session-Id"] = session.sessionId;
   // Debug logging (development): do not remove — helps trace missing API data
   try {
     const safeHeaders = { ...headers } as Record<string,string>;
