@@ -3,19 +3,12 @@ import { motion, AnimatePresence } from "motion/react";
 import { Link } from "react-router";
 import {
   Plus, Check, Play, Pause, RotateCcw, ArrowRight,
-  Map, BarChart2, Calendar, CheckSquare, Sparkles, MessageSquare,
+  Map, BarChart2, Calendar, CheckSquare, Sparkles,
 } from "lucide-react";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";
-const BG   = "#F9FAFB";
-const CARD = "#FFFFFF";
-const T1   = "#111827";
-const T2   = "#6B7280";
-const T3   = "#9CA3AF";
-const OG   = "#F37021";
-const BDR  = "#E5E7EB";
-const SH   = "0 1px 3px rgba(15,23,42,0.05), 0 10px 28px rgba(15,23,42,0.06)";
+const OG   = "#FF6B00";
 
 const SHOWCASE_MODULES = [
   {
@@ -62,9 +55,9 @@ const TIER_STYLE: Record<string, { bg: string; border: string; text: string }> =
     text: "#1D4ED8",
   },
   "Xây nền tảng": {
-    bg: "#EFF6FF",
-    border: "#BFDBFE",
-    text: "#1D4ED8",
+    bg: "#E8F5E9",
+    border: "#C8E6C9",
+    text: "#2E7D32",
   },
   "Cao cấp": {
     bg: "#FFF3EB",
@@ -77,15 +70,15 @@ const TIER_STYLE: Record<string, { bg: string; border: string; text: string }> =
 const TAG_COLORS: Record<string,[string,string]> = {
   "Học tập":    ["#FFF3EB", "#9A3412"],
   "Ôn tập":     ["#EFF6FF", "#1E40AF"],
-  "Sự nghiệp":  ["#FFF3EB", "#9A3412"],
-  "Lập trình":  ["#FFF3EB", "#9A3412"],
+  "Sự nghiệp":  ["#F3E5F5", "#6A1B9A"],
+  "Lập trình":  ["#E0F7FA", "#00838F"],
 };
 interface Task { id:number; text:string; done:boolean; tag:string; }
 const INIT_TASKS: Task[] = [
   { id:1, text:"Hoàn thành module React Hooks", done:false, tag:"Học tập"   },
   { id:2, text:"Ôn lại ghi chú System Design",   done:false, tag:"Ôn tập"    },
   { id:3, text:"Cập nhật CV với kỹ năng mới",    done:false, tag:"Sự nghiệp" },
-  { id:4, text:"Xem 2 video kỹ năng mềm", done:false, tag:"Sự nghiệp" },
+  { id:4, text:"Xem 2 video kỹ năng mềm",        done:false, tag:"Sự nghiệp" },
   { id:5, text:"Đẩy repo luyện TypeScript",      done:false, tag:"Lập trình" },
 ];
 
@@ -93,13 +86,10 @@ const INIT_TASKS: Task[] = [
 type PMode = "focus"|"short"|"long";
 const PMODE: Record<PMode,{ label:string; dur:number; color:string }> = {
   focus: { label:"Tập trung",       dur:25*60, color:OG        },
-  short: { label:"Nghỉ ngắn", dur: 5*60, color:"#EA580C" },
-  long:  { label:"Nghỉ dài",  dur:15*60, color:"#15803D" },
+  short: { label:"Nghỉ ngắn",        dur: 5*60, color:"#EF4444" },
+  long:  { label:"Nghỉ dài",         dur:15*60, color:"#10B981" },
 };
 
-/* ═══════════════════════════════════════════════
-   MAIN DASHBOARD
-═══════════════════════════════════════════════ */
 export default function Dashboard() {
   /* Tasks */
   const [tasks, setTasks]       = useState<Task[]>(INIT_TASKS);
@@ -134,184 +124,250 @@ export default function Dashboard() {
   const switchMode=(m:PMode)=>{ setPMode(m); setRunning(false); setTimeLeft(PMODE[m].dur); };
 
   return (
-    <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.28}} style={{fontFamily:F}}>
-      <div style={{
-        display:"grid",
-        gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",
-        gap:"12px",
-        marginBottom:"12px",
-      }}>
-        {SHOWCASE_MODULES.map((m, i) => (
-          <motion.div
-            key={m.title}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04 }}
-          >
-            <Link to={m.to} style={{ textDecoration:"none" }}>
-              <div style={{
-                background:CARD,
-                borderRadius:"14px",
-                border:`1px solid ${BDR}`,
-                boxShadow:SH,
-                padding:"15px",
-                height:"100%",
-                transition:"transform .14s ease",
-              }}>
-                <div style={{
-                  width:"30px", height:"30px", borderRadius:"9px", marginBottom:"10px",
-                  background:"#FFF3EB", border:"1px solid #FBD5BE",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                }}>
-                  <m.icon size={15} color="#B45309" />
-                </div>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    marginBottom: "8px",
-                    padding: "2px 8px",
-                    borderRadius: "999px",
-                    fontSize: "0.64rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.04em",
-                    textTransform: "uppercase",
-                    background: TIER_STYLE[m.tier].bg,
-                    border: `1px solid ${TIER_STYLE[m.tier].border}`,
-                    color: TIER_STYLE[m.tier].text,
-                  }}
-                >
-                  {m.tier}
-                </span>
-                <h3 style={{ fontSize:"0.9rem", fontWeight:700, color:T1, marginBottom:"5px" }}>{m.title}</h3>
-                <p style={{ fontSize:"0.76rem", color:T2, lineHeight:1.55 }}>{m.desc}</p>
-              </div>
-            </Link>
-          </motion.div>
-        ))}
+    <div className="relative min-h-screen bg-[#F9FAFB] px-1 py-1 text-slate-900 overflow-hidden" style={{ fontFamily: F }}>
+      {/* Ambient background glows */}
+      <div className="absolute left-[-10%] top-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-[#FF6B00]/5 to-transparent blur-[120px] pointer-events-none" />
+      <div className="absolute right-[-10%] bottom-[-10%] -z-10 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-[#10B981]/5 to-transparent blur-[150px] pointer-events-none" />
+
+      {/* Header Banner */}
+      <div className="relative flex flex-col justify-between gap-6 overflow-hidden rounded-[2rem] border border-orange-100 bg-gradient-to-br from-[#FFF8F5] via-[#FFF1EB] to-[#FFFFFF] p-6 shadow-[0_16px_40px_-12px_rgba(255,107,0,0.08)] sm:flex-row sm:items-center sm:p-8 mb-8">
+        <div className="absolute -left-20 -top-20 h-48 w-48 rounded-full bg-[#FF6B00]/5 blur-[80px]" />
+        
+        <div className="relative space-y-2">
+          <div className="inline-flex items-center gap-2 rounded-full bg-orange-500/10 border border-orange-500/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[#FF6B00]">
+            <Sparkles className="h-3.5 w-3.5" />
+            Control Hub
+          </div>
+          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Trung tâm điều khiển</h2>
+          <p className="max-w-2xl text-sm leading-relaxed text-slate-600 font-medium">
+            Tổng quan ngày học của bạn, truy cập nhanh lộ trình AI, quản lý các tác vụ và luyện tập Pomodoro.
+          </p>
+        </div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:"12px", marginBottom:"12px" }}>
-        <div style={{ background:CARD, borderRadius:"14px", border:`1px solid ${BDR}`, boxShadow:SH, padding:"18px" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"8px" }}>
+      {/* Showcase Grid */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5 mb-8">
+        {SHOWCASE_MODULES.map((m, i) => {
+          const Icon = m.icon;
+          return (
+            <motion.div
+              key={m.title}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="h-full"
+            >
+              <Link to={m.to} className="block h-full group">
+                <div className="h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_-3px_rgba(15,23,42,0.05),0_12px_24px_-4px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-1 hover:border-[#FF6B00]/30 hover:shadow-[0_20px_40px_-15px_rgba(255,107,0,0.08)] flex flex-col items-start">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 border border-orange-100 text-orange-600 transition-colors duration-300 group-hover:bg-[#FF6B00] group-hover:text-white mb-4">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  
+                  <span
+                    className="inline-flex mb-3 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border"
+                    style={{
+                      backgroundColor: TIER_STYLE[m.tier].bg,
+                      borderColor: TIER_STYLE[m.tier].border,
+                      color: TIER_STYLE[m.tier].text,
+                    }}
+                  >
+                    {m.tier}
+                  </span>
+                  
+                  <h3 className="text-sm font-bold text-slate-800 group-hover:text-[#FF6B00] transition-colors mb-1.5">{m.title}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed mt-auto">{m.desc}</p>
+                </div>
+              </Link>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Main Sections */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3 mb-8">
+        
+        {/* Priorities Section */}
+        <div className="lg:col-span-2 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_2px_8px_-3px_rgba(15,23,42,0.05),0_12px_24px_-4px_rgba(15,23,42,0.04)]">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 style={{ fontWeight:800, fontSize:"1.2rem", color:T1, letterSpacing:"-0.02em", marginBottom:"2px" }}>Ưu tiên hôm nay</h1>
-              <p style={{ color:T2, fontSize:"0.8rem" }}>Đánh dấu hoàn thành các tác vụ quan trọng trước.</p>
+              <h3 className="text-lg font-extrabold text-slate-900">Ưu tiên hôm nay</h3>
+              <p className="text-xs text-slate-500 mt-1">Đánh dấu hoàn thành các tác vụ quan trọng trước.</p>
             </div>
-            <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} onClick={()=>setAddingTask(true)} title="Thêm một tác vụ mới" style={{
-              display:"flex", alignItems:"center", gap:"5px", padding:"7px 12px", borderRadius:"9px", border:"1px solid #F7B489",
-              background:"#FFF3EB", color:"#9A3412", fontWeight:700, fontSize:"0.75rem", cursor:"pointer",
-            }}>
-              <Plus size={13}/> Thêm
+            
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setAddingTask(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50/50 px-4 py-2 text-xs font-bold text-[#FF6B00] transition hover:bg-orange-50"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Thêm tác vụ
             </motion.button>
           </div>
+
           <AnimatePresence>
             {addingTask && (
-              <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} style={{ overflow:"hidden", marginBottom:"10px" }}>
-                <div style={{ display:"flex", gap:"6px" }}>
-                  <input value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addTask();if(e.key==="Escape")setAddingTask(false);}} placeholder="Thêm tác vụ mới..." autoFocus style={{
-                    flex:1, padding:"8px 12px", borderRadius:"9px", border:`1.5px solid ${BDR}`, outline:"none", fontFamily:F, fontSize:"0.82rem",
-                  }}/>
-                  <button onClick={addTask} style={{ padding:"8px 14px", borderRadius:"9px", border:"1px solid #F7B489", background:"#FFF3EB", color:"#9A3412", cursor:"pointer", fontWeight:700 }}>Lưu</button>
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mb-4"
+              >
+                <div className="flex gap-2 p-1 bg-slate-50 rounded-2xl border border-slate-200">
+                  <input
+                    value={newTask}
+                    onChange={e => setNewTask(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") addTask();
+                      if (e.key === "Escape") setAddingTask(false);
+                    }}
+                    placeholder="Thêm tác vụ mới cho hôm nay..."
+                    autoFocus
+                    className="flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-slate-400"
+                  />
+                  <button
+                    onClick={addTask}
+                    className="rounded-xl bg-[#FF6B00] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#E05E00]"
+                  >
+                    Lưu
+                  </button>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+          <div className="space-y-2.5">
             {tasks.map(task => {
-              const [tagBg,tagColor] = TAG_COLORS[task.tag] ?? ["#F3F4F6","#6B7280"];
+              const [tagBg, tagColor] = TAG_COLORS[task.tag] ?? ["#F3F4F6", "#6B7280"];
               return (
-                <div key={task.id} style={{
-                  border:`1px solid ${BDR}`, borderRadius:"10px", background:"#fff", padding:"9px 10px",
-                  display:"flex", alignItems:"center", gap:"9px",
-                }}>
-                  <button onClick={()=>toggleTask(task.id)} style={{
-                    width:"18px", height:"18px", borderRadius:"50%", border:`1.5px solid ${task.done?"#10B981":BDR}`,
-                    background:task.done?"#10B981":"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer",
-                  }}>{task.done && <Check size={10} color="#fff" strokeWidth={3}/>}</button>
-                  <span style={{ flex:1, fontSize:"0.84rem", color:task.done?T3:T1, textDecoration:task.done?"line-through":"none" }}>{task.text}</span>
-                  <span style={{ fontSize:"0.64rem", padding:"2px 8px", borderRadius:"99px", background:tagBg, color:tagColor, fontWeight:700 }}>{task.tag}</span>
+                <div
+                  key={task.id}
+                  className="group flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/30 p-3.5 transition hover:border-[#FF6B00]/20 hover:bg-white hover:shadow-sm"
+                >
+                  <button
+                    onClick={() => toggleTask(task.id)}
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-200"
+                    style={{
+                      borderColor: task.done ? "#10B981" : "#CBD5E1",
+                      backgroundColor: task.done ? "#10B981" : "#FFFFFF",
+                    }}
+                  >
+                    {task.done && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                  </button>
+                  
+                  <span
+                    className="flex-1 text-sm font-semibold transition-all duration-200"
+                    style={{
+                      color: task.done ? "#94A3B8" : "#334155",
+                      textDecoration: task.done ? "line-through" : "none",
+                    }}
+                  >
+                    {task.text}
+                  </span>
+                  
+                  <span
+                    className="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                    style={{ backgroundColor: tagBg, color: tagColor }}
+                  >
+                    {task.tag}
+                  </span>
                 </div>
               );
             })}
           </div>
         </div>
 
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
-          <div style={{ background:CARD, borderRadius:"14px", border:`1px solid ${BDR}`, boxShadow:SH, padding:"16px" }}>
-            <p style={{ fontSize:"0.66rem", fontWeight:700, color:T3, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:"6px" }}>Lộ trình học</p>
-            <h3 style={{ fontSize:"0.96rem", fontWeight:700, color:T1, marginBottom:"4px" }}>React Hooks</h3>
-            <p style={{ fontSize:"0.76rem", color:T2, lineHeight:1.5, marginBottom:"10px" }}>Tiếp tục bài học kế tiếp trong lộ trình.</p>
-            <Link to="/app/roadmap" style={{ textDecoration:"none" }} title="Mở lộ trình và tiếp tục bài học">
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"7px", padding:"9px", borderRadius:"9px", border:"1px solid #F7B489", background:"#FFF3EB", color:"#9A3412", fontWeight:700, fontSize:"0.78rem" }}>
-                Mở lộ trình <ArrowRight size={14}/>
+        {/* Sidebar widgets */}
+        <div className="space-y-6">
+          
+          {/* Quick Learning Path */}
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_2px_8px_-3px_rgba(15,23,42,0.05),0_12px_24px_-4px_rgba(15,23,42,0.04)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Lộ trình học tập</span>
+            <h4 className="text-base font-extrabold text-slate-800 mt-1 mb-1">React Hooks</h4>
+            <p className="text-xs text-slate-500 leading-relaxed mb-4">Tiếp tục bài học kế tiếp trong lộ trình thông minh.</p>
+            
+            <Link to="/app/roadmap" className="block text-center">
+              <div className="inline-flex w-full items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-[#FF6B00] to-amber-500 py-3 text-xs font-bold text-white shadow-md shadow-[#FF6B00]/15 transition hover:brightness-105">
+                Mở lộ trình học <ArrowRight className="h-3.5 w-3.5" />
               </div>
             </Link>
           </div>
 
-          <div style={{ background:CARD, borderRadius:"14px", border:`1px solid ${BDR}`, boxShadow:SH, padding:"16px" }}>
-            <p style={{ fontSize:"0.62rem", color:T3, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:"4px" }}>
-            Bộ đếm tập trung
-          </p>
-          <p style={{ fontWeight:700, fontSize:"0.9rem", color:T1, marginBottom:"12px", fontFamily:F }}>
-            {running ? "Đang tập trung" : "Sẵn sàng"}
-          </p>
-
-          {/* Mode tabs */}
-          <div style={{ display:"flex", background:"#F3F4F6", borderRadius:"8px", padding:"3px", marginBottom:"14px" }}>
-            {(Object.keys(PMODE) as PMode[]).map(m=>(
-              <button key={m} onClick={()=>switchMode(m)} style={{
-                flex:1, padding:"5px 0", borderRadius:"6px",
-                background:pMode===m?CARD:"transparent",
-                border:"none", cursor:"pointer",
-                fontSize:"0.7rem", fontFamily:F,
-                color:pMode===m?PMODE[m].color:T3,
-                fontWeight:pMode===m?700:400,
-                boxShadow:pMode===m?SH:"none", transition:"all 0.15s",
-              }}>
-                {PMODE[m].label}
-              </button>
-            ))}
-          </div>
-
-          {/* Timer display */}
-          <p style={{
-            fontSize:"2.3rem", fontWeight:800, letterSpacing:"-0.05em",
-            color:T1, textAlign:"center", lineHeight:1,
-            marginBottom:"12px", fontVariantNumeric:"tabular-nums",
-          }}>
-            {mm}:{ss}
-          </p>
-
-          {/* Controls */}
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"10px", marginBottom:"10px" }}>
-            <button onClick={()=>{setRunning(false);setTimeLeft(PMODE[pMode].dur);}}
-              style={{ width:"34px", height:"34px", borderRadius:"9px", border:`1px solid ${BDR}`, background:"transparent", cursor:"pointer", color:T3, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <RotateCcw size={14}/>
-            </button>
-            <motion.button
-              whileHover={{ scale:1.06 }} whileTap={{ scale:0.94 }}
-              onClick={()=>setRunning(v=>!v)}
+          {/* Pomodoro Timer widget */}
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_2px_8px_-3px_rgba(15,23,42,0.05),0_12px_24px_-4px_rgba(15,23,42,0.04)] relative overflow-hidden">
+            {/* Soft status light indicator in corner */}
+            <div
+              className="absolute right-5 top-5 h-2.5 w-2.5 rounded-full blur-[2px] transition-colors"
               style={{
-                width:"44px", height:"44px", borderRadius:"50%",
-                background:"#FFF3EB",
-                border:"1px solid #F7B489",
-                color:"#9A3412",
-                display:"flex", alignItems:"center", justifyContent:"center",
-                cursor:"pointer",
-                boxShadow:"none",
+                backgroundColor: running ? "#10B981" : "#FF6B00",
+                animation: running ? "ss-pulse 2s infinite" : "none",
               }}
-            >
-              {running ? <Pause size={18} fill="#9A3412"/> : <Play size={18} fill="#9A3412"/>}
-            </motion.button>
+            />
+
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Bộ đếm tập trung</span>
+            <h4 className="text-sm font-extrabold text-slate-800 mt-1 mb-4">
+              {running ? "Đang đếm ngược..." : "Đang chờ bắt đầu"}
+            </h4>
+
+            {/* Switch tabs */}
+            <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-5">
+              {(Object.keys(PMODE) as PMode[]).map(m => (
+                <button
+                  key={m}
+                  onClick={() => switchMode(m)}
+                  className="flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all duration-200"
+                  style={{
+                    backgroundColor: pMode === m ? "#FFFFFF" : "transparent",
+                    color: pMode === m ? PMODE[m].color : "#64748B",
+                    boxShadow: pMode === m ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                  }}
+                >
+                  {PMODE[m].label}
+                </button>
+              ))}
+            </div>
+
+            {/* Large clock */}
+            <div className="flex justify-center mb-5">
+              <div className="font-mono text-5xl font-black tracking-tight text-slate-800 select-none tabular-nums drop-shadow-sm">
+                {mm}:{ss}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => {
+                  setRunning(false);
+                  setTimeLeft(PMODE[pMode].dur);
+                }}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 hover:border-slate-300"
+                title="Đặt lại"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </button>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setRunning(v => !v)}
+                className="flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg transition"
+                style={{
+                  backgroundColor: running ? "#E05E00" : "#FF6B00",
+                  boxShadow: `0 4px 12px ${running ? "rgba(224,94,0,0.25)" : "rgba(255,107,0,0.25)"}`,
+                }}
+              >
+                {running ? <Pause className="h-5 w-5 fill-white text-white" /> : <Play className="h-5 w-5 fill-white text-white" />}
+              </motion.button>
+            </div>
+            
+            <p className="text-[10px] text-slate-400 text-center mt-4">Bắt đầu chu kỳ tập trung 25 phút để tối ưu học tập.</p>
           </div>
 
-          <p style={{ fontSize:"0.72rem", color:T2, textAlign:"center" }}>
-            Bắt đầu 25 phút tập trung, sau đó nghỉ ngắn.
-          </p>
         </div>
+
       </div>
-      </div>
-    </motion.div>
+
+    </div>
   );
 }
