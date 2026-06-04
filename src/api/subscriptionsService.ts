@@ -10,3 +10,8 @@ export async function getQuotaStatus(): Promise<QuotaStatusResponse> {
   const response = await skillSprintApiClient.get<ApiResponse<QuotaStatusResponse>>("/api/subscriptions/me/quota");
   return extractApiData(response);
 }
+
+/** POST /api/subscriptions/cancel — cancels the user's active subscription. */
+export async function cancelSubscription(): Promise<void> {
+  await skillSprintApiClient.post("/api/subscriptions/cancel");
+}

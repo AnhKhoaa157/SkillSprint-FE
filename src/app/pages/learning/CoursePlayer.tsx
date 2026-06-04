@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import {
   AlertTriangle,
@@ -97,29 +97,6 @@ function normalizeList(values: string[] | null | undefined): string[] {
   return values.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
 }
 
-// 1. DYNAMIC PHASE RENDERING HELPER
-function renderPhaseBadge(phase: string | null | undefined): JSX.Element {
-  const p = phase?.toUpperCase();
-  if (p === "SHORT_BREAK") {
-    return (
-      <span className="inline-flex items-center rounded-md bg-amber-100 px-2.5 py-1 text-[10px] sm:text-xs font-bold text-amber-700 border border-amber-200">
-        ĐANG NGHỈ GIẢI LAO NGẮN
-      </span>
-    );
-  }
-  if (p === "LONG_BREAK") {
-    return (
-      <span className="inline-flex items-center rounded-md bg-blue-100 px-2.5 py-1 text-[10px] sm:text-xs font-bold text-blue-700 border border-blue-200">
-        ĐANG NGHỈ GIẢI LAO DÀI
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-md bg-emerald-100 px-2.5 py-1 text-[10px] sm:text-xs font-bold text-emerald-700 border border-emerald-200">
-      ĐANG TẬP TRUNG HỌC
-    </span>
-  );
-}
 
 export default function CoursePlayer() {
   const [searchParams] = useSearchParams();
@@ -155,6 +132,12 @@ export default function CoursePlayer() {
 
   const [isSubActionLoading, setIsSubActionLoading] = useState(false);
 
+  const [pomodoroPhase, setPomodoroPhase] = useState<"FOCUS" | "SHORT_BREAK" | "LONG_BREAK">("FOCUS");
+  const pomodoroPhaseRef = useRef<"FOCUS" | "SHORT_BREAK" | "LONG_BREAK">("FOCUS");
+  pomodoroPhaseRef.current = pomodoroPhase;
+  const activeSessionIdRef = useRef<string | null>(activeSessionId);
+  activeSessionIdRef.current = activeSessionId;
+
   const task = detail?.task ?? null;
   const roadmapStep = detail?.roadmapStep ?? null;
   const practice = detail?.practice ?? null;
@@ -181,6 +164,28 @@ export default function CoursePlayer() {
   const elapsedStudyMinutes = Math.floor(actualStudySeconds / 60);
   const hasMetMinimum = elapsedStudyMinutes >= minimumRequiredMinutes;
 
+  const handlePhaseExpire = async (
+    phase: "FOCUS" | "SHORT_BREAK" | "LONG_BREAK",
+    sid: string | null,
+  ) => {
+    if (!sid) return;
+    try {
+      await studySessionService.nextPomodoroPhase(sid);
+    } catch { /* fire-and-forget */ }
+
+    if (phase === "FOCUS") {
+      setPomodoroPhase("SHORT_BREAK");
+      setTimeLeft(300);
+      setIsTimerRunning(true);
+      showToast("success", "🎉 Tập trung xong! Bắt đầu 5 phút nghỉ giải lao.");
+    } else {
+      setPomodoroPhase("FOCUS");
+      setTimeLeft(1500);
+      setIsTimerRunning(false);
+      showToast("success", "☕ Hết giờ nghỉ! Nhấn Bắt đầu để tiếp tục chu kỳ mới.");
+    }
+  };
+
   useEffect(() => {
     if (!isTimerRunning) return;
 
@@ -188,12 +193,15 @@ export default function CoursePlayer() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           setIsTimerRunning(false);
-          void handleAutoExpireSession();
+          void handlePhaseExpire(pomodoroPhaseRef.current, activeSessionIdRef.current);
           return 0;
         }
         return prev - 1;
       });
-      setActualStudySeconds((prev) => prev + 1);
+      // Only accumulate study time during the focus phase
+      if (pomodoroPhaseRef.current === "FOCUS") {
+        setActualStudySeconds((prev) => prev + 1);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -258,7 +266,8 @@ export default function CoursePlayer() {
       });
 
       setActiveSessionId(response.sessionId);
-      setTimeLeft(1500); // Mặc định 25 phút
+      setPomodoroPhase("FOCUS");
+      setTimeLeft(1500);
       setActualStudySeconds(0);
       setIsTimerRunning(true);
       storeSessionId(taskId, response.sessionId);
@@ -309,14 +318,21 @@ export default function CoursePlayer() {
     setIsSubActionLoading(true);
     try {
       await studySessionService.nextPomodoroPhase(activeSessionId);
-      
+
       const freshDetail = await fetchUpdatedDetail();
-      const nextPhase = freshDetail?.pomodoro?.currentPhase?.toUpperCase();
-      
-      // Update timer UI based on new phase type
-      if (nextPhase === "SHORT_BREAK") setTimeLeft(300); // 5 minutes
-      else if (nextPhase === "LONG_BREAK") setTimeLeft(900); // 15 minutes
-      else setTimeLeft(1500); // 25 minutes (FOCUS)
+      const backendPhase = (freshDetail as any)?.pomodoro?.currentPhase?.toUpperCase();
+
+      // Use backend phase if valid, otherwise toggle locally
+      const nextLocalPhase: "FOCUS" | "SHORT_BREAK" | "LONG_BREAK" =
+        backendPhase === "SHORT_BREAK" ? "SHORT_BREAK"
+        : backendPhase === "LONG_BREAK" ? "LONG_BREAK"
+        : backendPhase === "FOCUS" ? "FOCUS"
+        : pomodoroPhase === "FOCUS" ? "SHORT_BREAK" : "FOCUS";
+
+      setPomodoroPhase(nextLocalPhase);
+      if (nextLocalPhase === "SHORT_BREAK") setTimeLeft(300);
+      else if (nextLocalPhase === "LONG_BREAK") setTimeLeft(900);
+      else setTimeLeft(1500);
 
       setIsTimerRunning(true);
       showToast("success", "⏭️ Đã chuyển sang chu kỳ tiếp theo.");
@@ -689,57 +705,97 @@ export default function CoursePlayer() {
                 </div>
               </div>
 
-              {/* ── Pomodoro Timer + Action Control Sub-buttons ── */}
+              {/* ── Premium Pomodoro Timer Widget ── */}
               {hasStartedSession && !isSessionCompleted && (
-                <div className="mt-5 space-y-4">
-                  <div className="rounded-2xl border-2 border-orange-200 bg-orange-50/70 p-6 text-center shadow-inner">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-block h-2 w-2 rounded-full ${isTimerRunning ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                        <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">
-                          {isTimerRunning ? "TIMER ĐANG CHẠY" : "ĐÃ TẠM DỪNG"}
-                        </span>
-                      </div>
-                      <div className="mt-2">
-                        {renderPhaseBadge(detail?.pomodoro?.currentPhase)}
-                      </div>
+                <div className="mt-5 space-y-3">
+                  {/* Phase-aware timer card */}
+                  <div className={`relative rounded-2xl border-2 p-5 text-center transition-colors duration-500 ${
+                    pomodoroPhase !== "FOCUS"
+                      ? "border-green-200 bg-gradient-to-br from-green-50 to-emerald-50/80"
+                      : "border-red-200 bg-gradient-to-br from-red-50/80 to-orange-50/60"
+                  }`}>
+                    {/* Phase title */}
+                    <p className={`text-[10px] font-black uppercase tracking-[0.22em] ${
+                      pomodoroPhase !== "FOCUS" ? "text-green-600" : "text-red-500"
+                    }`}>
+                      {pomodoroPhase === "SHORT_BREAK"
+                        ? "☕ Nghỉ giải lao (5 phút)"
+                        : pomodoroPhase === "LONG_BREAK"
+                        ? "🌿 Nghỉ dài (15 phút)"
+                        : "🎯 Thời gian tập trung"}
+                    </p>
+
+                    {/* Running indicator */}
+                    <div className="mt-1.5 flex items-center justify-center gap-1.5">
+                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                        isTimerRunning
+                          ? pomodoroPhase !== "FOCUS"
+                            ? "bg-green-500 animate-pulse"
+                            : "bg-red-500 animate-pulse"
+                          : "bg-amber-400"
+                      }`} />
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                        {isTimerRunning ? "ĐANG CHẠY" : "ĐÃ TẠM DỪNG"}
+                      </span>
                     </div>
-                    <div className="mt-4 font-mono text-5xl font-black tracking-tight text-slate-900 tabular-nums">
+
+                    {/* Giant countdown */}
+                    <div className={`mt-3 font-mono text-[3.5rem] font-black tabular-nums leading-none transition-colors duration-500 ${
+                      pomodoroPhase !== "FOCUS" ? "text-green-500" : "text-red-500"
+                    } ${isTimerRunning && timeLeft <= 10 ? "animate-pulse" : ""}`}>
                       {formatTimer(timeLeft)}
                     </div>
-                    <p className="mt-3 text-xs font-medium text-slate-500">
-                      ⏱️ Học thực tế: <span className="font-bold text-slate-700">{elapsedStudyMinutes} phút</span> / <span className="text-orange-600 font-bold">{minimumRequiredMinutes} phút tối thiểu</span>
-                    </p>
+
+                    {/* Progress stats */}
+                    <div className="mt-3 flex items-center justify-center gap-3 text-xs">
+                      <span className="text-slate-400">
+                        ⏱{" "}
+                        <span className="font-bold text-slate-600">{elapsedStudyMinutes} phút</span>
+                        {" học"}
+                      </span>
+                      <span className="text-slate-300">·</span>
+                      <span className={`font-bold ${hasMetMinimum ? "text-green-600" : "text-orange-500"}`}>
+                        {hasMetMinimum ? "✓ Đủ điều kiện" : `Cần ${minimumRequiredMinutes} phút`}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* 🎮 3 CONTROLS BUTTONS: Pause, Resume, Next Phase */}
-                  <div className="grid grid-cols-2 gap-2">
+                  {/* Control buttons: [Tạm dừng/Bắt đầu ×2] [Bỏ qua ×1] */}
+                  <div className="grid grid-cols-3 gap-2">
                     {isTimerRunning ? (
                       <button
                         type="button"
                         onClick={handlePausePomodoro}
                         disabled={isSubActionLoading}
-                        className="flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 py-2.5 text-xs font-bold text-amber-800 shadow-sm transition hover:bg-amber-100 disabled:opacity-50"
+                        className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 py-2.5 text-xs font-bold text-amber-800 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:opacity-50"
                       >
-                        <PauseCircle size={14} /> Tạm dừng
+                        <PauseCircle size={13} /> Tạm dừng
                       </button>
                     ) : (
                       <button
                         type="button"
                         onClick={handleResumePomodoro}
                         disabled={isSubActionLoading}
-                        className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 py-2.5 text-xs font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100 disabled:opacity-50"
+                        className={`col-span-2 flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-xs font-bold shadow-sm transition active:scale-95 disabled:opacity-50 ${
+                          pomodoroPhase !== "FOCUS"
+                            ? "border-green-200 bg-green-50 text-green-800 hover:bg-green-100"
+                            : "border-red-200 bg-red-50 text-red-800 hover:bg-red-100"
+                        }`}
                       >
-                        <Play size={14} /> Học tiếp
+                        {isSubActionLoading
+                          ? <LoaderCircle size={13} className="animate-spin" />
+                          : <Play size={13} />}
+                        {" "}Bắt đầu
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={handleNextPhase}
                       disabled={isSubActionLoading}
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:opacity-50"
+                      className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
+                      title="Bỏ qua / chuyển phase"
                     >
-                      <SkipForward size={14} /> Qua phase mới
+                      <SkipForward size={13} /> Bỏ qua
                     </button>
                   </div>
                 </div>

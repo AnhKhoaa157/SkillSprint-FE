@@ -41,6 +41,9 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<ApiRespon
     console.log("[adminUserService] response:", res.status, payload);
 
     if (!res.ok) {
+      if (res.status === 401) {
+        window.dispatchEvent(new Event("session-kickout-triggered"));
+      }
       const message = payload?.message || `Server error ${res.status}`;
       throw new Error(message);
     }

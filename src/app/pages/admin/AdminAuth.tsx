@@ -126,8 +126,21 @@ export default function AdminAuth() {
         setLoginError("Tài khoản này không có quyền truy cập Admin Portal.");
         return;
       }
+      // Mirror the learner onLoginSuccess pattern exactly:
+      // 1. Wipe any stale auth state (prevents cross-session sessionId contamination
+      //    where a previous learner session's X-Session-Id would be read from
+      //    sessionStorage and sent on admin requests, causing Redis 401s).
+      localStorage.clear();
+      sessionStorage.clear();
+      // 2. Write the canonical auth session to localStorage.
       storeAuthTokens(result.tokens);
-      navigate(getPostLoginPath(result.tokens.role));
+      // 3. Hard-redirect so AuthContextProvider remounts cold and
+      //    ensureSessionHydration() copies localStorage → sessionStorage,
+      //    setting "skillSprint.auth.hydrated". This guarantees apiClient.ts
+      //    reads the correct sessionId from sessionStorage on the first request.
+      setTimeout(() => {
+        window.location.href = getPostLoginPath(result.tokens.role);
+      }, 100);
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : "Đăng nhập thất bại.");
     } finally {

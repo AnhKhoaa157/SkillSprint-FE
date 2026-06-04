@@ -223,6 +223,24 @@ export default function DashboardLayout() {
   const loc   = useLocation();
   const pathname = loc.pathname.replace(/\/+$/, "") || "/";
   const showAuthLoader = (loc.state as any)?.showLoadingFromAuth ?? false;
+
+  // Auto-open PricingModal when navigated in with ?pricing=PLAN or after login
+  // with a pendingPlan stored in sessionStorage.
+  useEffect(() => {
+    const params = new URLSearchParams(loc.search);
+    const pricingParam = params.get("pricing");
+    const pendingPlan = sessionStorage.getItem("pendingPlan");
+
+    if (pricingParam || pendingPlan) {
+      setPricingOpen(true);
+      sessionStorage.removeItem("pendingPlan");
+      if (pricingParam) {
+        navigate(loc.pathname, { replace: true });
+      }
+    }
+  // Only run on mount — intentional empty dep array.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   let crumb = CRUMBS[loc.pathname] ?? "Trung tâm điều khiển";
   if (loc.pathname.startsWith("/app/workspaces")) {
     if (loc.pathname === "/app/workspaces") crumb = CRUMBS["/app/workspaces"];
