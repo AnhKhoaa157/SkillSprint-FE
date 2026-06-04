@@ -123,6 +123,10 @@ export async function requestJson<T>(
       return payload;
     }
 
+    if (response.status === 401) {
+      window.dispatchEvent(new Event("session-kickout-triggered"));
+    }
+
     const message = payload?.message || `Server error: ${response.status}`;
     const error: any = new Error(message);
     error.status = response.status;
