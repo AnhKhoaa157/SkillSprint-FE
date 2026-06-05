@@ -1,34 +1,29 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { Outlet, NavLink, useLocation, Link, useNavigate } from "react-router";
 import {
   LayoutDashboard, Map, Mic,
   Menu, X, Zap, Bell, ChevronRight, Crown, Gift, Sparkles,
   AlertTriangle, CalendarClock, BookOpenCheck, CheckCircle2,
-  LoaderCircle, Loader2,
+  LoaderCircle,
 } from "lucide-react";
 import { APP_NAV_SECTIONS } from "../config/nav";
 import { motion, AnimatePresence } from "motion/react";
 import { PricingModal } from "../components/modals/PricingModal";
 import { ReferralModal } from "../components/modals/ReferralModal";
-import { SessionKickoutModal } from "../components/auth/SessionKickoutModal";
 import { BrandLogo } from "../components/layout/BrandLogo";
 import meService from "../../api/meService";
 import workspaceService from "../../api/workspaceService";
 import { getStoredUserProfile } from "../../api/authService";
-import { getUnreadNotifications, getNotifications } from "../../api/notificationsService";
-import type { NotificationResponse } from "../../api/skillSprintModels";
-import { useSubscription } from "../../hooks/useSubscription";
 
 /* ─── Sidebar Design Tokens ─── */
 const F      = "'Inter','Plus Jakarta Sans',sans-serif";
-const SBG    = "#0B1220";   // sidebar dark navy
-const SBDR   = "rgba(255,255,255,0.06)";
-const STXT   = "#94A3B8";   // inactive text
-const STXT_A = "#FFFFFF";   // active text
+const SBG    = "#FFFFFF";   // sidebar white
+const SBDR   = "rgba(15,23,42,0.06)";
+const STXT   = "#64748B";   // inactive text
+const STXT_A = "#0F172A";   // active text
 const OG     = "#FF6B00";
-const OGL    = "rgba(255,107,0,0.12)";
-const SHOVER = "rgba(255,255,255,0.05)";
+const OGL    = "rgba(255,107,0,0.08)";
+const SHOVER = "rgba(15,23,42,0.03)";
 /* content area tokens */
 const BG     = "#F9FAFB";
 const CARD   = "#FFFFFF";
@@ -187,17 +182,7 @@ function normalizeRoadmapSidebarItem(workspace: RoadmapSidebarWorkspace, index: 
   };
 }
 
-/** Two-letter initials from a display name — mirrors getInitials in Profile.tsx */
-function getNavInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "L";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
 export default function DashboardLayout() {
-  const { planId, planMeta, refresh: refreshSubscription } = useSubscription();
-
   const [sideOpen, setSideOpen]       = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
@@ -205,42 +190,19 @@ export default function DashboardLayout() {
   const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(true);
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [roadmapWorkspaces, setRoadmapWorkspaces] = useState<RoadmapSidebarItem[]>([]);
-  const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [notifLoading, setNotifLoading] = useState(false);
-  const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarInitials: string; avatarUrl: string }>(() => {
+  const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarLetter: string }>(() => {
     const stored = getStoredUserProfile();
     const fullName = stored?.fullName || "Learner";
     return {
       fullName,
       roleLabel: stored?.role === "ADMIN" ? "Admin" : "Learner",
-      avatarInitials: getNavInitials(fullName),
-      avatarUrl: "",
+      avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
     };
   });
-  const [navAvatarError, setNavAvatarError] = useState(false);
   const navigate = useNavigate();
   const loc   = useLocation();
   const pathname = loc.pathname.replace(/\/+$/, "") || "/";
   const showAuthLoader = (loc.state as any)?.showLoadingFromAuth ?? false;
-
-  // Auto-open PricingModal when navigated in with ?pricing=PLAN or after login
-  // with a pendingPlan stored in sessionStorage.
-  useEffect(() => {
-    const params = new URLSearchParams(loc.search);
-    const pricingParam = params.get("pricing");
-    const pendingPlan = sessionStorage.getItem("pendingPlan");
-
-    if (pricingParam || pendingPlan) {
-      setPricingOpen(true);
-      sessionStorage.removeItem("pendingPlan");
-      if (pricingParam) {
-        navigate(loc.pathname, { replace: true });
-      }
-    }
-  // Only run on mount — intentional empty dep array.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   let crumb = CRUMBS[loc.pathname] ?? "Trung tâm điều khiển";
   if (loc.pathname.startsWith("/app/workspaces")) {
     if (loc.pathname === "/app/workspaces") crumb = CRUMBS["/app/workspaces"];
@@ -278,27 +240,6 @@ export default function DashboardLayout() {
     }
   };
 
-  const loadNotifications = async () => {
-    setNotifLoading(true);
-    try {
-      const data = await getNotifications();
-      setNotifications(data);
-    } catch {
-      // silently fail — notifications are non-critical
-    } finally {
-      setNotifLoading(false);
-    }
-  };
-
-  const fetchUnreadCount = async () => {
-    try {
-      const data = await getUnreadNotifications();
-      setUnreadCount(data.length);
-    } catch {
-      // silently fail — notifications are non-critical
-    }
-  };
-
   useEffect(() => {
     let mounted = true;
 
@@ -311,8 +252,7 @@ export default function DashboardLayout() {
         setProfile({
           fullName,
           roleLabel: me.roles?.includes("ADMIN") ? "Admin" : "Learner",
-          avatarInitials: getNavInitials(fullName),
-          avatarUrl: me.avatarUrl || "",
+          avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
         });
       } catch {
         if (!mounted) return;
@@ -321,14 +261,12 @@ export default function DashboardLayout() {
         setProfile({
           fullName,
           roleLabel: stored?.role === "ADMIN" ? "Admin" : "Learner",
-          avatarInitials: getNavInitials(fullName),
-          avatarUrl: "",
+          avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
         });
       }
     };
 
     loadProfile();
-    void fetchUnreadCount();
 
     const handleProfileUpdated = () => {
       loadProfile();
@@ -362,7 +300,6 @@ export default function DashboardLayout() {
     }}>
       <style>{`
         @keyframes ss-pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-        @keyframes wiggle{0%,100%{transform:rotate(0deg)}20%{transform:rotate(-10deg)}40%{transform:rotate(6deg)}60%{transform:rotate(-4deg)}80%{transform:rotate(2deg)}}
         ::-webkit-scrollbar{width:4px}
         ::-webkit-scrollbar-track{background:transparent}
         ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:99px}
@@ -383,43 +320,32 @@ export default function DashboardLayout() {
         )}
       </AnimatePresence>
 
-      {/* ════════════════ DARK NAVY SIDEBAR ════════════════ */}
       <aside
         className={`fixed top-0 left-0 z-50 h-full flex flex-col
           lg:relative lg:translate-x-0 transition-transform duration-300
           ${sideOpen?"translate-x-0":"-translate-x-full"}`}
         style={{
           width:"228px", flexShrink:0,
-          background:"linear-gradient(180deg, #0A1223 0%, #07132B 100%)",
-          borderRight:`1px solid ${SBDR}`,
-          boxShadow:"inset -1px 0 0 rgba(255,255,255,0.03)",
+          background:"linear-gradient(180deg, #FFFDFB 0%, #FAF7F2 100%)",
+          borderRight:"1px solid rgba(255,107,0,0.08)",
+          boxShadow:"4px 0 24px rgba(255,107,0,0.02), 1px 0 5px rgba(0,0,0,0.01)",
         }}
       >
         {/* Logo */}
         <div style={{
           display:"flex", alignItems:"center", justifyContent:"space-between",
-          padding:"18px 16px 16px",
-          borderBottom:`1px solid ${SBDR}`,
+          padding:"16px",
+          borderBottom:"1px solid rgba(255,107,0,0.08)",
         }}>
-          <Link to="/" style={{display:"flex",alignItems:"center",gap:"9px",textDecoration:"none"}}>
-            <div style={{
-              width:"32px",height:"32px",borderRadius:"8px",
-              background:OG,display:"flex",alignItems:"center",justifyContent:"center",
-              boxShadow:"0 4px 12px rgba(255,107,0,0.35)",flexShrink:0,
-            }}>
-              <Zap size={15} color="#fff" fill="#fff"/>
-            </div>
-            <div>
-              <p style={{fontWeight:800,fontSize:"0.96rem",color:"#FFFFFF",letterSpacing:"-0.02em",lineHeight:1}}>
-                SkillSprint
-              </p>
-              <span style={{
-                fontSize:"9px",padding:"1px 6px",borderRadius:"3px",marginTop:"3px",
-                display:"inline-block",background:"rgba(255,107,0,0.2)",
-                color:OG,fontWeight:700,letterSpacing:"0.06em",
-              }}>{planMeta.badge}</span>
-            </div>
-          </Link>
+          <div style={{display:"flex",alignItems:"center",gap:"24px"}}>
+            <BrandLogo size={20} align="left" />
+            <span style={{
+              fontSize:"9px",padding:"1px 6px",borderRadius:"4px",
+              display:"inline-block",background:"rgba(255,107,0,0.1)",
+              color:OG,fontWeight:700,letterSpacing:"0.06em",
+              flexShrink:0
+            }}>FREE</span>
+          </div>
           <button className="lg:hidden" onClick={()=>setSideOpen(false)}
             style={{background:"none",border:"none",cursor:"pointer",color:STXT}}>
             <X size={16}/>
@@ -427,132 +353,124 @@ export default function DashboardLayout() {
         </div>
 
         {/* Navigation groups */}
-        <nav className="flex-1 overflow-y-auto px-3 py-2">
-          {APP_NAV_SECTIONS.map(section => (
-            <div key={section.label} className="mb-4 last:mb-0">
-              <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                {section.label}
-              </div>
-              <div className="space-y-1">
-                {section.items
-                  .filter(item => !(section.label === "Học tập & AI" && item.path === "/app/roadmap"))
-                  .map(item => {
-                    const isActive = isNavItemActive(item.path, item.end, item.match);
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+          {APP_NAV_SECTIONS.map((section, idx) => (
+            <div key={section.label} className="space-y-1">
+              {idx > 0 && <div className="my-2 border-t border-orange-100/40" />}
+              {section.items
+                .filter(item => !(section.label === "Học tập & AI" && item.path === "/app/roadmap"))
+                .map(item => {
+                  const isActive = isNavItemActive(item.path, item.end, item.match);
 
-                    return (
-                      <NavLink
-                        key={item.path}
-                        to={item.path}
-                        end={item.end}
-                        onClick={() => setSideOpen(false)}
-                        className={() => [
-                          "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
-                          "border-l-2 border-transparent",
-                          isActive
-                            ? "border-l-orange-500 bg-gradient-to-r from-orange-500/15 to-orange-500/5 text-orange-500"
-                            : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200",
-                        ].join(" ")}
-                      >
-                        <>
-                          <item.icon
-                            size={18}
-                            strokeWidth={2}
-                            className={[
-                              "shrink-0 transition-transform duration-200 group-hover:scale-105",
-                              isActive ? "text-orange-500" : "text-current",
-                            ].join(" ")}
-                          />
-                          <span className="flex-1 font-medium">{item.label}</span>
-                          {item.badge && (
-                            <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
-                              <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
-                              <span className="relative h-2.5 w-2.5 rounded-full bg-orange-500" />
-                            </span>
-                          )}
-                        </>
-                      </NavLink>
-                    );
-                  })}
-
-                {section.label === "Học tập & AI" && (
-                  <div className="mt-2 rounded-2xl border border-white/10 bg-white/5 p-2">
-                    <button
-                      type="button"
-                      onClick={() => setRoadmapMenuOpen((value) => !value)}
-                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition hover:bg-white/5"
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      end={item.end}
+                      onClick={() => setSideOpen(false)}
+                      className={() => [
+                        "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition-all duration-200",
+                        "border-l-4 border-transparent",
+                        isActive
+                          ? "border-l-[#FF6B00] bg-gradient-to-r from-orange-500/8 to-amber-500/4 text-[#FF6B00] font-bold shadow-[0_4px_12px_rgba(255,107,0,0.03)]"
+                          : "text-slate-500 hover:bg-orange-500/4 hover:text-slate-800",
+                      ].join(" ")}
                     >
-                      <span className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-                        <Sparkles size={16} className="text-orange-400" />
-                        Lộ trình AI theo workspace
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[11px] font-bold text-orange-300">
-                          {roadmapLoading ? "..." : roadmapWorkspaces.length}
-                        </span>
-                        <ChevronRight
-                          size={14}
-                          className={`text-slate-400 transition-transform ${roadmapMenuOpen ? "rotate-90" : ""}`}
+                      <>
+                        <item.icon
+                          size={18}
+                          strokeWidth={isActive ? 2.5 : 2}
+                          className={[
+                            "shrink-0 transition-transform duration-200 group-hover:scale-105",
+                            isActive ? "text-[#FF6B00]" : "text-slate-400 group-hover:text-slate-600",
+                          ].join(" ")}
                         />
+                        <span className="flex-1 font-medium">{item.label}</span>
+                        {item.badge && (
+                          <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
+                            <span className="relative h-2 w-2 rounded-full bg-orange-500" />
+                          </span>
+                        )}
+                      </>
+                    </NavLink>
+                  );
+                })}
+
+              {section.label === "Học tập & AI" && (
+                <div className="mt-1 pl-4 border-l border-orange-100/80 ml-3 space-y-1 py-1">
+                  <button
+                    type="button"
+                    onClick={() => setRoadmapMenuOpen((value) => !value)}
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold text-slate-500 hover:bg-orange-500/4 hover:text-[#FF6B00] transition"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Sparkles size={14} className="text-[#FF6B00]" />
+                      Lộ trình AI theo workspace
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="rounded-full bg-orange-500/10 px-1.5 py-0.2 text-[9px] font-bold text-[#FF6B00]">
+                        {roadmapLoading ? "..." : roadmapWorkspaces.length}
                       </span>
-                    </button>
+                      <ChevronRight
+                        size={12}
+                        className={`text-slate-400 transition-transform ${roadmapMenuOpen ? "rotate-90" : ""}`}
+                      />
+                    </span>
+                  </button>
 
-                    <AnimatePresence initial={false}>
-                      {roadmapMenuOpen ? (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="space-y-1 px-1 pb-1 pt-2">
-                            {roadmapLoading ? (
-                              Array.from({ length: 3 }).map((_, index) => (
-                                <div key={index} className="rounded-md border border-white/5 bg-white/5 px-3 py-2">
-                                  <div className="h-3 w-24 animate-pulse rounded-full bg-white/15" />
-                                  <div className="mt-2 h-2 w-36 animate-pulse rounded-full bg-white/10" />
-                                </div>
-                              ))
-                            ) : roadmapWorkspaces.length > 0 ? (
-                              roadmapWorkspaces.map((workspace) => {
-                                const roadmapPath = `/app/workspaces/${workspace.id}/roadmap`;
-                                const isActive = pathname === roadmapPath || pathname.startsWith(`${roadmapPath}/`);
+                  <AnimatePresence initial={false}>
+                    {roadmapMenuOpen ? (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-1 py-1">
+                          {roadmapLoading ? (
+                            Array.from({ length: 2 }).map((_, index) => (
+                              <div key={index} className="h-7 w-full animate-pulse rounded-md bg-slate-100/60" />
+                            ))
+                          ) : roadmapWorkspaces.length > 0 ? (
+                            roadmapWorkspaces.map((workspace) => {
+                              const roadmapPath = `/app/workspaces/${workspace.id}/roadmap`;
+                              const isActive = pathname === roadmapPath || pathname.startsWith(`${roadmapPath}/`);
 
-                                return (
-                                  <NavLink
-                                    key={workspace.id}
-                                    to={roadmapPath}
-                                    onClick={() => setSideOpen(false)}
-                                    className={() => [
-                                      "group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors duration-200",
-                                      "border-l-2 border-transparent",
-                                      isActive
-                                        ? "border-l-orange-500 bg-slate-800 text-orange-200"
-                                        : "text-slate-400 hover:bg-slate-800 hover:text-slate-100",
-                                    ].join(" ")}
-                                  >
-                                    <div className="min-w-0 flex-1">
-                                      <div className="truncate font-medium">{workspace.name}</div>
-                                      <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-green-400">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                                        <span className="uppercase tracking-[0.2em]">{workspace.statusLabel || "READY"}</span>
-                                      </div>
+                              return (
+                                <NavLink
+                                  key={workspace.id}
+                                  to={roadmapPath}
+                                  onClick={() => setSideOpen(false)}
+                                  className={() => [
+                                    "group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] transition-colors duration-200",
+                                    isActive
+                                      ? "bg-orange-500/8 text-[#FF6B00] font-bold"
+                                      : "text-slate-400 hover:bg-orange-500/4 hover:text-slate-700",
+                                  ].join(" ")}
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate font-medium">{workspace.name}</div>
+                                    <div className="mt-0.5 flex items-center gap-1 text-[9px] text-green-600/80">
+                                      <span className="h-1 w-1 rounded-full bg-green-500" />
+                                      <span className="uppercase tracking-wider">{workspace.statusLabel || "READY"}</span>
                                     </div>
-                                    <ChevronRight size={14} className="shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5" />
-                                  </NavLink>
-                                );
-                              })
-                            ) : (
-                              <div className="rounded-md border border-dashed border-white/10 bg-white/5 px-3 py-2 text-xs leading-5 text-slate-400">
-                                Chưa có workspace nào có roadmap đã xác nhận.
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      ) : null}
-                    </AnimatePresence>
-                  </div>
-                )}
-              </div>
+                                  </div>
+                                  <ChevronRight size={12} className="shrink-0 opacity-50 transition-transform group-hover:translate-x-0.5" />
+                                </NavLink>
+                              );
+                            })
+                          ) : (
+                            <div className="rounded-lg border border-dashed border-orange-100/40 bg-orange-50/10 px-2.5 py-2 text-[10px] leading-relaxed text-slate-400">
+                              Chưa có workspace nào có roadmap đã xác nhận.
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
           ))}
         </nav>
@@ -570,11 +488,11 @@ export default function DashboardLayout() {
             onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.background="rgba(255,107,0,0.08)";}}
           >
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2px"}}>
-              <span style={{fontSize:"8.5px",fontWeight:700,color:OG,letterSpacing:"0.08em",textTransform:"uppercase"}}>GÓI {planMeta.badge}</span>
+              <span style={{fontSize:"8.5px",fontWeight:700,color:OG,letterSpacing:"0.08em",textTransform:"uppercase"}}>GÓI MIỄN PHÍ</span>
               <Crown size={12} color="#F59E0B"/>
             </div>
-            <p style={{fontWeight:700,fontSize:"0.8rem",color:"#FFFFFF",marginBottom:"1px"}}>{planMeta.upgradeLabel}</p>
-            <p style={{color:STXT,fontSize:"0.7rem"}}>{planMeta.upgradeSubtext}</p>
+            <p style={{fontWeight:700,fontSize:"0.8rem",color:"#0F172A",marginBottom:"1px"}}>Nâng cấp lên Pro</p>
+            <p style={{color:"#64748B",fontSize:"0.7rem"}}>Mở khóa tính năng AI và nhiều hơn</p>
           </div>
 
           <button className="ss-referral mb-3" onClick={()=>setReferralOpen(true)}
@@ -582,32 +500,23 @@ export default function DashboardLayout() {
               display:"flex",alignItems:"center",gap:"7px",padding:"8px 10px",
               borderRadius:"8px",cursor:"pointer",width:"100%",
               background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.2)",
-              color:"#FBBF24",fontFamily:F,fontWeight:600,fontSize:"0.78rem",
+              color:"#D97706",fontFamily:F,fontWeight:600,fontSize:"0.78rem",
               transition:"background 0.15s ease",
             }}>
             <Gift size={12}/>
             Mời bạn &amp; nhận Premium
           </button>
 
-          <div className="border-t border-slate-800/60 pt-3">
-            <Link to="/app/profile" className="block rounded-xl transition hover:bg-slate-800/30" style={{ textDecoration: "none" }}>
+          <div className="border-t border-slate-100 pt-3">
+            <Link to="/app/profile" className="block rounded-xl transition hover:bg-slate-100" style={{ textDecoration: "none" }}>
               <div className="flex items-center gap-3 px-3 py-2">
-              {profile.avatarUrl && !navAvatarError ? (
-                <img
-                  src={profile.avatarUrl}
-                  alt={profile.fullName}
-                  onError={() => setNavAvatarError(true)}
-                  className="h-9 w-9 rounded-full object-cover flex-shrink-0 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
-                />
-              ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-xs font-bold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)] flex-shrink-0 tracking-tight">
-                  {profile.avatarInitials}
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-sm font-bold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
+                  {profile.avatarLetter}
                 </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-slate-200">{profile.fullName}</p>
-                <p className="text-xs text-slate-500">{profile.roleLabel}</p>
-              </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-800">{profile.fullName}</p>
+                  <p className="text-xs text-slate-500">{profile.roleLabel}</p>
+                </div>
               </div>
             </Link>
           </div>
@@ -645,34 +554,21 @@ export default function DashboardLayout() {
             </div>
 
             {/* ── Notification Bell ── */}
-            <div className="relative">
+            <div style={{ position:"relative" }}>
               <button
-                onClick={() => setNotifOpen(p => {
-                  const next = !p;
-                  if (next) loadNotifications();
-                  return next;
-                })}
-                className={[
-                  "relative flex items-center justify-center p-[7px] rounded-[9px] cursor-pointer transition-all duration-150 border group",
-                  notifOpen
-                    ? "border-orange-500/30 bg-orange-500/12 text-orange-500"
-                    : "border-gray-200 bg-transparent text-gray-500 hover:bg-gray-100/50",
-                  "hover:animate-[wiggle_0.5s_ease-in-out]",
-                ].join(" ")}
+                onClick={() => setNotifOpen(p => !p)}
+                style={{
+                  position:"relative", padding:"7px", borderRadius:"9px",
+                  color:notifOpen ? OG : T2,
+                  border:`1px solid ${notifOpen ? "rgba(255,107,0,0.30)" : BDR}`,
+                  background: notifOpen ? OGL : "transparent",
+                  cursor:"pointer",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  transition:"all 0.15s",
+                }}
               >
-                <Bell size={15} className="transition-transform duration-200 group-hover:scale-110" />
-
-                {/* Red badge with pulse ring */}
-                {unreadCount > 0 && (
-                  <>
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
-                      <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 animate-ping opacity-75" />
-                    </span>
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold leading-4 text-center px-[4px] border-[1.5px] border-white shadow-[0_2px_6px_rgba(239,68,68,0.4)] z-10">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  </>
-                )}
+                <Bell size={15}/>
+                <span style={{position:"absolute",top:"6px",right:"6px",width:"6px",height:"6px",borderRadius:"50%",background:OG,border:`1.5px solid ${CARD}`}}/>
               </button>
 
               {/* Dropdown */}
@@ -683,130 +579,147 @@ export default function DashboardLayout() {
                     animate={{ opacity:1, y:0, scale:1 }}
                     exit={{ opacity:0, y:6, scale:0.96 }}
                     transition={{ duration:0.18, ease:[0.22,1,0.36,1] }}
-                    className="absolute top-full right-0 mt-2 w-[360px] bg-white rounded-[14px] border border-gray-200 shadow-[0_4px_8px_rgba(0,0,0,0.05),0_16px_48px_rgba(0,0,0,0.12)] overflow-hidden z-50"
+                    style={{
+                      position:"absolute", top:"calc(100% + 8px)", right:0,
+                      width:330, background:CARD,
+                      borderRadius:14,
+                      border:`1px solid ${BDR}`,
+                      boxShadow:"0 4px 8px rgba(0,0,0,0.05), 0 16px 48px rgba(0,0,0,0.12)",
+                      overflow:"hidden", zIndex:200,
+                    }}
                   >
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                      <div className="flex items-center gap-[7px]">
-                        <Bell size={13} className="text-gray-800" />
-                        <span className="font-bold text-[0.875rem] text-gray-800" style={{ fontFamily: F }}>Thông báo</span>
-                        {unreadCount > 0 && (
-                          <span className="px-[7px] py-[1px] rounded-full bg-orange-500/12 border border-orange-500/20 text-[0.60rem] font-bold text-orange-500" style={{ fontFamily: F }}>
-                            {unreadCount} mới
-                          </span>
-                        )}
+                    <div style={{ padding:"12px 16px 10px", borderBottom:`1px solid ${BDR}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                        <Bell size={13} color={T1}/>
+                        <span style={{ fontFamily:F, fontWeight:700, fontSize:"0.875rem", color:T1 }}>Thông báo</span>
+                        <div style={{ padding:"1px 7px", borderRadius:99, background:OGL, border:`1px solid rgba(255,107,0,0.2)` }}>
+                          <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:OG }}>3 mới</span>
+                        </div>
                       </div>
                       <button
                         onClick={() => setNotifOpen(false)}
-                        className="bg-none border-none cursor-pointer text-gray-400 p-[2px] flex"
+                        style={{ background:"none", border:"none", cursor:"pointer", color:T3, padding:2, display:"flex" }}
                       >
                         <X size={14}/>
                       </button>
                     </div>
 
-                    {/* Skeleton loading */}
-                    {notifLoading ? (
-                      <div className="p-4 space-y-3">
-                        {Array.from({ length: 3 }).map((_, i) => (
-                          <div key={i} className="flex items-start gap-3 animate-pulse">
-                            <div className="w-8 h-8 rounded-lg bg-gray-200 flex-shrink-0" />
-                            <div className="flex-1 space-y-2 py-1">
-                              <div className="h-2.5 w-20 bg-gray-200 rounded" />
-                              <div className="h-2 w-full bg-gray-100 rounded" />
-                              <div className="h-2 w-3/4 bg-gray-100 rounded" />
+                    {/* Notification list */}
+                    <div style={{ display:"flex", flexDirection:"column" }}>
+
+                      {/* ── Item 1: URGENT alert ── */}
+                      <div style={{
+                        padding:"13px 15px",
+                        borderBottom:`1px solid ${BDR}`,
+                        background:"#FFFBEB",
+                        borderLeft:"3px solid #F59E0B",
+                      }}>
+                        <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                          <div style={{
+                            width:32, height:32, borderRadius:8, flexShrink:0,
+                            background:"#FEF3C7", border:"1.5px solid #FCD34D",
+                            display:"flex", alignItems:"center", justifyContent:"center",
+                          }}>
+                            <AlertTriangle size={15} color="#D97706"/>
+                          </div>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
+                              <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:800, color:"#D97706", letterSpacing:"0.08em", textTransform:"uppercase" }}>Cảnh báo</span>
+                              <span style={{ fontFamily:F, fontSize:"0.60rem", color:T3 }}>Hôm qua · 8:00 PM</span>
+                            </div>
+                            <p style={{ fontFamily:F, fontSize:"0.80rem", fontWeight:600, color:T1, lineHeight:1.5, marginBottom:10 }}>
+                              Bạn đã bỏ lỡ buổi học HTML &amp; CSS hôm qua. Muốn AI sắp xếp lại lịch không?
+                            </p>
+                            <div style={{ display:"flex", gap:7 }}>
+                              <button style={{
+                                padding:"5px 13px", borderRadius:7,
+                                border:"1.5px solid #D97706", background:"transparent",
+                                fontFamily:F, fontWeight:700, fontSize:"0.72rem", color:"#D97706",
+                                cursor:"pointer", transition:"all 0.12s",
+                                display:"flex", alignItems:"center", gap:5,
+                              }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="#FEF3C7"; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="transparent"; }}
+                              >
+                                <CalendarClock size={12}/>
+                                Sắp xếp lại
+                              </button>
+                              <button style={{
+                                padding:"5px 13px", borderRadius:7,
+                                border:`1.5px solid ${BDR}`, background:"transparent",
+                                fontFamily:F, fontWeight:600, fontSize:"0.72rem", color:T3,
+                                cursor:"pointer", transition:"all 0.12s",
+                              }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background=BG; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="transparent"; }}
+                              >
+                                Bỏ qua
+                              </button>
                             </div>
                           </div>
-                        ))}
+                        </div>
                       </div>
-                    ) : notifications.length === 0 ? (
-                      <div className="py-8 px-4 text-center">
-                        <Bell size={28} className="text-gray-400 mx-auto mb-2" />
-                        <p className="text-[0.82rem] font-semibold text-gray-500 mb-1" style={{ fontFamily: F }}>Không có thông báo mới</p>
-                        <p className="text-[0.72rem] text-gray-400" style={{ fontFamily: F }}>Mọi thứ đều ổn, bạn không có thông báo nào chưa đọc.</p>
+
+                      {/* ── Item 2 ── */}
+                      <div style={{
+                        padding:"12px 15px",
+                        borderBottom:`1px solid ${BDR}`,
+                        background:CARD,
+                        display:"flex", alignItems:"flex-start", gap:10,
+                      }}>
+                        <div style={{
+                          width:32, height:32, borderRadius:8, flexShrink:0,
+                          background:"#F0FDF4", border:"1.5px solid #A7F3D0",
+                          display:"flex", alignItems:"center", justifyContent:"center",
+                        }}>
+                          <BookOpenCheck size={15} color="#059669"/>
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
+                            <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:"#059669" }}>AI Roadmap</span>
+                            <span style={{ fontFamily:F, fontSize:"0.60rem", color:T3 }}>2 giờ trước</span>
+                          </div>
+                          <p style={{ fontFamily:F, fontSize:"0.78rem", color:T2, lineHeight:1.5 }}>
+                            Lộ trình tuần 4 đã sẵn sàng — 5 chủ đề mới về <strong style={{ color:T1 }}>Data Structures</strong> được thêm vào.
+                          </p>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="max-h-64 overflow-y-auto">
-                        {notifications.map((n) => {
-                          let iconColor = "#6B7280";
-                          let bgColor = "#F9FAFB";
-                          let borderColor = BDR;
-                          let badgeLabel = "";
-                          let badgeColor = "";
-                          let IconComponent = Bell;
 
-                          if (n.type === "WARNING" || n.type === "URGENT") {
-                            iconColor = "#D97706"; bgColor = "#FFFBEB"; borderColor = "#F59E0B"; badgeLabel = "Cảnh báo"; badgeColor = "#D97706"; IconComponent = AlertTriangle;
-                          } else if (n.type === "ACHIEVEMENT") {
-                            iconColor = "#2563EB"; bgColor = "#EFF6FF"; borderColor = "#BFDBFE"; badgeLabel = "Thành tích"; badgeColor = "#2563EB"; IconComponent = CheckCircle2;
-                          } else if (n.type === "ROADMAP" || n.type === "AI") {
-                            iconColor = "#059669"; bgColor = "#F0FDF4"; borderColor = "#A7F3D0"; badgeLabel = "AI Roadmap"; badgeColor = "#059669"; IconComponent = BookOpenCheck;
-                          } else if (n.type === "REMINDER") {
-                            iconColor = "#7C3AED"; bgColor = "#F5F3FF"; borderColor = "#C4B5FD"; badgeLabel = "Nhắc nhở"; badgeColor = "#7C3AED"; IconComponent = CalendarClock;
-                          }
-
-                          const timeAgo = (() => {
-                            const diff = Date.now() - new Date(n.createdAt).getTime();
-                            const mins = Math.floor(diff / 60000);
-                            if (mins < 1) return "Vừa xong";
-                            if (mins < 60) return `${mins} phút trước`;
-                            const hours = Math.floor(mins / 60);
-                            if (hours < 24) return `${hours} giờ trước`;
-                            const days = Math.floor(hours / 24);
-                            return `${days} ngày trước`;
-                          })();
-
-                          return (
-                            <div key={n.notificationId} className={[
-                              "px-4 py-3 border-b border-gray-200 flex items-start gap-[10px]",
-                              n.read ? "bg-white" : "bg-blue-50/60",
-                            ].join(" ")}
-                              style={{
-                                borderLeft: n.read ? "3px solid transparent" : `3px solid ${borderColor}`,
-                              }}
-                            >
-                              <div style={{
-                                width:32, height:32, borderRadius:8, flexShrink:0,
-                                background: n.read ? "#F3F4F6" : bgColor,
-                                border:`1.5px solid ${n.read ? BDR : borderColor}`,
-                                display:"flex", alignItems:"center", justifyContent:"center",
-                              }}>
-                                <IconComponent size={15} color={n.read ? T3 : iconColor}/>
-                              </div>
-                              <div style={{ flex:1, minWidth:0 }}>
-                                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
-                                  {badgeLabel && (
-                                    <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:badgeColor, letterSpacing:"0.04em" }}>
-                                      {badgeLabel}
-                                    </span>
-                                  )}
-                                  <span style={{ fontFamily:F, fontSize:"0.58rem", color:T3 }}>{timeAgo}</span>
-                                  {!n.read && (
-                                    <span style={{
-                                      width:6, height:6, borderRadius:"50%",
-                                      background:OG, flexShrink:0,
-                                    }}/>
-                                  )}
-                                </div>
-                                <p style={{ fontFamily:F, fontSize:"0.80rem", fontWeight: n.read ? 400 : 600, color: n.read ? T2 : T1, lineHeight:1.5 }}>
-                                  {n.title && <span style={{ fontWeight:700 }}>{n.title}</span>}
-                                  {n.title && n.message ? ': ' : ''}
-                                  {n.message}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
+                      {/* ── Item 3 ── */}
+                      <div style={{
+                        padding:"12px 15px",
+                        background:CARD,
+                        display:"flex", alignItems:"flex-start", gap:10,
+                      }}>
+                        <div style={{
+                          width:32, height:32, borderRadius:8, flexShrink:0,
+                          background:"#EFF6FF", border:"1.5px solid #BFDBFE",
+                          display:"flex", alignItems:"center", justifyContent:"center",
+                        }}>
+                          <CheckCircle2 size={15} color="#2563EB"/>
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
+                            <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:"#2563EB" }}>Thành tích</span>
+                            <span style={{ fontFamily:F, fontSize:"0.60rem", color:T3 }}>Hôm nay</span>
+                          </div>
+                          <p style={{ fontFamily:F, fontSize:"0.78rem", color:T2, lineHeight:1.5 }}>
+                            Bạn đạt <strong style={{ color:T1 }}>12 ngày streak</strong> liên tiếp! 🔥 Giữ vững nhé!
+                          </p>
+                        </div>
                       </div>
-                    )}
+                    </div>
 
                     {/* Footer */}
-                    <Link to="/app/profile?tab=notifications"
-                      onClick={() => setNotifOpen(false)}
-                      className="block py-[9px] px-[15px] border-t border-gray-200 bg-gray-50 text-center no-underline text-[0.72rem] font-bold text-orange-500"
-                      style={{ fontFamily: F }}
-                    >
-                      Xem tất cả thông báo →
-                    </Link>
+                    <div style={{ padding:"9px 15px", borderTop:`1px solid ${BDR}`, background:BG, textAlign:"center" }}>
+                      <button style={{
+                        fontFamily:F, fontSize:"0.72rem", fontWeight:700,
+                        color:OG, background:"none", border:"none", cursor:"pointer",
+                      }}>
+                        Xem tất cả thông báo →
+                      </button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -839,15 +752,9 @@ export default function DashboardLayout() {
       <PricingModal
         isOpen={pricingOpen}
         onClose={()=>setPricingOpen(false)}
-        currentPlan={planId}
-        onSuccess={async () => {
-          await refreshSubscription();
-          toast.success("🚀 Nâng cấp Career Premium thành công! Toàn bộ không gian học tập AI đã được mở khóa.");
-          navigate("/app/dashboard", { replace: true });
-        }}
+        onSuccess={(plan) => navigate("/app/upgraded", { state: { plan } })}
       />
       <ReferralModal isOpen={referralOpen} onClose={()=>setReferralOpen(false)}/>
-      <SessionKickoutModal loginPath="/auth" />
     </div>
   );
 }
