@@ -384,148 +384,145 @@ export default function StudyCalendar() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} style={{ fontFamily: F }}>
-      <div style={{ background: WH, border: `1px solid ${BDR}`, borderRadius: "16px", padding: "16px 18px", marginBottom: "14px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
-          <div>
-            <h1 style={{ fontSize: "1.06rem", fontWeight: 800, color: T1, lineHeight: 1.1 }}>Lịch học tập</h1>
-            <p style={{ fontSize: "0.74rem", color: T2, marginTop: "3px" }}>Theo dõi lịch học của bạn theo từng workspace</p>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="relative min-h-[calc(100vh-2rem)] overflow-hidden">
+      {/* Ambient background glows */}
+      <div className="absolute left-[-10%] top-[-10%] -z-10 h-[400px] w-[400px] rounded-full bg-gradient-to-br from-[#FF7E21]/5 to-transparent blur-[120px] pointer-events-none" />
+      <div className="absolute right-[-10%] bottom-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-amber-400/5 to-transparent blur-[130px] pointer-events-none" />
+
+      {/* Premium Light Header Banner */}
+      <div className="relative mb-6 flex flex-col justify-between gap-6 overflow-hidden rounded-[2rem] border border-amber-200/40 bg-gradient-to-br from-white via-[#FCFAF5] to-[#F8F5EE] p-6 shadow-[0_4px_24px_-4px_rgba(255,126,33,0.04),0_1px_4px_rgba(0,0,0,0.02)] sm:flex-row sm:items-center sm:p-8">
+        <div className="absolute -left-20 -top-20 h-48 w-48 rounded-full bg-[#FF7E21]/5 blur-[80px]" />
+        
+        <div className="relative space-y-2">
+          <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FF7E21]/10 to-[#FFD29D]/10 border border-[#FF7E21]/20 px-3.5 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#FF7E21]">
+            <CalendarDays className="h-3.5 w-3.5" />
+            Lịch học tập
           </div>
-
-          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-            <select
-              value={selectedWorkspaceId}
-              onChange={e => setSelectedWorkspaceId(e.target.value)}
-              style={{ padding: "7px 10px", borderRadius: "9px", border: `1px solid ${BDR}`, background: WH, color: T1, fontSize: "0.76rem", minWidth: "220px" }}
-            >
-              {workspaces.length === 0 && <option value="">Chưa có workspace</option>}
-              {workspaces.map(workspace => (
-                <option key={workspace.workspaceId} value={workspace.workspaceId}>{workspace.name}</option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (hasExistingCalendar) {
-                  setScheduleModalOpen(true);
-                  return;
-                }
-
-                void handleAutoGenerate();
-              }}
-              disabled={savingSchedule || !canGenerateCalendar}
-              className={`inline-flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-[0.75rem] font-bold transition-colors ${
-                hasExistingCalendar
-                  ? "border border-orange-500 bg-white text-orange-600 shadow-[0_2px_8px_rgba(255,107,0,0.12)] hover:bg-orange-50"
-                  : "bg-orange-500 text-white shadow-[0_2px_8px_rgba(255,107,0,0.3)] hover:bg-orange-600"
-              } ${savingSchedule || (!hasExistingCalendar && !canGenerateCalendar) ? "opacity-60" : ""}`}
-            >
-              {savingSchedule && !hasExistingCalendar ? <LoaderCircle size={12} className="animate-spin" /> : hasExistingCalendar ? <Check size={12} /> : <Sparkles size={12} />}
-              {savingSchedule && !hasExistingCalendar ? "⏳ Đang tạo lịch..." : hasExistingCalendar ? "⚙️ Tùy chỉnh & Tạo lại" : "✨ Tạo lịch AI tự động"}
-            </button>
-
-            <button
-              onClick={() => void reloadCalendarTasks()}
-              disabled={!selectedWorkspaceId}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "7px 12px",
-                borderRadius: "9px",
-                border: `1px solid ${BDR}`,
-                background: WH,
-                color: T1,
-                cursor: selectedWorkspaceId ? "pointer" : "not-allowed",
-                fontWeight: 700,
-                fontSize: "0.75rem",
-              }}
-            >
-              <RefreshCw size={12} />
-              Làm mới
-            </button>
-          </div>
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800">Lịch học cá nhân</h2>
+          <p className="max-w-2xl text-xs sm:text-sm leading-relaxed text-slate-500/90 font-medium">
+            Theo dõi, tự động hóa và sắp xếp thời gian biểu học tập thông minh dựa trên lộ trình AI.
+          </p>
         </div>
 
-        {!roadmapLoading && selectedWorkspaceId && !hasRoadmap && (
-          <div style={{ marginTop: "12px", padding: "12px 14px", borderRadius: "12px", border: "1px solid #FED7AA", background: "#FFF7ED", color: "#9A3412", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
-            <div>
-              <p style={{ fontSize: "0.8rem", fontWeight: 800 }}>Bạn cần tạo roadmap trước khi lên lịch học</p>
-              <p style={{ fontSize: "0.72rem", marginTop: "3px", color: "#B45309" }}>Hãy mở roadmap để hoàn tất lộ trình, rồi quay lại bấm AI soạn lịch.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate(`/app/workspaces/${selectedWorkspaceId}/roadmap`)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 12px",
-                borderRadius: "10px",
-                background: "#FFFFFF",
-                border: "1px solid #FDBA74",
-                color: "#9A3412",
-                fontSize: "0.76rem",
-                fontWeight: 800,
-                cursor: "pointer",
-              }}
-            >
-              Mở roadmap
-            </button>
-          </div>
-        )}
+        <div className="relative flex flex-wrap items-center gap-3">
+          <select
+            value={selectedWorkspaceId}
+            onChange={e => setSelectedWorkspaceId(e.target.value)}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[#FF7E21]/60 focus:ring-4 focus:ring-[#FF7E21]/5 min-w-[220px] shadow-sm cursor-pointer"
+          >
+            {workspaces.length === 0 && <option value="" className="bg-white text-slate-700">Chưa có workspace</option>}
+            {workspaces.map(workspace => (
+              <option key={workspace.workspaceId} value={workspace.workspaceId} className="bg-white text-slate-700">{workspace.name}</option>
+            ))}
+          </select>
 
-        {roadmapError && hasRoadmap === false && (
-          <div style={{ marginTop: "12px", padding: "12px 14px", borderRadius: "12px", border: "1px solid #FECACA", background: "#FEF2F2", color: "#B91C1C", fontSize: "0.8rem" }}>
-            Không tải được roadmap hiện tại: {roadmapError}
-          </div>
-        )}
+          <button
+            type="button"
+            onClick={() => {
+              if (hasExistingCalendar) {
+                setScheduleModalOpen(true);
+                return;
+              }
+              void handleAutoGenerate();
+            }}
+            disabled={savingSchedule || !canGenerateCalendar}
+            className={`inline-flex items-center gap-1.5 rounded-2xl px-5 py-3 text-xs font-bold transition-all duration-300 active:scale-[0.98] ${
+              hasExistingCalendar
+                ? "border border-[#FF7E21]/30 bg-slate-900 text-[#FF8C37] hover:bg-slate-800 hover:shadow-md hover:shadow-[#FF7E21]/5"
+                : "bg-gradient-to-r from-[#FF7E21] to-[#FF5E00] text-white shadow-md shadow-orange-500/10 hover:shadow-lg hover:shadow-orange-500/20"
+            } ${savingSchedule || (!hasExistingCalendar && !canGenerateCalendar) ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            {savingSchedule && !hasExistingCalendar ? <LoaderCircle size={14} className="animate-spin" /> : hasExistingCalendar ? <Check size={14} /> : <Sparkles size={14} />}
+            {savingSchedule && !hasExistingCalendar ? "Đang tạo lịch..." : hasExistingCalendar ? "Tùy chỉnh lịch" : "Tạo lịch AI"}
+          </button>
 
-        {selectedWorkspace && (
-          <div style={{ marginTop: "10px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "0.72rem", color: T3 }}>Workspace hiện tại:</span>
-            <span style={{ fontSize: "0.74rem", fontWeight: 700, color: OG }}>{selectedWorkspace.name}</span>
-            <span style={{ fontSize: "0.72rem", color: T3 }}>•</span>
-            <span style={{ fontSize: "0.72rem", color: T3 }}>{calendarTasks.length} task</span>
-            <span style={{ fontSize: "0.72rem", color: T3 }}>•</span>
-            <span style={{ fontSize: "0.72rem", color: T3 }}>{totalCompleted} hoàn thành</span>
-            <span style={{ fontSize: "0.72rem", color: T3 }}>•</span>
-            <span style={{ fontSize: "0.72rem", color: hasRoadmap ? "#059669" : "#B91C1C", fontWeight: 700 }}>{hasRoadmap ? "Roadmap sẵn sàng" : "Chưa có roadmap"}</span>
-          </div>
-        )}
+          <button
+            onClick={() => void reloadCalendarTasks()}
+            disabled={!selectedWorkspaceId}
+            className={`inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98] ${!selectedWorkspaceId ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            <RefreshCw size={14} />
+            Làm mới
+          </button>
+        </div>
       </div>
 
+      {!roadmapLoading && selectedWorkspaceId && !hasRoadmap && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-orange-200 bg-orange-50/60 px-4 py-3.5 text-[#9A3412] backdrop-blur-sm">
+          <div>
+            <p className="text-sm font-bold">Bạn cần tạo roadmap trước khi lên lịch học</p>
+            <p className="text-xs mt-1 text-[#B45309]">Hãy mở roadmap để hoàn tất lộ trình, rồi quay lại bấm AI soạn lịch.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(`/app/workspaces/${selectedWorkspaceId}/roadmap`)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-orange-300 bg-white px-4 py-2 text-xs font-bold text-[#9A3412] hover:bg-orange-50/55 transition duration-200 cursor-pointer"
+          >
+            Mở roadmap
+          </button>
+        </div>
+      )}
+
+      {roadmapError && hasRoadmap === false && (
+        <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
+          Không tải được roadmap hiện tại: {roadmapError}
+        </div>
+      )}
+
+      {selectedWorkspace && (
+        <div className="mb-6 flex flex-wrap items-center gap-4 bg-white/70 backdrop-blur-sm border border-slate-200/50 p-4 rounded-2xl shadow-[0_2px_8px_-3px_rgba(15,23,42,0.03)]">
+          <div className="flex items-center gap-1.5 rounded-xl border border-orange-100 bg-orange-50/40 px-3 py-1.5 text-xs font-bold text-[#FF7E21]">
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold">Workspace:</span>
+            <span>{selectedWorkspace.name}</span>
+          </div>
+          
+          <div className="flex items-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50/40 px-3 py-1.5 text-xs font-bold text-blue-700">
+            <span>{calendarTasks.length} công việc</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 rounded-xl border border-[#E9D5FF] bg-[#FAF5FF] px-3 py-1.5 text-xs font-bold text-purple-700">
+            <span>{totalCompleted} hoàn thành</span>
+          </div>
+
+          <div className="flex-1" />
+
+          <span className={`font-bold px-3 py-1.5 rounded-xl text-xs border ${hasRoadmap ? "bg-emerald-50/80 border-emerald-200 text-emerald-700" : "bg-rose-50/80 border-rose-200 text-rose-700"}`}>
+            {hasRoadmap ? "✓ Lộ trình hoàn chỉnh" : "⚠ Chưa lập lộ trình"}
+          </span>
+        </div>
+      )}
+
       {error && (
-        <div style={{ marginBottom: "14px", padding: "12px 14px", borderRadius: "12px", border: "1px solid #FECACA", background: "#FEF2F2", color: "#B91C1C", fontSize: "0.8rem" }}>
+        <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
           {error}
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "14px", alignItems: "start" }}>
-        <div style={{ background: WH, border: `1px solid ${BDR}`, borderRadius: "16px", padding: "12px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px", gap: "10px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <button onClick={() => shiftMonth(-1)} style={{ width: "28px", height: "28px", borderRadius: "8px", border: `1px solid ${BDR}`, background: WH, cursor: "pointer", color: T2 }}><ChevronLeft size={14} /></button>
-              <button onClick={() => shiftMonth(1)} style={{ width: "28px", height: "28px", borderRadius: "8px", border: `1px solid ${BDR}`, background: WH, cursor: "pointer", color: T2 }}><ChevronRight size={14} /></button>
-              <span style={{ fontSize: "0.84rem", fontWeight: 700, color: T1 }}>{monthLabel}</span>
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px] items-start">
+        {/* Calendar Box */}
+        <div className="rounded-[2.5rem] border border-slate-200/80 bg-white/80 backdrop-blur-sm p-6 shadow-[0_20px_50px_rgba(15,23,42,0.04)]">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <button onClick={() => shiftMonth(-1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:bg-slate-50 hover:text-[#FF7E21] hover:border-[#FF7E21]/20 active:scale-95"><ChevronLeft size={16} /></button>
+              <button onClick={() => shiftMonth(1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:bg-slate-50 hover:text-[#FF7E21] hover:border-[#FF7E21]/20 active:scale-95"><ChevronRight size={16} /></button>
+              <span className="ml-2 text-lg font-black text-slate-800">{monthLabel}</span>
             </div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 10px", borderRadius: "9px", background: "rgba(255,107,0,0.08)", border: "1px solid rgba(255,107,0,0.2)" }}>
-              <CalendarDays size={12} color={OG} />
-              <span style={{ fontSize: "0.72rem", color: OG, fontWeight: 800 }}>{loadingTasks ? "Đang tải" : `${calendarTasks.length} task`}</span>
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF7ED] border border-[#FFD29D]/60 px-3.5 py-1 text-xs font-bold text-[#FF7E21]">
+              <CalendarDays size={14} />
+              <span>{loadingTasks ? "Đang tải" : `${calendarTasks.length} nhiệm vụ`}</span>
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px", marginBottom: "6px" }}>
+          <div className="grid grid-cols-7 gap-2 mb-4">
             {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map(label => (
-              <div key={label} style={{ textAlign: "center", fontSize: "0.64rem", color: T3, fontWeight: 700 }}>{label}</div>
+              <div key={label} className="text-center text-xs font-black uppercase tracking-wider text-slate-400 py-1">{label}</div>
             ))}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px" }}>
+          <div className="grid grid-cols-7 gap-2">
             {cells.map((dayCell, index) => {
               if (!dayCell) {
-                return <div key={index} style={{ height: "72px", borderRadius: "10px", background: BG, border: `1px solid ${BDR}` }} />;
+                return <div key={index} className="h-20 rounded-2xl bg-slate-50/30 border border-slate-100/50" />;
               }
 
               const key = toDateKey(new Date(cursorYear, cursorMonth, dayCell));
@@ -537,28 +534,25 @@ export default function StudyCalendar() {
                 <button
                   key={index}
                   onClick={() => setSelectedDay(dayCell)}
-                  style={{
-                    height: "72px",
-                    borderRadius: "10px",
-                    border: selected ? `1.5px solid ${OG}` : `1px solid ${BDR}`,
-                    background: selected ? "#FFF7ED" : WH,
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    padding: "8px",
-                  }}
+                  className={`relative h-20 rounded-2xl p-3 flex flex-col justify-between items-start transition-all duration-300 border cursor-pointer bg-gradient-to-b from-white to-[#FAF9F6]/50 shadow-sm ${
+                    selected 
+                      ? "border-2 border-[#FF7E21] bg-gradient-to-br from-[#FFF9F3] to-[#FFEFE0] shadow-md shadow-orange-500/10 scale-102 ring-4 ring-[#FF7E21]/5" 
+                      : "border-slate-100 hover:border-slate-300/80 hover:shadow-md hover:bg-slate-50/50"
+                  }`}
                 >
-                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: selected ? OG : T1 }}>{dayCell}</span>
+                  <span className={`text-xs font-black ${selected ? "text-[#FF7E21]" : "text-slate-800"}`}>{dayCell}</span>
                   {count > 0 ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center", width: "100%", marginTop: "2px" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "22px", height: "22px", borderRadius: "8px", background: selected ? "rgba(255,107,0,0.14)" : "#FFF3E8", border: `1px solid ${selected ? "rgba(255,107,0,0.28)" : "#FDBA74"}`, color: OG, boxShadow: selected ? "0 2px 6px rgba(255,107,0,0.14)" : "none" }}>
-                        <ClipboardList size={12} strokeWidth={2.5} />
+                    <div className="flex items-center justify-center w-full">
+                      <span className={`flex h-7 w-7 items-center justify-center rounded-lg border text-xs font-black shadow-sm transition-all duration-300 ${
+                        selected 
+                          ? "bg-[#FF7E21] text-white border-transparent" 
+                          : "bg-[#FFF4EB] text-[#FF7E21] border-[#FFD29D]/40"
+                      }`}>
+                        {count}
                       </span>
                     </div>
                   ) : (
-                    <span style={{ fontSize: "0.62rem", color: T3 }}>Không có task</span>
+                    <div className="h-1.5 w-1.5 rounded-full bg-slate-200/80 mx-auto mt-1" />
                   )}
                 </button>
               );
@@ -566,20 +560,22 @@ export default function StudyCalendar() {
           </div>
         </div>
 
-        <div style={{ background: WH, border: `1px solid ${BDR}`, borderRadius: "16px", padding: "14px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", position: "sticky", top: "14px" }}>
-          <h3 style={{ fontSize: "0.9rem", fontWeight: 800, color: T1 }}>Kế hoạch trong ngày</h3>
-          <p style={{ fontSize: "0.68rem", color: T3, marginTop: "3px", marginBottom: "10px" }}>{selectedKey}</p>
+        {/* Side Panel: Daily Tasks */}
+        <div className="rounded-[2.5rem] border border-slate-200/80 bg-white/90 backdrop-blur-sm p-6 shadow-[0_20px_50px_rgba(15,23,42,0.04)] lg:sticky lg:top-6">
+          <h3 className="text-base font-black text-slate-800">Kế hoạch trong ngày</h3>
+          <p className="text-[10px] font-bold text-[#FF7E21] mt-1 mb-4 uppercase tracking-wider bg-orange-50 border border-orange-100/40 rounded-lg px-2 py-0.5 inline-block">{selectedKey}</p>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "7px", maxHeight: "420px", overflowY: "auto" }}>
+          <div className="flex flex-col gap-3 max-h-[460px] overflow-y-auto pr-1">
             {loadingTasks && (
-              <div style={{ padding: "12px", borderRadius: "10px", border: `1px solid ${BDR}`, color: T2, fontSize: "0.74rem", textAlign: "center" }}>
+              <div className="flex items-center justify-center p-8 rounded-2xl border border-slate-150 bg-slate-50/50 text-xs font-semibold text-slate-400">
+                <LoaderCircle size={14} className="animate-spin text-[#FF7E21] mr-2" />
                 Đang tải lịch học...
               </div>
             )}
 
             {!loadingTasks && selectedTasks.length === 0 && (
-              <div style={{ padding: "12px", borderRadius: "10px", border: `1px dashed ${BDR}`, color: T3, fontSize: "0.74rem", textAlign: "center" }}>
-                Chưa có task cho ngày này
+              <div className="p-8 rounded-2xl border border-dashed border-slate-200 text-center text-xs font-semibold text-slate-400 bg-slate-50/20">
+                Chưa có nhiệm vụ nào trong ngày.
               </div>
             )}
 
@@ -591,61 +587,48 @@ export default function StudyCalendar() {
               const futureTask = isFutureTaskDate(task.taskDate, todayKey);
 
               return (
-                <div key={task.taskId} style={{ padding: "9px 10px", borderRadius: "10px", border: `1px solid ${BDR}`, background: done ? BG : WH }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-                    <div style={{ marginTop: "1px" }}>
-                      {done ? <Check size={14} color="#22C55E" /> : <div style={{ width: "14px", height: "14px", border: `2px solid ${T3}`, borderRadius: "50%" }} />}
+                <div key={task.taskId} className={`p-4 rounded-2xl border transition-all duration-300 ${done ? "border-slate-200/40 bg-[#F8F9FA]/40 shadow-none" : "border-slate-200 bg-white hover:border-[#FF7E21]/30 hover:shadow-md hover:shadow-orange-500/5 border-l-4 border-l-[#FF7E21]"}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5">
+                      {done ? (
+                        <div className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                          <Check size={12} strokeWidth={3} />
+                        </div>
+                      ) : (
+                        <div className="w-4.5 h-4.5 border-2 border-slate-300 rounded-full" />
+                      )}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: "0.78rem", color: done ? T3 : T1, fontWeight: 600, textDecoration: done ? "line-through" : "none" }}>{task.title}</p>
-                      <div style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                        <Clock size={10} color={T3} />
-                        <span style={{ fontSize: "0.66rem", color: T3 }}>{toReadableTime(task.startTime)} - {toReadableTime(task.endTime)}</span>
-                        <span style={{ fontSize: "0.66rem", color: OG, fontWeight: 700 }}>{task.durationMinutes || 0}p</span>
-                        <span style={{ fontSize: "0.66rem", color: done ? "#059669" : T2, fontWeight: 700 }}>{done ? "COMPLETED" : (task.status || "PENDING")}</span>
-                        {done ? (
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "5px",
-                              padding: "6px 10px",
-                              borderRadius: "999px",
-                              border: "1px solid #BBF7D0",
-                              background: "#ECFDF5",
-                              color: "#047857",
-                              fontSize: "0.66rem",
-                              fontWeight: 800,
-                            }}
-                          >
-                            <Check size={10} />
-                            Đã hoàn thành
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => openStudySession(task.taskId)}
-                            disabled={futureTask}
-                            title={futureTask ? "Chưa đến ngày học" : undefined}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "5px",
-                              padding: "6px 10px",
-                              borderRadius: "999px",
-                              border: "1px solid #FED7AA",
-                              background: "#FFF7ED",
-                              color: "#C2410C",
-                              cursor: futureTask ? "not-allowed" : "pointer",
-                              fontSize: "0.66rem",
-                              fontWeight: 800,
-                            }}
-                            className={futureTask ? "opacity-50 cursor-not-allowed" : "transition hover:brightness-95"}
-                          >
-                            <PlayCircle size={10} />
-                            {actionableLabel}
-                          </button>
-                        )}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-bold leading-snug ${done ? "text-slate-400 line-through" : "text-slate-800"}`}>{task.title}</p>
+                      
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                        <span className="flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-700 px-2.5 py-0.5 rounded-lg font-bold text-[10px]">
+                          <Clock size={11} className="text-blue-500" />
+                          {toReadableTime(task.startTime)} - {toReadableTime(task.endTime)}
+                        </span>
+                        
+                        <span className="inline-flex items-center gap-1 bg-orange-50 border border-orange-100 text-[#FF7E21] px-2 py-0.5 rounded-lg font-bold text-[10px]">
+                          {task.durationMinutes || 0}m
+                        </span>
+                        
+                        <div className="ml-auto">
+                          {done ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 font-extrabold text-[10px]">
+                              Đã xong
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openStudySession(task.taskId)}
+                              disabled={futureTask}
+                              title={futureTask ? "Chưa đến ngày học" : undefined}
+                              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border border-orange-200 bg-orange-50/50 text-[#FF7E21] font-bold transition-all hover:bg-[#FF7E21] hover:text-white hover:border-transparent text-[10px] ${futureTask ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                            >
+                              <PlayCircle size={11} />
+                              <span>{actionableLabel}</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

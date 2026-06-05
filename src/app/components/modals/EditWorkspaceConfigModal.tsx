@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Clock3, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { Check, Clock3, Loader2, Plus, Sparkles, Trash2, X, Calendar, Award } from "lucide-react";
 import { toast } from "sonner";
 
 import onboardingService, { type OnboardingProfileResponse } from "../../../api/onboardingService";
@@ -41,6 +41,7 @@ type EditWorkspaceConfigModalProps = {
   workspaceName?: string;
   initialConfig?: OnboardingProfileResponse | null;
   onSaved?: (profile: OnboardingProfileResponse) => void;
+  inline?: boolean;
 };
 
 type TimeSlotBadgeProps = {
@@ -73,22 +74,22 @@ function ConfidenceCard({ active, title, description, onClick }: { active: boole
       className={
         "group w-full rounded-2xl border p-4 text-left transition-all duration-200 " +
         (active
-          ? "border-orange-500 bg-orange-50 shadow-[0_12px_30px_rgba(249,115,22,0.14)]"
-          : "border-slate-200 bg-white hover:border-orange-200 hover:bg-orange-50/50")
+          ? "border-[#FF6B00] bg-orange-50/20 shadow-sm scale-[1.02]"
+          : "border-slate-200 bg-white hover:border-orange-200 hover:bg-orange-50/10")
       }
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-bold text-slate-900">{title}</div>
-          <div className="mt-1 text-xs leading-5 text-slate-500">{description}</div>
+          <div className="text-sm font-extrabold text-slate-800">{title}</div>
+          <div className="mt-1 text-xs leading-5 text-slate-400 font-medium">{description}</div>
         </div>
         <div
           className={
-            "flex h-6 w-6 items-center justify-center rounded-full border transition-all " +
-            (active ? "border-orange-500 bg-orange-500 text-white" : "border-slate-200 text-transparent")
+            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all " +
+            (active ? "border-[#FF6B00] bg-[#FF6B00] text-white" : "border-slate-200 text-transparent")
           }
         >
-          <Check className="h-3.5 w-3.5" />
+          <Check className="h-3 w-3" />
         </div>
       </div>
     </button>
@@ -177,6 +178,7 @@ export default function EditWorkspaceConfigModal({
   workspaceName,
   initialConfig,
   onSaved,
+  inline = false,
 }: EditWorkspaceConfigModalProps) {
   const {
     register,
@@ -299,6 +301,175 @@ export default function EditWorkspaceConfigModal({
     }
   });
 
+  /* ── Inline render (Config tab) ── */
+  if (inline) {
+    return (
+      <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden">
+        {/* Inline Header */}
+        <div className="px-6 py-5 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 border border-orange-100 text-[#FF6B00]">
+              <Sparkles className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-[#FF6B00] uppercase tracking-[0.2em] mb-0.5">Cấu hình lộ trình</div>
+              <h2 className="text-base font-extrabold text-slate-800">
+                {workspaceName ? workspaceName : "Cấu hình học tập AI"}
+              </h2>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-6 bg-slate-50/20">
+          <form id="edit-workspace-config-form-inline" onSubmit={onSubmit} className="space-y-6">
+            
+            {/* NHÓM 1: MỤC TIÊU & THỜI GIAN */}
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-4">
+              <div className="flex items-center gap-2.5 pb-3.5 border-b border-slate-100">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-[#FF6B00]">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </div>
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Mục tiêu & Cam kết thời gian</span>
+              </div>
+
+              <div className="grid gap-5 md:grid-cols-12">
+                {/* Target Goal */}
+                <div className="col-span-12 md:col-span-7 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Mục tiêu học tập của bạn</label>
+                    <span className="text-xs font-semibold text-slate-400">{targetGoalValue.length}/2000</span>
+                  </div>
+                  <textarea
+                    {...register("targetGoal")}
+                    rows={4}
+                    maxLength={2000}
+                    placeholder="Ví dụ: Nắm vững kiến thức ReactJS và Hooks để tự tay xây dựng ứng dụng web hiện đại..."
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm leading-relaxed text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-orange-500/10 resize-none font-medium"
+                  />
+                  {errors.targetGoal && <p className="text-xs text-red-500 font-medium">{errors.targetGoal.message}</p>}
+                </div>
+
+                {/* Hours & Deadline */}
+                <div className="col-span-12 md:col-span-5 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400 block">Số giờ học mỗi tuần</label>
+                    <div className="relative">
+                      <input type="number" min={1} max={40} {...register("studyHoursPerWeek", { valueAsNumber: true })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 pr-24 text-sm font-bold text-slate-800 outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-orange-500/10" />
+                      <span className="absolute inset-y-0 right-4 flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-wide">giờ/tuần</span>
+                    </div>
+                    {errors.studyHoursPerWeek && <p className="text-xs text-red-500 font-medium">{errors.studyHoursPerWeek.message}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400 block">Ngày hoàn thành dự kiến</label>
+                    <input type="date" value={targetDeadlineValue}
+                      onChange={e => setValue("targetDeadline", e.target.value, { shouldDirty: true })}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm font-bold text-slate-800 outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-orange-500/10" />
+                    {errors.targetDeadline && <p className="text-xs text-red-500 font-medium">{errors.targetDeadline.message}</p>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* NHÓM 2: MỨC TỰ TIN */}
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-4">
+              <div className="flex items-center gap-2.5 pb-3.5 border-b border-slate-100">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500">
+                  <Award className="h-3.5 w-3.5" />
+                </div>
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Mức độ tự tin hiện tại</span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {confidenceOptions.map(option => (
+                    <ConfidenceCard key={option.value} active={currentConfidence === option.value}
+                      title={option.title} description={option.description}
+                      onClick={() => setValue("confidence", option.value, { shouldValidate: true, shouldDirty: true })} />
+                  ))}
+                </div>
+                {errors.confidence && <p className="text-xs text-red-500 font-medium">{errors.confidence.message}</p>}
+              </div>
+            </div>
+
+            {/* NHÓM 3: LỊCH HỌC DỰ KIẾN */}
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-5">
+              <div className="flex items-center gap-2.5 pb-3.5 border-b border-slate-100">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-500">
+                  <Clock3 className="h-3.5 w-3.5" />
+                </div>
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Lịch rảnh của bạn</span>
+              </div>
+
+              {/* Day chips preferredDays */}
+              <div className="space-y-3">
+                <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400 block">Ngày học ưu tiên trong tuần</label>
+                <div className="flex flex-wrap gap-2">
+                  {dayOptions.map(day => {
+                    const isActive = selectedDays.includes(day.value);
+                    return (
+                      <button
+                        key={day.value}
+                        type="button"
+                        onClick={() => toggleDay(day.value)}
+                        className={`h-10 w-10 rounded-xl border text-xs font-bold transition-all duration-150 flex items-center justify-center ${
+                          isActive 
+                            ? "bg-[#FF6B00] border-[#FF6B00] text-white shadow-md shadow-[#FF6B00]/25 scale-105" 
+                            : "bg-slate-50 border-slate-200 text-slate-500 hover:border-orange-200 hover:bg-orange-50/30"
+                        }`}
+                      >
+                        {day.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Time Slots preferredTimeSlots */}
+              <div className="space-y-3 pt-2">
+                <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400 block">Khung giờ rảnh trong ngày</label>
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                  {TIME_SLOTS_OPTIONS.map(slot => {
+                    const isSelected = timeSlots.includes(slot.value);
+                    return (
+                      <button key={slot.id} type="button"
+                        onClick={() => setTimeSlots(curr => curr.includes(slot.value) ? curr.filter(s => s !== slot.value) : [...curr, slot.value])}
+                        className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold transition-all duration-150 ${
+                          isSelected 
+                            ? "border-[#FF6B00] bg-orange-50/40 text-[#FF6B00] font-extrabold shadow-sm scale-[1.01]" 
+                            : "border-slate-200 bg-slate-50/30 text-slate-600 hover:border-[#FF6B00]/30 hover:bg-orange-50/10"
+                        }`}>
+                        {isSelected && <Check className="h-3.5 w-3.5 shrink-0 text-[#FF6B00]" />}
+                        <span className="truncate">{slot.label.replace(/ \(.*\)/, "")}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+        {/* Inline Footer Actions */}
+        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
+          <button type="button" onClick={onClose}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-800">
+            Hủy
+          </button>
+          <button type="submit" form="edit-workspace-config-form-inline"
+            disabled={isSubmitting || loadingProfile}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 hover:bg-[#E05E00] disabled:opacity-70 transition">
+            {isSubmitting || loadingProfile ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <Check className="h-4 w-4" />}
+            {isSubmitting || loadingProfile ? "Đang lưu..." : "Lưu thay đổi"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Modal overlay render ── */
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
       <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl shadow-black/20">

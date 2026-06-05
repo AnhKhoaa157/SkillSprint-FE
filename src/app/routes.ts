@@ -1,5 +1,5 @@
 import React from "react";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./pages/workspace/Dashboard";
 import Roadmap from "./pages/workspace/Roadmap";
@@ -112,7 +112,7 @@ export const router = createBrowserRouter([
     path: appRoutes.root,
     Component: ProtectedLayout,
     children: [
-      { index: true, Component: Dashboard },
+      { index: true, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },
       { path: appRoutes.syllabus, Component: SyllabusInput },
       { path: appRoutes.calendar, Component: StudyCalendar },
       { path: appRoutes.matrix, Component: TaskMatrix },
@@ -127,7 +127,7 @@ export const router = createBrowserRouter([
       { path: appRoutes.learningCourse, Component: CoursePlayer },
       { path: appRoutes.quizReview, Component: QuizReviewFlow },
       { path: appRoutes.quizResult, Component: QuizResult },
-      { path: appRoutes.fallback, Component: Dashboard },
+      { path: appRoutes.fallback, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },
     ],
   },
 ]);
