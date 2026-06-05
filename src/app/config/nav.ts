@@ -7,7 +7,6 @@ import {
   Trophy,
   Users,
   TrendingUp,
-  Building2,
 } from "lucide-react";
 
 export type NavIcon = typeof LayoutDashboard;
@@ -29,7 +28,6 @@ export type AppNavSection = {
 export const ADMIN_NAV = [
   { id: "users",      label: "Người học & Nhóm học", icon: Users     },
   { id: "financials", label: "Tài chính",           icon: TrendingUp },
-  { id: "b2b",        label: "Đối tác B2B",         icon: Building2  },
 ];
 
 export const APP_NAV_SECTIONS: AppNavSection[] = [
