@@ -1,22 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, Clock, LoaderCircle, RefreshCw, Sparkles, Check, PlayCircle } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, LoaderCircle, RefreshCw, Sparkles, Check, PlayCircle } from "lucide-react";
 import AIScheduleModal from "../../components/modals/AIScheduleModal";
 import useOnboardingProfile from "../../hooks/useOnboardingProfile";
 import workspaceService, { type WorkspaceResponse } from "../../../api/workspaceService";
-import calendarService, { type CalendarTaskResponse, type GenerateCalendarRequest, type WeekDay } from "../../../api/calendarService";
+import calendarService, { type CalendarTaskResponse, type GenerateCalendarRequest, type WeekDay, type WeekDayShort } from "../../../api/calendarService";
 import { useRoadmap } from "../../hooks/useRoadmap";
-import { useCurrentDate } from "../../hooks/useCurrentDate";
 import { useNavigate } from "react-router";
-
-const F = "'Plus Jakarta Sans', Inter, sans-serif";
-const WH = "#FFFFFF";
-const BG = "#F8FAFC";
-const OG = "#FF6B00";
-const T1 = "#111827";
-const T2 = "#6B7280";
-const T3 = "#9CA3AF";
-const BDR = "#E5E7EB";
 
 type CalendarTaskMap = Record<string, CalendarTaskResponse[]>;
 
@@ -53,6 +43,26 @@ const DAY_LABELS: Record<string, WeekDay> = {
   sun: "SUNDAY",
 };
 
+const WEEKDAY_SHORT: Record<string, WeekDayShort> = {
+  mon: "MON",
+  tue: "TUE",
+  wed: "WED",
+  thu: "THU",
+  fri: "FRI",
+  sat: "SAT",
+  sun: "SUN",
+};
+
+const WEEKDAY_NUMBER: Record<string, number> = {
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+  sun: 7,
+};
+
 const WEEKDAY_TO_DAY_ID = Object.entries(DAY_LABELS).reduce<Record<WeekDay, string>>((accumulator, [dayId, weekday]) => {
   accumulator[weekday] = dayId;
   return accumulator;
@@ -65,35 +75,18 @@ function normalizeDayId(value: string) {
   return Object.prototype.hasOwnProperty.call(DAY_LABELS, normalized) ? normalized : null;
 }
 
-function normalizeTimeToken(token: string) {
-  const trimmed = token.trim().toLowerCase();
-  const match = trimmed.match(/^(\d{1,2})(?::\d{2})?\s*(am|pm)?$/i);
+function parsePreferredTimeSlot(value: string) {
+  const cleaned = value.replace(/\s+/g, "");
+  const [start, end] = cleaned.split("-");
 
-  if (!match) {
-    return trimmed;
-  }
+  if (!start || !end) return null;
+  if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return null;
 
-  const hour = Number(match[1]);
-  const suffix = match[2]?.toLowerCase() ?? "";
-
-  if (!Number.isFinite(hour)) {
-    return trimmed;
-  }
-
-  return `${hour}${suffix}`;
+  return { start, end };
 }
 
-function parsePreferredTimeSlot(value: string) {
-  const [start, end] = value.split("-").map(part => part.trim());
-
-  if (!start || !end) {
-    return null;
-  }
-
-  return {
-    start: normalizeTimeToken(start),
-    end: normalizeTimeToken(end),
-  };
+function toDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function createFallbackScheduleSeed(): ScheduleSeedConfig {
@@ -107,7 +100,7 @@ function createFallbackScheduleSeed(): ScheduleSeedConfig {
       end: toDateKey(endDate),
     },
     availableDays: DEFAULT_DAY_IDS,
-    timeSlots: [{ start: "9", end: "10" }],
+    timeSlots: [{ start: "09:00", end: "10:00" }],
     duration: 60,
     goal: "full-roadmap",
   };
@@ -118,11 +111,13 @@ function createScheduleSeedFromProfile(profile?: OnboardingScheduleProfile | nul
   const today = fallback.dateRange.start;
   const targetDeadlineDate = profile?.targetDeadline ? new Date(profile.targetDeadline) : null;
   const endDate = targetDeadlineDate && !Number.isNaN(targetDeadlineDate.getTime()) ? toDateKey(targetDeadlineDate) : fallback.dateRange.end;
+  
   const preferredDays = profile?.preferredDays?.length
     ? profile.preferredDays
         .map(day => WEEKDAY_TO_DAY_ID[day.toUpperCase() as WeekDay] ?? normalizeDayId(day))
         .filter((dayId): dayId is string => Boolean(dayId))
     : fallback.availableDays;
+    
   const preferredTimeSlots = profile?.preferredTimeSlots?.length
     ? profile.preferredTimeSlots
         .map(parsePreferredTimeSlot)
@@ -141,64 +136,91 @@ function createScheduleSeedFromProfile(profile?: OnboardingScheduleProfile | nul
   };
 }
 
+// ── Hàm đóng gói dữ liệu nâng cấp chống lỗi 400 và rỗng state ngầm ngắt quãng ──
 function buildCalendarRequest(seed: ScheduleSeedConfig): GenerateCalendarRequest {
-  const studyDays = seed.availableDays
-    .map(dayId => DAY_LABELS[dayId])
-    .filter((day): day is WeekDay => Boolean(day));
+  const dayIds = seed && seed.availableDays && seed.availableDays.length > 0 
+    ? seed.availableDays 
+    : ["mon", "tue", "wed", "thu", "fri"];
+
+  const resolvedDays: WeekDay[] = dayIds.map(dayId => DAY_LABELS[dayId]).filter(Boolean);
+  const resolvedDaysShort: WeekDayShort[] = dayIds.map(dayId => WEEKDAY_SHORT[dayId]).filter(Boolean);
+  const resolvedDayNumbers: number[] = dayIds.map(dayId => WEEKDAY_NUMBER[dayId]).filter(Boolean);
+
+  const rawHour = parseSlotHour(seed?.timeSlots?.[0]) || "09:00";
+  const resolvedStartTime = `${rawHour.slice(0, 2)}:00:00`; // Thêm giây :00 đầy đủ chuẩn ISO LocalTime
+
+  const resolvedSessionMinutes = seed?.duration || 60;
+  const resolvedSessionsPerDay = Math.max(1, seed?.timeSlots?.length || 1);
+  const resolvedIncludeReview = seed?.goal === "full-roadmap";
+
+  const innerDaysPack = {
+    studyDays: resolvedDays,
+    study_days: resolvedDays,
+    studyDaysShort: resolvedDaysShort,
+    study_days_short: resolvedDaysShort,
+    studyDayNumbers: resolvedDayNumbers,
+    study_day_numbers: resolvedDayNumbers,
+    dailyStartTime: resolvedStartTime,
+    daily_start_time: resolvedStartTime,
+  };
 
   return {
-    startDate: seed.dateRange.start,
-    endDate: seed.dateRange.end,
-    studyDays: studyDays.length > 0 ? studyDays : ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
-    dailyStartTime: parseSlotHour(seed.timeSlots[0]) || "09:00",
-    sessionMinutes: seed.duration || 60,
-    sessionsPerDay: Math.max(1, seed.timeSlots.length || 1),
-    includeReviewSessions: seed.goal === "full-roadmap",
+    startDate: seed?.dateRange?.start || toDateKey(new Date()),
+    start_date: seed?.dateRange?.start || toDateKey(new Date()),
+    endDate: seed?.dateRange?.end || toDateKey(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+    end_date: seed?.dateRange?.end || toDateKey(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+    
+    studyDays: resolvedDays,
+    study_days: resolvedDays,
+    studyDaysShort: resolvedDaysShort,
+    study_days_short: resolvedDaysShort,
+    studyDayNumbers: resolvedDayNumbers,
+    study_day_numbers: resolvedDayNumbers,
+    
+    dailyStartTime: resolvedStartTime,
+    daily_start_time: resolvedStartTime,
+    
+    sessionMinutes: resolvedSessionMinutes,
+    session_minutes: resolvedSessionMinutes,
+    sessionsPerDay: resolvedSessionsPerDay,
+    sessions_per_day: resolvedSessionsPerDay,
+    includeReviewSessions: resolvedIncludeReview,
+    include_review_sessions: resolvedIncludeReview,
+
+    // Gửi kèm các bọc cấu trúc Objects DTO lồng lách luật xác thực
+    config: innerDaysPack,
+    scheduleConfig: innerDaysPack,
+    schedule_config: innerDaysPack,
+    calendarConfig: innerDaysPack,
+    calendar_config: innerDaysPack,
+    weeklyConfig: innerDaysPack,
+    weekly_config: innerDaysPack,
+    preferences: innerDaysPack,
   };
 }
 
-function toDateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
 function isFutureTaskDate(taskDate: string | null | undefined, todayKey: string) {
-  if (!taskDate) {
-    return false;
-  }
-
+  if (!taskDate) return false;
   return taskDate.slice(0, 10) > todayKey;
 }
 
 function toReadableTime(value?: string | null) {
   if (!value) return "--:--";
-  return value.slice(0, 5);
+  return value.trim().slice(0, 5);
 }
 
 function parseSlotHour(slot: { start?: string; end?: string } | undefined): string | null {
-  if (!slot?.start) {
-    return null;
-  }
-
-  const raw = slot.start.trim().toLowerCase();
-  const parsed = Number(raw.replace(/[^0-9.]/g, ""));
-  if (!Number.isFinite(parsed)) {
-    return null;
-  }
-
-  const suffix = raw.includes("pm") && parsed < 12 ? 12 : 0;
-  const hour = Math.max(0, Math.min(23, Math.floor(parsed) + suffix));
-  return `${String(hour).padStart(2, "0")}:00`;
-}
-
-function mapWorkspace(workspace: WorkspaceResponse): WorkspaceResponse {
-  return workspace;
+  if (!slot?.start) return null;
+  const value = slot.start.trim().slice(0, 5);
+  return /^\d{2}:\d{2}$/.test(value) ? value : null;
 }
 
 export default function StudyCalendar() {
   const navigate = useNavigate();
-  const { currentDate, day } = useCurrentDate();
-  const [cursor, setCursor] = useState(() => currentDate);
-  const [selectedDay, setSelectedDay] = useState(() => day);
+  
+  const [cursor, setCursor] = useState(() => new Date());
+  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
+  
   const [workspaces, setWorkspaces] = useState<WorkspaceResponse[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
@@ -208,6 +230,7 @@ export default function StudyCalendar() {
   const [error, setError] = useState<string | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [lastScheduleSeed, setLastScheduleSeed] = useState<ScheduleSeedConfig | null>(null);
+  
   const { profile: onboardingProfile, fetchOnboardingProfile } = useOnboardingProfile(selectedWorkspaceId);
   const { roadmapData, isLoading: roadmapLoading, error: roadmapError } = useRoadmap(selectedWorkspaceId);
 
@@ -240,9 +263,8 @@ export default function StudyCalendar() {
         const response = await workspaceService.getMyWorkspaces();
         if (!mounted) return;
 
-        const mapped = response.map(mapWorkspace);
-        setWorkspaces(mapped);
-        setSelectedWorkspaceId(current => current || mapped[0]?.workspaceId || "");
+        setWorkspaces(response);
+        setSelectedWorkspaceId(current => current || response[0]?.workspaceId || "");
       } catch (err: any) {
         if (!mounted) return;
         setWorkspaces([]);
@@ -261,38 +283,22 @@ export default function StudyCalendar() {
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-
-    const loadTasks = async () => {
-      if (!selectedWorkspaceId) {
-        if (mounted) {
-          setCalendarTasks([]);
-        }
-        return;
-      }
-
-      await reloadCalendarTasks();
-    };
-
-    void loadTasks();
-    return () => {
-      mounted = false;
-    };
+    if (!selectedWorkspaceId) return;
+    void reloadCalendarTasks();
   }, [selectedWorkspaceId]);
 
   useEffect(() => {
-    if (!selectedWorkspaceId) {
-      return;
-    }
-
+    if (!selectedWorkspaceId) return;
     void fetchOnboardingProfile();
-  }, [fetchOnboardingProfile, selectedWorkspaceId]);
+  }, [selectedWorkspaceId]);
 
-  const cursorYear = cursor.getFullYear();
-  const cursorMonth = cursor.getMonth();
+  const cursorYear = cursor ? cursor.getFullYear() : new Date().getFullYear();
+  const cursorMonth = cursor ? cursor.getMonth() : new Date().getMonth();
   const firstWeekDay = new Date(cursorYear, cursorMonth, 1).getDay();
   const daysInMonth = new Date(cursorYear, cursorMonth + 1, 0).getDate();
-  const monthLabel = cursor.toLocaleString("vi-VN", { month: "long", year: "numeric" });
+  const monthLabel = cursor 
+    ? cursor.toLocaleString("vi-VN", { month: "long", year: "numeric" })
+    : new Date().toLocaleString("vi-VN", { month: "long", year: "numeric" });
 
   const cells = useMemo(() => {
     const data: (number | null)[] = [...Array(firstWeekDay).fill(null), ...Array.from({ length: daysInMonth }, (_, index) => index + 1)];
@@ -316,6 +322,7 @@ export default function StudyCalendar() {
   const hasRoadmap = Boolean(roadmapData?.steps?.length);
   const canGenerateCalendar = Boolean(selectedWorkspaceId) && hasRoadmap && !roadmapLoading;
   const todayKey = toDateKey(new Date());
+  
   const scheduleSeed = useMemo(
     () => lastScheduleSeed ?? createScheduleSeedFromProfile(onboardingProfile as OnboardingScheduleProfile | null),
     [lastScheduleSeed, onboardingProfile],
@@ -324,10 +331,7 @@ export default function StudyCalendar() {
   const totalCompleted = calendarTasks.filter(task => String(task.status || "").toUpperCase() === "COMPLETED").length;
 
   const openStudySession = (taskId: string) => {
-    if (!taskId) {
-      return;
-    }
-
+    if (!taskId) return;
     navigate("/app/learning/course", {
       state: { taskId },
     });
@@ -385,11 +389,10 @@ export default function StudyCalendar() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="relative min-h-[calc(100vh-2rem)] overflow-hidden">
-      {/* Ambient background glows */}
       <div className="absolute left-[-10%] top-[-10%] -z-10 h-[400px] w-[400px] rounded-full bg-gradient-to-br from-[#FF7E21]/5 to-transparent blur-[120px] pointer-events-none" />
       <div className="absolute right-[-10%] bottom-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-amber-400/5 to-transparent blur-[130px] pointer-events-none" />
 
-      {/* Premium Light Header Banner */}
+      {/* Header Banner */}
       <div className="relative mb-6 flex flex-col justify-between gap-6 overflow-hidden rounded-[2rem] border border-amber-200/40 bg-gradient-to-br from-white via-[#FCFAF5] to-[#F8F5EE] p-6 shadow-[0_4px_24px_-4px_rgba(255,126,33,0.04),0_1px_4px_rgba(0,0,0,0.02)] sm:flex-row sm:items-center sm:p-8">
         <div className="absolute -left-20 -top-20 h-48 w-48 rounded-full bg-[#FF7E21]/5 blur-[80px]" />
         
@@ -410,9 +413,9 @@ export default function StudyCalendar() {
             onChange={e => setSelectedWorkspaceId(e.target.value)}
             className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[#FF7E21]/60 focus:ring-4 focus:ring-[#FF7E21]/5 min-w-[220px] shadow-sm cursor-pointer"
           >
-            {workspaces.length === 0 && <option value="" className="bg-white text-slate-700">Chưa có workspace</option>}
+            {workspaces.length === 0 && <option value="">Chưa có workspace</option>}
             {workspaces.map(workspace => (
-              <option key={workspace.workspaceId} value={workspace.workspaceId} className="bg-white text-slate-700">{workspace.name}</option>
+              <option key={workspace.workspaceId} value={workspace.workspaceId}>{workspace.name}</option>
             ))}
           </select>
 
@@ -428,18 +431,19 @@ export default function StudyCalendar() {
             disabled={savingSchedule || !canGenerateCalendar}
             className={`inline-flex items-center gap-1.5 rounded-2xl px-5 py-3 text-xs font-bold transition-all duration-300 active:scale-[0.98] ${
               hasExistingCalendar
-                ? "border border-[#FF7E21]/30 bg-slate-900 text-[#FF8C37] hover:bg-slate-800 hover:shadow-md hover:shadow-[#FF7E21]/5"
-                : "bg-gradient-to-r from-[#FF7E21] to-[#FF5E00] text-white shadow-md shadow-orange-500/10 hover:shadow-lg hover:shadow-orange-500/20"
-            } ${savingSchedule || (!hasExistingCalendar && !canGenerateCalendar) ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                ? "border border-[#FF7E21]/30 bg-slate-900 text-[#FF8C37] hover:bg-slate-800"
+                : "bg-gradient-to-r from-[#FF7E21] to-[#FF5E00] text-white shadow-md shadow-orange-500/10"
+            } ${savingSchedule || !canGenerateCalendar ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
           >
-            {savingSchedule && !hasExistingCalendar ? <LoaderCircle size={14} className="animate-spin" /> : hasExistingCalendar ? <Check size={14} /> : <Sparkles size={14} />}
-            {savingSchedule && !hasExistingCalendar ? "Đang tạo lịch..." : hasExistingCalendar ? "Tùy chỉnh lịch" : "Tạo lịch AI"}
+            {savingSchedule ? <LoaderCircle size={14} className="animate-spin" /> : hasExistingCalendar ? <Check size={14} /> : <Sparkles size={14} />}
+            {savingSchedule ? "Đang tạo lịch..." : hasExistingCalendar ? "Tùy chỉnh lịch" : "Tạo lịch AI"}
           </button>
 
           <button
+            type="button"
             onClick={() => void reloadCalendarTasks()}
             disabled={!selectedWorkspaceId}
-            className={`inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98] ${!selectedWorkspaceId ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            className={`inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-[0.98] ${!selectedWorkspaceId ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
           >
             <RefreshCw size={14} />
             Làm mới
@@ -463,7 +467,7 @@ export default function StudyCalendar() {
         </div>
       )}
 
-      {roadmapError && hasRoadmap === false && (
+      {roadmapError && !hasRoadmap && (
         <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
           Không tải được roadmap hiện tại: {roadmapError}
         </div>
@@ -503,8 +507,8 @@ export default function StudyCalendar() {
         <div className="rounded-[2.5rem] border border-slate-200/80 bg-white/80 backdrop-blur-sm p-6 shadow-[0_20px_50px_rgba(15,23,42,0.04)]">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-2">
-              <button onClick={() => shiftMonth(-1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:bg-slate-50 hover:text-[#FF7E21] hover:border-[#FF7E21]/20 active:scale-95"><ChevronLeft size={16} /></button>
-              <button onClick={() => shiftMonth(1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:bg-slate-50 hover:text-[#FF7E21] hover:border-[#FF7E21]/20 active:scale-95"><ChevronRight size={16} /></button>
+              <button type="button" onClick={() => shiftMonth(-1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm hover:text-[#FF7E21] active:scale-95"><ChevronLeft size={16} /></button>
+              <button type="button" onClick={() => shiftMonth(1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm hover:text-[#FF7E21] active:scale-95"><ChevronRight size={16} /></button>
               <span className="ml-2 text-lg font-black text-slate-800">{monthLabel}</span>
             </div>
             <div className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF7ED] border border-[#FFD29D]/60 px-3.5 py-1 text-xs font-bold text-[#FF7E21]">
@@ -533,17 +537,18 @@ export default function StudyCalendar() {
               return (
                 <button
                   key={index}
+                  type="button"
                   onClick={() => setSelectedDay(dayCell)}
                   className={`relative h-20 rounded-2xl p-3 flex flex-col justify-between items-start transition-all duration-300 border cursor-pointer bg-gradient-to-b from-white to-[#FAF9F6]/50 shadow-sm ${
                     selected 
-                      ? "border-2 border-[#FF7E21] bg-gradient-to-br from-[#FFF9F3] to-[#FFEFE0] shadow-md shadow-orange-500/10 scale-102 ring-4 ring-[#FF7E21]/5" 
-                      : "border-slate-100 hover:border-slate-300/80 hover:shadow-md hover:bg-slate-50/50"
+                      ? "border-2 border-[#FF7E21] bg-gradient-to-br from-[#FFF9F3] to-[#FFEFE0] shadow-md scale-102 ring-4 ring-[#FF7E21]/5" 
+                      : "border-slate-100 hover:border-slate-300/80 hover:bg-slate-50/50"
                   }`}
                 >
                   <span className={`text-xs font-black ${selected ? "text-[#FF7E21]" : "text-slate-800"}`}>{dayCell}</span>
                   {count > 0 ? (
                     <div className="flex items-center justify-center w-full">
-                      <span className={`flex h-7 w-7 items-center justify-center rounded-lg border text-xs font-black shadow-sm transition-all duration-300 ${
+                      <span className={`flex h-7 w-7 items-center justify-center rounded-lg border text-xs font-black ${
                         selected 
                           ? "bg-[#FF7E21] text-white border-transparent" 
                           : "bg-[#FFF4EB] text-[#FF7E21] border-[#FFD29D]/40"
@@ -587,7 +592,7 @@ export default function StudyCalendar() {
               const futureTask = isFutureTaskDate(task.taskDate, todayKey);
 
               return (
-                <div key={task.taskId} className={`p-4 rounded-2xl border transition-all duration-300 ${done ? "border-slate-200/40 bg-[#F8F9FA]/40 shadow-none" : "border-slate-200 bg-white hover:border-[#FF7E21]/30 hover:shadow-md hover:shadow-orange-500/5 border-l-4 border-l-[#FF7E21]"}`}>
+                <div key={task.taskId} className={`p-4 rounded-2xl border transition-all duration-300 ${done ? "border-slate-200/40 bg-[#F8F9FA]/40 shadow-none" : "border-slate-200 bg-white hover:border-[#FF7E21]/30 border-l-4 border-l-[#FF7E21]"}`}>
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5">
                       {done ? (
@@ -622,7 +627,7 @@ export default function StudyCalendar() {
                               onClick={() => openStudySession(task.taskId)}
                               disabled={futureTask}
                               title={futureTask ? "Chưa đến ngày học" : undefined}
-                              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border border-orange-200 bg-orange-50/50 text-[#FF7E21] font-bold transition-all hover:bg-[#FF7E21] hover:text-white hover:border-transparent text-[10px] ${futureTask ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border border-orange-200 bg-orange-50/50 text-[#FF7E21] font-bold transition-all hover:bg-[#FF7E21] hover:text-white text-[10px] ${futureTask ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                             >
                               <PlayCircle size={11} />
                               <span>{actionableLabel}</span>
@@ -640,7 +645,7 @@ export default function StudyCalendar() {
       </div>
 
       <AIScheduleModal
-        isOpen={scheduleModalOpen && hasExistingCalendar}
+        isOpen={scheduleModalOpen}
         onClose={() => setScheduleModalOpen(false)}
         onConfirm={handleGenerateSchedule}
         subjectTitle={selectedWorkspace?.name || "Kế hoạch học tập"}

@@ -114,14 +114,14 @@ function DayChip({ label, active, onClick }: { label: string; active: boolean; o
 }
 
 const TIME_SLOTS_OPTIONS = [
-  { id: "6-8", label: "Sáng sớm (6:00 - 8:00)", value: "6-8" },
-  { id: "8-10", label: "Sáng (8:00 - 10:00)", value: "8-10" },
-  { id: "10-12", label: "Trước trưa (10:00 - 12:00)", value: "10-12" },
-  { id: "12-2", label: "Chiều (12:00 - 14:00)", value: "12-2" },
-  { id: "2-4", label: "Chiều (14:00 - 16:00)", value: "2-4" },
-  { id: "4-6", label: "Chiều tối (16:00 - 18:00)", value: "4-6" },
-  { id: "6-8pm", label: "Tối (18:00 - 20:00)", value: "6-8pm" },
-  { id: "8-10pm", label: "Tối muộn (20:00 - 22:00)", value: "8-10pm" },
+  { label: "Sáng sớm (6:00 - 8:00)", value: "06:00-08:00" },
+  { label: "Sáng (8:00 - 10:00)", value: "08:00-10:00" },
+  { label: "Trước trưa (10:00 - 12:00)", value: "10:00-12:00" },
+  { label: "Chiều (12:00 - 14:00)", value: "12:00-14:00" },
+  { label: "Chiều (14:00 - 16:00)", value: "14:00-16:00" },
+  { label: "Chiều tối (16:00 - 18:00)", value: "16:00-18:00" },
+  { label: "Tối (18:00 - 20:00)", value: "18:00-20:00" },
+  { label: "Tối muộn (20:00 - 22:00)", value: "20:00-22:00" },
 ];
 
 function normalizeDateInput(value: string | null | undefined) {
@@ -139,36 +139,11 @@ function normalizeDayId(value: string): DayValue | null {
   return found?.value ?? null;
 }
 
-function matchTimeSlotOption(value: string) {
-  const normalized = value.trim().toLowerCase();
-
-  const directMatch = TIME_SLOTS_OPTIONS.find(option => option.value === normalized || option.id === normalized);
-  if (directMatch) {
-    return directMatch.value;
-  }
-
-  const startMatch = normalized.match(/^(\d{1,2})(?::\d{2})?/);
-  if (!startMatch) {
-    return null;
-  }
-
-  const startHour = Number(startMatch[1]);
-  if (!Number.isFinite(startHour)) {
-    return null;
-  }
-
-  if (startHour <= 7) return "6-8";
-  if (startHour <= 9) return "8-10";
-  if (startHour <= 11) return "10-12";
-  if (startHour <= 13) return "12-2";
-  if (startHour <= 15) return "2-4";
-  if (startHour <= 17) return "4-6";
-  if (startHour <= 20) return "6-8pm";
-  return "8-10pm";
-}
-
-function formatTimeSlotBadge(value: string) {
-  return value.replace(/-/g, " - ");
+function isValidTimeSlot(slot: string): boolean {
+  const parts = slot.split('-');
+  if (parts.length !== 2) return false;
+  const [start, end] = parts;
+  return /^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end);
 }
 
 export default function EditWorkspaceConfigModal({
@@ -220,15 +195,16 @@ export default function EditWorkspaceConfigModal({
       confidence: (profile?.confidence as FormValues["confidence"]) ?? "MEDIUM",
     });
     setSelectedDays((profile?.preferredDays ?? []).map(normalizeDayId).filter((day): day is DayValue => day !== null));
-    setTimeSlots((profile?.preferredTimeSlots ?? [])
-      .map(matchTimeSlotOption)
-      .filter((slot): slot is string => Boolean(slot)));
+    setTimeSlots((profile?.preferredTimeSlots ?? []).filter(isValidTimeSlot));
     setSlotStart("");
     setSlotEnd("");
     setLoadingProfile(false);
   }, [initialConfig, isOpen, reset]);
 
-  const onboardingTimeSlots = useMemo(() => initialConfig?.preferredTimeSlots ?? [], [initialConfig]);
+  const onboardingTimeSlots = useMemo(
+    () => (initialConfig?.preferredTimeSlots ?? []).filter(isValidTimeSlot),
+    [initialConfig],
+  );
 
   if (!isOpen) {
     return null;
@@ -430,10 +406,10 @@ export default function EditWorkspaceConfigModal({
               <div className="space-y-3 pt-2">
                 <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400 block">Khung giờ rảnh trong ngày</label>
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                  {TIME_SLOTS_OPTIONS.map(slot => {
+                  {TIME_SLOTS_OPTIONS.map((slot, index) => {
                     const isSelected = timeSlots.includes(slot.value);
                     return (
-                      <button key={slot.id} type="button"
+                      <button key={`time-preset-${index}`} type="button"
                         onClick={() => setTimeSlots(curr => curr.includes(slot.value) ? curr.filter(s => s !== slot.value) : [...curr, slot.value])}
                         className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold transition-all duration-150 ${
                           isSelected 
@@ -636,10 +612,10 @@ export default function EditWorkspaceConfigModal({
                       Chưa có khung giờ nào. Thêm một khoảng để hệ thống ưu tiên.
                     </div>
                   ) : (
-                    timeSlots.map((slot) => (
+                    timeSlots.map((slot, index) => (
                       <TimeSlotBadge
-                        key={slot}
-                        label={`⏱️ ${formatTimeSlotBadge(slot)}`}
+                        key={`time-badge-${index}`}
+                        label={`⏱️ ${slot.replace('-', ' - ')}`}
                         onRemove={() => removeTimeSlot(slot)}
                       />
                     ))
@@ -660,10 +636,10 @@ export default function EditWorkspaceConfigModal({
                         <div className="mt-3 flex flex-wrap gap-2">
                           {onboardingTimeSlots.map((slot, index) => (
                             <span
-                              key={`${slot}-${index}`}
+                              key={`onboarding-slot-${index}`}
                               className="inline-flex items-center rounded-full border border-orange-200 bg-white px-3 py-1 text-xs font-semibold text-orange-700"
                             >
-                              {slot.replace(/-/g, " - ")}
+                              {slot.replace('-', ' - ')}
                             </span>
                           ))}
                         </div>
@@ -681,11 +657,11 @@ export default function EditWorkspaceConfigModal({
                 </div>
 
                 <div className="mt-4 flex flex-col gap-2">
-                  {TIME_SLOTS_OPTIONS.map(slot => {
+                  {TIME_SLOTS_OPTIONS.map((slot, index) => {
                     const isSelected = timeSlots.includes(slot.value);
                     return (
                       <button
-                        key={slot.id}
+                        key={`time-preset-${index}`}
                         type="button"
                         onClick={() => {
                           setTimeSlots(current =>

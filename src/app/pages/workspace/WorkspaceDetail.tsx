@@ -1,4 +1,5 @@
 import EditWorkspaceConfigModal from "../../components/modals/EditWorkspaceConfigModal";
+import OnboardingModal from "../../components/modals/OnboardingModal";
 import useOnboardingProfile from "../../hooks/useOnboardingProfile";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
@@ -189,6 +190,7 @@ export default function WorkspaceDetail(){
   const authSession = getStoredAuthSession();
   const token = authSession?.accessToken ?? null;
   const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const onboarding = useOnboardingProfile(id);
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(false);
@@ -321,10 +323,10 @@ export default function WorkspaceDetail(){
         setResults(fetchedStructure);
       }
 
-      // fetch onboarding profile; open modal if none
+      // fetch onboarding profile; open onboarding modal if none
       try{
         const p = await onboarding.fetchOnboardingProfile();
-        if (!p) setIsConfigOpen(true);
+        if (!p) setIsOnboardingOpen(true);
       }catch(err:any){
         console.error('Failed to load onboarding profile', err);
         toast.error('Không thể tải cài đặt lộ trình (server lỗi)');
@@ -1081,17 +1083,22 @@ export default function WorkspaceDetail(){
           {activeTab === "progress" && <WorkspaceProgress workspaceId={workspaceId} className="mt-0" />}
         </div>
 
-        {activeTab === "settings" && (
-          <EditWorkspaceConfigModal
-            isOpen={isConfigOpen}
-            onClose={()=>setIsConfigOpen(false)}
-            workspaceId={id ?? ''}
-            workspaceName={workspaceName}
-            initialConfig={onboarding.profile}
-            onSaved={() => void onboarding.fetchOnboardingProfile()}
-          />
-        )}
+        <EditWorkspaceConfigModal
+          isOpen={isConfigOpen}
+          onClose={()=>setIsConfigOpen(false)}
+          workspaceId={id ?? ''}
+          workspaceName={workspaceName}
+          initialConfig={onboarding.profile}
+          onSaved={() => void onboarding.fetchOnboardingProfile()}
+        />
       </div>
+
+      <OnboardingModal
+        open={isOnboardingOpen}
+        onClose={() => setIsOnboardingOpen(false)}
+        workspaceId={id ?? ''}
+        mode="onboarding"
+      />
 
       {/* ── Delete Material Confirmation Modal ────────────────────────────────── */}
       {pendingDeleteFile && (
