@@ -4,11 +4,14 @@ import {
   AlertTriangle,
   ArrowLeft,
   BookOpen,
+  Brain,
   CheckCircle2,
   Clock3,
+  ExternalLink,
   FileText,
   LoaderCircle,
   PlayCircle,
+  RefreshCw,
   Sparkles,
   Target,
   Timer,
@@ -21,6 +24,9 @@ import {
 } from "lucide-react";
 import studySessionService from "../../../api/studySessionService";
 import type { StudySessionDetailResponse } from "../../../api/studySessionService";
+import quizService from "../../../api/quizService";
+import type { QuizAttemptResponse } from "../../../api/quizService";
+import { usePomodoro } from "../../contexts/PomodoroContext";
 
 type StudySessionRouteState = {
   taskId?: string;
@@ -97,7 +103,6 @@ function normalizeList(values: string[] | null | undefined): string[] {
   return values.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
 }
 
-
 export default function CoursePlayer() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -122,21 +127,33 @@ export default function CoursePlayer() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
     return taskId ? readStoredSessionId(taskId) : null;
   });
-  const [timeLeft, setTimeLeft] = useState(1500); 
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [actualStudySeconds, setActualStudySeconds] = useState(0);
+
+  const {
+    timeLeft,
+    isTimerRunning,
+    pomodoroPhase,
+    actualStudySeconds,
+    activeStepId,
+    startTimer,
+    pauseTimer,
+    skipToNextPhase,
+    clearTimerContext,
+    isNavigationBlocked,
+    proceedNavigation,
+    resetNavigation,
+    formattedStudyTime,
+  } = usePomodoro();
 
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewNotes, setReviewNotes] = useState("");
-  const [reviewFocusScore, setReviewFocusScore] = useState(5); 
+  const [reviewFocusScore, setReviewFocusScore] = useState(5);
+
+  const [latestAttempt, setLatestAttempt] = useState<QuizAttemptResponse | null>(null);
+  const [hasQuizCreated, setHasQuizCreated] = useState(false); // NÂNG CẤP CHÍ MẠCH: Ghim giữ trạng thái nhận diện bộ đề
+  const [loadingQuizMeta, setLoadingQuizMeta] = useState(false);
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
 
   const [isSubActionLoading, setIsSubActionLoading] = useState(false);
-
-  const [pomodoroPhase, setPomodoroPhase] = useState<"FOCUS" | "SHORT_BREAK" | "LONG_BREAK">("FOCUS");
-  const pomodoroPhaseRef = useRef<"FOCUS" | "SHORT_BREAK" | "LONG_BREAK">("FOCUS");
-  pomodoroPhaseRef.current = pomodoroPhase;
-  const activeSessionIdRef = useRef<string | null>(activeSessionId);
-  activeSessionIdRef.current = activeSessionId;
 
   const task = detail?.task ?? null;
   const roadmapStep = detail?.roadmapStep ?? null;
@@ -163,49 +180,6 @@ export default function CoursePlayer() {
   const minimumRequiredMinutes = useMemo(() => computeMinimumRequiredMinutes(taskDuration), [taskDuration]);
   const elapsedStudyMinutes = Math.floor(actualStudySeconds / 60);
   const hasMetMinimum = elapsedStudyMinutes >= minimumRequiredMinutes;
-
-  const handlePhaseExpire = async (
-    phase: "FOCUS" | "SHORT_BREAK" | "LONG_BREAK",
-    sid: string | null,
-  ) => {
-    if (!sid) return;
-    try {
-      await studySessionService.nextPomodoroPhase(sid);
-    } catch { /* fire-and-forget */ }
-
-    if (phase === "FOCUS") {
-      setPomodoroPhase("SHORT_BREAK");
-      setTimeLeft(300);
-      setIsTimerRunning(true);
-      showToast("success", "🎉 Tập trung xong! Bắt đầu 5 phút nghỉ giải lao.");
-    } else {
-      setPomodoroPhase("FOCUS");
-      setTimeLeft(1500);
-      setIsTimerRunning(false);
-      showToast("success", "☕ Hết giờ nghỉ! Nhấn Bắt đầu để tiếp tục chu kỳ mới.");
-    }
-  };
-
-  useEffect(() => {
-    if (!isTimerRunning) return;
-
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          setIsTimerRunning(false);
-          void handlePhaseExpire(pomodoroPhaseRef.current, activeSessionIdRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-      // Only accumulate study time during the focus phase
-      if (pomodoroPhaseRef.current === "FOCUS") {
-        setActualStudySeconds((prev) => prev + 1);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isTimerRunning]);
 
   useEffect(() => {
     if (!taskId) {
@@ -251,6 +225,80 @@ export default function CoursePlayer() {
     }
   };
 
+  // NÂNG CẤP BỘ ĐỆM: Đồng bộ chuẩn chỉ hasQuizCreated kể cả khi Backend bắn 404 attempts
+  useEffect(() => {
+    const stepId = roadmapStep?.stepId;
+    if (!stepId) {
+      setLatestAttempt(null);
+      setHasQuizCreated(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingQuizMeta(true);
+    setLatestAttempt(null);
+    setHasQuizCreated(false);
+
+    quizService
+      .getCurrent(stepId)
+      .then(async (quiz) => {
+        if (cancelled) return;
+        if (quiz) {
+          setHasQuizCreated(true); // Tìm thấy thực thể Quiz -> Ép UI mở State B
+          try {
+            const attempt = await quizService.getLatestAttempt(quiz.quizId);
+            if (!cancelled && attempt) setLatestAttempt(attempt);
+          } catch {
+            // Có đề nhưng chưa có lượt submit nào -> latestAttempt giữ null là đúng
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLatestAttempt(null);
+          setHasQuizCreated(false);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingQuizMeta(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roadmapStep?.stepId]);
+
+  const handleGenerateAndOpenQuiz = async () => {
+    const stepId = roadmapStep?.stepId;
+    if (!stepId || isGeneratingQuiz) return;
+    setIsGeneratingQuiz(true);
+    try {
+      const quiz = await quizService.generate(stepId);
+      setHasQuizCreated(true); // Đổi state lạc quan để khóa UI
+      navigate(`/app/learning/quiz/${quiz.quizId}`, { state: { stepId } });
+    } catch (err: any) {
+      showToast("warning", err?.message || "Không thể tạo đề kiểm tra AI.");
+    } finally {
+      setIsGeneratingQuiz(false);
+    }
+  };
+
+  const handleRegenerateQuiz = async () => {
+    const stepId = roadmapStep?.stepId;
+    if (!stepId || isGeneratingQuiz) return;
+    setIsGeneratingQuiz(true);
+    try {
+      const quiz = await quizService.generate(stepId);
+      setLatestAttempt(null);
+      setHasQuizCreated(true);
+      navigate(`/app/learning/quiz/${quiz.quizId}`, { state: { stepId } });
+    } catch (err: any) {
+      showToast("warning", err?.message || "Không thể đổi bộ câu hỏi.");
+    } finally {
+      setIsGeneratingQuiz(false);
+    }
+  };
+
   const handleStartSession = async () => {
     if (!taskId || isStarting) return;
     setIsStarting(true);
@@ -266,10 +314,7 @@ export default function CoursePlayer() {
       });
 
       setActiveSessionId(response.sessionId);
-      setPomodoroPhase("FOCUS");
-      setTimeLeft(1500);
-      setActualStudySeconds(0);
-      setIsTimerRunning(true);
+      startTimer(roadmapStep?.stepId ?? taskId);
       storeSessionId(taskId, response.sessionId);
       await fetchUpdatedDetail();
       showToast("success", "🍅 Đã khởi tạo chu kỳ Pomodoro, bắt đầu tập trung học!");
@@ -282,13 +327,12 @@ export default function CoursePlayer() {
     }
   };
 
-  // 2. FULL POMODORO CONTROL INTEGRATION
   const handlePausePomodoro = async () => {
     if (!activeSessionId || isSubActionLoading) return;
     setIsSubActionLoading(true);
     try {
       await studySessionService.pausePomodoro(activeSessionId);
-      setIsTimerRunning(false);
+      pauseTimer();
       await fetchUpdatedDetail();
       showToast("success", "⏸️ Đã tạm dừng đồng hồ Pomodoro.");
     } catch (err: any) {
@@ -303,7 +347,7 @@ export default function CoursePlayer() {
     setIsSubActionLoading(true);
     try {
       await studySessionService.resumePomodoro(activeSessionId);
-      setIsTimerRunning(true);
+      startTimer(activeStepId ?? roadmapStep?.stepId ?? taskId ?? "");
       await fetchUpdatedDetail();
       showToast("success", "▶️ Tiếp tục chu kỳ tập trung.");
     } catch (err: any) {
@@ -318,23 +362,8 @@ export default function CoursePlayer() {
     setIsSubActionLoading(true);
     try {
       await studySessionService.nextPomodoroPhase(activeSessionId);
-
-      const freshDetail = await fetchUpdatedDetail();
-      const backendPhase = (freshDetail as any)?.pomodoro?.currentPhase?.toUpperCase();
-
-      // Use backend phase if valid, otherwise toggle locally
-      const nextLocalPhase: "FOCUS" | "SHORT_BREAK" | "LONG_BREAK" =
-        backendPhase === "SHORT_BREAK" ? "SHORT_BREAK"
-        : backendPhase === "LONG_BREAK" ? "LONG_BREAK"
-        : backendPhase === "FOCUS" ? "FOCUS"
-        : pomodoroPhase === "FOCUS" ? "SHORT_BREAK" : "FOCUS";
-
-      setPomodoroPhase(nextLocalPhase);
-      if (nextLocalPhase === "SHORT_BREAK") setTimeLeft(300);
-      else if (nextLocalPhase === "LONG_BREAK") setTimeLeft(900);
-      else setTimeLeft(1500);
-
-      setIsTimerRunning(true);
+      await fetchUpdatedDetail();
+      skipToNextPhase();
       showToast("success", "⏭️ Đã chuyển sang chu kỳ tiếp theo.");
     } catch (err: any) {
       showToast("warning", err?.message || "Không thể bỏ qua phase.");
@@ -343,31 +372,12 @@ export default function CoursePlayer() {
     }
   };
 
-  const handleAutoExpireSession = async () => {
-    if (!activeSessionId) return;
-    try {
-      await studySessionService.finishPomodoro(activeSessionId);
-      await studySessionService.finishStudySession(activeSessionId, {
-        notes: "Phiên học tự động kết thúc khi hết thời gian Pomodoro.",
-        focusScore: 5,
-      });
-      showToast("success", "⏰ Hết giờ! Hệ thống đã tự động đóng phiên học và cập nhật tiến độ.");
-      await fetchUpdatedDetail();
-      setActiveSessionId(null);
-      setActualStudySeconds(0);
-      if (taskId) clearStoredSessionId(taskId);
-    } catch (err: any) {
-      console.error("Auto expire failed:", err?.message);
-    }
-  };
-
   const handleTriggerReviewModal = () => {
     if (!activeSessionId) return;
-    setIsTimerRunning(false); 
+    pauseTimer(); 
     setShowReviewModal(true);
   };
 
-  // 3. INTEGRATION WITH REVIEW MODAL & 4. PROGRESS VALIDATION
   const handleConfirmFinishSession = async () => {
     if (!activeSessionId || isFinishing) return;
     setIsFinishing(true);
@@ -395,13 +405,11 @@ export default function CoursePlayer() {
         );
       }
 
-      setIsTimerRunning(false);
-      setTimeLeft(1500);
-      setActualStudySeconds(0);
       setShowReviewModal(false);
       setActiveSessionId(null);
       if (taskId) clearStoredSessionId(taskId);
 
+      clearTimerContext(); 
       await fetchUpdatedDetail();
     } catch (err: unknown) {
       const msg = (err as { message?: string })?.message || "Không thể kết thúc phiên học.";
@@ -452,11 +460,9 @@ export default function CoursePlayer() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 relative overflow-hidden">
-      {/* Custom subtle background glow circles */}
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute top-[20%] left-0 w-[300px] h-[300px] bg-orange-500/5 rounded-full blur-[60px] pointer-events-none" />
 
-      {/* ── Toast notification ─────────────────── */}
       {toastNotification && (
         <div
           className={`fixed top-4 right-4 z-50 max-w-sm rounded-2xl border px-5 py-4 shadow-2xl transition-all duration-300 ${
@@ -474,7 +480,6 @@ export default function CoursePlayer() {
         </div>
       )}
 
-      {/* ── Header ────────────────────────────────── */}
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur-xl shadow-sm shadow-slate-100/40">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <div className="min-w-0">
@@ -510,10 +515,8 @@ export default function CoursePlayer() {
         </div>
       </header>
 
-      {/* ── Main Layout ───────────────────────────── */}
       <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
-          {/* ── Left column: content ────────────────── */}
           <section className="space-y-6 lg:col-span-2">
             {error && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
@@ -542,7 +545,6 @@ export default function CoursePlayer() {
             ) : (
               <>
                 <div className="space-y-8 rounded-[24px] border border-slate-100 bg-white p-6 md:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
-                  {/* Info badges */}
                   <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-[0.15em]">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1.5 text-orange-600 border border-orange-100/60 shadow-sm shadow-orange-50/50">
                       <Target size={12} className="stroke-[2.5]" /> Study focus
@@ -555,7 +557,6 @@ export default function CoursePlayer() {
                     </span>
                   </div>
 
-                  {/* Title row */}
                   <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
                     <div>
                       <h2 className="text-xl font-extrabold tracking-tight text-slate-800 lg:text-2xl">{task?.title ?? "Study Session"}</h2>
@@ -570,9 +571,7 @@ export default function CoursePlayer() {
                     </div>
                   </div>
 
-                  {/* Study summary */}
                   <section className="rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50/30 to-amber-50/20 p-6 relative overflow-hidden shadow-sm shadow-orange-100/10">
-                    {/* Decorative bubble */}
                     <div className="absolute -right-10 -top-10 w-24 h-24 bg-orange-200/20 rounded-full blur-xl pointer-events-none" />
                     <div className="flex items-start gap-4 relative z-10">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-[0_8px_20px_-6px_rgba(249,115,22,0.4)]">
@@ -594,13 +593,23 @@ export default function CoursePlayer() {
                       </div>
                     </div>
                     <div className="mt-5 grid gap-3 sm:grid-cols-3 relative z-10">
-                      <PillStat label="Estimated" value={roadmapStep?.estimatedMinutes ? `${roadmapStep.estimatedMinutes} phút` : task?.durationMinutes ? `${task.durationMinutes} phút` : "--"} />
-                      <PillStat label="Roadmap" value={formatStatusLabel(roadmapStep?.status)} />
-                      <PillStat label="Session" value={hasStartedSession ? "Đang mở" : "Chưa bắt đầu"} />
+                      <div className="rounded-xl border border-slate-100 bg-white p-3.5 text-slate-900 shadow-sm transition hover:shadow-md">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Estimated</p>
+                        <p className="mt-1.5 text-xs font-extrabold text-slate-800">
+                          {roadmapStep?.estimatedMinutes ? `${roadmapStep.estimatedMinutes} phút` : task?.durationMinutes ? `${task.durationMinutes} phút` : "--"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-slate-100 bg-white p-3.5 text-slate-900 shadow-sm transition hover:shadow-md">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Roadmap</p>
+                        <p className="mt-1.5 text-xs font-extrabold text-slate-800">{formatStatusLabel(roadmapStep?.status)}</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-100 bg-white p-3.5 text-slate-900 shadow-sm transition hover:shadow-md">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Session</p>
+                        <p className="mt-1.5 text-xs font-extrabold text-slate-800">{hasStartedSession ? "Đang mở" : "Chưa bắt đầu"}</p>
+                      </div>
                     </div>
                   </section>
 
-                  {/* Subtitle + Practice */}
                   <section className="grid gap-5 sm:grid-cols-2">
                     <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.01)] transition hover:-translate-y-0.5 hover:shadow-md">
                       <div className="flex items-center gap-3">
@@ -652,7 +661,6 @@ export default function CoursePlayer() {
                     </article>
                   </section>
 
-                  {/* Lists */}
                   <section className="grid gap-4 sm:grid-cols-2">
                     <SectionCard title="What to learn" items={normalizeList(roadmapStep?.whatToLearn)} emptyText="Chưa có mục tiêu học." accent="orange" />
                     <SectionCard title="Key concepts" items={normalizeList(roadmapStep?.keyConcepts)} emptyText="Chưa có khái niệm cốt lõi." accent="slate" />
@@ -660,7 +668,6 @@ export default function CoursePlayer() {
                     <SectionCard title="Recommended focus" items={normalizeList(roadmapStep?.recommendedFocus)} emptyText="Chưa có phần tập trung khuyến nghị." accent="amber" />
                   </section>
 
-                  {/* Resources */}
                   <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.01)] lg:p-6 transition hover:shadow-md">
                     <div className="flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 border border-orange-100/60 shadow-sm shadow-orange-50/50">
@@ -709,7 +716,6 @@ export default function CoursePlayer() {
             )}
           </section>
 
-          {/* ── Right sidebar: Interactive Control Center ────── */}
           <aside className="lg:sticky lg:top-24 self-start">
             <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
               <div className="flex items-center gap-3">
@@ -722,21 +728,17 @@ export default function CoursePlayer() {
                 </div>
               </div>
 
-              {/* ── Premium Pomodoro Timer Widget ── */}
               {hasStartedSession && !isSessionCompleted && (
                 <div className="mt-5 space-y-4">
-                  {/* Phase-aware timer card */}
                   <div className={`relative rounded-3xl border-2 p-6 text-center transition-all duration-500 shadow-md ${
                     pomodoroPhase !== "FOCUS"
                       ? "border-emerald-100 bg-gradient-to-br from-emerald-50/40 to-teal-50/20 shadow-emerald-500/5"
                       : "border-orange-100 bg-gradient-to-br from-orange-50/40 to-amber-50/20 shadow-orange-500/5"
                   }`}>
-                    {/* Floating accent dot */}
                     <div className={`absolute top-4 right-4 h-2.5 w-2.5 rounded-full ${
                       isTimerRunning ? "animate-ping" : ""
                     } ${pomodoroPhase !== "FOCUS" ? "bg-emerald-500" : "bg-orange-500"}`} />
 
-                    {/* Phase title */}
                     <p className={`text-[9px] font-black uppercase tracking-[0.25em] ${
                       pomodoroPhase !== "FOCUS" ? "text-emerald-600" : "text-orange-600"
                     }`}>
@@ -747,19 +749,16 @@ export default function CoursePlayer() {
                         : "🎯 Thời gian tập trung"}
                     </p>
 
-                    {/* Running status text */}
                     <p className="mt-1 text-[8px] font-extrabold uppercase tracking-widest text-slate-400">
                       {isTimerRunning ? "ĐANG TẬP TRUNG" : "ĐÃ TẠM DỪNG"}
                     </p>
 
-                    {/* Giant countdown */}
                     <div className={`mt-3 font-mono text-[3.8rem] font-black tracking-tight tabular-nums leading-none transition-colors duration-500 ${
                       pomodoroPhase !== "FOCUS" ? "text-emerald-600" : "text-orange-600"
                     } ${isTimerRunning && timeLeft <= 10 ? "animate-pulse text-red-500" : ""}`}>
                       {formatTimer(timeLeft)}
                     </div>
 
-                    {/* Progress stats */}
                     <div className="mt-4 flex items-center justify-center gap-2.5 text-[11px] font-semibold">
                       <span className="text-slate-400 flex items-center gap-1">
                         <Clock3 size={11} />{" "}
@@ -773,7 +772,6 @@ export default function CoursePlayer() {
                     </div>
                   </div>
 
-                  {/* Control buttons */}
                   <div className="grid grid-cols-3 gap-2">
                     {isTimerRunning ? (
                       <button
@@ -814,7 +812,6 @@ export default function CoursePlayer() {
                 </div>
               )}
 
-              {/* ── Metadata Metrics ────────────────── */}
               <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/50 p-4.5 space-y-3 text-xs font-semibold">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-slate-400">Trạng thái phiên</span>
@@ -838,7 +835,112 @@ export default function CoursePlayer() {
                 )}
               </div>
 
-              {/* ── Action Triggers ──────────────────── */}
+              {/* ── AI QUIZ CONTROL CENTER (DÂN CHƠI THẬT SỰ) ── */}
+              {roadmapStep?.stepId && (
+                <div className="mt-4 rounded-[20px] border border-slate-100 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-indigo-100/60 bg-indigo-50 text-indigo-600">
+                        <Brain size={14} className="stroke-[2.5]" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-extrabold tracking-tight text-slate-700">AI Quiz</p>
+                        <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400">Kiểm tra kiến thức</p>
+                      </div>
+                    </div>
+                    {loadingQuizMeta && (
+                      <LoaderCircle size={13} className="animate-spin text-slate-400" />
+                    )}
+                  </div>
+
+                  {/* FIX TRIỆT ĐỂ BUG QUAY LẠI NÚT TẠO ĐỀ: Chốt chặn State A dựa trên biến hasQuizCreated */}
+                  {!hasQuizCreated && !loadingQuizMeta && (
+                    <div className="rounded-xl border border-dashed border-indigo-200/80 bg-indigo-50/30 p-3.5">
+                      <p className="text-[11px] leading-[1.6] font-medium text-slate-500">
+                        Bài kiểm tra chưa được kích hoạt. Hãy để AI quét nội dung bài học và thiết kế đề bài cho riêng bạn.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleGenerateAndOpenQuiz}
+                        disabled={isGeneratingQuiz}
+                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-3 text-xs font-extrabold text-white shadow-md shadow-indigo-500/20 transition hover:from-indigo-600 hover:to-violet-600 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                      >
+                        {isGeneratingQuiz ? (
+                          <><LoaderCircle size={13} className="animate-spin" /> Đang thiết kế đề...</>
+                        ) : (
+                          <><Sparkles size={13} /> ✨ Thiết kế bài kiểm tra bằng AI</>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* State B: ĐÃ CÓ ĐỀ TRÊN DB */}
+                  {hasQuizCreated && !loadingQuizMeta && (
+                    <div className="space-y-3">
+                      {latestAttempt ? (
+                        <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">Kết quả lần cuối</p>
+                              <p className="mt-1 text-sm font-extrabold text-slate-800">
+                                {Math.round((latestAttempt.correctAnswers / latestAttempt.totalQuestions) * 100)}%{" "}
+                                <span className="text-xs font-semibold text-slate-500">
+                                  ({latestAttempt.correctAnswers}/{latestAttempt.totalQuestions} câu đúng)
+                                </span>
+                              </p>
+                              <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+                                {formatDate(latestAttempt.submittedAt)}
+                              </p>
+                            </div>
+                            <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[9px] font-extrabold ring-1 ${
+                              latestAttempt.passed ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-rose-50 text-rose-700 ring-rose-200"
+                            }`}>
+                              {latestAttempt.passed ? "✓ PASSED" : "✗ FAILED"}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 text-[11px] text-slate-500 font-semibold leading-relaxed">
+                          🎯 Đề kiểm tra AI đã sẵn sàng! Vào làm ngay để kiểm tra mức độ hiểu bài của bạn.
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleGenerateAndOpenQuiz}
+                        disabled={isGeneratingQuiz}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-3 text-xs font-extrabold text-white shadow-md shadow-indigo-500/20 transition hover:from-indigo-600 hover:to-violet-600 active:scale-[0.98] cursor-pointer"
+                      >
+                        <ExternalLink size={13} /> ✍️ Vào làm bài kiểm tra
+                      </button>
+
+                      {latestAttempt && (
+                        <button
+                          type="button"
+                          onClick={handleRegenerateQuiz}
+                          disabled={isGeneratingQuiz}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                        >
+                          {isGeneratingQuiz ? (
+                            <><LoaderCircle size={13} className="animate-spin" /> Đang đổi đề...</>
+                          ) : (
+                            <><RefreshCw size={13} /> 🔄 Đổi bộ câu hỏi mới</>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {loadingQuizMeta && (
+                    <div className="animate-pulse space-y-2.5 pt-1">
+                      <div className="h-3.5 w-3/4 rounded-lg bg-slate-200" />
+                      <div className="h-3.5 w-1/2 rounded-lg bg-slate-200" />
+                      <div className="mt-3 h-10 rounded-xl bg-slate-200" />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {isSessionCompleted ? (
                 <div className="mt-5 rounded-2xl border border-emerald-100/60 bg-emerald-50/40 p-5 text-center shadow-sm">
                   <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm shadow-emerald-100/20 mb-3">
@@ -865,7 +967,7 @@ export default function CoursePlayer() {
                   </button>
                 </div>
               ) : (
-                <div className="mt-5">
+                <div className="mt-5 space-y-3">
                   <button
                     type="button"
                     onClick={handleTriggerReviewModal}
@@ -882,7 +984,7 @@ export default function CoursePlayer() {
         </div>
       </main>
 
-      {/* ── 🌟 REVIEW FORM OVERLAY MODAL (NOTES & FOCUS SCORE INPUT) ── */}
+      {/* ── 🌟 REVIEW FORM OVERLAY MODAL ── */}
       {showReviewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all duration-300">
           <div className="w-full max-w-md rounded-[28px] border border-slate-100/80 bg-white/95 p-6 shadow-[0_30px_70px_rgba(0,0,0,0.1)] relative">
@@ -890,7 +992,7 @@ export default function CoursePlayer() {
               type="button"
               onClick={() => {
                 setShowReviewModal(false);
-                if (activeSessionId) setIsTimerRunning(true); 
+                if (activeSessionId) startTimer(activeStepId ?? roadmapStep?.stepId ?? taskId ?? ""); 
               }}
               className="absolute top-5 right-5 h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
             >
@@ -949,7 +1051,7 @@ export default function CoursePlayer() {
                 type="button"
                 onClick={() => {
                   setShowReviewModal(false);
-                  if (activeSessionId) setIsTimerRunning(true);
+                  if (activeSessionId) startTimer(activeStepId ?? roadmapStep?.stepId ?? taskId ?? "");
                 }}
                 className="flex-1 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:bg-slate-50 transition active:scale-95"
               >
@@ -968,25 +1070,47 @@ export default function CoursePlayer() {
           </div>
         </div>
       )}
+
+      {isNavigationBlocked && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md transition-all">
+          <div className="w-full max-w-sm rounded-[28px] border border-orange-100 bg-white p-6 shadow-2xl text-center relative animate-in zoom-in-95 duration-200">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 mb-4 border border-orange-100/60">
+              <AlertTriangle size={28} className="stroke-[2.5]" />
+            </div>
+            <h3 className="text-base font-black text-slate-800">Bạn đang trong phiên tập trung!</h3>
+            <p className="mt-2 text-xs leading-5 text-slate-500 font-medium">
+              Bạn đã học được <span className="font-black text-slate-700">{formattedStudyTime || "0 giây"}</span>. 
+              Nếu rời khỏi vùng học tập bây giờ, chu kỳ Pomodoro hiện tại sẽ bị <span className="text-red-500 font-bold">HỦY BỎ</span> và không được lưu tiến trình!
+            </p>
+
+            <div className="mt-6 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={resetNavigation}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-xs font-bold text-white shadow-md shadow-orange-500/10 transition active:scale-95"
+              >
+                🎯 Tiếp tục học tập (Giữ kỉ luật)
+              </button>
+              <button
+                type="button"
+                onClick={proceedNavigation}
+                className="w-full py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-400 hover:bg-slate-50 hover:text-red-500 transition active:scale-95"
+              >
+                Hủy phiên & Rời đi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// ✅ COMPONENTS CON
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 transition-all hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.05)]">
       <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
       <p className="mt-2 text-sm font-black text-slate-800 tracking-tight">{value}</p>
-    </div>
-  );
-}
-
-function PillStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-slate-100 bg-white p-3.5 text-slate-900 shadow-sm transition hover:shadow-md">
-      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className="mt-1.5 text-xs font-extrabold text-slate-800">{value}</p>
     </div>
   );
 }
@@ -1033,4 +1157,4 @@ function SectionCard({
       )}
     </div>
   );
-}
+} 

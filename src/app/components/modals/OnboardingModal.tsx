@@ -123,6 +123,13 @@ function TimeSlotTag({ label, onRemove }: TimeSlotTagProps) {
   );
 }
 
+function isValidTimeSlot(slot: string): boolean {
+  const parts = slot.split('-');
+  if (parts.length !== 2) return false;
+  const [start, end] = parts;
+  return /^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end);
+}
+
 export default function OnboardingModal({
   open,
   onClose,
@@ -179,7 +186,7 @@ export default function OnboardingModal({
         confidence: (profile?.confidence as FormValues["confidence"]) ?? "MEDIUM",
       });
       setSelectedDays(profile?.preferredDays ?? []);
-      setTimeSlots(profile?.preferredTimeSlots ?? []);
+      setTimeSlots((profile?.preferredTimeSlots ?? []).filter(isValidTimeSlot));
       setSlotStart("");
       setSlotEnd("");
       setStep(0);
@@ -492,10 +499,10 @@ export default function OnboardingModal({
                         Chưa có khung giờ nào. Thêm một khoảng để hệ thống ưu tiên.
                       </div>
                     ) : (
-                      timeSlots.map((slot) => (
+                      timeSlots.map((slot, index) => (
                         <TimeSlotTag
-                          key={slot}
-                          label={`⏱️ ${slot.replace("-", " - ")}`}
+                          key={`time-badge-${index}`}
+                          label={`⏱️ ${slot.replace('-', ' - ')}`}
                           onRemove={() => setTimeSlots((current) => current.filter((item) => item !== slot))}
                         />
                       ))
@@ -646,10 +653,10 @@ export default function OnboardingModal({
                         Chưa có khung giờ nào. Thêm một khoảng để hệ thống ưu tiên.
                       </div>
                     ) : (
-                      timeSlots.map((slot) => (
+                      timeSlots.map((slot, index) => (
                         <TimeSlotTag
-                          key={slot}
-                          label={`⏱️ ${slot.replace("-", " - ")}`}
+                          key={`time-badge-${index}`}
+                          label={`⏱️ ${slot.replace('-', ' - ')}`}
                           onRemove={() => setTimeSlots((current) => current.filter((item) => item !== slot))}
                         />
                       ))
