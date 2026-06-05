@@ -148,40 +148,40 @@ export default function PricingPage() {
                 </motion.div>
               </CursorSpotlight>
 
-              {/* Box 2: Premium (Dark with Glow) */}
-              <div style={{ position:"relative", flex:1, width:"100%", maxWidth:"420px" }}>
-                {/* Glowing Aura */}
-                <div style={{ position:"absolute", inset:0, background:OG, opacity:0.25, filter:"blur(50px)", borderRadius:"32px", zIndex:0 }}/>
+              {/* Box 2: Premium (Light with Warm Glow) */}
+              <div style={{ position:"relative", flex:1, width:"100%", maxWidth:"420px", display:"flex" }}>
+                {/* Glowing Aura for Light Theme */}
+                <div style={{ position:"absolute", inset:"-10px", background:"radial-gradient(circle, rgba(255,107,0,0.14) 0%, rgba(255,107,0,0) 70%)", filter:"blur(30px)", borderRadius:"40px", zIndex:0 }}/>
                 
-                <CursorSpotlight color="rgba(255,107,0,0.26)" size={200}>
+                <CursorSpotlight color="rgba(255,107,0,0.18)" size={200}>
                   <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ duration:0.5, delay:0.3 }}
-                    style={{ position:"relative", zIndex:1, background:DARK, borderRadius:"32px", border:`1px solid #3F3F46`, padding:"40px", boxShadow:"0 30px 60px rgba(0,0,0,0.5)", display:"flex", flexDirection:"column", height:"100%" }}>
+                    style={{ position:"relative", zIndex:1, background:"linear-gradient(135deg, #FFFDF9 0%, #FFFFFF 100%)", borderRadius:"32px", border:`2px solid rgba(255,107,0,0.5)`, padding:"40px", boxShadow:"0 20px 40px -10px rgba(255,107,0,0.15), 0 4px 20px -2px rgba(255,107,0,0.06)", display:"flex", flexDirection:"column", height:"100%", justifyContent:"between" }}>
                   
                   {/* Floating Ribbon */}
-                  <div style={{ position:"absolute", top:"-16px", left:"50%", transform:"translateX(-50%)", background:"linear-gradient(90deg, #FF6B00, #F59E0B)", color:"#fff", padding:"6px 16px", borderRadius:"99px", fontFamily:F, fontSize:"0.8rem", fontWeight:800, display:"flex", alignItems:"center", gap:"6px", boxShadow:"0 10px 20px rgba(255,107,0,0.4)", border:"1px solid rgba(255,255,255,0.2)", width:"max-content" }}>
+                  <div style={{ position:"absolute", top:"-16px", left:"50%", transform:"translateX(-50%)", background:"linear-gradient(90deg, #FF6B00, #F59E0B)", color:"#fff", padding:"6px 16px", borderRadius:"99px", fontFamily:F, fontSize:"0.8rem", fontWeight:800, display:"flex", alignItems:"center", gap:"6px", boxShadow:"0 8px 20px rgba(255,107,0,0.3)", border:"1px solid rgba(255,255,255,0.4)", width:"max-content" }}>
                     <Sparkles size={14} />
                     ĐƯỢC KHUYÊN DÙNG
                   </div>
 
-                  <h3 style={{ fontFamily:F, fontWeight:800, fontSize:"1.8rem", color:TW, marginBottom:"8px", marginTop:"10px" }}>Gói Premium</h3>
-                  <p style={{ fontFamily:F, fontSize:"1rem", color:TW2, marginBottom:"32px" }}>Toàn quyền truy cập mọi tính năng siêu việt nhất.</p>
+                  <h3 style={{ fontFamily:F, fontWeight:800, fontSize:"1.8rem", color:T1, marginBottom:"8px", marginTop:"10px" }}>Gói Premium</h3>
+                  <p style={{ fontFamily:F, fontSize:"1rem", color:T2, marginBottom:"32px" }}>Toàn quyền truy cập mọi tính năng siêu việt nhất.</p>
                   
                   <div style={{ display:"flex", alignItems:"baseline", gap:"4px", marginBottom:"32px" }}>
-                    <span style={{ fontFamily:F, fontWeight:900, fontSize:"3.5rem", color:TW, lineHeight:1, letterSpacing:"-0.03em" }}>
+                    <span style={{ fontFamily:F, fontWeight:900, fontSize:"3.5rem", color:T1, lineHeight:1, letterSpacing:"-0.03em" }}>
                       {isAnnual ? "149" : "199"}
                     </span>
-                    <span style={{ fontFamily:F, fontWeight:700, fontSize:"1.2rem", color:TW }}>.000</span>
-                    <span style={{ fontFamily:F, fontSize:"1rem", color:TW2, marginLeft:"4px" }}>đ/tháng</span>
+                    <span style={{ fontFamily:F, fontWeight:700, fontSize:"1.2rem", color:T1 }}>.000</span>
+                    <span style={{ fontFamily:F, fontSize:"1rem", color:T2, marginLeft:"4px" }}>đ/tháng</span>
                   </div>
 
-                  <motion.button whileHover={{ scale:1.02, boxShadow:"0 10px 25px rgba(255,107,0,0.4)" }} whileTap={{ scale:0.98 }}
+                  <motion.button whileHover={{ scale:1.02, boxShadow:"0 10px 25px rgba(255,107,0,0.35)" }} whileTap={{ scale:0.98 }}
                     onClick={() => handlePlanCTA("PREMIUM")}
-                    style={{ width:"100%", padding:"16px", borderRadius:"16px", background:OG, color:TW, fontFamily:F, fontWeight:800, fontSize:"1.05rem", border:"none", cursor:"pointer", marginBottom:"40px", boxShadow:"0 6px 15px rgba(255,107,0,0.25)", transition:"box-shadow 0.2s" }}>
+                    style={{ width:"100%", padding:"16px", borderRadius:"16px", background:OG, color:TW, fontFamily:F, fontWeight:800, fontSize:"1.05rem", border:"none", cursor:"pointer", marginBottom:"40px", boxShadow:"0 6px 15px rgba(255,107,0,0.2)", transition:"box-shadow 0.2s" }}>
                     Nâng cấp lên Premium
                   </motion.button>
 
                   <div style={{ flex:1 }}>
-                    <div style={{ fontFamily:F, fontWeight:700, fontSize:"0.9rem", color:TW, textTransform:"uppercase", letterSpacing:"1px", marginBottom:"20px" }}>Mọi thứ của Builder, cộng thêm:</div>
+                    <div style={{ fontFamily:F, fontWeight:800, fontSize:"0.9rem", color:T1, textTransform:"uppercase", letterSpacing:"1px", marginBottom:"20px" }}>Mọi thứ của Builder, cộng thêm:</div>
                     <ul style={{ listStyle:"none", padding:0, margin:0, display:"flex", flexDirection:"column", gap:"16px" }}>
                       {[
                         { text: "Lộ trình AI cá nhân hóa sâu" },
@@ -194,16 +194,16 @@ export default function PricingPage() {
                           <div style={{ width:"24px", height:"24px", borderRadius:"50%", background:"rgba(255,107,0,0.1)", border:"1px solid rgba(255,107,0,0.2)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:"2px" }}>
                             <Zap size={14} color={OG} strokeWidth={3}/>
                           </div>
-                          <span style={{ fontFamily:F, fontSize:"1.05rem", color:"#E5E7EB", fontWeight: 600, lineHeight:1.5 }}>
+                          <span style={{ fontFamily:F, fontSize:"1.05rem", color:T1, fontWeight: 600, lineHeight:1.5 }}>
                             {feature.text}
                           </span>
                         </li>
                       ))}
                     </ul>
                   </div>
-                  </motion.div>
-                </CursorSpotlight>
-              </div>
+                </motion.div>
+              </CursorSpotlight>
+            </div>
 
             </div>
           </section>
