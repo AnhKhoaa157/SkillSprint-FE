@@ -3,15 +3,15 @@ import useOnboardingProfile from "../../hooks/useOnboardingProfile";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
-import SyllabusInput from "../learning/SyllabusInput";
+// SyllabusInput removed — chức năng gộp vào Tài liệu
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
 import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
-import { ArrowLeft, ArrowRight, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle, Loader2, Copy, SlidersHorizontal, Check, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle, Copy, SlidersHorizontal, Check, Calendar, Compass } from "lucide-react";
 import { getStoredAuthSession } from "../../../api/authService";
 import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/materialService.ts";
 import roadmapService from "../../../api/roadmapService";
-import learningStructureService, { type LearningStructureResponse, type ChapterResponse } from "../../../api/learningStructureService";
 
+const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
 
 const F = "'Inter','Plus Jakarta Sans',sans-serif";
 const CARD = "#FFFFFF";
@@ -42,6 +42,31 @@ type UploadFile = {
   materialId?: string;
 };
 
+type LearningStructureTopic = {
+  title: string;
+  summaryContent: string;
+  keyConcepts: string[];
+};
+
+type LearningStructureChapter = {
+  title: string;
+  summary: string;
+  keyConcepts: string[];
+  topics: LearningStructureTopic[];
+};
+
+type LearningStructureResponse = {
+  structureVersionId?: string;
+  status?: 'DRAFT' | 'CONFIRMED' | string;
+  chapters?: LearningStructureChapter[];
+  tasks?: unknown[];
+  [key: string]: unknown;
+};
+
+type ApiResponse<T> = {
+  data?: T;
+  [key: string]: unknown;
+};
 
 type StepStatus = 'completed' | 'active' | 'pending';
 
@@ -55,7 +80,7 @@ type AnalysisTimeline = {
   [key: string]: unknown;
 };
 
-type WorkspaceDetailTab = "files" | "syllabus" | "roadmap" | "progress" | "settings";
+type WorkspaceDetailTab = "files" | "roadmap" | "progress" | "config";
 
 function toWorkspaceCode(rawId?: string) {
   if (!rawId) return "WS-CHUA-CO";
@@ -69,6 +94,24 @@ function toWorkspaceCode(rawId?: string) {
   return `WS-${compact.slice(-6).padStart(6, "0")}`;
 }
 
+function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
+  const headers: Record<string, string> = {};
+
+  if (includeJsonContentType) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const session = getStoredAuthSession();
+  if (session?.sessionId) {
+    headers["X-Session-Id"] = session.sessionId;
+  }
+
+  return headers;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -192,10 +235,7 @@ export default function WorkspaceDetail(){
   const onboarding = useOnboardingProfile(id);
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(false);
-  // ── Delete-material modal state ──────────────────────────────────────────────
-  const [pendingDeleteFile, setPendingDeleteFile] = useState<UploadFile | null>(null);
-  const [isDeleting,        setIsDeleting]        = useState(false);
-  const [results, setResults] = useState<LearningStructureResponse | null>(null);
+  const [results, setResults] = useState<ApiResponse<LearningStructureResponse> | LearningStructureResponse | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const processingIntervals = useRef<Record<string, number>>({});
@@ -203,16 +243,19 @@ export default function WorkspaceDetail(){
   const structurePollingAttemptsRef = useRef(0);
   const analysisStartedAtRef = useRef<number | null>(null);
 
-  const structureData = results;
-  const visibleChapters: ChapterResponse[] = Array.isArray(structureData?.chapters) ? structureData.chapters : [];
-  const rawStatus = structureData?.status ?? "";
+  const structureData = (results?.data ? results.data : results) as LearningStructureResponse | null;
+  const visibleChapters = Array.isArray(structureData?.chapters) ? structureData.chapters : [];
+  const rawStatus = structureData?.status || "DRAFT";
   const normalizedStatus = String(rawStatus).toUpperCase();
   const canCreateRoadmap = Boolean(visibleChapters.length && normalizedStatus === 'CONFIRMED');
   const hasRoadmapAlready = Boolean(
     (structureData as any)?.hasRoadmap ||
     (structureData as any)?.roadmapId ||
     (structureData as any)?.currentRoadmap ||
-    (structureData as any)?.roadmap
+    (structureData as any)?.roadmap ||
+    (results as any)?.data?.hasRoadmap ||
+    (results as any)?.data?.roadmapId ||
+    (results as any)?.roadmapId
   );
 
   const docsCount = files.length;
@@ -411,7 +454,17 @@ export default function WorkspaceDetail(){
 
     if (file.materialId && id) {
       try {
-        await materialService.deleteMaterial(id, file.materialId);
+        const headers = buildAuthHeaders(token, false); // buildAuthHeaders already adds Authorization if token exists
+
+        const resp = await fetch(`${API_BASE}/api/workspaces/${id}/materials/${file.materialId}`, {
+          method: 'DELETE',
+          headers,
+        });
+
+        if (!resp.ok) {
+          throw new Error(`Delete failed: ${resp.status}`);
+        }
+
         setFiles(prev => prev.filter(item => item.materialId !== file.materialId));
         toast.success('Đã xóa file khỏi backend');
         return;
@@ -426,52 +479,31 @@ export default function WorkspaceDetail(){
     toast.info('Đã ẩn file khỏi danh sách');
   }
 
-  /** Opens the custom delete-confirmation modal — no native confirm() */
-  function handleDeleteMaterial(file: UploadFile) {
-    if (!file.materialId || !id) return;
-    setPendingDeleteFile(file);
-  }
-
-  /** Optimistic removal — closes the modal and removes the row immediately,
-   *  then fires the DELETE in the background. A 500 from the backend (e.g. FK
-   *  constraint from an active roadmap) is swallowed silently so the demo flow
-   *  stays unblocked. */
-  async function confirmDelete() {
-    if (!pendingDeleteFile?.materialId || !id) return;
-    const targetMaterialId = pendingDeleteFile.materialId;
-    const targetFileName   = pendingDeleteFile.name;
-
-    // Stop active polling before removing the row
-    const intervalId = processingIntervals.current[targetMaterialId];
-    if (intervalId) {
-      clearInterval(intervalId);
-      delete processingIntervals.current[targetMaterialId];
-    }
-
-    // Optimistic: close modal + remove row + confirm toast — all synchronous
-    setPendingDeleteFile(null);
-    setFiles(prev => prev.filter(item => item.materialId !== targetMaterialId));
-    toast.success(`Đã xóa "${targetFileName}" thành công.`);
-
-    // Background API call — 500s are silently logged, never surfaced to the user
-    try {
-      await materialService.deleteMaterial(id, targetMaterialId);
-    } catch (err) {
-      console.warn(
-        `[Material delete] server-side failure for ${targetMaterialId} (likely FK constraint — row already removed from UI):`,
-        err,
-      );
-    }
-  }
-
-  async function fetchLearningStructure(): Promise<LearningStructureResponse | null> {
+  async function fetchLearningStructure(): Promise<ApiResponse<LearningStructureResponse> | LearningStructureResponse | null>{
     if (!id) return null;
-    try {
-      const data = await learningStructureService.getLearningStructure(id);
-      setResults(data);
-      return data;
-    } catch (err) {
-      console.error('Failed to fetch learning structure', err);
+    try{
+      const headers = buildAuthHeaders(token);
+      const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure`, { method: 'GET', headers });
+      if (resp.status === 404) {
+        setResults(null);
+        return null;
+      }
+
+      if (!resp.ok) {
+        throw new Error(`Learning structure fetch failed: ${resp.status}`);
+      }
+
+      const res = await resp.json().catch(()=>null) as unknown;
+      console.log("DEBUG_RAW_DETAIL_PAYLOAD:", res);
+      setResults(res as ApiResponse<LearningStructureResponse>);
+      return res as ApiResponse<LearningStructureResponse>;
+    }catch(err:any){
+      if (String(err?.message || '').includes('404')) {
+        setResults(null);
+        return null;
+      }
+
+      console.error('Failed to fetch learning structure (non-404 error)', err);
       return null;
     }
   }
@@ -492,12 +524,11 @@ export default function WorkspaceDetail(){
   const liveAnalysisDurationMs = analysisStartedAtRef.current ? Date.now() - analysisStartedAtRef.current : null;
   const analysisDurationLabel = analysisDurationMs !== null ? formatDuration(analysisDurationMs) : (isGeneratingStructure || generateLoading ? formatDuration(liveAnalysisDurationMs) : '0s');
   const generating = isGeneratingStructure || generateLoading;
-  const workspaceTabs: Array<{ id: WorkspaceDetailTab; label: string; description: string; icon: typeof FileText }> = [
-    { id: "files", label: "Tài liệu", description: "Tải lên và xử lý nội dung", icon: FileText },
-    { id: "syllabus", label: "Nhập Syllabus", description: "Nhập syllabus và phân tích theo workspace", icon: FileText },
-    { id: "roadmap", label: "Roadmap", description: "Xem lộ trình học tập", icon: Layers3 },
-    { id: "progress", label: "Tiến độ", description: "Dashboard tiến độ", icon: Radar },
-    { id: "settings", label: "Cài đặt", description: "Cấu hình workspace", icon: SlidersHorizontal },
+  const workspaceTabs: Array<{ id: WorkspaceDetailTab; label: string; icon: typeof FileText }> = [
+    { id: "files",    label: "Tài liệu",     icon: FileText },
+    { id: "roadmap",  label: "Roadmap",      icon: Layers3 },
+    { id: "progress", label: "Tiến độ",      icon: Radar },
+    { id: "config",   label: "Cấu hình",     icon: SlidersHorizontal },
   ];
 
   async function reloadWorkspaceMaterials() {
@@ -539,16 +570,17 @@ export default function WorkspaceDetail(){
       setGenerateLoading(true);
       toast.loading(isRegenerate ? 'Đang tạo lại cấu trúc AI...' : 'Bắt đầu phân tích AI...', { id: 'structure-generation' });
 
-      await learningStructureService.generateLearningStructure(id);
+      const headers = buildAuthHeaders(token);
+      const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure/generate`, { method: 'POST', headers });
+      if (!resp.ok) throw new Error('Generate failed');
 
       await new Promise(resolve => setTimeout(resolve, 10000));
       stopStructurePolling();
       startStructurePolling();
       await fetchLearningStructure();
-    } catch (err: any) {
-      const msg = err?.message || (isRegenerate ? 'Không thể tạo lại cấu trúc' : 'Không thể bắt đầu phân tích');
+    } catch (err:any) {
       console.error('Generate error', err);
-      toast.error(msg, { id: 'structure-generation' });
+      toast.error(isRegenerate ? 'Không thể tạo lại cấu trúc' : 'Không thể bắt đầu phân tích', { id: 'structure-generation' });
       setIsGeneratingStructure(false);
       setStructureGenerationRequested(false);
     } finally {
@@ -556,20 +588,21 @@ export default function WorkspaceDetail(){
     }
   }
 
-  async function handleConfirm() {
-    if (!id || !results) return;
-    try {
+  async function handleConfirm(){
+    if (!id || !results) return; // Ensure results are present before confirming
+    try{
       setConfirming(true);
-      const confirmed = await learningStructureService.confirmLearningStructure(id);
-      setResults(confirmed);
-      setStructureGenerationRequested(true);
+      const headers = buildAuthHeaders(token);
+      const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure/confirm`, { method: 'POST', headers, body: JSON.stringify({}) });
+      if (!resp.ok) throw new Error('Confirm failed');
+      const confPayload = await resp.json().catch(()=>null) as ApiResponse<LearningStructureResponse> | LearningStructureResponse | null;
       toast.success('Lộ trình đã được xác nhận');
-    } catch (err: any) {
-      console.error('Confirm error', err);
-      toast.error('Không thể xác nhận lộ trình');
-    } finally {
-      setConfirming(false);
-    }
+      if (confPayload) {
+        setResults(confPayload);
+      }
+      setStructureGenerationRequested(true);
+    }catch(err:any){ console.error('Confirm error', err); toast.error('Không thể xác nhận lộ trình'); }
+    finally { setConfirming(false); }
   }
 
   async function handleGenerateRoadmap(){
@@ -580,12 +613,25 @@ export default function WorkspaceDetail(){
       setRoadmapError(null);
       const generatedRoadmap = await roadmapService.generateRoadmap(id);
       if (generatedRoadmap) {
-        setResults((prev) => ({
-          ...(prev ?? {}),
-          hasRoadmap: true,
-          roadmapId: (generatedRoadmap as any).roadmapId ?? (generatedRoadmap as any).id,
-          roadmap: generatedRoadmap,
-        } as LearningStructureResponse));
+        setResults((prev) => {
+          const previous = isRecord(prev) ? prev : {};
+          const wrapped = isRecord((prev as any)?.data) ? (prev as any).data : null;
+
+          return {
+            ...(isRecord(prev) ? prev : {}),
+            ...(wrapped || {}),
+            data: {
+              ...((isRecord(prev) ? prev : {}) as Record<string, unknown>),
+              ...(wrapped || {}),
+              hasRoadmap: true,
+              roadmapId: generatedRoadmap.id || (generatedRoadmap as any).roadmapId || generatedRoadmap.workspaceId,
+              roadmap: generatedRoadmap,
+            },
+            hasRoadmap: true,
+            roadmapId: generatedRoadmap.id || (generatedRoadmap as any).roadmapId || generatedRoadmap.workspaceId,
+            roadmap: generatedRoadmap,
+          } as any;
+        });
       }
 
       navigate(`/app/workspaces/${id}/roadmap`, { state: { roadmap: generatedRoadmap } });
@@ -675,64 +721,47 @@ export default function WorkspaceDetail(){
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8 font-inter text-slate-900">
-      <div className="max-w-[1200px] mx-auto">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-6 mb-6">
-          <div>
-            <div className="inline-flex items-center gap-3 px-3 py-1 rounded-full bg-white shadow-sm text-gray-800 mb-2">
-              <BookOpenCheck className="w-4 h-4 text-orange-500" />
-              <span className="text-sm font-semibold">AI Workspace</span>
-            </div>
-            <h1 className="text-2xl font-extrabold">{workspaceName}</h1>
-            <div className="mt-2 flex items-center gap-3 text-sm text-slate-500">
-              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full shadow-sm ${processingDocsCount>0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                <span className={`w-2 h-2 rounded-full ${processingDocsCount>0 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                <strong className="text-xs">AI {processingDocsCount>0 ? 'Processing' : 'Online'}</strong>
-              </span>
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white shadow-sm text-slate-600">
-                <span className="text-xs">{workspaceCode}</span>
-                <button className="p-1 rounded hover:bg-slate-100"><Copy className="w-4 h-4" /></button>
-              </span>
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white shadow-sm text-slate-600">
-                <Clock3 className="w-4 h-4 text-orange-500" />
-                <span className="text-xs font-semibold">{analysisDurationLabel}</span>
-              </span>
-            </div>
-          </div>
+    <div className="relative min-h-screen bg-[#F9FAFB] p-6 font-inter text-slate-900 overflow-hidden sm:p-8">
+      {/* Decorative background glow circles */}
+      <div className="absolute left-[-10%] top-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-[#FF6B00]/5 to-transparent blur-[120px] pointer-events-none" />
+      <div className="absolute right-[-10%] bottom-[-10%] -z-10 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-[#F59E0B]/5 to-transparent blur-[150px] pointer-events-none" />
 
-          <div className="flex items-center gap-3">
-            <button 
-              type="button"
-              onClick={() => navigate('/app/workspaces')}
-              className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition flex items-center gap-1"
-            >
-              ← Quay lại
-            </button>
+      <div className="max-w-[1400px] mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 mb-8">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#FF6B00] mb-2">
+              <BookOpenCheck className="w-3.5 h-3.5" />
+              <span>AI Learning Workspace</span>
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 truncate">{workspaceName}</h1>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate('/app/workspaces')}
+            className="shrink-0 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition shadow-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Trở về
+          </button>
         </div>
 
-        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-          <div className="grid gap-2 md:grid-cols-4">
-            {workspaceTabs.map(tab => {
-              const selected = activeTab === tab.id;
-
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`rounded-xl px-4 py-3 text-left transition ${selected ? "bg-orange-500 text-white shadow-md shadow-orange-500/20" : "bg-slate-50 text-slate-700 hover:bg-slate-100"}`}
-                >
-                  <div className="flex items-center gap-2 text-sm font-bold">
-                    <tab.icon className="h-4 w-4" />
-                    <span>{tab.label}</span>
-                  </div>
-                  <div className={`mt-0.5 text-[11px] ${selected ? "text-orange-50" : "text-slate-400"}`}>{tab.description}</div>
-                </button>
-              );
-            })}
-          </div>
+        {/* Tab Navigation — compact pill style */}
+        <div className="mb-8 flex items-center gap-1.5 rounded-2xl border border-slate-200/70 bg-white p-1.5 shadow-sm overflow-x-auto">
+          {workspaceTabs.map(tab => {
+            const selected = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold whitespace-nowrap transition duration-200 ${selected ? "bg-[#FF6B00] text-white shadow-md shadow-[#FF6B00]/20" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
+              >
+                <tab.icon className="h-4 w-4 shrink-0" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {roadmapError ? (
@@ -741,424 +770,395 @@ export default function WorkspaceDetail(){
           </div>
         ) : null}
 
-        {/* Main content area */}
-        <div className={`grid grid-cols-12 gap-6 mb-6 ${activeTab === "files" ? "" : "hidden"}`}>
-          {/* Left column: Materials & Knowledge Base */}
-          <div className="col-span-12 lg:col-span-7">
-            <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-100">
-              <h2 className="text-lg font-semibold mb-4">Materials & Knowledge Base</h2>
-
-              <label
-                onDragEnter={()=>setDragActive(true)}
-                onDragOver={(e)=>{ e.preventDefault(); setDragActive(true); }}
-                onDragLeave={()=>setDragActive(false)}
-                onDrop={onDrop}
-                className={`group relative flex items-center justify-between gap-4 p-6 rounded-xl border-2 border-dashed ${dragActive ? 'border-orange-300 bg-orange-50/40' : 'border-slate-200 bg-slate-50'} cursor-pointer`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-lg bg-white shadow-sm">
-                    <FileText className="w-6 h-6 text-orange-500" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium">Kéo & thả tài liệu vào đây</div>
-                    <div className="text-xs text-slate-400">PDF, DOCX, TXT — tối đa 50MB</div>
-                  </div>
+        {/* FILES TAB — Modern card-based layout */}
+        <div className={`${activeTab === "files" ? "grid grid-cols-12 gap-6 mb-6" : "hidden"}`}>
+          {/* Left column: Materials */}
+          <div className="col-span-12 lg:col-span-7 space-y-5">
+            {/* Upload zone */}
+            <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 border border-orange-100">
+                  <UploadCloud className="h-4 w-4 text-[#FF6B00]" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <input ref={fileRef} type="file" multiple className="hidden" onChange={onFiles} />
-                  <button onClick={()=>fileRef.current?.click()} className="px-4 py-2 rounded-lg bg-orange-500 text-white border border-orange-500 hover:bg-orange-600 hover:shadow">Chọn file</button>
-                </div>
-              </label>
-
-              <div className="mt-6 overflow-hidden rounded-lg border border-slate-100">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="text-left p-3">File name</th>
-                      <th className="text-left p-3">Size</th>
-                      <th className="text-left p-3">Uploaded</th>
-                      <th className="text-left p-3">Status</th>
-                      <th className="p-3 w-12" />
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white">
-                    {files.length === 0 ? (
-                      <tr><td colSpan={5} className="p-6 text-center text-slate-400">Chưa tải lên tài liệu nào.</td></tr>
-                    ) : files.map(f => (
-                      <tr key={f.id} className="hover:bg-slate-50 transition cursor-pointer">
-                        <td className="p-3 flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-md bg-slate-100 flex items-center justify-center"><FileText className="w-4 h-4 text-orange-500" /></div>
-                          <div>
-                            <div className="font-medium">{f.name}</div>
-                            <div className="text-xs text-slate-400">Click để xem trước</div>
-                          </div>
-                        </td>
-                        <td className="p-3 text-slate-600">
-                          {f.jobStatus === 'PENDING' ? (
-                            <span className="inline-flex items-center gap-2 text-slate-500">
-                              <LoaderCircle className="h-4 w-4 animate-spin text-orange-500" />
-                              <span>Đang chờ xử lý...</span>
-                            </span>
-                          ) : f.jobStatus === 'PROCESSING' ? (
-                            `${f.progress}%`
-                          ) : f.progress>0 ? `${f.progress}%` : '—'}
-                        </td>
-                        <td className="p-3 text-slate-600">{new Date().toLocaleDateString()}</td>
-                        <td className="p-3">
-                          {f.jobStatus === 'PENDING' ? (
-                            <div className="flex items-center gap-2 text-xs text-slate-500">
-                              <LoaderCircle className="h-4 w-4 animate-spin text-orange-500" />
-                              <span>Đang chờ xử lý...</span>
-                            </div>
-                          ) : f.jobStatus === 'PROCESSING' ? (
-                            <div>
-                              {Number.isFinite(f.progress) ? (
-                                <>
-                                  <div className="flex items-center justify-between text-xs text-slate-600 mb-2">Processing <span>{f.progress}%</span></div>
-                                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                    <div style={{width:`${f.progress}%`}} className="h-2 bg-orange-500" />
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="flex items-center gap-2 text-xs text-slate-500">
-                                  <LoaderCircle className="h-4 w-4 animate-spin text-orange-500" />
-                                  <span>Đang xử lý</span>
-                                </div>
-                              )}
-                            </div>
-                          ) : f.jobStatus === 'FAILED' ? (
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-xs">Failed</div>
-                          ) : f.status === 'done' ? (
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs">
-                              <CheckCircle2 className="w-4 h-4" /> Processed
-                            </div>
-                          ) : (
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-xs">Failed</div>
-                          )}
-                          {f.status !== 'done' && (
-                            <div className="mt-2">
-                              <button
-                                type="button"
-                                onClick={() => cancelFile(f)}
-                                className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md border border-slate-200 text-xs text-slate-600 hover:bg-slate-50"
-                              >
-                                Hủy file
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          {f.materialId && (
-                            <button
-                              type="button"
-                              title={`Xóa "${f.name}"`}
-                              onClick={() => void handleDeleteMaterial(f)}
-                              className="text-slate-400 hover:text-rose-600 transition p-1.5 rounded-lg hover:bg-rose-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* Right column: AI Engine Pipeline */}
-          <div className="col-span-12 lg:col-span-5">
-            <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-100">
-              <h3 className="text-md font-semibold mb-4">AI Engine Pipeline</h3>
-              <ol className="space-y-4">
-                <li className="flex items-start gap-3">
-                  <span className={`h-9 w-9 rounded-lg grid place-items-center ${getStepStatus(1) === 'completed' ? 'bg-emerald-50 text-emerald-700' : getStepStatus(1) === 'active' ? 'bg-orange-50 text-orange-700' : 'bg-slate-100 text-slate-300'}`}>
-                    {getStepStatus(1) === 'completed' ? <CheckCircle2 className="w-5 h-5"/> : getStepStatus(1) === 'active' ? <LoaderCircle className="w-5 h-5 animate-spin" /> : <UploadCloud className="w-5 h-5 opacity-40" />}
-                  </span>
-                  <div>
-                    <div className="font-semibold">1. Upload Material</div>
-                    <div className="text-xs text-slate-400">Files are added to workspace</div>
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <span className={`h-9 w-9 rounded-lg grid place-items-center ${getStepStatus(2) === 'completed' ? 'bg-emerald-50 text-emerald-700' : getStepStatus(2) === 'active' ? 'bg-orange-50 text-orange-700' : 'bg-slate-100 text-slate-300'}`}>
-                    {getStepStatus(2) === 'completed' ? <CheckCircle2 className="w-5 h-5" /> : getStepStatus(2) === 'active' ? <LoaderCircle className="w-5 h-5 animate-spin" /> : <LoaderCircle className="w-5 h-5 opacity-40" />}
-                  </span>
-                  <div className="flex-1">
-                    <div className="font-semibold">2. Parse & Extract</div>
-                    <div className="text-xs text-slate-400">Extracting text, metadata and embeddings</div>
-                    <div className="mt-2 bg-slate-100 rounded-full h-2 overflow-hidden">
-                      {getStepStatus(2) === 'active' ? (
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <LoaderCircle className="h-4 w-4 animate-spin text-orange-500" />
-                          <span>{pendingJobsCount > 0 ? 'Đang chờ xử lý...' : 'Đang xử lý...'}</span>
-                        </div>
-                      ) : getStepStatus(2) === 'completed' ? (
-                        <div className="h-2 bg-emerald-500" style={{width: '100%'}} />
-                      ) : processingJobsCount > 0 && processingProgress !== null ? (
-                        <div className="h-2 bg-orange-500" style={{width: `${processingProgress}%`}} />
-                      ) : processingJobsCount > 0 ? (
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <LoaderCircle className="h-4 w-4 animate-spin text-orange-500" />
-                          <span>Đang xử lý</span>
-                        </div>
-                      ) : (
-                        <div className="h-2 bg-slate-200" style={{width: `${getStepStatus(2) === 'pending' ? 0 : processingProgress ?? 0}%`}} />
-                      )}
-                    </div>
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <span className={`h-9 w-9 rounded-lg grid place-items-center ${getStepStatus(3) === 'completed' ? 'bg-emerald-50 text-emerald-700' : getStepStatus(3) === 'active' ? 'bg-orange-50 text-orange-700' : 'bg-slate-100 text-slate-300'}`}>
-                    {getStepStatus(3) === 'completed' ? <CheckCircle2 className="w-5 h-5" /> : getStepStatus(3) === 'active' ? <LoaderCircle className="w-5 h-5 animate-spin" /> : <Layers3 className="w-5 h-5 opacity-40" />}
-                  </span>
-                  <div>
-                    <div className="font-semibold">3. Structure Generation</div>
-                    <div className="text-xs text-slate-400">
-                      {getStepStatus(3) === 'completed'
-                        ? 'Learning structure is ready'
-                        : getStepStatus(3) === 'active'
-                          ? 'Generating structure from extracted content'
-                          : 'Waiting for Parse & Extract to finish'}
-                    </div>
-                  </div>
-                </li>
-              </ol>
-            </div>
-          </div>
-        </div>
-
-        <div className={`${activeTab === "syllabus" ? "mt-6" : "hidden"}`}>
-          {activeTab === "syllabus" && (
-            <SyllabusInput workspaceId={workspaceId} workspace={currentWorkspace} />
-          )}
-        </div>
-
-        <div className={`${activeTab === "settings" ? "mt-6" : "hidden"}`}>
-          {activeTab === "settings" && (
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">Cấu hình lộ trình</h3>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Điều chỉnh thông tin đầu vào, mục tiêu học và cấu trúc workspace để AI sinh roadmap chính xác hơn.
-                  </p>
+                  <div className="text-sm font-bold text-slate-800">Tải lên tài liệu</div>
+                  <div className="text-xs text-slate-400">PDF, DOCX, TXT — tối đa 50MB mỗi file</div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsConfigOpen(true)}
-                  className="inline-flex items-center justify-center rounded-xl border border-orange-500 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-600 transition hover:bg-orange-100"
+              </div>
+              <div className="p-6">
+                <label
+                  onDragEnter={() => setDragActive(true)}
+                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                  onDragLeave={() => setDragActive(false)}
+                  onDrop={onDrop}
+                  className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-10 cursor-pointer transition-all duration-200 ${dragActive ? 'border-[#FF6B00]/50 bg-[#FFF7ED]/50' : 'border-slate-200 hover:border-[#FF6B00]/30 hover:bg-slate-50/80'}`}
                 >
-                  Cấu hình lộ trình
-                </button>
-              </div>
-
-              <div className="mt-6 grid gap-4 md:grid-cols-3">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Workspace</div>
-                  <div className="mt-2 text-sm font-semibold text-slate-900">{workspaceName}</div>
-                  <div className="mt-1 text-xs text-slate-500">{workspaceCode}</div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Trạng thái AI</div>
-                  <div className="mt-2 text-sm font-semibold text-slate-900">{processingDocsCount > 0 ? "Processing" : "Online"}</div>
-                  <div className="mt-1 text-xs text-slate-500">Dựa trên tài liệu và cài đặt hiện tại</div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Timeline</div>
-                  <div className="mt-2 text-sm font-semibold text-slate-900">{analysisDurationLabel}</div>
-                  <div className="mt-1 text-xs text-slate-500">Thời gian phân tích gần nhất</div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* AI Results Preview - New Section */}
-        <div className={`mt-6 ${activeTab === "roadmap" ? "" : "hidden"}`}>
-          <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-100">
-            <div className="flex items-center justify-between mb-3 border-b border-orange-200 pb-2">
-              <h3 className="text-md font-semibold">AI Results Preview</h3>
-              <div className="text-xs text-slate-400">Updated: just now</div>
-            </div>
-            {!results ? (
-              (isGeneratingStructure || generateLoading) ? (
-                <div className="text-center py-8">
-                  <div className="mx-auto mb-4 w-36 h-36 bg-slate-50 rounded-lg grid place-items-center">
-                    <LoaderCircle className="animate-spin w-12 h-12 text-orange-500" />
+                  <input ref={fileRef} type="file" multiple className="hidden" onChange={onFiles} />
+                  <div className={`flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-200 ${dragActive ? 'bg-[#FF6B00] text-white shadow-lg shadow-[#FF6B00]/20' : 'bg-slate-100 text-slate-400'}`}>
+                    <MoveDown className="h-6 w-6" />
                   </div>
-                  <div className="text-sm font-semibold mb-1">Đang sinh lộ trình</div>
-                  <div className="text-xs text-slate-400 mb-4">Hệ thống đang phân tích tài liệu và sinh lộ trình. Vui lòng chờ...</div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="mx-auto mb-4 w-36 h-36 bg-slate-50 rounded-lg grid place-items-center">
-                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#FF9800" strokeWidth="1.5"><path d="M12 2v6"/><path d="M5 6h14"/><path d="M6 13h12"/><path d="M8 20h8"/></svg>
+                  <div className="text-center">
+                    <div className="text-sm font-semibold text-slate-700">Kéo &amp; thả tài liệu vào đây</div>
+                    <div className="text-xs text-slate-400 mt-1">hoặc nhấn để chọn file từ máy tính</div>
                   </div>
-                  <div className="text-sm font-semibold mb-1">Chưa có cấu trúc</div>
-                  <div className="text-xs text-slate-400 mb-4">Tải lên tài liệu và chờ xử lý để sinh lộ trình học.</div>
                   <button
                     type="button"
-                    onClick={handleRegenerateStructure}
-                    disabled={generating || confirming}
-                    className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-md transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => fileRef.current?.click()}
+                    className="mt-1 inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] transition-all duration-200"
                   >
-                    {generating ? "⏳ Đang phân tích..." : "✨ Phân tích AI"}
+                    <FileUp className="h-4 w-4" />
+                    Chọn file
                   </button>
-                </div>
-              )
-            ) : (
-              <div>
-                <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between">
-                  <div className="inline-flex items-center gap-2">
-                    {normalizedStatus === 'CONFIRMED' ? (
-                      <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Cấu trúc đã xác nhận
-                      </div>
-                    ) : (
-                      <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
-                        <ShieldCheck className="w-4 h-4" />
-                        Cấu trúc đang chờ xác nhận
-                      </div>
-                    )}
-                  </div>
+                </label>
+              </div>
+            </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    {normalizedStatus === 'CONFIRMED' ? (
+            {/* File list */}
+            <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 border border-slate-100">
+                    <FileText className="h-4 w-4 text-slate-500" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-slate-800">Tài liệu đã tải lên</div>
+                    <div className="text-xs text-slate-400">{files.length} tài liệu · {doneDocsCount} đã xử lý xong</div>
+                  </div>
+                </div>
+                {materialsLoading && <LoaderCircle className="h-4 w-4 animate-spin text-[#FF6B00]" />}
+              </div>
+
+              {files.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-50 text-slate-300">
+                    <FileText className="h-7 w-7" />
+                  </div>
+                  <div className="text-sm font-semibold text-slate-500">Chưa có tài liệu nào</div>
+                  <div className="text-xs text-slate-400 mt-1">Tải lên file để bắt đầu phân tích AI</div>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {files.map(f => (
+                    <div key={f.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors duration-150">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 border border-orange-100/50">
+                        <FileText className="h-4 w-4 text-[#FF6B00]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-slate-800 truncate">{f.name}</div>
+                        {(f.jobStatus === 'PROCESSING' || f.status === 'processing') && Number.isFinite(f.progress) && f.progress > 0 && f.progress < 100 && (
+                          <div className="mt-1.5">
+                            <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                              <span>Đang xử lý</span>
+                              <span className="font-semibold text-[#FF6B00]">{f.progress}%</span>
+                            </div>
+                            <div className="h-1 w-full overflow-hidden rounded-full bg-slate-100">
+                              <div className="h-full rounded-full bg-gradient-to-r from-[#FF6B00] to-amber-400 transition-all duration-300" style={{ width: `${f.progress}%` }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="shrink-0">
+                        {f.jobStatus === 'PENDING' ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                            <LoaderCircle className="h-3 w-3 animate-spin" />Đang chờ
+                          </span>
+                        ) : f.jobStatus === 'PROCESSING' ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF7ED] border border-[#FFEDD5] px-2.5 py-1 text-[11px] font-semibold text-[#FF6B00]">
+                            <LoaderCircle className="h-3 w-3 animate-spin" />Xử lý
+                          </span>
+                        ) : f.jobStatus === 'FAILED' ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-600">Thất bại</span>
+                        ) : f.status === 'done' || String(f.jobStatus || '').toUpperCase() === 'COMPLETED' ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                            <CheckCircle2 className="h-3 w-3" />Hoàn thành
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">Đang tải</span>
+                        )}
+                      </div>
+                      {f.status !== 'done' && String(f.jobStatus || '').toUpperCase() !== 'COMPLETED' && (
+                        <button
+                          type="button"
+                          onClick={() => cancelFile(f)}
+                          className="shrink-0 opacity-0 group-hover:opacity-100 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500 transition-all duration-150"
+                          title="Hủy file"
+                        >
+                          <Zap className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right column: AI Pipeline */}
+          <div className="col-span-12 lg:col-span-5 space-y-5">
+            <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 border border-violet-100">
+                  <BrainCircuit className="h-4 w-4 text-violet-500" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-slate-800">AI Engine Pipeline</div>
+                  <div className="text-xs text-slate-400">Quy trình phân tích tài liệu</div>
+                </div>
+              </div>
+              <div className="p-6">
+                <ol className="space-y-0">
+                  {[
+                    { step: 1 as const, title: 'Tải lên tài liệu', desc: getStepStatus(1) === 'active' ? 'Đang tải file lên hệ thống...' : getStepStatus(1) === 'completed' ? `${files.length} tài liệu đã được thêm` : 'Tải file để bắt đầu', Icon: UploadCloud },
+                    { step: 2 as const, title: 'Phân tích & Trích xuất', desc: getStepStatus(2) === 'active' ? (pendingJobsCount > 0 ? 'Đang chờ phân tích...' : 'Trích xuất văn bản và embeddings...') : getStepStatus(2) === 'completed' ? 'Đã trích xuất thành công' : 'Chờ bước tải lên hoàn thành', Icon: Layers3 },
+                    { step: 3 as const, title: 'Sinh cấu trúc học tập', desc: getStepStatus(3) === 'active' ? 'AI đang sinh cấu trúc...' : getStepStatus(3) === 'completed' ? 'Cấu trúc đã sẵn sàng' : 'Chờ phân tích hoàn thành', Icon: Sparkles },
+                  ].map(({ step, title, desc, Icon }, idx) => {
+                    const status = getStepStatus(step);
+                    return (
+                      <li key={step} className="relative flex gap-4">
+                        {idx < 2 && <div className="absolute left-[18px] top-[36px] w-px h-[calc(100%-4px)] bg-slate-100" />}
+                        <div className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all duration-300 ${status === 'completed' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : status === 'active' ? 'bg-[#FFF7ED] border-[#FFEDD5] text-[#FF6B00]' : 'bg-slate-50 border-slate-200 text-slate-300'}`}>
+                          {status === 'completed' ? <CheckCircle2 className="h-4 w-4" /> : status === 'active' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4 opacity-50" />}
+                        </div>
+                        <div className="pb-6 min-w-0">
+                          <div className={`text-sm font-bold ${status === 'completed' ? 'text-emerald-700' : status === 'active' ? 'text-slate-800' : 'text-slate-400'}`}>{title}</div>
+                          <div className="text-xs text-slate-400 mt-0.5 leading-relaxed">{desc}</div>
+                          {step === 2 && status === 'active' && processingProgress !== null && (
+                            <div className="mt-2">
+                              <div className="h-1 w-full overflow-hidden rounded-full bg-slate-100">
+                                <div className="h-full rounded-full bg-gradient-to-r from-[#FF6B00] to-amber-400 transition-all duration-500" style={{ width: `${processingProgress}%` }} />
+                              </div>
+                              <div className="mt-1 text-[11px] text-slate-400 text-right">{processingProgress}%</div>
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+
+                {files.length > 0 && !results && (
+                  <div className="mt-2 pt-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      disabled={generating || pendingJobsCount > 0 || processingJobsCount > 0}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-4 py-3 text-sm font-bold text-white shadow-md shadow-[#FF6B00]/15 hover:bg-[#E05E00] disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
+                    >
+                      {generating ? (<><LoaderCircle className="h-4 w-4 animate-spin" />Đang phân tích AI...</>) : (<><Sparkles className="h-4 w-4" />Phân tích AI ngay</>)}
+                    </button>
+                  </div>
+                )}
+
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  {[{ label: 'Tổng file', value: docsCount, color: 'text-slate-700' }, { label: 'Hoàn thành', value: doneDocsCount, color: 'text-emerald-600' }, { label: 'Xử lý', value: processingDocsCount, color: 'text-[#FF6B00]' }].map(({ label, value, color }) => (
+                    <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-center">
+                      <div className={`text-base font-black ${color}`}>{value}</div>
+                      <div className="text-[11px] font-medium text-slate-400 mt-0.5">{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* AI learning configuration summary */}
+            <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 border border-orange-100">
+                  <SlidersHorizontal className="h-4 w-4 text-[#FF6B00]" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-slate-800">Cấu hình lộ trình học</div>
+                  <div className="text-xs text-slate-400">Mục tiêu & kế hoạch học tập của bạn</div>
+                </div>
+              </div>
+              <div className="p-5 space-y-4">
+                {onboarding.profile ? (
+                  <>
+                    <div className="rounded-xl bg-slate-50/60 border border-slate-100 p-3.5">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Mục tiêu học tập</div>
+                      <div className="text-xs font-semibold text-slate-700 leading-relaxed italic">
+                        "{onboarding.profile.targetGoal}"
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3.5 pt-1">
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Clock3 className="h-3.5 w-3.5 text-slate-400" /> Cam kết học
+                        </div>
+                        <div className="text-xs font-bold text-slate-700">
+                          {onboarding.profile.studyHoursPerWeek ? `${onboarding.profile.studyHoursPerWeek} giờ / tuần` : 'Chưa thiết lập'}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-slate-400" /> Hạn hoàn thành
+                        </div>
+                        <div className="text-xs font-bold text-slate-700">
+                          {onboarding.profile.targetDeadline ? new Date(onboarding.profile.targetDeadline).toLocaleDateString('vi-VN') : 'Chưa thiết lập'}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 col-span-2 pt-1">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Compass className="h-3.5 w-3.5 text-slate-400" /> Tự tin & Lịch học
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          {/* Confidence badge */}
+                          {onboarding.profile.confidence === 'HIGH' && (
+                            <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-100">
+                              Tự tin cao
+                            </span>
+                          )}
+                          {onboarding.profile.confidence === 'MEDIUM' && (
+                            <span className="inline-flex items-center rounded-lg bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-100">
+                              Tự tin vừa
+                            </span>
+                          )}
+                          {onboarding.profile.confidence === 'LOW' && (
+                            <span className="inline-flex items-center rounded-lg bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-600 border border-amber-100">
+                              Tự tin thấp
+                            </span>
+                          )}
+
+                          {/* Language badge */}
+                          {onboarding.profile.preferredLanguage && (
+                            <span className="inline-flex items-center rounded-lg bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-100">
+                              Mức: {onboarding.profile.preferredLanguage === 'vi' ? 'Tiếng Việt' : onboarding.profile.preferredLanguage === 'en' ? 'Tiếng Anh' : onboarding.profile.preferredLanguage}
+                            </span>
+                          )}
+
+                          {/* Days badges mapping */}
+                          {onboarding.profile.preferredDays && onboarding.profile.preferredDays.length > 0 && (
+                            <span className="inline-flex items-center rounded-lg bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-100">
+                              Lịch học: {onboarding.profile.preferredDays.length} ngày/tuần
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100">
                       <button
                         type="button"
-                        onClick={() => navigate(`/app/workspaces/${id}/roadmap`)}
-                        className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-orange-600"
+                        onClick={() => setActiveTab("config")}
+                        className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition duration-150"
                       >
-                        ✨ Xem lộ trình học tập chi tiết
+                        <SlidersHorizontal className="h-3.5 w-3.5" />
+                        Chỉnh sửa cấu hình học
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-xs text-slate-400">Chưa thiết lập cấu hình lộ trình học</p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("config")}
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B00]/10 px-4 py-2.5 text-xs font-bold text-[#FF6B00] hover:bg-[#FF6B00]/20 transition duration-150"
+                    >
+                      Cấu hình ngay
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CONFIG TAB — inline config form replaces modal */}
+        <div className={`${activeTab === "config" ? "" : "hidden"}`}>
+          {activeTab === "config" && (
+            <EditWorkspaceConfigModal
+              isOpen={true}
+              onClose={() => setActiveTab("files")}
+              workspaceId={id ?? ''}
+              workspaceName={workspaceName}
+              initialConfig={onboarding.profile}
+              onSaved={() => void onboarding.fetchOnboardingProfile()}
+              inline
+            />
+          )}
+        </div>
+
+        {/* ROADMAP TAB */}
+        <div className={`mt-6 ${activeTab === "roadmap" ? "" : "hidden"}`}>
+          <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 border border-orange-100">
+                  <Layers3 className="h-4 w-4 text-[#FF6B00]" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-slate-800">Cấu trúc học tập AI</div>
+                  <div className="text-xs text-slate-400">Lộ trình được sinh tự động từ nội dung tài liệu</div>
+                </div>
+              </div>
+              {results && (
+                normalizedStatus === 'CONFIRMED' ? (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    <CheckCircle2 className="w-3.5 h-3.5" />Đã xác nhận
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[#FFF7ED] border border-[#FFEDD5] px-3 py-1 text-xs font-semibold text-[#FF6B00]">
+                    <ShieldCheck className="w-3.5 h-3.5" />Chờ xác nhận
+                  </div>
+                )
+              )}
+            </div>
+            <div className="p-6">
+              {!results ? (
+                (isGeneratingStructure || generateLoading) ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-orange-50 border border-orange-100 text-[#FF6B00]"><LoaderCircle className="h-9 w-9 animate-spin" /></div>
+                    <div>
+                      <div className="text-base font-bold text-slate-800">Đang sinh lộ trình...</div>
+                      <div className="text-sm text-slate-400 mt-1">Hệ thống đang phân tích và tổng hợp nội dung. Vui lòng chờ.</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-slate-50 border border-slate-200 text-slate-300"><Layers3 className="h-9 w-9" /></div>
+                    <div>
+                      <div className="text-base font-bold text-slate-700">Chưa có cấu trúc học tập</div>
+                      <div className="text-sm text-slate-400 mt-1 max-w-sm">Tải lên tài liệu và chờ xử lý xong để sinh lộ trình học bằng AI.</div>
+                    </div>
+                    <button type="button" onClick={handleRegenerateStructure} disabled={generating || confirming} className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] disabled:cursor-not-allowed disabled:opacity-50 transition">
+                      <Sparkles className="h-4 w-4" />{generating ? "Đang phân tích..." : "Phân tích AI"}
+                    </button>
+                  </div>
+                )
+              ) : (
+                <div className="space-y-5">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {normalizedStatus === 'CONFIRMED' ? (
+                      <button type="button" onClick={() => navigate(`/app/workspaces/${id}/roadmap`)} className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] transition">
+                        <Sparkles className="h-4 w-4" />Xem lộ trình học tập chi tiết
                       </button>
                     ) : (
                       <>
-                        <button
-                          type="button"
-                          onClick={handleRegenerateStructure}
-                          disabled={generating || confirming}
-                          className="inline-flex items-center gap-2 rounded-lg border border-orange-500 bg-white px-4 py-2 text-sm font-medium text-orange-600 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
+                        <button type="button" onClick={handleRegenerateStructure} disabled={generating || confirming} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 transition">
                           {generating ? '⏳ Đang tạo lại...' : '🔄 Tạo lại cấu trúc'}
                         </button>
-                        <button
-                          type="button"
-                          onClick={handleConfirm}
-                          disabled={confirming || generating}
-                          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:opacity-50"
-                        >
-                          <Check size={16} />
-                          {confirming ? 'Đang lưu cấu trúc...' : 'Chấp nhận lộ trình'}
+                        <button type="button" onClick={handleConfirm} disabled={confirming || generating} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-500/15 hover:bg-emerald-700 disabled:opacity-50 transition">
+                          <Check size={16} />{confirming ? 'Đang lưu...' : 'Chấp nhận lộ trình'}
                         </button>
                       </>
                     )}
                   </div>
+                  <LearningStructureDisplay chapters={visibleChapters} />
                 </div>
-
-                <div className="mb-3 flex gap-2">
-                  <button className="px-3 py-1 rounded-md bg-orange-500 text-white text-sm font-medium">Chương có cấu trúc</button>
-                </div>
-
-                <LearningStructureDisplay
-                  chapters={visibleChapters}
-                  workspaceId={workspaceId}
-                  structureStatus={normalizedStatus}
-                  onStructureUpdate={() => void fetchLearningStructure()}
-                  onConfirmStructure={handleConfirm}
-                  isConfirming={confirming}
-                />
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
-        <div className={`${activeTab === "progress" ? "mt-6" : "hidden"}`}>
+        <div className={`${activeTab === "progress" ? "" : "hidden"}`}>
           {activeTab === "progress" && <WorkspaceProgress workspaceId={workspaceId} className="mt-0" />}
         </div>
 
-        {activeTab === "settings" && (
-          <EditWorkspaceConfigModal
-            isOpen={isConfigOpen}
-            onClose={()=>setIsConfigOpen(false)}
-            workspaceId={id ?? ''}
-            workspaceName={workspaceName}
-            initialConfig={onboarding.profile}
-            onSaved={() => void onboarding.fetchOnboardingProfile()}
-          />
-        )}
       </div>
-
-      {/* ── Delete Material Confirmation Modal ────────────────────────────────── */}
-      {pendingDeleteFile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => { if (!isDeleting) setPendingDeleteFile(null); }}
-          />
-
-          {/* Dialog card */}
-          <div className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
-
-            {/* Icon */}
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-rose-50 mx-auto mb-4">
-              <Trash2 className="w-6 h-6 text-rose-600" />
-            </div>
-
-            {/* Title */}
-            <h2 className="text-lg font-bold text-slate-900 text-center">
-              Xóa tài liệu này?
-            </h2>
-
-            {/* Description */}
-            <p className="mt-2 text-sm text-slate-500 text-center leading-relaxed">
-              Hành động này không thể hoàn tác. Tài liệu này sẽ bị xóa vĩnh viễn khỏi không gian làm việc.
-            </p>
-
-            {/* File name chip */}
-            <div className="mt-3 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 text-sm text-slate-700 text-center font-medium truncate">
-              {pendingDeleteFile.name}
-            </div>
-
-            {/* Actions */}
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => setPendingDeleteFile(null)}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm font-semibold transition disabled:opacity-50"
-              >
-                Hủy bỏ
-              </button>
-
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => void confirmDelete()}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold transition disabled:opacity-60 inline-flex items-center justify-center gap-2"
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Đang xóa...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4" />
-                    Xóa tài liệu
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
