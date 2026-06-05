@@ -3,7 +3,7 @@
 <!-- HEADER STYLE: CLASSIC -->
 <div align="center">
 
-<img src="SkillSprint-FE.png" width="30%" style="position: relative; top: 0; right: 0;" alt="Project Logo"/>
+<img src="/public/logo.png" width="30%" style="position: relative; top: 0; right: 0;" alt="Project Logo"/>
 
 # SKILLSPRINT-FE
 
