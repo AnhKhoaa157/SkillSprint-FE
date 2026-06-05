@@ -6,6 +6,7 @@ import {
   AlertTriangle, CalendarClock, BookOpenCheck, CheckCircle2,
   LoaderCircle,
 } from "lucide-react";
+import { useNotificationSocket } from "../hooks/useNotificationSocket";
 import { APP_NAV_SECTIONS } from "../config/nav";
 import { motion, AnimatePresence } from "motion/react";
 import { PricingModal } from "../components/modals/PricingModal";
@@ -182,6 +183,49 @@ function normalizeRoadmapSidebarItem(workspace: RoadmapSidebarWorkspace, index: 
   };
 }
 
+/* ─── Notification helpers ─── */
+
+function toRelativeTime(dateStr: string): string {
+  try {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60_000);
+    if (mins < 1) return "Vừa xong";
+    if (mins < 60) return `${mins} phút trước`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} giờ trước`;
+    return `${Math.floor(hrs / 24)} ngày trước`;
+  } catch {
+    return "";
+  }
+}
+
+type NotifIconType = "check" | "alert" | "calendar" | "sparkles" | "bell";
+type NotifMeta = {
+  iconType: NotifIconType;
+  iconBg: string; iconBorder: string; iconColor: string;
+  label: string; labelColor: string;
+  itemBg: string; leftBorderColor?: string;
+};
+
+function getNotifMeta(type: string): NotifMeta {
+  switch (type) {
+    case "MATERIAL_ANALYSIS_DONE":
+      return { iconType:"check", iconBg:"#F0FDF4", iconBorder:"#A7F3D0", iconColor:"#059669", label:"Tài liệu", labelColor:"#059669", itemBg:CARD };
+    case "MATERIAL_PROCESSING_FAILED":
+      return { iconType:"alert", iconBg:"#FEF2F2", iconBorder:"#FECACA", iconColor:"#DC2626", label:"Lỗi xử lý", labelColor:"#DC2626", itemBg:"#FFF5F5", leftBorderColor:"#EF4444" };
+    case "ROADMAP_READY":
+      return { iconType:"check", iconBg:"#F0FDF4", iconBorder:"#A7F3D0", iconColor:"#059669", label:"AI Roadmap", labelColor:"#059669", itemBg:CARD };
+    case "TASK_REMINDER":
+      return { iconType:"calendar", iconBg:"#FFFBEB", iconBorder:"#FCD34D", iconColor:"#D97706", label:"Nhắc nhở", labelColor:"#D97706", itemBg:"#FFFBEB", leftBorderColor:"#F59E0B" };
+    case "TASK_OVERDUE":
+      return { iconType:"alert", iconBg:"#FEF2F2", iconBorder:"#FECACA", iconColor:"#DC2626", label:"Quá hạn", labelColor:"#DC2626", itemBg:"#FFF5F5", leftBorderColor:"#EF4444" };
+    case "AI_SCHEDULE_READY":
+      return { iconType:"sparkles", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"AI Lịch học", labelColor:OG, itemBg:CARD };
+    default:
+      return { iconType:"bell", iconBg:"#EFF6FF", iconBorder:"#BFDBFE", iconColor:"#2563EB", label:"Thông báo", labelColor:"#2563EB", itemBg:CARD };
+  }
+}
+
 export default function DashboardLayout() {
   const [sideOpen, setSideOpen]       = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
@@ -199,6 +243,7 @@ export default function DashboardLayout() {
       avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
     };
   });
+  const { notifications, unreadCount, markAsRead } = useNotificationSocket();
   const navigate = useNavigate();
   const loc   = useLocation();
   const pathname = loc.pathname.replace(/\/+$/, "") || "/";
@@ -568,7 +613,18 @@ export default function DashboardLayout() {
                 }}
               >
                 <Bell size={15}/>
-                <span style={{position:"absolute",top:"6px",right:"6px",width:"6px",height:"6px",borderRadius:"50%",background:OG,border:`1.5px solid ${CARD}`}}/>
+                {unreadCount > 0 && (
+                  <span style={{
+                    position:"absolute", top:"-5px", right:"-5px",
+                    minWidth:"16px", height:"16px", borderRadius:"99px",
+                    background:OG, border:`2px solid ${CARD}`,
+                    display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px",
+                  }}>
+                    <span style={{fontFamily:F,fontSize:"8px",fontWeight:800,color:"#fff",lineHeight:1}}>
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  </span>
+                )}
               </button>
 
               {/* Dropdown */}
@@ -594,7 +650,9 @@ export default function DashboardLayout() {
                         <Bell size={13} color={T1}/>
                         <span style={{ fontFamily:F, fontWeight:700, fontSize:"0.875rem", color:T1 }}>Thông báo</span>
                         <div style={{ padding:"1px 7px", borderRadius:99, background:OGL, border:`1px solid rgba(255,107,0,0.2)` }}>
-                          <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:OG }}>3 mới</span>
+                          <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:OG }}>
+                            {unreadCount > 0 ? `${unreadCount} mới` : "Đã đọc hết"}
+                          </span>
                         </div>
                       </div>
                       <button
@@ -606,109 +664,64 @@ export default function DashboardLayout() {
                     </div>
 
                     {/* Notification list */}
-                    <div style={{ display:"flex", flexDirection:"column" }}>
-
-                      {/* ── Item 1: URGENT alert ── */}
-                      <div style={{
-                        padding:"13px 15px",
-                        borderBottom:`1px solid ${BDR}`,
-                        background:"#FFFBEB",
-                        borderLeft:"3px solid #F59E0B",
-                      }}>
-                        <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
-                          <div style={{
-                            width:32, height:32, borderRadius:8, flexShrink:0,
-                            background:"#FEF3C7", border:"1.5px solid #FCD34D",
-                            display:"flex", alignItems:"center", justifyContent:"center",
-                          }}>
-                            <AlertTriangle size={15} color="#D97706"/>
+                    <div style={{ display:"flex", flexDirection:"column", maxHeight:320, overflowY:"auto" }}>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding:"32px 20px", textAlign:"center" }}>
+                          <div style={{ display:"flex", justifyContent:"center", marginBottom:8 }}>
+                            <Bell size={28} color={T3}/>
                           </div>
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
-                              <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:800, color:"#D97706", letterSpacing:"0.08em", textTransform:"uppercase" }}>Cảnh báo</span>
-                              <span style={{ fontFamily:F, fontSize:"0.60rem", color:T3 }}>Hôm qua · 8:00 PM</span>
-                            </div>
-                            <p style={{ fontFamily:F, fontSize:"0.80rem", fontWeight:600, color:T1, lineHeight:1.5, marginBottom:10 }}>
-                              Bạn đã bỏ lỡ buổi học HTML &amp; CSS hôm qua. Muốn AI sắp xếp lại lịch không?
-                            </p>
-                            <div style={{ display:"flex", gap:7 }}>
-                              <button style={{
-                                padding:"5px 13px", borderRadius:7,
-                                border:"1.5px solid #D97706", background:"transparent",
-                                fontFamily:F, fontWeight:700, fontSize:"0.72rem", color:"#D97706",
-                                cursor:"pointer", transition:"all 0.12s",
-                                display:"flex", alignItems:"center", gap:5,
-                              }}
-                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="#FEF3C7"; }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="transparent"; }}
-                              >
-                                <CalendarClock size={12}/>
-                                Sắp xếp lại
-                              </button>
-                              <button style={{
-                                padding:"5px 13px", borderRadius:7,
-                                border:`1.5px solid ${BDR}`, background:"transparent",
-                                fontFamily:F, fontWeight:600, fontSize:"0.72rem", color:T3,
-                                cursor:"pointer", transition:"all 0.12s",
-                              }}
-                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background=BG; }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="transparent"; }}
-                              >
-                                Bỏ qua
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* ── Item 2 ── */}
-                      <div style={{
-                        padding:"12px 15px",
-                        borderBottom:`1px solid ${BDR}`,
-                        background:CARD,
-                        display:"flex", alignItems:"flex-start", gap:10,
-                      }}>
-                        <div style={{
-                          width:32, height:32, borderRadius:8, flexShrink:0,
-                          background:"#F0FDF4", border:"1.5px solid #A7F3D0",
-                          display:"flex", alignItems:"center", justifyContent:"center",
-                        }}>
-                          <BookOpenCheck size={15} color="#059669"/>
-                        </div>
-                        <div style={{ flex:1 }}>
-                          <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
-                            <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:"#059669" }}>AI Roadmap</span>
-                            <span style={{ fontFamily:F, fontSize:"0.60rem", color:T3 }}>2 giờ trước</span>
-                          </div>
-                          <p style={{ fontFamily:F, fontSize:"0.78rem", color:T2, lineHeight:1.5 }}>
-                            Lộ trình tuần 4 đã sẵn sàng — 5 chủ đề mới về <strong style={{ color:T1 }}>Data Structures</strong> được thêm vào.
+                          <p style={{ fontFamily:F, fontSize:"0.75rem", color:T3, fontWeight:500 }}>
+                            Chưa có thông báo nào
                           </p>
                         </div>
-                      </div>
-
-                      {/* ── Item 3 ── */}
-                      <div style={{
-                        padding:"12px 15px",
-                        background:CARD,
-                        display:"flex", alignItems:"flex-start", gap:10,
-                      }}>
-                        <div style={{
-                          width:32, height:32, borderRadius:8, flexShrink:0,
-                          background:"#EFF6FF", border:"1.5px solid #BFDBFE",
-                          display:"flex", alignItems:"center", justifyContent:"center",
-                        }}>
-                          <CheckCircle2 size={15} color="#2563EB"/>
-                        </div>
-                        <div style={{ flex:1 }}>
-                          <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
-                            <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:"#2563EB" }}>Thành tích</span>
-                            <span style={{ fontFamily:F, fontSize:"0.60rem", color:T3 }}>Hôm nay</span>
+                      ) : notifications.slice(0, 8).map((notif) => {
+                        const meta = getNotifMeta(notif.type);
+                        const relTime = toRelativeTime(notif.createdAt);
+                        const iconEl =
+                          meta.iconType === "check"    ? <BookOpenCheck size={15} color={meta.iconColor}/> :
+                          meta.iconType === "alert"    ? <AlertTriangle  size={15} color={meta.iconColor}/> :
+                          meta.iconType === "calendar" ? <CalendarClock  size={15} color={meta.iconColor}/> :
+                          meta.iconType === "sparkles" ? <Sparkles        size={15} color={meta.iconColor}/> :
+                                                         <Bell            size={15} color={meta.iconColor}/>;
+                        return (
+                          <div
+                            key={notif.notificationId}
+                            onClick={() => { if (!notif.read) void markAsRead(notif.notificationId); }}
+                            style={{
+                              padding:"12px 15px",
+                              borderBottom:`1px solid ${BDR}`,
+                              background: notif.read ? CARD : meta.itemBg,
+                              ...(meta.leftBorderColor && !notif.read ? { borderLeft:`3px solid ${meta.leftBorderColor}` } : {}),
+                              display:"flex", alignItems:"flex-start", gap:10,
+                              cursor: notif.read ? "default" : "pointer",
+                              opacity: notif.read ? 0.72 : 1,
+                              transition:"opacity 0.15s",
+                            }}
+                          >
+                            <div style={{
+                              width:32, height:32, borderRadius:8, flexShrink:0,
+                              background:meta.iconBg, border:`1.5px solid ${meta.iconBorder}`,
+                              display:"flex", alignItems:"center", justifyContent:"center",
+                            }}>
+                              {iconEl}
+                            </div>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
+                                <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:meta.labelColor }}>
+                                  {meta.label}
+                                </span>
+                                <span style={{ fontFamily:F, fontSize:"0.60rem", color:T3 }}>{relTime}</span>
+                                {!notif.read && (
+                                  <span style={{ marginLeft:"auto", width:6, height:6, borderRadius:"50%", background:OG, display:"inline-block", flexShrink:0 }}/>
+                                )}
+                              </div>
+                              <p style={{ fontFamily:F, fontSize:"0.75rem", color: notif.read ? T2 : T1, lineHeight:1.5, wordBreak:"break-word" }}>
+                                {notif.message}
+                              </p>
+                            </div>
                           </div>
-                          <p style={{ fontFamily:F, fontSize:"0.78rem", color:T2, lineHeight:1.5 }}>
-                            Bạn đạt <strong style={{ color:T1 }}>12 ngày streak</strong> liên tiếp! 🔥 Giữ vững nhé!
-                          </p>
-                        </div>
-                      </div>
+                        );
+                      })}
                     </div>
 
                     {/* Footer */}

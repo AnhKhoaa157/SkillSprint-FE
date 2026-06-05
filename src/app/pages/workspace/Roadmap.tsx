@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpenCheck,
+  Bot,
   CircleHelp,
   CalendarDays,
   Clock3,
@@ -24,6 +25,7 @@ import {
   ArrowUpRight,
   ChevronRight,
 } from "lucide-react";
+import AiTutorChat from "./AiTutorChat";
 
 type StepTone = {
   label: string;
@@ -314,7 +316,7 @@ export default function Roadmap() {
   const [error, setError] = useState<string | null>(null);
   const [selectedStep, setSelectedStep] = useState<RoadmapStep | null>(null);
   const [isStarting, setIsStarting] = useState(false);
-  const [detailTab, setDetailTab] = useState<"overview" | "resources">("overview");
+  const [detailTab, setDetailTab] = useState<"overview" | "resources" | "tutor">("overview");
 
   useEffect(() => {
     setDetailTab("overview");
@@ -498,12 +500,31 @@ export default function Roadmap() {
                 {stepResources.length}
               </span>
             </button>
+            <button
+              type="button"
+              onClick={() => setDetailTab("tutor")}
+              className={`pb-2.5 px-1 transition-all font-bold border-b-2 flex items-center gap-1.5 ml-auto ${
+                detailTab === "tutor"
+                  ? "border-violet-500 text-violet-600"
+                  : "border-transparent text-slate-500 hover:text-slate-850"
+              }`}
+            >
+              <Bot className="h-3.5 w-3.5" />
+              <span>Hỏi AI</span>
+            </button>
           </div>
         </div>
 
         {/* Tab Contents */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-white">
-          {detailTab === "overview" ? (
+        <div className={`flex-1 bg-white ${detailTab === "tutor" ? "overflow-hidden flex flex-col min-h-0 p-4" : "overflow-y-auto custom-scrollbar p-6"}`}>
+          {detailTab === "tutor" ? (
+            <AiTutorChat
+              key={getStepKey(step) ?? ""}
+              mode="step"
+              contextId={getStepKey(step) ?? ""}
+              contextTitle={toText(step.title) || `Cột mốc ${idx + 1}`}
+            />
+          ) : detailTab === "overview" ? (
             <div className="space-y-6">
               {/* Journey details grid */}
               <div className="border-b border-slate-100 pb-5 space-y-4">
@@ -1115,6 +1136,7 @@ export default function Roadmap() {
           </div>
         )}
       </div>
+
     </div>
   );
 }

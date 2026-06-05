@@ -11,6 +11,10 @@ export async function getUnreadNotifications(): Promise<NotificationResponse[]> 
   return extractApiData(response);
 }
 
+export async function markNotificationRead(notificationId: string): Promise<void> {
+  await skillSprintApiClient.patch<ApiResponse<null>>(`/api/notifications/${encodeURIComponent(notificationId)}/read`);
+}
+
 export async function createReminder(workspaceId: string, payload: CreateReminderRequest): Promise<void> {
   await skillSprintApiClient.post<ApiResponse<null>>(`/api/workspaces/${encodeURIComponent(workspaceId)}/reminders`, payload);
 }

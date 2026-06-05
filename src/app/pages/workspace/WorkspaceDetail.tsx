@@ -7,8 +7,9 @@ import { useParams, useNavigate } from "react-router";
 // SyllabusInput removed — chức năng gộp vào Tài liệu
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
 import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
-import { ArrowLeft, ArrowRight, BookOpenCheck, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, Zap, LoaderCircle, Copy, SlidersHorizontal, Check, Calendar, Compass } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpenCheck, Bot, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Zap, LoaderCircle, Copy, SlidersHorizontal, Check, Calendar, Compass } from "lucide-react";
 import { getStoredAuthSession } from "../../../api/authService";
+import AiTutorChat from "./AiTutorChat";
 import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/materialService.ts";
 import roadmapService from "../../../api/roadmapService";
 
@@ -517,6 +518,7 @@ export default function WorkspaceDetail(){
   const [roadmapGenerating, setRoadmapGenerating] = useState(false);
   const [roadmapError, setRoadmapError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceDetailTab>("files");
+  const [workspaceTutorOpen, setWorkspaceTutorOpen] = useState(false);
   const currentWorkspace = {
     workspaceId,
     name: workspaceName,
@@ -1161,6 +1163,58 @@ export default function WorkspaceDetail(){
         </div>
 
       </div>
+
+      {/* ==================== WORKSPACE AI TUTOR FLOATING BUTTON ==================== */}
+      {workspaceId && (
+        <>
+          <button
+            type="button"
+            onClick={() => setWorkspaceTutorOpen(true)}
+            title="Hỏi AI Tutor về Workspace"
+            className="fixed bottom-6 right-6 z-40 flex h-13 w-13 items-center justify-center rounded-full bg-violet-600 text-white shadow-xl hover:bg-violet-700 hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-violet-400/30"
+          >
+            <Bot className="h-6 w-6" />
+          </button>
+
+          {workspaceTutorOpen && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-end sm:p-6">
+              <div
+                className="absolute inset-0 bg-black/25 backdrop-blur-sm"
+                onClick={() => setWorkspaceTutorOpen(false)}
+              />
+              <div className="relative w-full sm:w-[420px] h-[78vh] sm:h-[580px] rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl flex flex-col overflow-hidden border border-slate-200/60">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0 bg-white">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 border border-violet-100 shadow-sm">
+                      <Bot className="h-4.5 w-4.5 text-violet-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-800 leading-snug">AI Tutor</p>
+                      <p className="text-[9px] text-slate-400 font-medium truncate max-w-[240px]">
+                        Workspace · {workspaceName}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setWorkspaceTutorOpen(false)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition shadow-sm"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0 p-4">
+                  <AiTutorChat
+                    mode="workspace"
+                    contextId={workspaceId}
+                    contextTitle={workspaceName}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
