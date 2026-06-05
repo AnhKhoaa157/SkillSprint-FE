@@ -451,7 +451,11 @@ export default function CoursePlayer() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 relative overflow-hidden">
+      {/* Custom subtle background glow circles */}
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute top-[20%] left-0 w-[300px] h-[300px] bg-orange-500/5 rounded-full blur-[60px] pointer-events-none" />
+
       {/* ── Toast notification ─────────────────── */}
       {toastNotification && (
         <div
@@ -471,24 +475,24 @@ export default function CoursePlayer() {
       )}
 
       {/* ── Header ────────────────────────────────── */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur-xl shadow-sm shadow-slate-100/40">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <div className="min-w-0">
-            <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              <button type="button" onClick={goBack} className="inline-flex items-center gap-1 hover:text-orange-600">
-                <ArrowLeft size={14} /> Quay lại
+            <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-400 font-semibold">
+              <button type="button" onClick={goBack} className="inline-flex items-center gap-1 hover:text-orange-600 transition-colors">
+                <ArrowLeft size={13} className="stroke-[2.5]" /> Quay lại
               </button>
               <span>/</span>
-              <Link to="/app/calendar" className="hover:text-orange-600">
+              <Link to="/app/calendar" className="hover:text-orange-600 transition-colors">
                 Study Calendar
               </Link>
               <span>/</span>
-              <span className="truncate font-semibold text-orange-600">Phiên học</span>
+              <span className="truncate font-bold text-orange-600">Phiên học</span>
             </div>
-            <h1 className="truncate text-lg font-black tracking-tight sm:text-xl">
-              {task?.title ?? state.title ?? "Study Session"}
+            <h1 className="truncate text-base font-extrabold tracking-tight sm:text-lg text-slate-800">
+               {task?.title ?? state.title ?? "Study Session"}
             </h1>
-            <p className="mt-1 truncate text-sm text-slate-500">{roadmapStep?.title ?? state.subject ?? "Bài học hiện tại"}</p>
+            <p className="mt-0.5 truncate text-xs font-semibold text-slate-400">{roadmapStep?.title ?? state.subject ?? "Bài học hiện tại"}</p>
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -537,25 +541,25 @@ export default function CoursePlayer() {
               </div>
             ) : (
               <>
-                <div className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="space-y-8 rounded-[24px] border border-slate-100 bg-white p-6 md:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
                   {/* Info badges */}
-                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-100">
-                      <Target size={13} /> Study focus
+                  <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-[0.15em]">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1.5 text-orange-600 border border-orange-100/60 shadow-sm shadow-orange-50/50">
+                      <Target size={12} className="stroke-[2.5]" /> Study focus
                     </span>
-                    <span className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-100">
-                      <Clock3 size={13} /> {formatDate(task?.taskDate)}
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1.5 text-indigo-600 border border-indigo-100/60 shadow-sm shadow-indigo-50/50">
+                      <Clock3 size={12} className="stroke-[2.5]" /> {formatDate(task?.taskDate)}
                     </span>
-                    <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-slate-600 ring-1 ring-slate-200">
-                      <BookOpen size={13} /> {task?.category ?? "Study"}
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1.5 text-slate-600 border border-slate-100 shadow-sm shadow-slate-50/50">
+                      <BookOpen size={12} className="stroke-[2.5]" /> {task?.category ?? "Study"}
                     </span>
                   </div>
 
                   {/* Title row */}
                   <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
                     <div>
-                      <h2 className="text-2xl font-bold tracking-tight text-slate-800 lg:text-3xl">{task?.title ?? "Study Session"}</h2>
-                      <p className="mt-3 text-base leading-7 text-slate-600">
+                      <h2 className="text-xl font-extrabold tracking-tight text-slate-800 lg:text-2xl">{task?.title ?? "Study Session"}</h2>
+                      <p className="mt-2.5 text-sm leading-6 text-slate-500 font-semibold">
                         {roadmapStep?.subtitle ?? task?.description ?? "Hoàn thành bài học theo luồng Study Session."}
                       </p>
                     </div>
@@ -567,22 +571,29 @@ export default function CoursePlayer() {
                   </div>
 
                   {/* Study summary */}
-                  <section className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-sm">
-                        <Sparkles size={22} />
+                  <section className="rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50/30 to-amber-50/20 p-6 relative overflow-hidden shadow-sm shadow-orange-100/10">
+                    {/* Decorative bubble */}
+                    <div className="absolute -right-10 -top-10 w-24 h-24 bg-orange-200/20 rounded-full blur-xl pointer-events-none" />
+                    <div className="flex items-start gap-4 relative z-10">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-[0_8px_20px_-6px_rgba(249,115,22,0.4)]">
+                        <Sparkles size={20} className="animate-pulse" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-700">Study summary</p>
-                        <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-800">
+                        <div className="flex items-center gap-2">
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-600">Study summary</p>
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-orange-100 px-2 py-0.5 text-[8px] font-bold text-orange-700">
+                            AI Suggested
+                          </span>
+                        </div>
+                        <h3 className="mt-1 text-base font-extrabold tracking-tight text-slate-800">
                           {roadmapStep?.title ?? task?.title ?? "Study Session"}
                         </h3>
-                        <p className="mt-3 text-base leading-7 text-slate-600 line-clamp-3" title={roadmapStep?.summary ?? task?.description ?? ""}>
+                        <p className="mt-3 text-xs leading-6 text-slate-600 font-semibold line-clamp-3" title={roadmapStep?.summary ?? task?.description ?? ""}>
                           {roadmapStep?.summary ?? task?.description ?? "Backend chưa trả summary cho bước học này."}
                         </p>
                       </div>
                     </div>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    <div className="mt-5 grid gap-3 sm:grid-cols-3 relative z-10">
                       <PillStat label="Estimated" value={roadmapStep?.estimatedMinutes ? `${roadmapStep.estimatedMinutes} phút` : task?.durationMinutes ? `${task.durationMinutes} phút` : "--"} />
                       <PillStat label="Roadmap" value={formatStatusLabel(roadmapStep?.status)} />
                       <PillStat label="Session" value={hasStartedSession ? "Đang mở" : "Chưa bắt đầu"} />
@@ -590,52 +601,52 @@ export default function CoursePlayer() {
                   </section>
 
                   {/* Subtitle + Practice */}
-                  <section className="grid gap-4 sm:grid-cols-2">
-                    <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <section className="grid gap-5 sm:grid-cols-2">
+                    <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.01)] transition hover:-translate-y-0.5 hover:shadow-md">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm shadow-slate-900/10">
                           <FileText size={18} />
                         </div>
                         <div>
-                          <h3 className="text-base font-black tracking-tight">Roadmap subtitle</h3>
-                          <p className="text-sm text-slate-500">Tóm tắt phần học hiện tại</p>
+                          <h3 className="text-xs font-extrabold tracking-tight text-slate-800">Roadmap subtitle</h3>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Tóm tắt nội dung</p>
                         </div>
                       </div>
-                      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-sm leading-7 text-slate-700 line-clamp-2" title={roadmapStep?.subtitle ?? ""}>
+                      <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+                        <p className="text-xs leading-6 text-slate-600 font-medium line-clamp-2" title={roadmapStep?.subtitle ?? ""}>
                           {roadmapStep?.subtitle ?? "Chưa có subtitle cho roadmap step này."}
                         </p>
                       </div>
                     </article>
 
-                    <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.01)] transition hover:-translate-y-0.5 hover:shadow-md">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 border border-orange-100/60 shadow-sm shadow-orange-50/50">
                           <BookOpen size={18} />
                         </div>
                         <div>
-                          <h3 className="text-base font-black tracking-tight">Practice prompt</h3>
-                          <p className="text-sm text-slate-500">Bài luyện tập ngắn theo đúng MVP</p>
+                          <h3 className="text-xs font-extrabold tracking-tight text-slate-800">Practice prompt</h3>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Luyện tập nhanh</p>
                         </div>
                       </div>
                       {practice ? (
-                        <div className="mt-5 space-y-3">
-                          <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
-                            <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-600">Prompt</p>
-                            <p className="mt-2 text-sm leading-7 text-slate-800 line-clamp-3" title={practice.prompt}>
+                        <div className="mt-4 space-y-3">
+                          <div className="rounded-xl border border-orange-100/60 bg-orange-50/30 p-3.5">
+                            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-orange-600">Prompt</p>
+                            <p className="mt-1 text-xs leading-5 text-slate-700 font-medium line-clamp-3" title={practice.prompt}>
                               {practice.prompt}
                             </p>
                           </div>
-                          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                            <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Expected output</p>
-                            <p className="mt-2 text-sm leading-7 text-emerald-950/90 line-clamp-3" title={practice.expectedOutput}>
+                          <div className="rounded-xl border border-emerald-100/60 bg-emerald-50/30 p-3.5">
+                            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-600">Expected output</p>
+                            <p className="mt-1 text-xs leading-5 text-emerald-900/90 font-medium line-clamp-3" title={practice.expectedOutput}>
                               {practice.expectedOutput}
                             </p>
                           </div>
                         </div>
                       ) : (
-                        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-                          Chưa có practice prompt cho task này.
+                        <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/60 p-4 text-xs leading-6 text-slate-400 italic">
+                          Chưa có bài luyện tập cho task này.
                         </div>
                       )}
                     </article>
@@ -643,24 +654,24 @@ export default function CoursePlayer() {
 
                   {/* Lists */}
                   <section className="grid gap-4 sm:grid-cols-2">
-                    <SectionCard title="What to learn" items={normalizeList(roadmapStep?.whatToLearn)} emptyText="Backend chưa trả danh sách mục tiêu học." accent="orange" />
-                    <SectionCard title="Key concepts" items={normalizeList(roadmapStep?.keyConcepts)} emptyText="Backend chưa trả key concepts." accent="slate" />
-                    <SectionCard title="Learning outcomes" items={normalizeList(roadmapStep?.learningOutcomes)} emptyText="Backend chưa trả learning outcomes." accent="emerald" />
-                    <SectionCard title="Recommended focus" items={normalizeList(roadmapStep?.recommendedFocus)} emptyText="Backend chưa trả recommended focus." accent="amber" />
+                    <SectionCard title="What to learn" items={normalizeList(roadmapStep?.whatToLearn)} emptyText="Chưa có mục tiêu học." accent="orange" />
+                    <SectionCard title="Key concepts" items={normalizeList(roadmapStep?.keyConcepts)} emptyText="Chưa có khái niệm cốt lõi." accent="slate" />
+                    <SectionCard title="Learning outcomes" items={normalizeList(roadmapStep?.learningOutcomes)} emptyText="Chưa có kết quả học mong muốn." accent="emerald" />
+                    <SectionCard title="Recommended focus" items={normalizeList(roadmapStep?.recommendedFocus)} emptyText="Chưa có phần tập trung khuyến nghị." accent="amber" />
                   </section>
 
                   {/* Resources */}
-                  <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+                  <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.01)] lg:p-6 transition hover:shadow-md">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 border border-orange-100/60 shadow-sm shadow-orange-50/50">
                         <WandSparkles size={18} />
                       </div>
                       <div>
-                        <h3 className="text-base font-black tracking-tight">Resources</h3>
-                        <p className="text-sm text-slate-500">Tài nguyên gợi ý từ backend cho phiên học này</p>
+                        <h3 className="text-xs font-extrabold tracking-tight text-slate-800">Resources</h3>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Tài nguyên gợi ý từ AI</p>
                       </div>
                     </div>
-                    <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                       {resources.length > 0 ? (
                         resources.map((resource, index) => (
                           <a
@@ -668,21 +679,27 @@ export default function CoursePlayer() {
                             href={resource.url ?? "#"}
                             target={resource.url ? "_blank" : undefined}
                             rel={resource.url ? "noreferrer" : undefined}
-                            className="group rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:-translate-y-0.5 hover:border-orange-200 hover:bg-orange-50/50"
+                            className="group relative rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all duration-300 hover:-translate-y-1 hover:border-orange-200 hover:bg-orange-50/20 hover:shadow-lg hover:shadow-orange-500/5"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-bold text-slate-900">{resource.title ?? "Untitled resource"}</p>
-                                <p className="mt-1 text-xs text-slate-500">{resource.platform ?? resource.resourceType ?? "Resource"}</p>
+                                <p className="truncate text-xs font-extrabold text-slate-800 group-hover:text-orange-600 transition-colors">{resource.title ?? "Untitled resource"}</p>
+                                <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                                  {resource.platform ?? resource.resourceType ?? "Resource"}
+                                </span>
                               </div>
-                              {resource.aiRecommended ? <Sparkles size={15} className="text-orange-500" /> : null}
+                              {resource.aiRecommended ? (
+                                <span className="flex h-5 items-center gap-0.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-[8px] font-black text-orange-600 uppercase tracking-widest animate-pulse">
+                                  <Sparkles size={8} /> AI
+                                </span>
+                              ) : null}
                             </div>
-                            <p className="mt-3 text-sm leading-6 text-slate-600">{resource.reason ?? resource.content ?? "Backend resource."}</p>
+                            <p className="mt-3 text-[11px] leading-5 text-slate-500 font-medium line-clamp-2">{resource.reason ?? resource.content ?? "Tài liệu học tập bổ trợ."}</p>
                           </a>
                         ))
                       ) : (
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 md:col-span-2 xl:col-span-3">
-                          Chưa có tài nguyên cho phiên học này.
+                        <div className="rounded-xl border border-slate-100 bg-slate-50/40 p-4 text-xs text-slate-400 italic md:col-span-2 xl:col-span-3">
+                          Chưa có tài nguyên bổ trợ cho phiên học này.
                         </div>
                       )}
                     </div>
@@ -693,30 +710,35 @@ export default function CoursePlayer() {
           </section>
 
           {/* ── Right sidebar: Interactive Control Center ────── */}
-          <aside className="lg:sticky lg:top-6 self-start">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <aside className="lg:sticky lg:top-24 self-start">
+            <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-sm">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-[0_8px_20px_-6px_rgba(249,115,22,0.4)]">
                   <Timer size={18} />
                 </div>
                 <div>
-                  <h3 className="text-base font-black tracking-tight">Session controls</h3>
-                  <p className="text-sm text-slate-500">Điều phối chu kỳ Pomodoro</p>
+                  <h3 className="text-sm font-extrabold tracking-tight text-slate-800">Session controls</h3>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Điều phối Pomodoro</p>
                 </div>
               </div>
 
               {/* ── Premium Pomodoro Timer Widget ── */}
               {hasStartedSession && !isSessionCompleted && (
-                <div className="mt-5 space-y-3">
+                <div className="mt-5 space-y-4">
                   {/* Phase-aware timer card */}
-                  <div className={`relative rounded-2xl border-2 p-5 text-center transition-colors duration-500 ${
+                  <div className={`relative rounded-3xl border-2 p-6 text-center transition-all duration-500 shadow-md ${
                     pomodoroPhase !== "FOCUS"
-                      ? "border-green-200 bg-gradient-to-br from-green-50 to-emerald-50/80"
-                      : "border-red-200 bg-gradient-to-br from-red-50/80 to-orange-50/60"
+                      ? "border-emerald-100 bg-gradient-to-br from-emerald-50/40 to-teal-50/20 shadow-emerald-500/5"
+                      : "border-orange-100 bg-gradient-to-br from-orange-50/40 to-amber-50/20 shadow-orange-500/5"
                   }`}>
+                    {/* Floating accent dot */}
+                    <div className={`absolute top-4 right-4 h-2.5 w-2.5 rounded-full ${
+                      isTimerRunning ? "animate-ping" : ""
+                    } ${pomodoroPhase !== "FOCUS" ? "bg-emerald-500" : "bg-orange-500"}`} />
+
                     {/* Phase title */}
-                    <p className={`text-[10px] font-black uppercase tracking-[0.22em] ${
-                      pomodoroPhase !== "FOCUS" ? "text-green-600" : "text-red-500"
+                    <p className={`text-[9px] font-black uppercase tracking-[0.25em] ${
+                      pomodoroPhase !== "FOCUS" ? "text-emerald-600" : "text-orange-600"
                     }`}>
                       {pomodoroPhase === "SHORT_BREAK"
                         ? "☕ Nghỉ giải lao (5 phút)"
@@ -725,66 +747,57 @@ export default function CoursePlayer() {
                         : "🎯 Thời gian tập trung"}
                     </p>
 
-                    {/* Running indicator */}
-                    <div className="mt-1.5 flex items-center justify-center gap-1.5">
-                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${
-                        isTimerRunning
-                          ? pomodoroPhase !== "FOCUS"
-                            ? "bg-green-500 animate-pulse"
-                            : "bg-red-500 animate-pulse"
-                          : "bg-amber-400"
-                      }`} />
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
-                        {isTimerRunning ? "ĐANG CHẠY" : "ĐÃ TẠM DỪNG"}
-                      </span>
-                    </div>
+                    {/* Running status text */}
+                    <p className="mt-1 text-[8px] font-extrabold uppercase tracking-widest text-slate-400">
+                      {isTimerRunning ? "ĐANG TẬP TRUNG" : "ĐÃ TẠM DỪNG"}
+                    </p>
 
                     {/* Giant countdown */}
-                    <div className={`mt-3 font-mono text-[3.5rem] font-black tabular-nums leading-none transition-colors duration-500 ${
-                      pomodoroPhase !== "FOCUS" ? "text-green-500" : "text-red-500"
-                    } ${isTimerRunning && timeLeft <= 10 ? "animate-pulse" : ""}`}>
+                    <div className={`mt-3 font-mono text-[3.8rem] font-black tracking-tight tabular-nums leading-none transition-colors duration-500 ${
+                      pomodoroPhase !== "FOCUS" ? "text-emerald-600" : "text-orange-600"
+                    } ${isTimerRunning && timeLeft <= 10 ? "animate-pulse text-red-500" : ""}`}>
                       {formatTimer(timeLeft)}
                     </div>
 
                     {/* Progress stats */}
-                    <div className="mt-3 flex items-center justify-center gap-3 text-xs">
-                      <span className="text-slate-400">
-                        ⏱{" "}
-                        <span className="font-bold text-slate-600">{elapsedStudyMinutes} phút</span>
-                        {" học"}
+                    <div className="mt-4 flex items-center justify-center gap-2.5 text-[11px] font-semibold">
+                      <span className="text-slate-400 flex items-center gap-1">
+                        <Clock3 size={11} />{" "}
+                        <span className="font-extrabold text-slate-600">{elapsedStudyMinutes} phút</span>
+                        {" đã học"}
                       </span>
-                      <span className="text-slate-300">·</span>
-                      <span className={`font-bold ${hasMetMinimum ? "text-green-600" : "text-orange-500"}`}>
-                        {hasMetMinimum ? "✓ Đủ điều kiện" : `Cần ${minimumRequiredMinutes} phút`}
+                      <span className="text-slate-300">|</span>
+                      <span className={`font-extrabold ${hasMetMinimum ? "text-emerald-600" : "text-orange-500"}`}>
+                        {hasMetMinimum ? "✓ Đạt chỉ tiêu" : `Cần tối thiểu ${minimumRequiredMinutes}m`}
                       </span>
                     </div>
                   </div>
 
-                  {/* Control buttons: [Tạm dừng/Bắt đầu ×2] [Bỏ qua ×1] */}
+                  {/* Control buttons */}
                   <div className="grid grid-cols-3 gap-2">
                     {isTimerRunning ? (
                       <button
                         type="button"
                         onClick={handlePausePomodoro}
                         disabled={isSubActionLoading}
-                        className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 py-2.5 text-xs font-bold text-amber-800 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:opacity-50"
+                        className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50/80 py-3 text-xs font-bold text-amber-800 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:opacity-50"
                       >
-                        <PauseCircle size={13} /> Tạm dừng
+                        <PauseCircle size={14} className="stroke-[2.5]" /> Tạm dừng
                       </button>
                     ) : (
                       <button
                         type="button"
                         onClick={handleResumePomodoro}
                         disabled={isSubActionLoading}
-                        className={`col-span-2 flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-xs font-bold shadow-sm transition active:scale-95 disabled:opacity-50 ${
+                        className={`col-span-2 flex items-center justify-center gap-1.5 rounded-xl border py-3 text-xs font-bold shadow-sm transition active:scale-95 disabled:opacity-50 ${
                           pomodoroPhase !== "FOCUS"
-                            ? "border-green-200 bg-green-50 text-green-800 hover:bg-green-100"
-                            : "border-red-200 bg-red-50 text-red-800 hover:bg-red-100"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                            : "border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100"
                         }`}
                       >
                         {isSubActionLoading
-                          ? <LoaderCircle size={13} className="animate-spin" />
-                          : <Play size={13} />}
+                          ? <LoaderCircle size={14} className="animate-spin" />
+                          : <Play size={14} className="stroke-[2.5]" />}
                         {" "}Bắt đầu
                       </button>
                     )}
@@ -792,62 +805,62 @@ export default function CoursePlayer() {
                       type="button"
                       onClick={handleNextPhase}
                       disabled={isSubActionLoading}
-                      className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
-                      title="Bỏ qua / chuyển phase"
+                      className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 py-3 text-xs font-bold text-slate-500 shadow-sm transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
+                      title="Bỏ qua phase"
                     >
-                      <SkipForward size={13} /> Bỏ qua
+                      <SkipForward size={14} /> Bỏ qua
                     </button>
                   </div>
                 </div>
               )}
 
               {/* ── Metadata Metrics ────────────────── */}
-              <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3 text-sm">
+              <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/50 p-4.5 space-y-3 text-xs font-semibold">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Session state</span>
-                  <span className={`font-bold ${isSessionCompleted ? "text-emerald-600" : hasStartedSession ? "text-orange-600" : "text-slate-700"}`}>
-                    {isSessionCompleted ? "Completed" : hasStartedSession ? "In progress" : "Not started"}
+                  <span className="text-slate-400">Trạng thái phiên</span>
+                  <span className={`font-black ${isSessionCompleted ? "text-emerald-600" : hasStartedSession ? "text-orange-600" : "text-slate-500"}`}>
+                    {isSessionCompleted ? "Đã hoàn thành" : hasStartedSession ? "Đang diễn ra" : "Chưa bắt đầu"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Học tối thiểu</span>
-                  <span className={`font-bold ${hasMetMinimum ? "text-emerald-600" : "text-amber-600"}`}>
+                  <span className="text-slate-400">Yêu cầu tối thiểu</span>
+                  <span className="font-extrabold text-slate-700">
                     {minimumRequiredMinutes} phút
                   </span>
                 </div>
                 {elapsedStudyMinutes > 0 && (
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-slate-500">Thời gian tích lũy</span>
-                    <span className={`font-bold ${hasMetMinimum ? "text-emerald-600" : "text-slate-700"}`}>
-                      {elapsedStudyMinutes} phút
-                    </span>
-                  </div>
+                   <div className="flex items-center justify-between gap-3">
+                     <span className="text-slate-400">Đã tích lũy</span>
+                     <span className={`font-black ${hasMetMinimum ? "text-emerald-600" : "text-slate-700"}`}>
+                       {elapsedStudyMinutes} phút
+                     </span>
+                   </div>
                 )}
               </div>
 
               {/* ── Action Triggers ──────────────────── */}
               {isSessionCompleted ? (
-                <div className="mt-5 rounded-xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm mb-3">
-                    <CheckCircle2 size={24} />
+                <div className="mt-5 rounded-2xl border border-emerald-100/60 bg-emerald-50/40 p-5 text-center shadow-sm">
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm shadow-emerald-100/20 mb-3">
+                    <CheckCircle2 size={20} className="stroke-[2.5]" />
                   </div>
-                  <h4 className="text-lg font-black text-slate-900">🎉 Bài học đã hoàn thành!</h4>
-                  <p className="mt-1 text-xs text-slate-600">Hệ thống đã đồng bộ trạng thái COMPLETED lên lộ trình.</p>
+                  <h4 className="text-sm font-extrabold text-slate-800">🎉 Đã hoàn thành mục học</h4>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-500">Tiến độ đã được đồng bộ lên lộ trình cá nhân của bạn.</p>
                 </div>
               ) : !hasStartedSession ? (
                 <div className="mt-5 space-y-4">
-                  <div className="rounded-xl border border-orange-100 bg-orange-50/60 p-4 text-xs leading-5 text-slate-600">
+                  <div className="rounded-xl border border-orange-100/60 bg-orange-50/20 p-4 text-[11px] leading-5 text-slate-500">
                     {canStartByDate
-                      ? "Bấm bắt đầu để tạo Study Session thực tế, đồng thời kích hoạt chu trình Pomodoro 25 phút."
-                      : "Mục học này chưa đến ngày thực hiện trên lịch trình. Bạn có thể mở trước nếu muốn."}
+                      ? "Nhấn nút dưới để bắt đầu chu kỳ tập trung học 25 phút bằng đồng hồ Pomodoro."
+                      : "Mục học này chưa đến hạn. Bạn vẫn có thể mở học trước nếu muốn."}
                   </div>
                   <button
                     type="button"
                     onClick={handleStartSession}
                     disabled={!canStart}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-4 text-sm font-bold text-white shadow-lg transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {isStarting ? <LoaderCircle size={16} className="animate-spin" /> : <PlayCircle size={16} />}
+                    {isStarting ? <LoaderCircle size={15} className="animate-spin" /> : <PlayCircle size={15} />}
                     {canStartByDate ? "🚀 Bắt đầu tập trung (Pomodoro)" : "⏳ Vẫn mở học trước hạn"}
                   </button>
                 </div>
@@ -857,9 +870,9 @@ export default function CoursePlayer() {
                     type="button"
                     onClick={handleTriggerReviewModal}
                     disabled={isFinishing}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-4 text-sm font-bold text-white shadow-lg transition hover:bg-emerald-700 disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] disabled:opacity-50"
                   >
-                    {isFinishing ? <LoaderCircle size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                    {isFinishing ? <LoaderCircle size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
                     🏆 Kết thúc phiên học
                   </button>
                 </div>
@@ -871,63 +884,63 @@ export default function CoursePlayer() {
 
       {/* ── 🌟 REVIEW FORM OVERLAY MODAL (NOTES & FOCUS SCORE INPUT) ── */}
       {showReviewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md rounded-[24px] border border-slate-100 bg-white p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all duration-300">
+          <div className="w-full max-w-md rounded-[28px] border border-slate-100/80 bg-white/95 p-6 shadow-[0_30px_70px_rgba(0,0,0,0.1)] relative">
             <button
               type="button"
               onClick={() => {
                 setShowReviewModal(false);
                 if (activeSessionId) setIsTimerRunning(true); 
               }}
-              className="absolute top-4 right-4 h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+              className="absolute top-5 right-5 h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
 
             <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <BookOpen size={20} />
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100/60 shadow-sm shadow-emerald-50/50">
+                <BookOpen size={18} />
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900">Đánh giá phiên học</h3>
-                <p className="text-xs text-slate-500">Đồng bộ báo cáo tiến độ học tập AI</p>
+                <h3 className="text-sm font-extrabold text-slate-800">Đánh giá phiên học</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Báo cáo tiến độ học tập AI</p>
               </div>
             </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="mt-5 space-y-5">
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Mức độ tập trung (Focus Score)</label>
-                <div className="mt-2 flex items-center gap-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Mức độ tập trung (Focus Score)</label>
+                <div className="mt-2.5 flex items-center gap-2 bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={`star-${star}`}
                       type="button"
                       onClick={() => setReviewFocusScore(star)}
-                      className="transition-transform active:scale-95"
+                      className="transition-transform active:scale-90 hover:scale-110"
                     >
                       <Star
                         size={28}
-                        className={star <= reviewFocusScore ? "fill-amber-400 text-amber-400" : "text-slate-300"}
+                        className={star <= reviewFocusScore ? "fill-amber-400 text-amber-400" : "text-slate-200"}
                       />
                     </button>
                   ))}
-                  <span className="text-sm font-bold text-slate-600 ml-2">({reviewFocusScore}/5 sao)</span>
+                  <span className="text-xs font-extrabold text-slate-500 ml-2">({reviewFocusScore}/5 sao)</span>
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Nhật ký / Ghi chú buổi học (Notes)</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Nhật ký / Ghi chú buổi học (Notes)</label>
                 <textarea
                   rows={4}
                   value={reviewNotes}
                   onChange={(e) => setReviewNotes(e.target.value)}
                   placeholder="Hôm nay bạn học được những gì? Ghi chú lại lỗi sai hoặc kiến thức trọng tâm để AI theo dõi..."
-                  className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-orange-500 focus:outline-none custom-scrollbar"
+                  className="mt-2.5 w-full rounded-2xl border border-slate-200 p-3.5 text-xs text-slate-600 placeholder-slate-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 focus:outline-none custom-scrollbar transition-all"
                 />
               </div>
 
-              <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500 leading-relaxed">
-                💡 <strong>Quy chế tính tiến độ:</strong> Thời gian học thực tế hiện tại là <span className="font-bold text-slate-800">{elapsedStudyMinutes} phút</span>. Bạn cần học đủ <span className="font-bold text-orange-600">{minimumRequiredMinutes} phút</span> để hệ thống chuyển trạng thái sang <strong>COMPLETED</strong>.
+              <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 text-[11px] text-slate-400 leading-relaxed font-semibold">
+                💡 <strong className="text-slate-600">Quy chế tính tiến độ:</strong> Thời gian học thực tế hiện tại là <span className="font-extrabold text-slate-700">{elapsedStudyMinutes} phút</span>. Bạn cần học đủ <span className="font-extrabold text-orange-600">{minimumRequiredMinutes} phút</span> để hệ thống chuyển trạng thái sang <strong className="text-emerald-600">COMPLETED</strong>.
               </div>
             </div>
 
@@ -938,7 +951,7 @@ export default function CoursePlayer() {
                   setShowReviewModal(false);
                   if (activeSessionId) setIsTimerRunning(true);
                 }}
-                className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition"
+                className="flex-1 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:bg-slate-50 transition active:scale-95"
               >
                 Hủy bỏ
               </button>
@@ -946,9 +959,9 @@ export default function CoursePlayer() {
                 type="button"
                 onClick={handleConfirmFinishSession}
                 disabled={isFinishing}
-                className="flex-1 py-3 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 shadow-md transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-500/10 transition active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                {isFinishing && <LoaderCircle size={14} className="animate-spin" />}
+                {isFinishing && <LoaderCircle size={13} className="animate-spin" />}
                 💾 Xác nhận đóng
               </button>
             </div>
@@ -962,18 +975,18 @@ export default function CoursePlayer() {
 // ✅ COMPONENTS CON
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">{label}</p>
-      <p className="mt-2 text-sm font-bold text-slate-800">{value}</p>
+    <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 transition-all hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.05)]">
+      <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
+      <p className="mt-2 text-sm font-black text-slate-800 tracking-tight">{value}</p>
     </div>
   );
 }
 
 function PillStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm">
-      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">{label}</p>
-      <p className="mt-2 text-sm font-bold text-slate-800">{value}</p>
+    <div className="rounded-xl border border-slate-100 bg-white p-3.5 text-slate-900 shadow-sm transition hover:shadow-md">
+      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</p>
+      <p className="mt-1.5 text-xs font-extrabold text-slate-800">{value}</p>
     </div>
   );
 }
@@ -990,26 +1003,33 @@ function SectionCard({
   accent: "orange" | "slate" | "emerald" | "amber";
 }) {
   const accentClasses: Record<string, string> = {
-    orange: "border-orange-100 bg-orange-50/70",
-    slate: "border-slate-200 bg-slate-50",
-    emerald: "border-emerald-100 bg-emerald-50/70",
-    amber: "border-amber-100 bg-amber-50/70",
+    orange: "border-orange-100/70 bg-gradient-to-br from-orange-50/45 to-amber-50/15 shadow-sm",
+    slate: "border-slate-200 bg-slate-50/50",
+    emerald: "border-emerald-100/70 bg-gradient-to-br from-emerald-50/45 to-teal-50/15 shadow-sm",
+    amber: "border-amber-100/70 bg-gradient-to-br from-amber-50/45 to-yellow-50/15 shadow-sm",
+  };
+
+  const bulletColors: Record<string, string> = {
+    orange: "bg-orange-500 shadow-orange-200",
+    slate: "bg-slate-400 shadow-slate-200",
+    emerald: "bg-emerald-500 shadow-emerald-200",
+    amber: "bg-amber-500 shadow-amber-200",
   };
 
   return (
-    <div className={`rounded-xl border p-5 shadow-sm ${accentClasses[accent]}`}>
-      <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{title}</p>
+    <div className={`rounded-2xl border p-5 transition-all hover:shadow-[0_8px_25px_-5px_rgba(0,0,0,0.02)] ${accentClasses[accent]}`}>
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{title}</p>
       {items.length > 0 ? (
-        <ul className="mt-3 space-y-2">
+        <ul className="mt-3.5 space-y-2.5">
           {items.map((item, index) => (
-            <li key={`${title}-${index}`} className="flex gap-2 text-sm leading-6 text-slate-700">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+            <li key={`${title}-${index}`} className="flex gap-2.5 text-xs leading-5 text-slate-600 font-semibold">
+              <span className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full shadow-sm ${bulletColors[accent]}`} />
               <span>{item}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-sm leading-6 text-slate-500">{emptyText}</p>
+        <p className="mt-3 text-xs leading-5 text-slate-400 italic">{emptyText}</p>
       )}
     </div>
   );
