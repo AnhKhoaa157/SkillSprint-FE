@@ -6,12 +6,14 @@ import {
 } from "recharts";
 import {
   TrendingUp,
-  Zap, ArrowUpRight, Download,
+  ArrowUpRight, Download,
   Activity, DollarSign, Repeat,
   GraduationCap, BookOpen, Award, ShieldCheck,
-  ChevronDown, Search, Command, X, ChevronRight,
+  Search, Command, X,
+  MessageSquare,
 } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../../contexts/AuthContext";
 import { toast } from "sonner";
 import AdminHealth from "./AdminHealth";
 import healthService from "../../../api/healthService";
@@ -24,11 +26,13 @@ import type {
   AdminDashboardResponse,
   PaymentTransactionResponse,
 } from "../../../api/adminDashboardService";
+import {
+  getAdminFeedbacks,
+  updateFeedbackStatus,
+  type FeedbackResponse,
+} from "../../../api/feedbackService";
 
 const ACCENT = "#FF6B00";
-const ACCENT_DEEP = "#EA580C";
-const ACCENT_SOFT = "rgba(255,107,0,0.08)";
-const ACCENT_BORDER = "rgba(255,107,0,0.2)";
 
 function toCsv(rows: Record<string, string | number>[]) {
   if (!rows.length) return "";
@@ -547,7 +551,7 @@ function PaymentsView() {
 
       {/* Header banner */}
       <div className="rounded-2xl p-5"
-        style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#FFF7ED 100%)", border: "1px solid #FDE68A" }}>
+        style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#F8FAFC 100%)", border: "1px solid #E2E8F0" }}>
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <div>
             <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0F172A" }}>Quản lý thanh toán</h2>
@@ -683,14 +687,258 @@ function PaymentsView() {
 }
 
 /* ─────────────────────────────────────────────────────────
+   ── FEEDBACK VIEW ──
+───────────────────────────────────────────────────────── */
+const FEEDBACK_TYPE_LABEL: Record<string, { label: string; color: string; bg: string }> = {
+  BUG:         { label: "Bug",         color: "#DC2626", bg: "rgba(220,38,38,0.08)" },
+  IMPROVEMENT: { label: "Cải tiến",    color: "#7C3AED", bg: "rgba(124,58,237,0.08)" },
+  QUESTION:    { label: "Câu hỏi",     color: "#0284C7", bg: "rgba(2,132,199,0.08)" },
+  OTHER:       { label: "Khác",        color: "#64748B", bg: "rgba(100,116,139,0.08)" },
+};
+
+const FEEDBACK_STATUS_LABEL: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  PENDING:   { label: "Chờ xử lý", color: "#B45309", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.28)" },
+  REVIEWED:  { label: "Đã xem",    color: "#0284C7", bg: "rgba(2,132,199,0.08)",  border: "rgba(2,132,199,0.28)"  },
+  RESOLVED:  { label: "Đã giải quyết", color: "#15803D", bg: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.28)" },
+  CLOSED:    { label: "Đã đóng",   color: "#64748B", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.28)" },
+};
+
+function FeedbackView() {
+  const [feedbacks, setFeedbacks] = useState<FeedbackResponse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [selected, setSelected] = useState<FeedbackResponse | null>(null);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [updating, setUpdating] = useState(false);
+  const [adminNote, setAdminNote] = useState("");
+  const [statusDraft, setStatusDraft] = useState("");
+  const PAGE_SIZE = 15;
+
+  const load = async (p: number, status = statusFilter) => {
+    setLoading(true);
+    try {
+      const res = await getAdminFeedbacks(p, PAGE_SIZE, status || undefined);
+      setFeedbacks(res.content ?? []);
+      setTotalItems(res.totalElements ?? 0);
+      setTotalPages(res.totalPages ?? 0);
+      setPage(p);
+    } catch (err) {
+      toast.error((err as Error).message || "Không tải được danh sách feedback");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(0); }, []);
+
+  const handleSelect = (fb: FeedbackResponse) => {
+    setSelected(fb);
+    setStatusDraft(fb.status || "PENDING");
+    setAdminNote(fb.adminNote || "");
+  };
+
+  const handleUpdate = async () => {
+    if (!selected) return;
+    setUpdating(true);
+    try {
+      const updated = await updateFeedbackStatus(selected.feedbackId, statusDraft, adminNote || undefined);
+      setSelected(updated);
+      setFeedbacks(prev => prev.map(fb => fb.feedbackId === updated.feedbackId ? updated : fb));
+      toast.success("Cập nhật feedback thành công");
+    } catch (err) {
+      toast.error((err as Error).message || "Lỗi cập nhật");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" });
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
+      {/* Header banner */}
+      <div className="rounded-2xl p-5"
+        style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#F5F3FF 100%)", border: "1px solid #DDD6FE" }}>
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+          <div>
+            <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0F172A" }}>Feedback người dùng</h2>
+            <p style={{ margin: "4px 0 0", color: "#64748B", fontSize: "0.88rem" }}>Xem và xử lý phản hồi, báo lỗi từ người dùng</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-3 py-1 rounded-full text-xs" style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#334155" }}>
+              Tổng: {totalItems}
+            </span>
+            {/* Status filter */}
+            <select
+              value={statusFilter}
+              onChange={e => { setStatusFilter(e.target.value); load(0, e.target.value); }}
+              style={{ height: 32, padding: "0 10px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: "0.82rem", color: "#334155" }}
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="PENDING">Chờ xử lý</option>
+              <option value="REVIEWED">Đã xem</option>
+              <option value="RESOLVED">Đã giải quyết</option>
+              <option value="CLOSED">Đã đóng</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        {/* Table */}
+        <div className="xl:col-span-2 rounded-2xl overflow-hidden"
+          style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+          <div className="grid px-5 py-2.5"
+            style={{ gridTemplateColumns: "2fr 1fr 1.2fr 1.2fr", borderBottom: "1px solid #F3F4F6", background: "#FAFAFA" }}>
+            {["Người dùng / Tiêu đề", "Loại", "Trạng thái", "Thời gian"].map(col => (
+              <span key={col} style={{ color: "#9CA3AF", fontSize: "0.68rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                {col}
+              </span>
+            ))}
+          </div>
+
+          {loading && Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="grid px-5 py-3.5 animate-pulse"
+              style={{ gridTemplateColumns: "2fr 1fr 1.2fr 1.2fr", borderBottom: "1px solid #F9FAFB", alignItems: "center" }}>
+              {[0.7, 0.4, 0.5, 0.55].map((w, j) => (
+                <div key={j} className="h-3 rounded" style={{ background: "#F3F4F6", width: `${w * 100}%` }} />
+              ))}
+            </div>
+          ))}
+
+          {!loading && feedbacks.length === 0 && (
+            <div className="py-16 text-center">
+              <MessageSquare size={32} style={{ color: "#E5E7EB", margin: "0 auto 8px" }} />
+              <p style={{ color: "#9CA3AF", fontSize: "0.85rem" }}>Không có feedback nào</p>
+            </div>
+          )}
+
+          {!loading && feedbacks.map((fb, i) => {
+            const typeInfo = FEEDBACK_TYPE_LABEL[fb.type] ?? FEEDBACK_TYPE_LABEL.OTHER;
+            const statusInfo = FEEDBACK_STATUS_LABEL[fb.status] ?? FEEDBACK_STATUS_LABEL.PENDING;
+            const isActive = selected?.feedbackId === fb.feedbackId;
+            return (
+              <motion.div key={fb.feedbackId}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
+                onClick={() => handleSelect(fb)}
+                className="grid px-5 py-3 cursor-pointer"
+                style={{
+                  gridTemplateColumns: "2fr 1fr 1.2fr 1.2fr",
+                  borderBottom: "1px solid #F9FAFB",
+                  alignItems: "center",
+                  background: isActive ? "#F5F3FF" : "#FFFFFF",
+                  borderLeft: isActive ? "3px solid #7C3AED" : "3px solid transparent",
+                }}
+                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = "#F8FAFC"; }}
+                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = "#FFFFFF"; }}
+              >
+                <div className="min-w-0 pr-2">
+                  <p style={{ fontWeight: 600, fontSize: "0.8rem", color: "#111827" }} className="truncate">{fb.title}</p>
+                  <p style={{ fontSize: "0.7rem", color: "#9CA3AF" }} className="truncate">{fb.userFullName || fb.userEmail}</p>
+                </div>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold w-fit"
+                  style={{ background: typeInfo.bg, color: typeInfo.color }}>
+                  {typeInfo.label}
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border w-fit"
+                  style={{ background: statusInfo.bg, color: statusInfo.color, border: `1px solid ${statusInfo.border}` }}>
+                  {statusInfo.label}
+                </span>
+                <span style={{ fontSize: "0.72rem", color: "#6B7280" }}>{formatDate(fb.createdAt)}</span>
+              </motion.div>
+            );
+          })}
+
+          {/* Pagination */}
+          <div className="px-5 py-3 flex items-center justify-between"
+            style={{ borderTop: "1px solid #F3F4F6", background: "#FAFAFA" }}>
+            <span style={{ fontSize: "0.8rem", color: "#64748B" }}>
+              Trang {page + 1} · {totalItems} phản hồi
+            </span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => load(Math.max(0, page - 1))} disabled={page === 0 || loading}
+                className="px-3 py-1.5 rounded-lg text-xs"
+                style={{ border: "1px solid #E2E8F0", background: "#fff", color: "#334155", opacity: page === 0 || loading ? 0.4 : 1, cursor: page === 0 ? "not-allowed" : "pointer" }}>
+                ← Trước
+              </button>
+              <button onClick={() => load(page + 1)} disabled={page + 1 >= totalPages || loading}
+                className="px-3 py-1.5 rounded-lg text-xs"
+                style={{ border: "1px solid #E2E8F0", background: "#fff", color: "#334155", opacity: page + 1 >= totalPages || loading ? 0.4 : 1, cursor: page + 1 >= totalPages ? "not-allowed" : "pointer" }}>
+                Tiếp →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Detail panel */}
+        <div className="rounded-2xl p-5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+          <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", fontWeight: 800, color: "#0F172A" }}>Chi tiết phản hồi</h3>
+          {!selected ? (
+            <p style={{ fontSize: "0.82rem", color: "#94A3B8" }}>Chọn một dòng để xem chi tiết và cập nhật.</p>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-xl p-3" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+                <p style={{ fontWeight: 700, fontSize: "0.88rem", color: "#0F172A" }}>{selected.title}</p>
+                <p style={{ fontSize: "0.75rem", color: "#64748B", marginTop: 2 }}>{selected.userFullName} · {selected.userEmail}</p>
+                <p style={{ fontSize: "0.72rem", color: "#9CA3AF", marginTop: 2 }}>ID: {selected.feedbackId.slice(0, 12)}…</p>
+              </div>
+
+              <div>
+                <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748B", marginBottom: 4 }}>Nội dung</p>
+                <p style={{ fontSize: "0.82rem", color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{selected.content}</p>
+              </div>
+
+              {selected.relatedUrl && (
+                <div>
+                  <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748B", marginBottom: 2 }}>URL liên quan</p>
+                  <p style={{ fontSize: "0.75rem", color: "#7C3AED", wordBreak: "break-all" }}>{selected.relatedUrl}</p>
+                </div>
+              )}
+
+              <div>
+                <label style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: 700, display: "block", marginBottom: 4 }}>Cập nhật trạng thái</label>
+                <select value={statusDraft} onChange={e => setStatusDraft(e.target.value)}
+                  style={{ width: "100%", height: 36, borderRadius: 8, border: "1px solid #E2E8F0", padding: "0 10px", fontSize: "0.82rem" }}>
+                  <option value="PENDING">Chờ xử lý</option>
+                  <option value="REVIEWED">Đã xem</option>
+                  <option value="RESOLVED">Đã giải quyết</option>
+                  <option value="CLOSED">Đã đóng</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: 700, display: "block", marginBottom: 4 }}>Ghi chú Admin</label>
+                <textarea value={adminNote} onChange={e => setAdminNote(e.target.value)} rows={3}
+                  placeholder="Thêm ghi chú phản hồi..."
+                  style={{ width: "100%", borderRadius: 8, border: "1px solid #E2E8F0", padding: "8px 10px", fontSize: "0.82rem", resize: "vertical" }} />
+              </div>
+
+              <button onClick={handleUpdate} disabled={updating}
+                className="w-full py-2 rounded-xl text-sm font-semibold"
+                style={{ background: "#7C3AED", color: "#fff", opacity: updating ? 0.6 : 1, cursor: updating ? "not-allowed" : "pointer" }}>
+                {updating ? "Đang lưu..." : "Lưu cập nhật"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
    Main Admin Dashboard
 ───────────────────────────────────────────────────────── */
 export default function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments">("financials");
-  const [timeRange, setTimeRange] = useState("90d");
-  const [lastSync, setLastSync] = useState(new Date());
+  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback">("financials");
+  const [, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<{ fullName?: string; roles?: string[]; avatarUrl?: string } | null>(null);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [showHealthPanel, setShowHealthPanel] = useState(false);
@@ -708,7 +956,13 @@ export default function AdminDashboard() {
     { id: "financials", label: "Tài chính", icon: TrendingUp },
     { id: "users", label: "Quản lý người dùng", icon: ShieldCheck },
     { id: "payments", label: "Quản lý thanh toán", icon: DollarSign },
+    { id: "feedback", label: "Feedback người dùng", icon: MessageSquare },
   ] as const;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/admin-login", { replace: true });
+  };
 
   async function loadMgmt(page = 0, searchTerm = mgmtSearch) {
     setMgmtLoading(true);
@@ -782,6 +1036,7 @@ export default function AdminDashboard() {
     financials: { title: "Tài chính", sub: "Chỉ số doanh thu · Unit economics" },
     users: { title: "Quản lý người dùng", sub: "Quản lý người dùng và phân quyền" },
     payments: { title: "Quản lý thanh toán", sub: "Lịch sử giao dịch · Phân tích thanh toán" },
+    feedback: { title: "Feedback người dùng", sub: "Xem và quản lý phản hồi từ người dùng" },
   };
   const current = headerLabels[activeNav];
 
@@ -829,9 +1084,6 @@ export default function AdminDashboard() {
     setActionMessage("Đã đồng bộ dữ liệu admin thành công.");
   };
 
-  const handleSendSummary = () => {
-    setActionMessage(`Đã gửi báo cáo ${current.title} cho team vận hành.`);
-  };
 
   const commandActions = [
     { id: "goto-users", label: "Đi tới Quản lý người dùng", keywords: "users students cohorts quản lý người dùng phân quyền", action: () => setActiveNav("users") },
@@ -839,7 +1091,6 @@ export default function AdminDashboard() {
     { id: "goto-payments", label: "Đi tới Quản lý thanh toán", keywords: "payments transactions giao dịch thanh toán", action: () => setActiveNav("payments") },
     { id: "export", label: "Xuất dữ liệu màn hình hiện tại", keywords: "export csv download", action: handleExport },
     { id: "sync", label: "Đồng bộ dữ liệu admin", keywords: "sync refresh", action: handleSync },
-    { id: "summary", label: "Gửi báo cáo tổng hợp", keywords: "summary report send", action: handleSendSummary },
   ];
 
   const filteredCommands = commandActions.filter((item) => {
@@ -907,7 +1158,7 @@ export default function AdminDashboard() {
   return (
     <div
       className="flex h-screen overflow-hidden"
-      style={{ background: "#FFF7ED", fontFamily: "'Inter', sans-serif", color: "#111827" }}
+      style={{ background: "#F1F5F9", fontFamily: "'Inter', sans-serif", color: "#111827" }}
     >
       <style>{`
         @keyframes statusPulse { 0%,100%{opacity:1;}50%{opacity:0.4;} }
@@ -921,18 +1172,18 @@ export default function AdminDashboard() {
       {/* ── SIDEBAR ── */}
       <aside
         className="flex flex-col h-full shrink-0"
-        style={{ width: "224px", background: "linear-gradient(180deg, #FFFFFF 0%, #FFF7ED 100%)", borderRight: "1px solid #E2E8F0" }}
+        style={{ width: "224px", background: "linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)", borderRight: "1px solid #E2E8F0" }}
       >
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-5 py-5"
           style={{ borderBottom: "1px solid rgba(148,163,184,0.18)" }}>
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: `linear-gradient(135deg, ${ACCENT}, ${ACCENT_DEEP})` }}>
-            <Zap size={13} className="text-white fill-white" />
+          <div className="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center shrink-0"
+            style={{ background: "linear-gradient(135deg,#FF6B00,#EA580C)", padding: "6px" }}>
+            <img src="/brand-logo.svg" alt="SkillSprint" className="w-full h-full object-contain brightness-0 invert" />
           </div>
           <div>
-            <p style={{ fontWeight: 700, fontSize: "0.85rem", letterSpacing: "-0.02em", color: "#0F172A" }}>SkillSprint</p>
-            <p style={{ color: "#64748B", fontSize: "9px", fontWeight: 600, letterSpacing: "0.1em" }}>B2B · CỔNG QUẢN TRỊ</p>
+            <p style={{ fontWeight: 800, fontSize: "0.88rem", letterSpacing: "-0.03em", color: "#0F172A" }}>SkillSprint</p>
+            <p style={{ color: "#94A3B8", fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em" }}>B2B · CỔNG QUẢN TRỊ</p>
           </div>
         </div>
 
@@ -969,18 +1220,18 @@ export default function AdminDashboard() {
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 text-left"
                 style={{
-                  background: isActive ? ACCENT_SOFT : "transparent",
-                  border: isActive ? `1px solid ${ACCENT_BORDER}` : "1px solid transparent",
-                  color: isActive ? "#9A3412" : "#334155",
-                  fontWeight: isActive ? 600 : 400,
+                  background: isActive ? "rgba(124,58,237,0.07)" : "transparent",
+                  border: isActive ? "1px solid rgba(124,58,237,0.18)" : "1px solid transparent",
+                  color: isActive ? "#5B21B6" : "#334155",
+                  fontWeight: isActive ? 700 : 400,
                 }}
                 onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(148,163,184,0.10)"; e.currentTarget.style.color = "#0F172A"; } }}
                 onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#334155"; } }}
               >
-                <item.icon size={15} style={{ color: isActive ? "#C2410C" : "#64748B", flexShrink: 0 }} />
+                <item.icon size={15} style={{ color: isActive ? "#7C3AED" : "#64748B", flexShrink: 0 }} />
                 <span style={{ flex: 1 }}>{item.label}</span>
                 {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#C2410C" }} />
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#7C3AED" }} />
                 )}
               </button>
             );
@@ -991,12 +1242,12 @@ export default function AdminDashboard() {
 
         {/* Bottom */}
         <div className="px-3 pb-4 pt-3 space-y-2" style={{ borderTop: "1px solid rgba(148,163,184,0.18)" }}>
-          <Link to="/admin-login" className="flex items-center gap-2.5 px-3 py-2 text-xs rounded-xl transition-all"
-            style={{ color: "#64748B" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "#9A3412"; e.currentTarget.style.background = "rgba(255,107,0,0.12)"; }}
+          <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-xl transition-all text-left"
+            style={{ color: "#64748B", background: "none", border: "none", cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.color = "#DC2626"; e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
             onMouseLeave={e => { e.currentTarget.style.color = "#64748B"; e.currentTarget.style.background = "transparent"; }}>
             ← Đăng xuất
-          </Link>
+          </button>
         </div>
       </aside>
 
@@ -1040,35 +1291,12 @@ export default function AdminDashboard() {
               </div>
               <div className="sr-only" aria-live="polite">{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</div>
             </button>
-            <div className="hidden xl:flex items-center rounded-xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
-              {['30d', '60d', '90d'].map(r => (
-                <button key={r} onClick={() => setTimeRange(r)}
-                  className="px-3 py-1.5 text-xs transition-all"
-                  style={{
-                    background: timeRange === r ? ACCENT_SOFT : "transparent",
-                    color: timeRange === r ? ACCENT : "#6B7280",
-                    fontWeight: timeRange === r ? 700 : 400,
-                    borderRight: r !== "90d" ? "1px solid #E5E7EB" : "none",
-                  }}>
-                  {r}
-                </button>
-              ))}
-            </div>
-
-            <button className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all"
-              style={{ background: "#FFF7ED", color: "#9A3412", border: "1px solid #FDBA74" }}
-              onMouseEnter={e => { e.currentTarget.style.color = "#7C2D12"; e.currentTarget.style.background = "#FFEDD5"; }}
-              onMouseLeave={e => { e.currentTarget.style.color = "#9A3412"; e.currentTarget.style.background = "#FFF7ED"; }}
+            <button className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+              style={{ background: "rgba(124,58,237,0.07)", color: "#5B21B6", border: "1px solid rgba(124,58,237,0.18)" }}
+              onMouseEnter={e => { e.currentTarget.style.color = "#4C1D95"; e.currentTarget.style.background = "rgba(124,58,237,0.12)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "#5B21B6"; e.currentTarget.style.background = "rgba(124,58,237,0.07)"; }}
               onClick={handleExport}>
               <Download size={12} /> Xuất dữ liệu
-            </button>
-
-            <button className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all"
-              style={{ background: ACCENT, color: "#FFFFFF", border: `1px solid ${ACCENT}` }}
-              onMouseEnter={e => { e.currentTarget.style.background = ACCENT_DEEP; e.currentTarget.style.borderColor = ACCENT_DEEP; }}
-              onMouseLeave={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.borderColor = ACCENT; }}
-              onClick={handleSendSummary}>
-              Gửi báo cáo
             </button>
 
             <button
@@ -1102,7 +1330,7 @@ export default function AdminDashboard() {
                 <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 220, background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 8px 24px rgba(2,6,23,0.12)', padding: 8, zIndex: 9999 }}>
                   <Link to="/admin/profile" className="w-full text-left px-3 py-2 rounded" style={{ display: 'block', color: '#111827', fontWeight: 700 }}>Hồ sơ</Link>
                   <div style={{ height: 1, background: '#F1F5F9', margin: '6px 0' }} />
-                  <Link to="/admin-login" className="w-full text-left px-3 py-2 rounded" style={{ display: 'block', color: '#EF4444' }}>← Đăng xuất</Link>
+                  <button onClick={handleLogout} className="w-full text-left px-3 py-2 rounded" style={{ display: 'block', color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer' }}>← Đăng xuất</button>
                 </div>
               )}
             </div>
@@ -1112,7 +1340,7 @@ export default function AdminDashboard() {
         {/* ── SCROLLABLE CONTENT ── */}  
         <div className="flex-1 overflow-y-auto p-7">
           {actionMessage && (
-            <div className="mb-4 px-4 py-2 rounded-xl text-sm" style={{ background: "#FFF7ED", border: "1px solid #FDBA74", color: "#9A3412" }}>
+            <div className="mb-4 px-4 py-2 rounded-xl text-sm" style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)", color: "#5B21B6" }}>
               {actionMessage}
             </div>
           )}
@@ -1177,12 +1405,12 @@ export default function AdminDashboard() {
               <div>
                 <div className="space-y-4">
                   {mgmtMessage && (
-                    <div className="px-4 py-2 rounded-xl text-sm" style={{ background: "#FFF7ED", border: "1px solid #FDBA74", color: "#9A3412" }}>
+                    <div className="px-4 py-2 rounded-xl text-sm" style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)", color: "#5B21B6" }}>
                       {mgmtMessage}
                     </div>
                   )}
 
-                  <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#FFF7ED 100%)", border: "1px solid #FDE68A" }}>
+                  <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#F8FAFC 100%)", border: "1px solid #E2E8F0" }}>
                     <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
                       <div>
                         <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0F172A" }}>Quản lý người dùng</h2>
@@ -1216,10 +1444,10 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => loadMgmt(0, mgmtSearch)}
-                            className="px-3 py-2 rounded-lg text-xs font-semibold"
-                            style={{ background: "#111827", color: "#FFFFFF" }}
+                            className="px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+                            style={{ background: "linear-gradient(135deg,#FF6B00,#EA580C)", color: "#FFFFFF" }}
                           >
-                            Tìm
+                            Tìm kiếm
                           </button>
                           <button
                             onClick={() => {
@@ -1237,12 +1465,12 @@ export default function AdminDashboard() {
                       <div className="overflow-x-auto">
                         <table style={{ width: "100%", borderCollapse: "collapse" }}>
                           <thead>
-                            <tr style={{ background: "#FAFAFA", textAlign: "left", color: "#64748B", fontSize: "0.78rem" }}>
-                              <th style={{ padding: "12px 14px" }}>Người dùng</th>
-                              <th style={{ padding: "12px 14px" }}>Vai trò</th>
-                              <th style={{ padding: "12px 14px" }}>Trạng thái</th>
-                              <th style={{ padding: "12px 14px" }}>Cập nhật</th>
-                              <th style={{ padding: "12px 14px" }}>Hành động</th>
+                            <tr style={{ background: "#F8FAFC", textAlign: "left", borderBottom: "2px solid #E2E8F0" }}>
+                              <th style={{ padding: "11px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.08em" }}>Người dùng</th>
+                              <th style={{ padding: "11px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.08em" }}>Vai trò</th>
+                              <th style={{ padding: "11px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.08em" }}>Trạng thái</th>
+                              <th style={{ padding: "11px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.08em" }}>Cập nhật</th>
+                              <th style={{ padding: "11px 14px", fontSize: "0.68rem", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.08em" }}>Hành động</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1261,10 +1489,10 @@ export default function AdminDashboard() {
                                   ? { bg: "rgba(239,68,68,0.10)", text: "#B91C1C", border: "rgba(239,68,68,0.28)" }
                                   : { bg: "rgba(245,158,11,0.10)", text: "#B45309", border: "rgba(245,158,11,0.28)" };
                               return (
-                                <tr key={user.id} style={{ borderTop: "1px solid #F1F5F9", background: mgmtSelected?.id === user.id ? "#FFF7ED" : "#FFFFFF" }}>
+                                <tr key={user.id} style={{ borderTop: "1px solid #F1F5F9", background: mgmtSelected?.id === user.id ? "#EEF2FF" : "#FFFFFF" }}>
                                   <td style={{ padding: "12px 14px" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                      <div style={{ width: 34, height: 34, borderRadius: 999, background: "#FFE7D1", color: "#C2410C", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>
+                                      <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#7C3AED,#FF6B00)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.82rem", flexShrink: 0 }}>
                                         {(user.fullName || user.email || "?").charAt(0).toUpperCase()}
                                       </div>
                                       <div>
@@ -1281,10 +1509,12 @@ export default function AdminDashboard() {
                                   <td style={{ padding: "12px 14px" }}>
                                     <button
                                       onClick={() => openMgmtDetail(user.id)}
-                                      className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                                      style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#0F172A" }}
+                                      className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                                      style={{ background: "rgba(124,58,237,0.07)", border: "1px solid rgba(124,58,237,0.2)", color: "#5B21B6" }}
+                                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.14)"; }}
+                                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.07)"; }}
                                     >
-                                      Chi tiết
+                                      Chi tiết →
                                     </button>
                                   </td>
                                 </tr>
@@ -1317,16 +1547,23 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                      <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: "#0F172A" }}>Chi tiết & cập nhật</h3>
+                    <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderTop: "3px solid #7C3AED" }}>
+                      <h3 style={{ margin: "0 0 8px", fontSize: "0.95rem", fontWeight: 800, color: "#0F172A" }}>Chi tiết & cập nhật</h3>
                       {!mgmtSelected ? (
-                        <p style={{ marginTop: 12, fontSize: "0.82rem", color: "#94A3B8" }}>Chọn một người dùng từ bảng để xem chi tiết.</p>
+                        <div className="py-8 text-center">
+                          <p style={{ fontSize: "0.82rem", color: "#94A3B8" }}>Chọn một người dùng để xem chi tiết và cập nhật.</p>
+                        </div>
                       ) : (
                         <div className="space-y-3 mt-3">
-                          <div className="rounded-xl p-3" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
-                            <p style={{ margin: 0, fontWeight: 700, fontSize: "0.85rem", color: "#0F172A" }}>{mgmtSelected.fullName || "Chưa cập nhật tên"}</p>
-                            <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "#64748B" }}>{mgmtSelected.email}</p>
-                            <p style={{ margin: "6px 0 0", fontSize: "0.74rem", color: "#94A3B8" }}>ID: {mgmtSelected.id}</p>
+                          <div className="rounded-xl p-3 flex items-center gap-3" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg,#7C3AED,#FF6B00)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "1.1rem", flexShrink: 0 }}>
+                              {(mgmtSelected.fullName || mgmtSelected.email || "?").charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p style={{ margin: 0, fontWeight: 700, fontSize: "0.85rem", color: "#0F172A" }}>{mgmtSelected.fullName || "Chưa cập nhật tên"}</p>
+                              <p style={{ margin: "2px 0 0", fontSize: "0.75rem", color: "#64748B" }} className="truncate">{mgmtSelected.email}</p>
+                              <p style={{ margin: "2px 0 0", fontSize: "0.68rem", color: "#94A3B8", fontFamily: "monospace" }}>ID: {String(mgmtSelected.id).slice(0, 12)}…</p>
+                            </div>
                           </div>
 
                           <div>
@@ -1343,14 +1580,13 @@ export default function AdminDashboard() {
                               onClick={() => saveMgmtStatus(mgmtSelected.id, mgmtStatusDraft)}
                               disabled={!mgmtStatusDraft || mgmtLoading}
                               className="mt-2 w-full px-3 py-2 rounded-lg text-xs font-semibold"
-                              style={{ background: "#111827", color: "#fff", opacity: !mgmtStatusDraft || mgmtLoading ? 0.5 : 1 }}
+                              style={{ background: "linear-gradient(135deg,#FF6B00,#EA580C)", color: "#fff", opacity: !mgmtStatusDraft || mgmtLoading ? 0.5 : 1, cursor: !mgmtStatusDraft || mgmtLoading ? "not-allowed" : "pointer" }}
                             >
                               Lưu trạng thái
                             </button>
                           </div>
 
                           <div>
-                            <label style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 700 }}>Vai trò</label>
                             <label style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 700 }}>Vai trò</label>
                             <select
                               value={mgmtRolesDraft}
@@ -1389,6 +1625,7 @@ export default function AdminDashboard() {
           )}
           {activeNav === "financials" && <FinancialsView />}
           {activeNav === "payments" && <PaymentsView />}
+          {activeNav === "feedback" && <FeedbackView />}
         </div>
       </main>
 
@@ -1450,7 +1687,7 @@ export default function AdminDashboard() {
                   onClick={() => executeCommand(command.id)}
                   className="w-full text-left px-3 py-2.5 rounded-xl transition-all"
                   style={{ color: "#374151" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#FFF7ED"; e.currentTarget.style.color = "#9A3412"; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(124,58,237,0.07)"; e.currentTarget.style.color = "#5B21B6"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#374151"; }}
                 >
                   <p style={{ fontWeight: 600, fontSize: "0.83rem" }}>{command.label}</p>

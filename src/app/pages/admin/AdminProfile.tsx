@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { clearAuthTokens } from "../../../api/authService";
 import meService, { type MeResponse } from "../../../api/meService";
-import { Copy } from "lucide-react";
+import { Copy, CheckCircle, Shield, User, Mail, Save, LoaderCircle } from "lucide-react";
 
 export default function AdminProfile() {
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ export default function AdminProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -56,7 +57,9 @@ export default function AdminProfile() {
     if (!profile) return;
     try {
       await navigator.clipboard.writeText(profile.userId);
+      setCopied(true);
       toast.success("Đã copy User ID");
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error("Không copy được User ID");
     }
@@ -64,28 +67,11 @@ export default function AdminProfile() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto py-8 px-4 font-sans">
+      <div className="max-w-5xl mx-auto py-10 px-4 font-sans space-y-6">
+        <div className="h-36 bg-white rounded-3xl border border-slate-100 shadow-sm animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm animate-pulse">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-slate-100 rounded-full" />
-              <div className="space-y-2">
-                <div className="h-4 bg-slate-100 rounded w-32" />
-                <div className="h-3 bg-slate-100 rounded w-20" />
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="h-10 bg-slate-100 rounded-xl" />
-              <div className="h-10 bg-slate-100 rounded-xl" />
-            </div>
-            <div className="h-10 bg-slate-100 rounded-xl w-32 mt-6" />
-          </div>
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm animate-pulse space-y-4">
-            <div className="h-3 bg-slate-100 rounded w-16" />
-            <div className="h-16 bg-slate-100 rounded-xl" />
-            <div className="h-3 bg-slate-100 rounded w-24" />
-            <div className="h-7 bg-slate-100 rounded-full w-16" />
-          </div>
+          <div className="md:col-span-2 h-64 bg-white rounded-3xl border border-slate-100 shadow-sm animate-pulse" />
+          <div className="h-64 bg-white rounded-3xl border border-slate-100 shadow-sm animate-pulse" />
         </div>
       </div>
     );
@@ -93,103 +79,147 @@ export default function AdminProfile() {
 
   const initials = (profile?.fullName || profile?.email || "A").charAt(0).toUpperCase();
   const roles = profile?.roles?.join(", ") || "ADMIN";
+  const isActive = (profile?.status || "ACTIVE").toUpperCase() === "ACTIVE";
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="max-w-4xl mx-auto py-8 px-4 font-sans"
+      transition={{ duration: 0.3 }}
+      className="max-w-5xl mx-auto py-10 px-4 font-sans space-y-6"
     >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        {/* ── Left: Account Settings ── */}
-        <div className="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 bg-violet-50 text-violet-600 rounded-full flex items-center justify-center font-bold text-xl shrink-0 border border-violet-100">
-              {initials}
+      {/* Hero identity card */}
+      <div className="relative bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        {/* accent bar */}
+        <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg,#7C3AED,#FF6B00)" }} />
+        <div className="px-7 py-6 flex flex-col sm:flex-row sm:items-center gap-5">
+          {/* Avatar ring */}
+          <div className="relative shrink-0">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-600 to-orange-500 flex items-center justify-center text-white font-extrabold text-3xl shadow-lg shadow-violet-500/20">
+              {profile?.avatarUrl
+                ? <img src={profile.avatarUrl} alt={profile.fullName} className="w-full h-full object-cover rounded-2xl" />
+                : initials}
             </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-700 leading-tight">
-                {profile?.fullName || "Chưa cập nhật tên"}
-              </p>
-              <button className="text-xs text-orange-500 hover:text-orange-600 transition-colors mt-1">
-                Thay đổi ảnh
-              </button>
+            <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-white border-2 border-white flex items-center justify-center shadow">
+              <Shield size={12} className="text-violet-600" />
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Email
-              </label>
-              <div className="w-full mt-1 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-400 rounded-xl text-sm cursor-not-allowed select-all">
-                {profile?.email}
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                {profile?.fullName || "Admin"}
+              </h1>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200 uppercase tracking-wide">
+                {roles}
+              </span>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${isActive ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-500 border-slate-200"}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-slate-400"}`} />
+                {isActive ? "Đang hoạt động" : "Không hoạt động"}
+              </span>
             </div>
+            <p className="text-sm text-slate-500 mt-1">{profile?.email}</p>
+          </div>
+        </div>
+      </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Họ và tên
-              </label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={e => setFullName(e.target.value)}
-                placeholder="Nhập họ và tên"
-                className="w-full mt-1 px-4 py-2 bg-slate-50 border border-slate-200 focus:bg-white text-slate-700 rounded-xl text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 outline-none transition-all"
-              />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* ── Profile update form ── */}
+        <div className="md:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-7 space-y-5">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center">
+              <User size={15} className="text-orange-500" />
             </div>
+            <h2 className="text-base font-extrabold text-slate-900">Thông tin cá nhân</h2>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              Email
+            </label>
+            <div className="flex items-center gap-2.5 w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-400 cursor-not-allowed select-all">
+              <Mail size={14} className="text-slate-300 shrink-0" />
+              {profile?.email}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1 ml-1">Email không thể thay đổi</p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              Họ và tên
+            </label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              placeholder="Nhập họ và tên hiển thị"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white text-slate-800 rounded-2xl text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-400/15 outline-none transition-all"
+            />
           </div>
 
           <button
             onClick={handleSave}
-            disabled={saving}
-            className="bg-[#f37021] hover:bg-[#e05f13] text-white font-medium text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm shadow-orange-600/10 active:scale-[0.98] mt-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={saving || fullName === (profile?.fullName || "")}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-bold text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            style={{ background: saving ? "#6B7280" : "linear-gradient(135deg,#FF6B00,#f37021)" }}
           >
-            {saving ? "Đang lưu..." : "Lưu thông tin"}
+            {saving ? (
+              <><LoaderCircle size={14} className="animate-spin" />Đang lưu...</>
+            ) : (
+              <><Save size={14} />Lưu thông tin</>
+            )}
           </button>
         </div>
 
-        {/* ── Right: System Meta ── */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-5">
+        {/* ── System meta sidebar ── */}
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-6">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center">
+              <Shield size={15} className="text-violet-500" />
+            </div>
+            <h2 className="text-base font-extrabold text-slate-900">Hệ thống</h2>
+          </div>
+
+          {/* User ID */}
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-              User ID
-            </p>
-            <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl font-mono text-xs text-slate-500 break-all relative">
-              <span className="pr-7 leading-relaxed">{profile?.userId}</span>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">User ID</p>
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl px-3.5 py-3 relative group">
+              <p className="font-mono text-[11px] text-slate-500 break-all pr-7 leading-relaxed">
+                {profile?.userId}
+              </p>
               <button
                 onClick={handleCopyId}
                 title="Copy User ID"
-                className="absolute right-2 top-2 p-1.5 rounded-lg hover:bg-slate-200 transition-colors"
+                className="absolute right-2.5 top-2.5 p-1.5 rounded-lg hover:bg-slate-200 transition-colors"
               >
-                <Copy size={12} className="text-slate-400" />
+                {copied
+                  ? <CheckCircle size={13} className="text-emerald-500" />
+                  : <Copy size={13} className="text-slate-400" />}
               </button>
             </div>
           </div>
 
+          {/* System roles */}
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-              Vai trò hệ thống
-            </p>
-            <span className="w-fit px-3 py-1 text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 rounded-full">
-              {roles}
-            </span>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Vai trò hệ thống</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(profile?.roles || ["ADMIN"]).map(r => (
+                <span key={r} className="px-3 py-1 text-xs font-bold bg-violet-50 text-violet-700 border border-violet-200 rounded-full">
+                  {r}
+                </span>
+              ))}
+            </div>
           </div>
 
+          {/* Account status */}
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-              Trạng thái tài khoản
-            </p>
-            <span className="w-fit inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold bg-green-50 text-green-700 border border-green-200 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-              Hoạt động
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Trạng thái tài khoản</p>
+            <span className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full border ${isActive ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-500 border-slate-200"}`}>
+              <span className={`w-2 h-2 rounded-full ${isActive ? "bg-emerald-500 shadow-[0_0_6px_#22c55e]" : "bg-slate-400"}`} />
+              {isActive ? "Đang hoạt động" : "Không hoạt động"}
             </span>
           </div>
         </div>
-
       </div>
     </motion.div>
   );

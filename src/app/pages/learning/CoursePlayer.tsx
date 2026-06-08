@@ -154,6 +154,7 @@ export default function CoursePlayer() {
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
 
   const [isSubActionLoading, setIsSubActionLoading] = useState(false);
+  const [sideTab, setSideTab] = useState<"pomodoro" | "quiz">("pomodoro");
 
   const task = detail?.task ?? null;
   const roadmapStep = detail?.roadmapStep ?? null;
@@ -718,6 +719,24 @@ export default function CoursePlayer() {
 
           <aside className="lg:sticky lg:top-24 self-start">
             <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
+              {/* Tab switcher */}
+              <div className="flex rounded-xl overflow-hidden border border-slate-100 mb-4">
+                <button
+                  onClick={() => setSideTab("pomodoro")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-all ${sideTab === "pomodoro" ? "bg-orange-500 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                >
+                  <Timer size={12} /> Pomodoro
+                </button>
+                <button
+                  onClick={() => setSideTab("quiz")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-all ${sideTab === "quiz" ? "bg-indigo-500 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                >
+                  <Brain size={12} /> AI Quiz
+                </button>
+              </div>
+
+              {sideTab === "pomodoro" && (
+              <>
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-[0_8px_20px_-6px_rgba(249,115,22,0.4)]">
                   <Timer size={18} />
@@ -834,9 +853,11 @@ export default function CoursePlayer() {
                    </div>
                 )}
               </div>
+              </>
+              )}
 
-              {/* ── AI QUIZ CONTROL CENTER (DÂN CHƠI THẬT SỰ) ── */}
-              {roadmapStep?.stepId && (
+              {/* ── AI QUIZ TAB ── */}
+              {sideTab === "quiz" && roadmapStep?.stepId && (
                 <div className="mt-4 rounded-[20px] border border-slate-100 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">

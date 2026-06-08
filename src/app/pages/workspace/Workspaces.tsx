@@ -614,11 +614,14 @@ export default function Workspaces() {
 
               <div className="space-y-4 bg-slate-50 p-5">
                 <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 border border-sky-100">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 border border-amber-100">
                     <LayoutGrid className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-slate-900">Trang tạo đầy đủ</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-bold text-slate-900">Trang tạo đầy đủ</div>
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">Đang phát triển</span>
+                    </div>
                     <div className="text-sm text-slate-500">Dành cho trường hợp cần thêm mô tả hoặc cấu trúc chi tiết hơn.</div>
                   </div>
                 </div>
@@ -626,7 +629,7 @@ export default function Workspaces() {
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-bold text-slate-900">Đi tới form đầy đủ</span>
-                    <BookOpenCheck className="h-5 w-5 text-[#FF7E21]" />
+                    <BookOpenCheck className="h-5 w-5 text-slate-400" />
                   </div>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
                     Nếu bạn muốn chuẩn hóa mô tả mục tiêu học ngay từ đầu, hãy chuyển sang trang tạo workspace chuyên dụng.
@@ -635,14 +638,10 @@ export default function Workspaces() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    navigate("/app/workspaces/new");
-                  }}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
+                  disabled
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-bold text-slate-400 cursor-not-allowed opacity-70"
                 >
-                  Đi tới trang tạo workspace
-                  <ArrowRight className="h-4 w-4" />
+                  Tính năng đang phát triển
                 </button>
               </div>
             </div>
