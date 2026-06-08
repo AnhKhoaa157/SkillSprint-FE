@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "motion/react";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, LoaderCircle, RefreshCw, Sparkles, Check, PlayCircle } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, LoaderCircle, RefreshCw, Sparkles, Check, PlayCircle, CalendarClock, X } from "lucide-react";
 import AIScheduleModal from "../../components/modals/AIScheduleModal";
 import useOnboardingProfile from "../../hooks/useOnboardingProfile";
 import workspaceService, { type WorkspaceResponse } from "../../../api/workspaceService";
@@ -230,6 +230,11 @@ export default function StudyCalendar() {
   const [error, setError] = useState<string | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [lastScheduleSeed, setLastScheduleSeed] = useState<ScheduleSeedConfig | null>(null);
+  const [rescheduleTask, setRescheduleTask] = useState<CalendarTaskResponse | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleStart, setRescheduleStart] = useState("");
+  const [rescheduleEnd, setRescheduleEnd] = useState("");
+  const [rescheduling, setRescheduling] = useState(false);
   
   const { profile: onboardingProfile, fetchOnboardingProfile } = useOnboardingProfile(selectedWorkspaceId);
   const { roadmapData, isLoading: roadmapLoading, error: roadmapError } = useRoadmap(selectedWorkspaceId);
@@ -335,6 +340,31 @@ export default function StudyCalendar() {
     navigate("/app/learning/course", {
       state: { taskId },
     });
+  };
+
+  const openReschedule = (task: CalendarTaskResponse) => {
+    setRescheduleTask(task);
+    setRescheduleDate(task.taskDate?.slice(0, 10) || "");
+    setRescheduleStart(task.startTime?.slice(0, 5) || "");
+    setRescheduleEnd(task.endTime?.slice(0, 5) || "");
+  };
+
+  const handleReschedule = async () => {
+    if (!rescheduleTask) return;
+    setRescheduling(true);
+    try {
+      const updated = await calendarService.updateCalendarTask(rescheduleTask.taskId, {
+        taskDate: rescheduleDate || undefined,
+        startTime: rescheduleStart ? `${rescheduleStart}:00` : undefined,
+        endTime: rescheduleEnd ? `${rescheduleEnd}:00` : undefined,
+      });
+      setCalendarTasks(prev => prev.map(t => t.taskId === updated.taskId ? updated : t));
+      setRescheduleTask(null);
+    } catch (err: any) {
+      setError(err?.message || "Không thể dời lịch");
+    } finally {
+      setRescheduling(false);
+    }
   };
 
   const shiftMonth = (offset: number) => {
@@ -616,7 +646,17 @@ export default function StudyCalendar() {
                           {task.durationMinutes || 0}m
                         </span>
                         
-                        <div className="ml-auto">
+                        <div className="ml-auto flex items-center gap-1.5">
+                          {!done && (
+                            <button
+                              type="button"
+                              onClick={() => openReschedule(task)}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-slate-200 bg-slate-50 text-slate-500 font-bold hover:border-[#FF7E21]/40 hover:text-[#FF7E21] transition-all text-[10px] cursor-pointer"
+                              title="Dời lịch"
+                            >
+                              <CalendarClock size={11} />
+                            </button>
+                          )}
                           {done ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 font-extrabold text-[10px]">
                               Đã xong
@@ -652,6 +692,91 @@ export default function StudyCalendar() {
         currentPhase={1}
         initialConfig={scheduleSeed}
       />
+
+      {/* Reschedule task modal */}
+      <AnimatePresence>
+        {rescheduleTask && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(15,23,42,0.45)", backdropFilter: "blur(4px)" }}
+            onClick={() => setRescheduleTask(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 6 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <CalendarClock size={18} className="text-[#FF7E21]" />
+                  <h3 className="text-base font-black text-slate-800">Dời lịch học</h3>
+                </div>
+                <button onClick={() => setRescheduleTask(null)} className="p-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer">
+                  <X size={16} className="text-slate-500" />
+                </button>
+              </div>
+
+              <p className="text-xs font-semibold text-slate-500 mb-4 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 truncate">
+                {rescheduleTask.title}
+              </p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Ngày học mới</label>
+                  <input
+                    type="date"
+                    value={rescheduleDate}
+                    onChange={e => setRescheduleDate(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 focus:border-[#FF7E21] focus:ring-2 focus:ring-[#FF7E21]/10 outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Bắt đầu</label>
+                    <input
+                      type="time"
+                      value={rescheduleStart}
+                      onChange={e => setRescheduleStart(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 focus:border-[#FF7E21] focus:ring-2 focus:ring-[#FF7E21]/10 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Kết thúc</label>
+                    <input
+                      type="time"
+                      value={rescheduleEnd}
+                      onChange={e => setRescheduleEnd(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 focus:border-[#FF7E21] focus:ring-2 focus:ring-[#FF7E21]/10 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-5">
+                <button
+                  onClick={() => setRescheduleTask(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleReschedule}
+                  disabled={rescheduling || !rescheduleDate}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition ${rescheduling || !rescheduleDate ? "bg-orange-300 cursor-not-allowed" : "bg-[#FF7E21] hover:bg-[#E05E00] cursor-pointer"}`}
+                >
+                  {rescheduling ? <span className="flex items-center justify-center gap-1"><LoaderCircle size={14} className="animate-spin" /> Đang lưu...</span> : "Lưu lịch mới"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

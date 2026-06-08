@@ -12,6 +12,7 @@ import { getStoredAuthSession } from "../../../api/authService";
 import AiTutorChat from "./AiTutorChat";
 import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/materialService.ts";
 import roadmapService from "../../../api/roadmapService";
+import workspaceService from "../../../api/workspaceService";
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
 
@@ -384,6 +385,15 @@ export default function WorkspaceDetail(){
         if (current?.name) setWorkspaceName(current.name);
       }
     } catch (e) {}
+    if (id) {
+      workspaceService.getWorkspace(id)
+        .then(data => {
+          if (data && data.name) {
+            setWorkspaceName(data.name);
+          }
+        })
+        .catch(err => console.error("Failed to fetch workspace detail", err));
+    }
     void reloadWorkspaceMaterials();
     return () => {
       try{
@@ -880,16 +890,14 @@ export default function WorkspaceDetail(){
                           <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">Đang tải</span>
                         )}
                       </div>
-                      {f.status !== 'done' && String(f.jobStatus || '').toUpperCase() !== 'COMPLETED' && (
-                        <button
-                          type="button"
-                          onClick={() => cancelFile(f)}
-                          className="shrink-0 opacity-0 group-hover:opacity-100 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500 transition-all duration-150"
-                          title="Hủy file"
-                        >
-                          <Zap className="h-3 w-3" />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => cancelFile(f)}
+                        className="shrink-0 opacity-0 group-hover:opacity-100 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500 transition-all duration-150"
+                        title="Xóa file"
+                      >
+                        <Zap className="h-3 w-3" />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1217,16 +1225,4 @@ export default function WorkspaceDetail(){
       )}
     </div>
   );
-}
-
-function generateSampleLearningPlan(){
-  return {
-    chapters: [
-      { title: "Nhập môn và nền tảng", topics: ["Tổng quan", "Cài đặt", "Khái niệm cơ bản"] },
-      { title: "Thuật toán cốt lõi", topics: ["Sắp xếp", "Tìm kiếm", "Đệ quy"] },
-      { title: "Chủ đề nâng cao", topics: ["Đồ thị", "Quy hoạch động"] },
-    ],
-    roadmap: ["Tuần 1: Nền tảng", "Tuần 2: Thuật toán cốt lõi", "Tuần 3: Chủ đề nâng cao"],
-    tasks: ["Đọc chương 1", "Hoàn thành bài luyện: sắp xếp", "Xây dựng dự án nhỏ"],
-  };
-}
+}

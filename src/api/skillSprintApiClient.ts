@@ -29,6 +29,15 @@ skillSprintApiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       window.dispatchEvent(new Event("session-kickout-triggered"));
     }
+    // Extract the backend's error message from the response body if available
+    const backendMessage: string | undefined = error.response?.data?.message;
+    if (backendMessage) {
+      // Wrap it in an Error so catch blocks can read err.message
+      const wrapped = new Error(backendMessage);
+      (wrapped as any).status = error.response?.status;
+      (wrapped as any).originalError = error;
+      return Promise.reject(wrapped);
+    }
     return Promise.reject(error);
   },
 );

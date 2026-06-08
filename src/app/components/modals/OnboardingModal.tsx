@@ -2,7 +2,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, ChevronLeft, ChevronRight, Clock3, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { BookOpen, Calendar, Check, ChevronLeft, ChevronRight, Clock, Clock3, Loader2, Plus, Sparkles, Target, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { fetchOnboardingProfile, upsertOnboardingProfile, type OnboardingProfileResponse } from "../../../api/onboardingService";
@@ -56,14 +56,14 @@ function ConfidenceCard({ active, title, description, onClick }: ConfidenceCardP
       className={
         "group w-full rounded-2xl border p-4 text-left transition-all duration-200 " +
         (active
-          ? "border-orange-500 bg-orange-50 shadow-[0_12px_30px_rgba(249,115,22,0.14)]"
-          : "border-slate-200 bg-white hover:border-orange-200 hover:bg-orange-50/50")
+          ? "border-orange-500 bg-orange-50 shadow-[0_12px_30px_rgba(249,115,22,0.14)] ring-2 ring-orange-500/20"
+          : "border-slate-100 bg-white hover:border-orange-200 hover:bg-orange-50/50 shadow-sm")
       }
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-sm font-bold text-slate-900">{title}</div>
-          <div className="mt-1 text-xs leading-5 text-slate-500">{description}</div>
+          <div className="text-sm font-bold text-[#0F172A]">{title}</div>
+          <div className="mt-1 text-xs leading-5 text-[#475569]">{description}</div>
         </div>
         <div
           className={
@@ -93,7 +93,7 @@ function DayChip({ label, active, onClick }: ChipProps) {
         "rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 " +
         (active
           ? "bg-orange-500 text-white shadow-md shadow-orange-500/25"
-          : "bg-gray-100 text-gray-600 hover:bg-gray-200")
+          : "bg-slate-100 text-slate-500 hover:bg-slate-200")
       }
     >
       {label}
@@ -108,13 +108,13 @@ type TimeSlotTagProps = {
 
 function TimeSlotTag({ label, onRemove }: TimeSlotTagProps) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm">
-      <Clock3 className="h-4 w-4 text-orange-500" />
+    <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 shadow-sm">
+      <Clock className="h-4 w-4 text-violet-500" />
       <span>{label}</span>
       <button
         type="button"
         onClick={onRemove}
-        className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+        className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-violet-400 transition hover:bg-violet-100 hover:text-violet-700"
         aria-label={`Remove ${label}`}
       >
         <Trash2 className="h-3.5 w-3.5" />
@@ -305,8 +305,9 @@ export default function OnboardingModal({
     <div className="fixed inset-0 z-50 flex">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
 
-      <aside className="relative ml-auto flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-slate-200 bg-white/95 shadow-2xl shadow-black/10 backdrop-blur">
-        <div className="border-b border-slate-200/80 bg-white/90 px-6 py-5">
+      <aside className="relative ml-auto flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-slate-200 bg-[#F7F8FA] shadow-2xl shadow-black/10 backdrop-blur">
+        <div className="border-b border-slate-200 bg-white px-6 py-5">
+          <div className="h-1 w-full bg-gradient-to-r from-orange-500 to-violet-500 absolute top-0 left-0 right-0" />
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-orange-500">
@@ -339,9 +340,9 @@ export default function OnboardingModal({
                 <span>{step === 0 ? "Mục tiêu & Thông tin chung" : "Lịch học"}</span>
                 <span>{step + 1}/2</span>
               </div>
-              <div className="mt-3 h-2 rounded-full bg-slate-100">
+              <div className="mt-3 h-1.5 rounded-full bg-slate-100">
                 <div
-                  className="h-2 rounded-full bg-gradient-to-r from-orange-400 to-orange-500 transition-all duration-300"
+                  className="h-1.5 rounded-full bg-gradient-to-r from-orange-500 to-violet-500 transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -349,7 +350,7 @@ export default function OnboardingModal({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto bg-[#F7F8FA] px-6 py-6">
           {loadingProfile ? (
             <div className="flex min-h-[420px] items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50">
               <div className="flex items-center gap-3 text-sm font-medium text-slate-500">
@@ -361,14 +362,18 @@ export default function OnboardingModal({
             <form
               id="onboarding-form"
               onSubmit={onSubmit}
-              className="space-y-6 pb-32"
+              className="space-y-4 pb-32"
             >
               {isEditMode ? (
-                <section className="space-y-6">
-                  <div>
-                    <div className="mb-2 flex items-center justify-between gap-4">
-                      <label className="text-sm font-semibold text-slate-800">Mục tiêu học tập</label>
-                      <span className="text-xs font-medium text-slate-400">{targetGoalValue.length}/2000</span>
+                <section className="space-y-4">
+                  {/* Learning Goal card */}
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+                        <Target className="h-3.5 w-3.5 text-orange-500" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-600">Mục tiêu học tập</span>
+                      <span className="ml-auto text-xs font-medium text-[#94A3B8]">{targetGoalValue.length}/2000</span>
                     </div>
                     <div className="relative">
                       <textarea
@@ -376,59 +381,73 @@ export default function OnboardingModal({
                         rows={6}
                         maxLength={2000}
                         placeholder="Ví dụ: Hoàn thành khóa học ReactJS..."
-                        className="min-h-[160px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 pr-16 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                        className="min-h-[160px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 pr-16 text-sm leading-6 text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
                       />
-                      <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                      <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-[#475569]">
                         {targetGoalValue.length}/2000
                       </div>
                     </div>
                     {errors.targetGoal && <p className="mt-2 text-sm text-red-600">{errors.targetGoal.message}</p>}
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-[1.3fr_0.7fr]">
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-800">Số giờ học mỗi tuần</label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min={1}
-                          max={40}
-                          {...register("studyHoursPerWeek", { valueAsNumber: true })}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-20 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-                        />
-                        <span className="absolute inset-y-0 right-4 flex items-center text-sm font-semibold text-slate-400">
-                          giờ/tuần
-                        </span>
+                  {/* Hours + Date card */}
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+                        <BookOpen className="h-3.5 w-3.5 text-orange-500" />
                       </div>
-                      <p className="mt-2 text-xs text-slate-500">Gợi ý: bắt đầu từ 8-12 giờ/tuần nếu bạn mới thiết lập lộ trình.</p>
-                      {errors.studyHoursPerWeek && (
-                        <p className="mt-2 text-sm text-red-600">{errors.studyHoursPerWeek.message}</p>
-                      )}
+                      <span className="text-xs font-bold text-slate-600">Giờ học & Thời hạn</span>
                     </div>
-
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-800">Mục tiêu hoàn thành (Tùy chọn)</label>
-                      <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-                        <input
-                          type="date"
-                          value={targetDeadlineValue ?? ""}
-                          onChange={(event) => setValue("targetDeadline", event.target.value, { shouldDirty: true })}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setValue("targetDeadline", "", { shouldDirty: true })}
-                          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
-                        >
-                          Xóa ngày
-                        </button>
+                    <div className="grid gap-4 md:grid-cols-[1.3fr_0.7fr]">
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-[#0F172A]">Số giờ học mỗi tuần</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={1}
+                            max={40}
+                            {...register("studyHoursPerWeek", { valueAsNumber: true })}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-20 text-sm text-[#0F172A] outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                          />
+                          <span className="absolute inset-y-0 right-4 flex items-center text-sm font-semibold text-[#94A3B8]">
+                            giờ/tuần
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs text-[#475569]">Gợi ý: bắt đầu từ 8-12 giờ/tuần nếu bạn mới thiết lập lộ trình.</p>
+                        {errors.studyHoursPerWeek && (
+                          <p className="mt-2 text-sm text-red-600">{errors.studyHoursPerWeek.message}</p>
+                        )}
                       </div>
-                      <p className="mt-2 text-xs text-slate-500">Không bắt buộc. Bạn có thể để trống hoặc xóa ngày đã chọn bất cứ lúc nào.</p>
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-[#0F172A]">Mục tiêu hoàn thành (Tùy chọn)</label>
+                        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+                          <input
+                            type="date"
+                            value={targetDeadlineValue ?? ""}
+                            onChange={(event) => setValue("targetDeadline", event.target.value, { shouldDirty: true })}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setValue("targetDeadline", "", { shouldDirty: true })}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#475569] transition hover:border-slate-300 hover:bg-slate-50"
+                          >
+                            Xóa ngày
+                          </button>
+                        </div>
+                        <p className="mt-2 text-xs text-[#475569]">Không bắt buộc. Bạn có thể để trống hoặc xóa ngày đã chọn bất cứ lúc nào.</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="mb-3 block text-sm font-semibold text-slate-800">Mức tự tin</label>
+                  {/* Confidence card */}
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+                        <Sparkles className="h-3.5 w-3.5 text-orange-500" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-600">Mức tự tin</span>
+                    </div>
                     <div className="grid gap-3 md:grid-cols-3">
                       {confidenceOptions.map((option) => (
                         <ConfidenceCard
@@ -443,10 +462,14 @@ export default function OnboardingModal({
                     {errors.confidence && <p className="mt-2 text-sm text-red-600">{errors.confidence.message}</p>}
                   </div>
 
-                  <div>
-                    <div className="mb-3 flex items-center justify-between gap-4">
-                      <label className="text-sm font-semibold text-slate-800">Ngày học ưu tiên</label>
-                      <span className="text-xs font-medium text-slate-400">Chọn nhiều ngày nếu cần</span>
+                  {/* Preferred Days card */}
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+                        <Calendar className="h-3.5 w-3.5 text-orange-500" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-600">Ngày học ưu tiên</span>
+                      <span className="ml-auto text-xs font-medium text-[#94A3B8]">Chọn nhiều ngày nếu cần</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {dayOptions.map((day) => (
@@ -460,65 +483,73 @@ export default function OnboardingModal({
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr_auto] md:items-end">
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-800">Giờ bắt đầu</label>
-                      <input
-                        type="time"
-                        value={slotStart}
-                        onChange={(event) => setSlotStart(event.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-                      />
-                    </div>
-
-                    <div className="hidden justify-center text-slate-400 md:flex">→</div>
-
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-800">Giờ kết thúc</label>
-                      <input
-                        type="time"
-                        value={slotEnd}
-                        onChange={(event) => setSlotEnd(event.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={addTimeSlot}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
-                    >
-                      <Plus className="h-4 w-4" />
-                      [+ Thêm]
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {timeSlots.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                        Chưa có khung giờ nào. Thêm một khoảng để hệ thống ưu tiên.
+                  {/* Time Slots card */}
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-violet-50 border border-violet-100 flex items-center justify-center">
+                        <Clock className="h-3.5 w-3.5 text-violet-500" />
                       </div>
-                    ) : (
-                      timeSlots.map((slot, index) => (
-                        <TimeSlotTag
-                          key={`time-badge-${index}`}
-                          label={`⏱️ ${slot.replace('-', ' - ')}`}
-                          onRemove={() => setTimeSlots((current) => current.filter((item) => item !== slot))}
+                      <span className="text-xs font-bold text-slate-600">Khung giờ học</span>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr_auto] md:items-end">
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-[#0F172A]">Giờ bắt đầu</label>
+                        <input
+                          type="time"
+                          value={slotStart}
+                          onChange={(event) => setSlotStart(event.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
                         />
-                      ))
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-orange-100 bg-orange-50/80 p-4 text-sm text-orange-900">
-                    Hệ thống sẽ dựa vào các khung giờ bạn chọn để tự động phân bổ lịch học sao cho phù hợp và hiệu quả nhất.
+                      </div>
+                      <div className="hidden justify-center text-[#94A3B8] md:flex">→</div>
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-[#0F172A]">Giờ kết thúc</label>
+                        <input
+                          type="time"
+                          value={slotEnd}
+                          onChange={(event) => setSlotEnd(event.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addTimeSlot}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
+                      >
+                        <Plus className="h-4 w-4" />
+                        [+ Thêm]
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {timeSlots.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-[#475569]">
+                          Chưa có khung giờ nào. Thêm một khoảng để hệ thống ưu tiên.
+                        </div>
+                      ) : (
+                        timeSlots.map((slot, index) => (
+                          <TimeSlotTag
+                            key={`time-badge-${index}`}
+                            label={`⏱️ ${slot.replace('-', ' - ')}`}
+                            onRemove={() => setTimeSlots((current) => current.filter((item) => item !== slot))}
+                          />
+                        ))
+                      )}
+                    </div>
+                    <div className="rounded-2xl border border-orange-100 bg-orange-50/80 p-4 text-sm text-orange-900">
+                      Hệ thống sẽ dựa vào các khung giờ bạn chọn để tự động phân bổ lịch học sao cho phù hợp và hiệu quả nhất.
+                    </div>
                   </div>
                 </section>
               ) : step === 0 && (
-                <section className="space-y-6">
-                  <div>
-                    <div className="mb-2 flex items-center justify-between gap-4">
-                      <label className="text-sm font-semibold text-slate-800">Mục tiêu học tập</label>
-                      <span className="text-xs font-medium text-slate-400">{targetGoalValue.length}/2000</span>
+                <section className="space-y-4">
+                  {/* Learning Goal card */}
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+                        <Target className="h-3.5 w-3.5 text-orange-500" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-600">Mục tiêu học tập</span>
+                      <span className="ml-auto text-xs font-medium text-[#94A3B8]">{targetGoalValue.length}/2000</span>
                     </div>
                     <div className="relative">
                       <textarea
@@ -526,59 +557,73 @@ export default function OnboardingModal({
                         rows={6}
                         maxLength={2000}
                         placeholder="Ví dụ: Hoàn thành khóa học ReactJS..."
-                        className="min-h-[160px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 pr-16 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                        className="min-h-[160px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 pr-16 text-sm leading-6 text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
                       />
-                      <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                      <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-[#475569]">
                         {targetGoalValue.length}/2000
                       </div>
                     </div>
                     {errors.targetGoal && <p className="mt-2 text-sm text-red-600">{errors.targetGoal.message}</p>}
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-[1.3fr_0.7fr]">
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-800">Số giờ học mỗi tuần</label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min={1}
-                          max={40}
-                          {...register("studyHoursPerWeek", { valueAsNumber: true })}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-20 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-                        />
-                        <span className="absolute inset-y-0 right-4 flex items-center text-sm font-semibold text-slate-400">
-                          giờ/tuần
-                        </span>
+                  {/* Hours + Date card */}
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+                        <BookOpen className="h-3.5 w-3.5 text-orange-500" />
                       </div>
-                      <p className="mt-2 text-xs text-slate-500">Gợi ý: bắt đầu từ 8-12 giờ/tuần nếu bạn mới thiết lập lộ trình.</p>
-                      {errors.studyHoursPerWeek && (
-                        <p className="mt-2 text-sm text-red-600">{errors.studyHoursPerWeek.message}</p>
-                      )}
+                      <span className="text-xs font-bold text-slate-600">Giờ học & Thời hạn</span>
                     </div>
-
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-800">Mục tiêu hoàn thành (Tùy chọn)</label>
-                      <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-                        <input
-                          type="date"
-                          value={targetDeadlineValue ?? ""}
-                          onChange={(event) => setValue("targetDeadline", event.target.value, { shouldDirty: true })}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setValue("targetDeadline", "", { shouldDirty: true })}
-                          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
-                        >
-                          Xóa ngày
-                        </button>
+                    <div className="grid gap-4 md:grid-cols-[1.3fr_0.7fr]">
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-[#0F172A]">Số giờ học mỗi tuần</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={1}
+                            max={40}
+                            {...register("studyHoursPerWeek", { valueAsNumber: true })}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-20 text-sm text-[#0F172A] outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                          />
+                          <span className="absolute inset-y-0 right-4 flex items-center text-sm font-semibold text-[#94A3B8]">
+                            giờ/tuần
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs text-[#475569]">Gợi ý: bắt đầu từ 8-12 giờ/tuần nếu bạn mới thiết lập lộ trình.</p>
+                        {errors.studyHoursPerWeek && (
+                          <p className="mt-2 text-sm text-red-600">{errors.studyHoursPerWeek.message}</p>
+                        )}
                       </div>
-                      <p className="mt-2 text-xs text-slate-500">Không bắt buộc. Bạn có thể để trống hoặc xóa ngày đã chọn bất cứ lúc nào.</p>
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-[#0F172A]">Mục tiêu hoàn thành (Tùy chọn)</label>
+                        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+                          <input
+                            type="date"
+                            value={targetDeadlineValue ?? ""}
+                            onChange={(event) => setValue("targetDeadline", event.target.value, { shouldDirty: true })}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setValue("targetDeadline", "", { shouldDirty: true })}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#475569] transition hover:border-slate-300 hover:bg-slate-50"
+                          >
+                            Xóa ngày
+                          </button>
+                        </div>
+                        <p className="mt-2 text-xs text-[#475569]">Không bắt buộc. Bạn có thể để trống hoặc xóa ngày đã chọn bất cứ lúc nào.</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="mb-3 block text-sm font-semibold text-slate-800">Mức tự tin</label>
+                  {/* Confidence card */}
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+                        <Sparkles className="h-3.5 w-3.5 text-orange-500" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-600">Mức tự tin</span>
+                    </div>
                     <div className="grid gap-3 md:grid-cols-3">
                       {confidenceOptions.map((option) => (
                         <ConfidenceCard
@@ -596,11 +641,15 @@ export default function OnboardingModal({
               )}
 
               {!isEditMode && step === 1 && (
-                <section className="space-y-6">
-                  <div>
-                    <div className="mb-3 flex items-center justify-between gap-4">
-                      <label className="text-sm font-semibold text-slate-800">Ngày học ưu tiên</label>
-                      <span className="text-xs font-medium text-slate-400">Chọn nhiều ngày nếu cần</span>
+                <section className="space-y-4">
+                  {/* Preferred Days card */}
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+                        <Calendar className="h-3.5 w-3.5 text-orange-500" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-600">Ngày học ưu tiên</span>
+                      <span className="ml-auto text-xs font-medium text-[#94A3B8]">Chọn nhiều ngày nếu cần</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {dayOptions.map((day) => (
@@ -614,57 +663,61 @@ export default function OnboardingModal({
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr_auto] md:items-end">
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-800">Giờ bắt đầu</label>
-                      <input
-                        type="time"
-                        value={slotStart}
-                        onChange={(event) => setSlotStart(event.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-                      />
-                    </div>
-
-                    <div className="hidden justify-center text-slate-400 md:flex">→</div>
-
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-800">Giờ kết thúc</label>
-                      <input
-                        type="time"
-                        value={slotEnd}
-                        onChange={(event) => setSlotEnd(event.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={addTimeSlot}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
-                    >
-                      <Plus className="h-4 w-4" />
-                      [+ Thêm]
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {timeSlots.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                        Chưa có khung giờ nào. Thêm một khoảng để hệ thống ưu tiên.
+                  {/* Time Slots card */}
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-violet-50 border border-violet-100 flex items-center justify-center">
+                        <Clock className="h-3.5 w-3.5 text-violet-500" />
                       </div>
-                    ) : (
-                      timeSlots.map((slot, index) => (
-                        <TimeSlotTag
-                          key={`time-badge-${index}`}
-                          label={`⏱️ ${slot.replace('-', ' - ')}`}
-                          onRemove={() => setTimeSlots((current) => current.filter((item) => item !== slot))}
+                      <span className="text-xs font-bold text-slate-600">Khung giờ học</span>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr_auto] md:items-end">
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-[#0F172A]">Giờ bắt đầu</label>
+                        <input
+                          type="time"
+                          value={slotStart}
+                          onChange={(event) => setSlotStart(event.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
                         />
-                      ))
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-orange-100 bg-orange-50/80 p-4 text-sm text-orange-900">
-                    Hệ thống sẽ dựa vào các khung giờ bạn chọn để tự động phân bổ lịch học sao cho phù hợp và hiệu quả nhất.
+                      </div>
+                      <div className="hidden justify-center text-[#94A3B8] md:flex">→</div>
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-[#0F172A]">Giờ kết thúc</label>
+                        <input
+                          type="time"
+                          value={slotEnd}
+                          onChange={(event) => setSlotEnd(event.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addTimeSlot}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
+                      >
+                        <Plus className="h-4 w-4" />
+                        [+ Thêm]
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {timeSlots.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-[#475569]">
+                          Chưa có khung giờ nào. Thêm một khoảng để hệ thống ưu tiên.
+                        </div>
+                      ) : (
+                        timeSlots.map((slot, index) => (
+                          <TimeSlotTag
+                            key={`time-badge-${index}`}
+                            label={`⏱️ ${slot.replace('-', ' - ')}`}
+                            onRemove={() => setTimeSlots((current) => current.filter((item) => item !== slot))}
+                          />
+                        ))
+                      )}
+                    </div>
+                    <div className="rounded-2xl border border-orange-100 bg-orange-50/80 p-4 text-sm text-orange-900">
+                      Hệ thống sẽ dựa vào các khung giờ bạn chọn để tự động phân bổ lịch học sao cho phù hợp và hiệu quả nhất.
+                    </div>
                   </div>
                 </section>
               )}
@@ -672,7 +725,7 @@ export default function OnboardingModal({
           )}
         </div>
 
-        <div className="sticky bottom-0 border-t border-slate-200 bg-white/95 px-6 py-4 backdrop-blur">
+        <div className="sticky bottom-0 border-t border-slate-200 bg-white px-6 py-4">
           <div className="flex items-center justify-between gap-3">
             {isEditMode ? (
               <div className="ml-auto flex items-center gap-3">
@@ -680,7 +733,7 @@ export default function OnboardingModal({
                   type="button"
                   onClick={onClose}
                   disabled={loadingProfile}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#475569] transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   Hủy
                 </button>
@@ -688,7 +741,7 @@ export default function OnboardingModal({
                   type="submit"
                   form="onboarding-form"
                   disabled={isSubmitting || loadingProfile}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-orange-700 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isSubmitting || loadingProfile ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -708,7 +761,7 @@ export default function OnboardingModal({
                     "inline-flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold transition " +
                     (step === 0 || loadingProfile
                       ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-300"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50")
+                      : "border-slate-200 bg-white text-[#475569] hover:border-slate-300 hover:bg-slate-50")
                   }
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -722,7 +775,7 @@ export default function OnboardingModal({
                       void handleNextStep();
                     }}
                     disabled={loadingProfile}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-orange-700 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     Tiếp theo
                     <ChevronRight className="h-4 w-4" />
@@ -732,7 +785,7 @@ export default function OnboardingModal({
                     type="submit"
                     form="onboarding-form"
                     disabled={isSubmitting || loadingProfile}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-orange-700 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {isSubmitting || loadingProfile ? (
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />

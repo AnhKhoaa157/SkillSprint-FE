@@ -14,7 +14,7 @@ const SHOWCASE_MODULES = [
   {
     title: "Lộ trình AI",
     desc: "Lộ trình kỹ năng theo phase, có gate assessment và tiến độ trực quan.",
-    to: "/app/roadmap",
+    to: "/app/workspaces",
     icon: Map,
     tier: "Miễn phí",
   },
@@ -286,7 +286,7 @@ export default function Dashboard() {
             <h4 className="text-base font-extrabold text-slate-800 mt-1 mb-1">React Hooks</h4>
             <p className="text-xs text-slate-500 leading-relaxed mb-4">Tiếp tục bài học kế tiếp trong lộ trình thông minh.</p>
             
-            <Link to="/app/roadmap" className="block text-center">
+            <Link to="/app/workspaces" className="block text-center">
               <div className="inline-flex w-full items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-[#FF6B00] to-amber-500 py-3 text-xs font-bold text-white shadow-md shadow-[#FF6B00]/15 transition hover:brightness-105">
                 Mở lộ trình học <ArrowRight className="h-3.5 w-3.5" />
               </div>

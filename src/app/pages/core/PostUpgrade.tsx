@@ -70,13 +70,13 @@ export default function PostUpgradeDashboard() {
 
         <div className="mt-5 flex flex-wrap gap-3">
           <button
-            onClick={() => navigate("/app/learning")}
+            onClick={() => navigate("/app/workspaces")}
             className="px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-colors inline-flex items-center gap-2"
           >
             <BookOpen size={16} /> Bắt đầu học ngay
           </button>
           <button
-            onClick={() => navigate("/app/roadmap")}
+            onClick={() => navigate("/app/workspaces")}
             className="px-4 py-2 rounded-xl border border-orange-200 bg-white text-orange-700 text-sm font-bold hover:bg-orange-50 transition-colors inline-flex items-center gap-2"
           >
             Xem roadmap <ArrowRight size={16} />
@@ -98,7 +98,7 @@ export default function PostUpgradeDashboard() {
             title="AI Learning Engine"
             desc={tier === "premium" ? "Lộ trình học tự động điều chỉnh theo tiến độ + mục tiêu nghề nghiệp." : "Lộ trình AI cá nhân hóa cho module hiện tại."}
             cta="Mở Learning Hub"
-            onClick={() => navigate("/app/learning")}
+            onClick={() => navigate("/app/workspaces")}
           />
 
           <FeatureCard
@@ -114,7 +114,7 @@ export default function PostUpgradeDashboard() {
             title={tier === "premium" ? "CV + Micro-credentials" : "Practice & Progress"}
             desc={tier === "premium" ? "Career profile nâng cao, badge chia sẻ LinkedIn và chứng nhận kỹ năng." : "Theo dõi tiến độ và mở kho bài luyện tập nâng cao."}
             cta={tier === "premium" ? "Mở hồ sơ nghề nghiệp" : "Tiếp tục học"}
-            onClick={() => navigate(tier === "premium" ? "/app/profile" : "/app/roadmap")}
+            onClick={() => navigate(tier === "premium" ? "/app/profile" : "/app/workspaces")}
           />
         </motion.div>
       </AnimatePresence>

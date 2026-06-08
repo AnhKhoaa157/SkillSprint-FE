@@ -210,8 +210,6 @@ interface AccountTabProps {
 function AccountTab({ profile, onSave, saving, onAvatarUploaded }: AccountTabProps) {
   const [fullName,   setFullName]   = useState(profile.fullName);
   const [email,      setEmail]      = useState(profile.email);
-  const [university, setUniversity] = useState("FPT University");
-  const [major,      setMajor]      = useState("Software Engineering");
   const [timeZone,   setTimeZone]   = useState(profile.timeZone || "Asia/Ho_Chi_Minh (GMT+7)");
   const [showUserId, setShowUserId] = useState(false);
 
@@ -296,10 +294,7 @@ function AccountTab({ profile, onSave, saving, onAvatarUploaded }: AccountTabPro
     }
   };
 
-  const UNIVERSITIES = [
-    "FPT University","VNU-HCM","HUST","RMIT Vietnam",
-    "Fulbright University","Ho Chi Minh University of Technology","Other",
-  ];
+
 
   return (
     <>
@@ -441,13 +436,22 @@ function AccountTab({ profile, onSave, saving, onAvatarUploaded }: AccountTabPro
         </div>
       </div>
 
-      {/* University Details */}
+      {/* University Details — placeholder until backend provides this API */}
       <div style={{ marginBottom:"28px" }}>
         <SectionHeading title="Thông tin học vấn"/>
-          <div style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
-            <Select label="Trường đại học" value={university} onChange={setUniversity} options={UNIVERSITIES}/>
-            <Input  label="Chuyên ngành"      value={major}      onChange={setMajor}      placeholder="VD: Công nghệ phần mềm"/>
+        <div style={{
+          display:"flex", alignItems:"center", gap:"14px",
+          padding:"16px 18px", borderRadius:"12px",
+          background:"#FFF7ED", border:"1px solid #FED7AA",
+        }}>
+          <div style={{ width:"36px", height:"36px", borderRadius:"10px", background:"rgba(255,107,0,0.12)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <span style={{ fontSize:"18px" }}>🎓</span>
           </div>
+          <div>
+            <p style={{ fontWeight:700, fontSize:"0.84rem", color:"#C2410C", fontFamily:F }}>Thông tin học vấn đang phát triển</p>
+            <p style={{ fontSize:"0.75rem", color:"#EA580C", fontFamily:F, marginTop:"2px" }}>Tính năng cập nhật trường/chuyên ngành sẽ được bổ sung khi backend hỗ trợ.</p>
+          </div>
+        </div>
       </div>
 
       {/* Danger Zone */}
@@ -1080,318 +1084,34 @@ function SubscriptionTab() {
 }
 
 /* ═══════════════════════════════════════════════
-   NOTIFICATIONS TAB
+   UNDER-DEVELOPMENT PLACEHOLDER (ENHANCED)
 ═══════════════════════════════════════════════ */
-function ToggleRow({
-  title,
-  description,
-  checked,
-  onChange,
-}: {
-  title: string;
-  description: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
+function DevPlaceholderTab({ label, icon, description }: { label: string; icon: string; description: string }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "12px 14px",
-        borderRadius: "10px",
-        border: `1px solid ${BDR}`,
-        background: CARD,
-      }}
-    >
-      <div style={{ paddingRight: "10px" }}>
-        <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.84rem", color: T1 }}>{title}</p>
-        <p style={{ fontFamily: F, fontSize: "0.75rem", color: T3, marginTop: "3px" }}>{description}</p>
-      </div>
-
-      <button
-        onClick={() => onChange(!checked)}
-        style={{
-          width: "42px",
-          height: "24px",
-          borderRadius: "999px",
-          border: "none",
-          cursor: "pointer",
-          position: "relative",
-          background: checked ? OG : "#E5E7EB",
-          transition: "all 0.18s",
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            position: "absolute",
-            top: "3px",
-            left: checked ? "21px" : "3px",
-            width: "18px",
-            height: "18px",
-            borderRadius: "50%",
-            background: "#fff",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
-            transition: "left 0.18s",
-          }}
-        />
-      </button>
-    </div>
-  );
-}
-
-function NotificationsTab() {
-  const [emailReminders, setEmailReminders] = useState(true);
-  const [pomodoroAlert, setPomodoroAlert] = useState(true);
-  const [weeklyDigest, setWeeklyDigest] = useState(false);
-  const [deadlineNudge, setDeadlineNudge] = useState(true);
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
-  };
-
-  return (
-    <div>
-      <SectionHeading title="Tùy chọn thông báo" />
-      <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
-        <ToggleRow
-          title="Nhắc nhở qua Email"
-          description="Nhận lời nhắc trước mỗi buổi học."
-          checked={emailReminders}
-          onChange={setEmailReminders}
-        />
-        <ToggleRow
-          title="Cảnh báo Pomodoro"
-          description="Thông báo khi kết thúc thời gian tập trung."
-          checked={pomodoroAlert}
-          onChange={setPomodoroAlert}
-        />
-        <ToggleRow
-          title="Tổng kết tuần"
-          description="Tóm tắt tiến độ, chuỗi học và nhiệm vụ vào mỗi Chủ nhật."
-          checked={weeklyDigest}
-          onChange={setWeeklyDigest}
-        />
-        <ToggleRow
-          title="Nhắc hạn chót"
-          description="Nhắc nhở 24 giờ trước kỳ thi hoặc hạn chót."
-          checked={deadlineNudge}
-          onChange={setDeadlineNudge}
-        />
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={handleSave}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "10px 20px",
-            borderRadius: "10px",
-            background: saved ? "#059669" : OG,
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: F,
-            fontWeight: 700,
-            fontSize: "0.85rem",
-            boxShadow: saved ? "0 4px 14px rgba(5,150,105,0.25)" : "0 4px 14px rgba(255,107,0,0.28)",
-          }}
-        >
-          {saved ? <><Check size={14} /> Đã lưu</> : "Lưu tùy chọn thông báo"}
-        </motion.button>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════
-   PRIVACY TAB
-═══════════════════════════════════════════════ */
-function PrivacyTab() {
-  const [publicProfile, setPublicProfile] = useState(false);
-  const [showLeaderboardName, setShowLeaderboardName] = useState(true);
-  const [allowAnalytics, setAllowAnalytics] = useState(true);
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
-  };
-
-  return (
-    <div>
-      <SectionHeading title="Quyền riêng tư & Hiển thị" />
-      <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
-        <ToggleRow
-          title="Hồ sơ công khai"
-          description="Cho phép người khác xem trang hồ sơ học tập."
-          checked={publicProfile}
-          onChange={setPublicProfile}
-        />
-        <ToggleRow
-          title="Hiển thị tên trên bảng xếp hạng"
-          description="Hiển thị tên và thứ hạng chuỗi học công khai."
-          checked={showLeaderboardName}
-          onChange={setShowLeaderboardName}
-        />
-        <ToggleRow
-          title="Phân tích sản phẩm"
-          description="Chia sẻ dữ liệu ẩn danh để cải thiện đề xuất AI."
-          checked={allowAnalytics}
-          onChange={setAllowAnalytics}
-        />
-      </div>
-
+    <div style={{ padding: "40px 20px", textAlign: "center" }}>
       <div style={{
-        padding: "12px 14px",
-        borderRadius: "10px",
-        border: `1px solid #C7D2FE`,
-        background: "#EEF2FF",
-        marginBottom: "18px",
+        width: "72px", height: "72px", borderRadius: "20px",
+        background: "linear-gradient(135deg, #FFF7ED, #FFEDD5)",
+        border: "1px solid #FED7AA",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        margin: "0 auto 16px",
+        fontSize: "32px",
       }}>
-        <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.8rem", color: "#4338CA" }}>
-          Xác thực 2FA và nhật ký bảo mật sẽ được thêm trong giai đoạn backend.
-        </p>
-        <p style={{ fontFamily: F, fontSize: "0.74rem", color: "#6366F1", marginTop: "4px" }}>
-          Giao diện đã sẵn sàng, tích hợp API sẽ được gắn sau.
-        </p>
+        {icon}
       </div>
-
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={handleSave}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "10px 20px",
-            borderRadius: "10px",
-            background: saved ? "#059669" : OG,
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: F,
-            fontWeight: 700,
-            fontSize: "0.85rem",
-            boxShadow: saved ? "0 4px 14px rgba(5,150,105,0.25)" : "0 4px 14px rgba(255,107,0,0.28)",
-          }}
-        >
-          {saved ? <><Check size={14} /> Đã lưu</> : "Lưu tùy chọn bảo mật"}
-        </motion.button>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════
-   INTEGRATIONS TAB
-═══════════════════════════════════════════════ */
-function IntegrationsTab() {
-  const [dateSource, setDateSource] = useState("Client (Browser Time)");
-  const [timezone, setTimezone] = useState("Asia/Ho_Chi_Minh (GMT+7)");
-  const [autoSync, setAutoSync] = useState(true);
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
-  };
-
-  return (
-    <div>
-      <SectionHeading title="Tiện ích tích hợp" />
-
+      <h3 style={{ fontWeight: 800, fontSize: "1rem", color: T1, marginBottom: "6px", fontFamily: F }}>
+        {label}
+      </h3>
+      <p style={{ color: T3, fontSize: "0.82rem", fontFamily: F, maxWidth: "320px", margin: "0 auto 20px", lineHeight: 1.6 }}>
+        {description}
+      </p>
       <div style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "10px",
-        padding: "12px 14px",
-        borderRadius: "10px",
-        border: `1px solid ${BDR}`,
-        background: "#F9FAFB",
-        marginBottom: "14px",
+        display: "inline-flex", alignItems: "center", gap: "8px",
+        padding: "8px 16px", borderRadius: "99px",
+        background: "rgba(255,107,0,0.08)", border: "1px solid rgba(255,107,0,0.2)",
       }}>
-        <CalendarClock size={16} color={OG} style={{ marginTop: "2px", flexShrink: 0 }} />
-        <div>
-            <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.84rem", color: T1 }}>
-              Chế độ nguồn ngày
-            </p>
-            <p style={{ fontFamily: F, fontSize: "0.75rem", color: T3, marginTop: "3px" }}>
-              Ứng dụng hiện dùng thời gian trình duyệt. Chuyển sang thời gian máy chủ sau khi backend ra mắt.
-            </p>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
-        <Select
-          label="Nguồn ngày"
-          value={dateSource}
-          onChange={setDateSource}
-          options={["Client (Browser Time)", "Mock API", "Server Time (Coming soon)"]}
-        />
-        <Select
-          label="Timezone"
-          value={timezone}
-          onChange={setTimezone}
-          options={["Asia/Ho_Chi_Minh (GMT+7)", "UTC (GMT+0)", "Asia/Singapore (GMT+8)"]}
-        />
-      </div>
-
-      <div style={{ marginBottom: "18px" }}>
-        <ToggleRow
-          title="Tự động đồng bộ mỗi phút"
-          description="Làm mới dữ liệu ngày và trạng thái trong các module dashboard."
-          checked={autoSync}
-          onChange={setAutoSync}
-        />
-      </div>
-
-      <div style={{
-        padding: "12px 14px",
-        borderRadius: "10px",
-        border: `1px solid #BFDBFE`,
-        background: "#EFF6FF",
-        marginBottom: "18px",
-      }}>
-        <p style={{ fontFamily: F, fontWeight: 700, fontSize: "0.8rem", color: "#1D4ED8" }}>Trạng thái backend: Chưa kết nối</p>
-        <p style={{ fontFamily: F, fontSize: "0.74rem", color: "#3B82F6", marginTop: "4px" }}>
-          Tab này đã sẵn sàng giao diện. Khi backend được kích hoạt, nó sẽ đọc các endpoint dữ liệu.
-        </p>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={handleSave}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "10px 20px",
-            borderRadius: "10px",
-            background: saved ? "#059669" : OG,
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: F,
-            fontWeight: 700,
-            fontSize: "0.85rem",
-            boxShadow: saved ? "0 4px 14px rgba(5,150,105,0.25)" : "0 4px 14px rgba(255,107,0,0.28)",
-          }}
-        >
-          {saved ? <><Check size={14} /> Đã lưu</> : "Lưu tùy chọn tích hợp"}
-        </motion.button>
+        <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: OG }} />
+        <span style={{ fontSize: "0.76rem", color: OG, fontWeight: 700, fontFamily: F }}>Đang phát triển</span>
       </div>
     </div>
   );
@@ -1410,9 +1130,6 @@ export default function Profile() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [subData, setSubData] = useState<CurrentSubscriptionResponse | null>(null);
-
-  const LEVEL    = 7;
-  const STREAK   = 12;
 
   // ── Derive current plan info from subscription data ──
   const planType: ServicePlanType = subData?.plan?.planType || "FREE";
@@ -1548,16 +1265,6 @@ export default function Profile() {
               border: `1px solid ${profile.emailVerified ? "#A7F3D0" : "#FED7AA"}`, fontWeight:700,
               display:"inline-flex", alignItems:"center", gap:"5px",
               }}>{profile.emailVerified ? <><BadgeCheck size={12} /> Email đã xác minh</> : <><AlertTriangle size={12} /> Email chưa xác minh</>}</span>
-            <span style={{
-              fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
-              background:"#FFF9C4", color:"#92400E",
-              border:"1px solid #FDE68A", fontWeight:700,
-            }}>⭐ Cấp độ {LEVEL}</span>
-            <span style={{
-              fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
-              background:"#ECFDF5", color:"#065F46",
-              border:"1px solid #A7F3D0", fontWeight:700,
-            }}>🔥 {STREAK} ngày liên tiếp</span>
             {profileLoading && (
               <span style={{
                 fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
@@ -1643,12 +1350,10 @@ export default function Profile() {
             >
               {activeTab === "account"       && <AccountTab profile={profile} onSave={handleUpdateProfile} saving={savingProfile} onAvatarUploaded={(updated) => setProfile(mapMeResponse(updated))}/>}
               {activeTab === "subscription"  && <SubscriptionTab/>}
-              {activeTab === "notifications" && <NotificationsTab/>}
-              {activeTab === "privacy"       && <PrivacyTab/>}
-              {activeTab === "integrations"  && <IntegrationsTab/>}
-              {activeTab !== "account" && activeTab !== "subscription" && activeTab !== "notifications" && activeTab !== "privacy" && activeTab !== "integrations" && (
-                <PlaceholderTab label={TABS.find(t=>t.id===activeTab)?.label ?? "Cài đặt"}/>
-              )}
+              {activeTab === "achievements"  && <DevPlaceholderTab label="Thành tựu" icon="🏆" description="Hệ thống huy hiệu và thành tựu học tập đang được xây dựng. Sẽ ra mắt trong phiên bản tới."/>}
+              {activeTab === "notifications" && <DevPlaceholderTab label="Cài đặt thông báo" icon="🔔" description="Tính năng tùy chỉnh thông báo đang phát triển. API backend chưa sẵn sàng."/>}
+              {activeTab === "privacy"       && <DevPlaceholderTab label="Bảo mật & Quyền riêng tư" icon="🔒" description="Tính năng bảo mật nâng cao (2FA, nhật ký đăng nhập) đang được tích hợp."/>}
+              {activeTab === "integrations"  && <DevPlaceholderTab label="Tiện ích tích hợp" icon="⚡" description="Tích hợp lịch, ứng dụng bên thứ ba sẽ được bổ sung sau khi backend hoàn thiện."/>}
             </motion.div>
           </AnimatePresence>
         </div>
