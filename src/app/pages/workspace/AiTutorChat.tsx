@@ -106,9 +106,9 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
   const charsLeft = MAX_CHARS - input.length;
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-[#fcfaf7]/30 text-slate-800 border border-slate-100 rounded-xl overflow-hidden">
+    <div className="flex flex-col h-full min-h-0 bg-[#F8F9FB] text-slate-800 border border-slate-100 rounded-xl overflow-hidden">
       {/* Context badge */}
-      <div className="flex items-center gap-2 px-4 pt-3 pb-2.5 shrink-0 border-b border-slate-100/80">
+      <div className="flex items-center gap-2 px-4 pt-3 pb-2.5 shrink-0 border-b border-slate-100 bg-white">
         <div className="flex h-5 w-5 items-center justify-center rounded-md bg-violet-50 border border-violet-100 shrink-0">
           <Sparkles className="h-3 w-3 text-violet-500" />
         </div>
@@ -117,7 +117,7 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
       </div>
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 min-h-0 px-4 py-3 bg-[#fdfbf9]/60">
+      <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 min-h-0 px-4 py-3 bg-[#F8F9FB]">
         {messages.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center h-full py-8 text-center px-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 border border-violet-100 mb-3 shadow-sm">
@@ -144,7 +144,7 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
           ) : (
             <div key={msg.id} className="flex flex-col gap-2">
               {/* AI answer bubble */}
-              <div className="max-w-[92%] rounded-2xl rounded-tl-none bg-white border border-slate-200/80 px-3.5 py-3 shadow-xs">
+              <div className="max-w-[92%] rounded-2xl rounded-tl-none bg-white border border-slate-100 shadow-sm px-3.5 py-3">
                 <div className="flex items-center gap-1.5 mb-2">
                   <div className="flex h-[18px] w-[18px] items-center justify-center rounded bg-violet-50 border border-violet-100 shrink-0">
                     <Bot className="h-2.5 w-2.5 text-violet-500" />
@@ -188,7 +188,7 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
                       key={i}
                       type="button"
                       onClick={() => void sendQuestion(q)}
-                      className="flex w-full items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-[10px] font-medium text-slate-600 hover:text-violet-600 hover:bg-violet-50 hover:border-violet-300 transition-all group shadow-xs"
+                      className="flex w-full items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-[10px] font-medium text-slate-600 hover:text-violet-600 hover:bg-violet-50 hover:border-violet-300 transition-all group shadow-xs"
                     >
                       <ChevronRight className="h-3 w-3 text-slate-400 group-hover:text-violet-500 shrink-0 mt-0.5" />
                       <span className="flex-1 leading-snug">{q}</span>
@@ -233,7 +233,7 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
 
       {/* Input area */}
       <div className="px-4 pb-3 pt-2.5 shrink-0 border-t border-slate-100">
-        <div className="relative rounded-xl border border-slate-200 bg-slate-50 focus-within:bg-white focus-within:border-violet-400 transition-all">
+        <div className="relative rounded-xl border border-slate-200 bg-slate-50 focus-within:bg-white focus-within:border-violet-400 transition-all shadow-sm">
           <textarea
             ref={textareaRef}
             rows={2}

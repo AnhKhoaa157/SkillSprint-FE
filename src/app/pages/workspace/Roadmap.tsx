@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import roadmapService, { RoadmapResponse, RoadmapResource, RoadmapStep } from "../../../api/roadmapService";
 import calendarService, { type CalendarTaskResponse } from "../../../api/calendarService";
+import { getCurrentSubscription } from "../../../api/subscriptionsService";
 import {
   ArrowLeft,
   ArrowRight,
@@ -317,6 +318,14 @@ export default function Roadmap() {
   const [selectedStep, setSelectedStep] = useState<RoadmapStep | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [detailTab, setDetailTab] = useState<"overview" | "resources" | "tutor">("overview");
+  const [isPremium, setIsPremium] = useState(true);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  useEffect(() => {
+    getCurrentSubscription()
+      .then(sub => { setIsPremium(sub.plan?.planType !== "FREE"); })
+      .catch(() => { setIsPremium(false); });
+  }, []);
 
   useEffect(() => {
     setDetailTab("overview");
@@ -325,7 +334,18 @@ export default function Roadmap() {
   const steps = roadmapData?.steps || [];
   const resources = roadmapData?.resources || [];
   const totalResources = useMemo(() => getTotalResources(roadmapData), [roadmapData]);
-  const progressPercent = useMemo(() => getProgressPercent(roadmapData), [roadmapData]);
+  const progressPercent = useMemo(() => {
+    if (!roadmapData) return 0;
+    const status = (toText(roadmapData.status) || "").toUpperCase();
+    if (status === "GENERATING") return 0;
+    if (steps.length === 0) return 0;
+    const completedCount = steps.filter(step => {
+      const stepId = getStepKey(step);
+      const matched = tasks.find(t => t.roadmapStepId === stepId);
+      return matched?.status?.toUpperCase() === "COMPLETED" || matched?.status?.toUpperCase() === "DONE";
+    }).length;
+    return Math.round((completedCount / steps.length) * 100);
+  }, [roadmapData, steps, tasks]);
   const roadmapTitle = toText(roadmapData?.title) || "Roadmap học tập";
   const roadmapDescription = toText(roadmapData?.description) || "Lộ trình học tập theo workspace đã xác nhận.";
 
@@ -971,6 +991,7 @@ export default function Roadmap() {
               const title = toText(step.title) || `Cột mốc ${index + 1}`;
               const matchedTask = tasks.find((task) => task.roadmapStepId === stepId);
               const isCompleted = matchedTask?.status?.toUpperCase() === "COMPLETED" || matchedTask?.status?.toUpperCase() === "DONE";
+              const isFreemiumLocked = !isPremium && index >= 2;
 
               const X_curr = xOffsets[index % 10];
               const X_next = xOffsets[(index + 1) % 10];
@@ -1008,39 +1029,60 @@ export default function Roadmap() {
                     className="absolute -translate-x-1/2 -translate-y-1/2 z-10 top-1/2 flex flex-col items-center"
                     style={{ left: `${X_curr}%` }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setSelectedStep(step)}
-                      className="flex flex-col items-center transition-all duration-300 hover:scale-105 focus:outline-none"
-                    >
-                      {/* Circle Node bubble */}
-                      <div className={`flex h-14 w-14 items-center justify-center rounded-full border-2 transition-all duration-300 ${
-                        isActive
-                          ? 'border-[#FF7E21] bg-[#FF7E21] text-white shadow-lg shadow-orange-500/20 ring-4 ring-orange-100'
-                          : isCompleted
-                          ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm ring-4 ring-emerald-50'
-                          : matchedTask
-                          ? 'border-[#D4A373] bg-white text-slate-700 shadow-sm hover:border-[#FF7E21] hover:text-[#FF7E21]'
-                          : 'border-slate-200 bg-slate-100 text-slate-400'
-                      }`}>
-                        {isCompleted ? (
-                          <Check className="h-5 w-5 stroke-[2.5]" />
-                        ) : !matchedTask ? (
-                          <Lock className="h-4 w-4" />
-                        ) : (
-                          <span className="text-sm font-extrabold">{index + 1}</span>
-                        )}
-                      </div>
+                    {isFreemiumLocked ? (
+                      /* Freemium-locked node */
+                      <button
+                        type="button"
+                        onClick={() => setShowUpgradeModal(true)}
+                        className="flex flex-col items-center focus:outline-none group"
+                      >
+                        <div className="relative flex h-14 w-14 items-center justify-center rounded-full border-2 border-slate-200 bg-slate-100 text-slate-400 overflow-hidden">
+                          <div className="absolute inset-0 backdrop-blur-[2px] bg-white/40" />
+                          <Lock className="h-5 w-5 text-slate-400 relative z-10" />
+                        </div>
+                        <div className="mt-2 bg-slate-50/95 px-3 py-1 rounded-xl border border-slate-200 relative z-10 w-28 sm:w-36 text-center overflow-hidden">
+                          <div className="absolute inset-0 backdrop-blur-[1px]" />
+                          <h3 className="text-[10px] font-bold tracking-tight text-slate-400 truncate leading-snug relative z-10 blur-[2px]" title={title}>
+                            {title}
+                          </h3>
+                          <span className="block text-[9px] font-semibold text-violet-500 relative z-10 mt-0.5">🔒 Mở khoá Pro</span>
+                        </div>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStep(step)}
+                        className="flex flex-col items-center transition-all duration-300 hover:scale-105 focus:outline-none"
+                      >
+                        {/* Circle Node bubble */}
+                        <div className={`flex h-14 w-14 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                          isActive
+                            ? 'border-[#FF7E21] bg-[#FF7E21] text-white shadow-lg shadow-orange-500/20 ring-4 ring-orange-100'
+                            : isCompleted
+                            ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm ring-4 ring-emerald-50'
+                            : matchedTask
+                            ? 'border-[#D4A373] bg-white text-slate-700 shadow-sm hover:border-[#FF7E21] hover:text-[#FF7E21]'
+                            : 'border-slate-200 bg-slate-100 text-slate-400'
+                        }`}>
+                          {isCompleted ? (
+                            <Check className="h-5 w-5 stroke-[2.5]" />
+                          ) : !matchedTask ? (
+                            <Lock className="h-4 w-4" />
+                          ) : (
+                            <span className="text-sm font-extrabold">{index + 1}</span>
+                          )}
+                        </div>
 
-                      {/* Small Label underneath circle */}
-                      <div className={`mt-2 bg-[#FFFDF9]/95 px-3 py-1 rounded-xl shadow-[0_2px_6px_rgba(15,23,42,0.03)] border relative z-10 w-28 sm:w-36 text-center transition-colors duration-350 ${
-                        isActive ? 'border-[#FF7E21] bg-orange-50/10' : 'border-amber-200 hover:border-[#FF7E21]'
-                      }`}>
-                        <h3 className="text-[10px] font-bold tracking-tight text-slate-800 truncate leading-snug" title={title}>
-                          {title}
-                        </h3>
-                      </div>
-                    </button>
+                        {/* Small Label underneath circle */}
+                        <div className={`mt-2 bg-[#FFFDF9]/95 px-3 py-1 rounded-xl shadow-[0_2px_6px_rgba(15,23,42,0.03)] border relative z-10 w-28 sm:w-36 text-center transition-colors duration-350 ${
+                          isActive ? 'border-[#FF7E21] bg-orange-50/10' : 'border-amber-200 hover:border-[#FF7E21]'
+                        }`}>
+                          <h3 className="text-[10px] font-bold tracking-tight text-slate-800 truncate leading-snug" title={title}>
+                            {title}
+                          </h3>
+                        </div>
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -1136,6 +1178,48 @@ export default function Roadmap() {
           </div>
         )}
       </div>
+
+      {/* ==================== UPGRADE MODAL ==================== */}
+      {showUpgradeModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
+          onClick={() => setShowUpgradeModal(false)}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* gradient banner */}
+            <div className="h-2 w-full bg-gradient-to-r from-violet-500 via-purple-500 to-orange-400" />
+            <div className="px-7 pt-7 pb-8 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 border border-violet-100">
+                <Lock className="h-6 w-6 text-violet-600" />
+              </div>
+              <h2 className="text-xl font-extrabold text-slate-900 mb-2">Cột mốc bị khoá</h2>
+              <p className="text-sm text-slate-500 leading-relaxed mb-6">
+                Gói <span className="font-bold text-slate-700">Miễn phí</span> chỉ mở 2 cột mốc đầu tiên.
+                Nâng cấp lên <span className="font-bold text-violet-600">Pro</span> để mở khoá toàn bộ lộ trình học tập.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => { setShowUpgradeModal(false); navigate("/pricing"); }}
+                  className="w-full py-3 rounded-2xl text-sm font-bold text-white transition"
+                  style={{ background: "linear-gradient(135deg,#7C3AED,#FF6B00)" }}
+                >
+                  Nâng cấp ngay →
+                </button>
+                <button
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="w-full py-2.5 rounded-2xl text-sm font-semibold text-slate-500 hover:text-slate-700 transition"
+                >
+                  Để sau
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

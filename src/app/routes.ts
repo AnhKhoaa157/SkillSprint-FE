@@ -16,22 +16,22 @@ import AdminAuth from "./pages/admin/AdminAuth";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import AdminProfile from "./pages/admin/AdminProfile";
+import AdminFeedback from "./pages/admin/AdminFeedback";
 import PostUpgradeDashboard from "./pages/core/PostUpgrade";
 import FeaturesLanding from "./pages/public/Features";
 import PricingPage from "./pages/public/PricingPage";
 import RequireAuth from "./components/auth/RequireAuth";
+import RequireAdminAuth from "./components/auth/RequireAdminAuth";
 import Loading from "./pages/core/Loading";
-import SyllabusInput from "./pages/learning/SyllabusInput";
 import StudyCalendar from "./pages/learning/StudyCalendar";
 import TaskMatrix from "./pages/workspace/TaskMatrix";
 import Leaderboard from "./pages/core/Leaderboard";
 import CoursePlayer from "./pages/learning/CoursePlayer";
 import QuizPage from "./pages/learning/QuizPage";
-import QuizReviewFlow from "./pages/learning/QuizReviewFlow";
-import QuizResult from "./pages/learning/QuizResult";
 import Workspaces from "./pages/workspace/Workspaces";
 import WorkspaceDetail from "./pages/workspace/WorkspaceDetail";
 import WorkspacesNew from "./pages/deprecated/WorkspacesNew";
+import NotificationsPage from "./pages/core/NotificationsPage";
 
 export const routeRegistry = {
   public: {
@@ -55,6 +55,7 @@ export const routeRegistry = {
     users: "users",
     userDetail: "users/:id",
     health: "health",
+    feedback: "feedback",
   },
   app: {
     root: "/app",
@@ -69,6 +70,7 @@ export const routeRegistry = {
     },
     profile: "profile",
     leaderboard: "leaderboard",
+    notifications: "notifications",
     upgraded: "upgraded",
     learning: "learning",
     learningCourse: "learning/course",
@@ -81,6 +83,7 @@ export const routeRegistry = {
 
 // Wrapper created without JSX to keep this file .ts-compatible.
 const ProtectedLayout = () => React.createElement(RequireAuth, null, React.createElement(DashboardLayout, null));
+const ProtectedAdminLayout = () => React.createElement(RequireAdminAuth, null, React.createElement(AdminLayout, null));
 
 const { public: publicRoutes, admin: adminRoutes, app: appRoutes } = routeRegistry;
 
@@ -100,24 +103,25 @@ export const router = createBrowserRouter([
       { path: publicRoutes.adminLogin, Component: AdminAuth },
       {
         path: adminRoutes.root,
-        Component: AdminLayout,
+        Component: ProtectedAdminLayout,
         children: [
           { index: true, Component: AdminDashboard },
           { path: adminRoutes.profile, Component: AdminProfile },
           { path: adminRoutes.users, Component: AdminUsers },
           { path: adminRoutes.userDetail, Component: AdminUserDetail },
           { path: adminRoutes.health, Component: AdminHealth },
+          { path: adminRoutes.feedback, Component: AdminFeedback },
         ],
       },
       { path: publicRoutes.course, Component: CoursePlayer },
-      { path: publicRoutes.quizReview, Component: QuizReviewFlow },
-      { path: publicRoutes.quizResult, Component: QuizResult },
+      { path: publicRoutes.quizReview, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },
+      { path: publicRoutes.quizResult, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },
       {
         path: appRoutes.root,
         Component: ProtectedLayout,
         children: [
           { index: true, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },
-          { path: appRoutes.syllabus, Component: SyllabusInput },
+          { path: appRoutes.syllabus, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },
           { path: appRoutes.calendar, Component: StudyCalendar },
           { path: appRoutes.matrix, Component: TaskMatrix },
           { path: appRoutes.workspaces.list, Component: Workspaces },
@@ -126,11 +130,12 @@ export const router = createBrowserRouter([
           { path: appRoutes.workspaces.roadmap, Component: Roadmap },
           { path: appRoutes.profile, Component: Profile },
           { path: appRoutes.leaderboard, Component: Leaderboard },
+          { path: appRoutes.notifications, Component: NotificationsPage },
           { path: appRoutes.upgraded, Component: PostUpgradeDashboard },
           { path: appRoutes.learningCourse, Component: CoursePlayer },
           { path: appRoutes.learningQuiz, Component: QuizPage },
-          { path: appRoutes.quizReview, Component: QuizReviewFlow },
-          { path: appRoutes.quizResult, Component: QuizResult },
+          { path: appRoutes.quizReview, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },
+          { path: appRoutes.quizResult, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },
           { path: appRoutes.fallback, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },
         ],
       },

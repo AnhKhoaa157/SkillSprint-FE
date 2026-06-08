@@ -10,7 +10,6 @@ import { useNotificationSocket } from "../hooks/useNotificationSocket";
 import { APP_NAV_SECTIONS } from "../config/nav";
 import { motion, AnimatePresence } from "motion/react";
 import { PricingModal } from "../components/modals/PricingModal";
-import { ReferralModal } from "../components/modals/ReferralModal";
 import { BrandLogo } from "../components/layout/BrandLogo";
 import meService from "../../api/meService";
 import workspaceService from "../../api/workspaceService";
@@ -229,12 +228,11 @@ function getNotifMeta(type: string): NotifMeta {
 export default function DashboardLayout() {
   const [sideOpen, setSideOpen]       = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
-  const [referralOpen, setReferralOpen] = useState(false);
   const [notifOpen, setNotifOpen]     = useState(false);
   const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(true);
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [roadmapWorkspaces, setRoadmapWorkspaces] = useState<RoadmapSidebarItem[]>([]);
-  const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarLetter: string }>(() => {
+  const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarLetter: string; avatarUrl?: string }>(() => {
     const stored = getStoredUserProfile();
     const fullName = stored?.fullName || "Learner";
     return {
@@ -298,6 +296,7 @@ export default function DashboardLayout() {
           fullName,
           roleLabel: me.roles?.includes("ADMIN") ? "Admin" : "Learner",
           avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
+          avatarUrl: me.avatarUrl || undefined,
         });
       } catch {
         if (!mounted) return;
@@ -540,23 +539,15 @@ export default function DashboardLayout() {
             <p style={{color:"#64748B",fontSize:"0.7rem"}}>Mở khóa tính năng AI và nhiều hơn</p>
           </div>
 
-          <button className="ss-referral mb-3" onClick={()=>setReferralOpen(true)}
-            style={{
-              display:"flex",alignItems:"center",gap:"7px",padding:"8px 10px",
-              borderRadius:"8px",cursor:"pointer",width:"100%",
-              background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.2)",
-              color:"#D97706",fontFamily:F,fontWeight:600,fontSize:"0.78rem",
-              transition:"background 0.15s ease",
-            }}>
-            <Gift size={12}/>
-            Mời bạn &amp; nhận Premium
-          </button>
+
 
           <div className="border-t border-slate-100 pt-3">
             <Link to="/app/profile" className="block rounded-xl transition hover:bg-slate-100" style={{ textDecoration: "none" }}>
               <div className="flex items-center gap-3 px-3 py-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-sm font-bold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
-                  {profile.avatarLetter}
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-sm font-bold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)] overflow-hidden">
+                  {profile.avatarUrl
+                    ? <img src={profile.avatarUrl} alt={profile.fullName} className="w-full h-full object-cover" />
+                    : profile.avatarLetter}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-slate-800">{profile.fullName}</p>
@@ -590,14 +581,6 @@ export default function DashboardLayout() {
             </nav>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-            <div className="hidden sm:flex" style={{
-              alignItems:"center",gap:"5px",padding:"4px 12px",
-              borderRadius:"99px",background:"#ECFDF5",border:"1px solid #A7F3D0",
-            }}>
-              <div style={{width:"5px",height:"5px",borderRadius:"50%",background:"#059669",animation:"ss-pulse 2s infinite"}}/>
-              <span style={{fontSize:"0.7rem",color:"#059669",fontWeight:700,fontFamily:F}}>AI Online</span>
-            </div>
-
             {/* ── Notification Bell ── */}
             <div style={{ position:"relative" }}>
               <button
@@ -726,10 +709,12 @@ export default function DashboardLayout() {
 
                     {/* Footer */}
                     <div style={{ padding:"9px 15px", borderTop:`1px solid ${BDR}`, background:BG, textAlign:"center" }}>
-                      <button style={{
-                        fontFamily:F, fontSize:"0.72rem", fontWeight:700,
-                        color:OG, background:"none", border:"none", cursor:"pointer",
-                      }}>
+                      <button
+                        onClick={() => { setNotifOpen(false); navigate("/app/notifications"); }}
+                        style={{
+                          fontFamily:F, fontSize:"0.72rem", fontWeight:700,
+                          color:OG, background:"none", border:"none", cursor:"pointer",
+                        }}>
                         Xem tất cả thông báo →
                       </button>
                     </div>
@@ -766,8 +751,8 @@ export default function DashboardLayout() {
         isOpen={pricingOpen}
         onClose={()=>setPricingOpen(false)}
         onSuccess={(plan) => navigate("/app/upgraded", { state: { plan } })}
+        currentPlan="FREE"
       />
-      <ReferralModal isOpen={referralOpen} onClose={()=>setReferralOpen(false)}/>
     </div>
   );
 }

@@ -6,8 +6,8 @@ const footerLinks = {
   "Sản phẩm": [
     { label: "Tính năng", to: "/features" },
     { label: "Gói dịch vụ", to: "/features" },
-    { label: "Lộ trình", to: "/app/roadmap" },
-    { label: "Phân tích", to: "/app/analytics" },
+    { label: "Lộ trình", to: "/app/workspaces" },
+    { label: "Phân tích", to: "/app/workspaces" },
     { label: "Bảng điều khiển", to: "/app" },
   ],
   "Công ty": [
