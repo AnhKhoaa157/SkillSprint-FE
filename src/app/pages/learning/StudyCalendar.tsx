@@ -4,7 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Clock, LoaderCircle, RefreshCw
 import AIScheduleModal from "../../components/modals/AIScheduleModal";
 import useOnboardingProfile from "../../hooks/useOnboardingProfile";
 import workspaceService, { type WorkspaceResponse } from "../../../api/workspaceService";
-import calendarService, { type CalendarTaskResponse, type GenerateCalendarRequest, type WeekDay, type WeekDayShort } from "../../../api/calendarService";
+import calendarService, { type CalendarTaskResponse, type GenerateCalendarRequest, type WeekDay } from "../../../api/calendarService";
 import { useRoadmap } from "../../hooks/useRoadmap";
 import { useNavigate } from "react-router";
 
@@ -41,26 +41,6 @@ const DAY_LABELS: Record<string, WeekDay> = {
   fri: "FRIDAY",
   sat: "SATURDAY",
   sun: "SUNDAY",
-};
-
-const WEEKDAY_SHORT: Record<string, WeekDayShort> = {
-  mon: "MON",
-  tue: "TUE",
-  wed: "WED",
-  thu: "THU",
-  fri: "FRI",
-  sat: "SAT",
-  sun: "SUN",
-};
-
-const WEEKDAY_NUMBER: Record<string, number> = {
-  mon: 1,
-  tue: 2,
-  wed: 3,
-  thu: 4,
-  fri: 5,
-  sat: 6,
-  sun: 7,
 };
 
 const WEEKDAY_TO_DAY_ID = Object.entries(DAY_LABELS).reduce<Record<WeekDay, string>>((accumulator, [dayId, weekday]) => {
@@ -143,9 +123,6 @@ function buildCalendarRequest(seed: ScheduleSeedConfig): GenerateCalendarRequest
     : ["mon", "tue", "wed", "thu", "fri"];
 
   const resolvedDays: WeekDay[] = dayIds.map(dayId => DAY_LABELS[dayId]).filter(Boolean);
-  const resolvedDaysShort: WeekDayShort[] = dayIds.map(dayId => WEEKDAY_SHORT[dayId]).filter(Boolean);
-  const resolvedDayNumbers: number[] = dayIds.map(dayId => WEEKDAY_NUMBER[dayId]).filter(Boolean);
-
   const rawHour = parseSlotHour(seed?.timeSlots?.[0]) || "09:00";
   const resolvedStartTime = `${rawHour.slice(0, 2)}:00:00`; // Thêm giây :00 đầy đủ chuẩn ISO LocalTime
 
@@ -153,49 +130,18 @@ function buildCalendarRequest(seed: ScheduleSeedConfig): GenerateCalendarRequest
   const resolvedSessionsPerDay = Math.max(1, seed?.timeSlots?.length || 1);
   const resolvedIncludeReview = seed?.goal === "full-roadmap";
 
-  const innerDaysPack = {
-    studyDays: resolvedDays,
-    study_days: resolvedDays,
-    studyDaysShort: resolvedDaysShort,
-    study_days_short: resolvedDaysShort,
-    studyDayNumbers: resolvedDayNumbers,
-    study_day_numbers: resolvedDayNumbers,
-    dailyStartTime: resolvedStartTime,
-    daily_start_time: resolvedStartTime,
-  };
-
   return {
     startDate: seed?.dateRange?.start || toDateKey(new Date()),
-    start_date: seed?.dateRange?.start || toDateKey(new Date()),
     endDate: seed?.dateRange?.end || toDateKey(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
-    end_date: seed?.dateRange?.end || toDateKey(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
     
-    studyDays: resolvedDays,
-    study_days: resolvedDays,
-    studyDaysShort: resolvedDaysShort,
-    study_days_short: resolvedDaysShort,
-    studyDayNumbers: resolvedDayNumbers,
-    study_day_numbers: resolvedDayNumbers,
+    preferredDays: resolvedDays,
     
     dailyStartTime: resolvedStartTime,
-    daily_start_time: resolvedStartTime,
     
     sessionMinutes: resolvedSessionMinutes,
-    session_minutes: resolvedSessionMinutes,
     sessionsPerDay: resolvedSessionsPerDay,
-    sessions_per_day: resolvedSessionsPerDay,
     includeReviewSessions: resolvedIncludeReview,
-    include_review_sessions: resolvedIncludeReview,
 
-    // Gửi kèm các bọc cấu trúc Objects DTO lồng lách luật xác thực
-    config: innerDaysPack,
-    scheduleConfig: innerDaysPack,
-    schedule_config: innerDaysPack,
-    calendarConfig: innerDaysPack,
-    calendar_config: innerDaysPack,
-    weeklyConfig: innerDaysPack,
-    weekly_config: innerDaysPack,
-    preferences: innerDaysPack,
   };
 }
 
