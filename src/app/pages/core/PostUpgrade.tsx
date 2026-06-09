@@ -7,10 +7,10 @@ import { useNavigate } from "react-router";
 
 const FEATURES = [
   {
-    icon: <Sparkles className="w-4 h-4 text-violet-500" />,
+    icon: <Sparkles className="w-4 h-4 text-[#FF6B00]" />,
     title: "Lộ trình AI cá nhân hóa",
     desc: "AI phân tích mục tiêu và tài liệu của bạn để tạo lộ trình học phù hợp nhất.",
-    bg: "bg-violet-50 border-violet-100",
+    bg: "bg-orange-50 border-orange-100",
   },
   {
     icon: <BrainCircuit className="w-4 h-4 text-orange-500" />,
@@ -49,14 +49,14 @@ export default function PostUpgradeDashboard() {
           className="rounded-3xl border border-slate-200 bg-white shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] overflow-hidden"
         >
           {/* Success header */}
-          <div className="px-8 py-8 text-center bg-gradient-to-b from-violet-50/70 to-transparent border-b border-slate-100">
+          <div className="px-8 py-8 text-center bg-gradient-to-b from-orange-50/70 to-transparent border-b border-slate-100">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 220, damping: 14, delay: 0.1 }}
-              className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50 border border-violet-200 shadow-[0_8px_24px_-6px_rgba(124,58,237,0.25)]"
+              className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 border border-orange-200 shadow-[0_8px_24px_-6px_rgba(255,107,0,0.25)]"
             >
-              <CheckCircle2 size={28} className="text-violet-600" />
+              <CheckCircle2 size={28} className="text-[#FF6B00]" />
             </motion.div>
 
             <motion.div
@@ -64,7 +64,7 @@ export default function PostUpgradeDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-violet-600">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#FF6B00]">
                 THANH TOÁN THÀNH CÔNG
               </span>
               <h1 className="mt-2 text-xl font-extrabold tracking-tight text-slate-900">
@@ -104,7 +104,7 @@ export default function PostUpgradeDashboard() {
           >
             <button
               onClick={() => navigate("/app/workspaces", { replace: true })}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-violet-500 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-violet-500/20 transition hover:from-violet-700 hover:to-violet-600 active:scale-[0.98]"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#FF6B00] px-5 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 transition hover:bg-[#E66000] active:scale-[0.98]"
             >
               <BookOpen size={15} /> Bắt đầu học ngay
             </button>

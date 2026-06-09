@@ -810,13 +810,13 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
 
           {/* ══ SUCCESS STEP ══ */}
           {step === "success" && (
-            <div style={{ minHeight: "440px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "40px 28px", background: "radial-gradient(circle at top, rgba(124,58,237,0.18) 0%, rgba(17,17,21,1) 52%)" }}>
+            <div style={{ minHeight: "440px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "40px 28px", background: `radial-gradient(circle at top, rgba(255,107,0,0.18) 0%, rgba(17,17,21,1) 52%)` }}>
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 12, delay: 0.1 }}
-                style={{ width: "88px", height: "88px", borderRadius: "50%", background: "rgba(124,58,237,0.18)", border: "1px solid rgba(124,58,237,0.45)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "18px", boxShadow: "0 0 0 12px rgba(124,58,237,0.08), 0 0 0 24px rgba(124,58,237,0.04)" }}
+                style={{ width: "88px", height: "88px", borderRadius: "50%", background: "rgba(255,107,0,0.18)", border: `1px solid rgba(255,107,0,0.45)`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "18px", boxShadow: "0 0 0 12px rgba(255,107,0,0.08), 0 0 0 24px rgba(255,107,0,0.04)" }}
               >
-                <motion.div initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.5, delay: 0.3 }}><Check size={36} color="#7C3AED" strokeWidth={3} /></motion.div>
+                <motion.div initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.5, delay: 0.3 }}><Check size={36} color={OG} strokeWidth={3} /></motion.div>
               </motion.div>
-              <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} style={{ fontSize: "0.8rem", color: "#A78BFA", fontWeight: 800, letterSpacing: "0.12em", marginBottom: "8px" }}>THANH TOÁN THÀNH CÔNG</motion.p>
+              <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} style={{ fontSize: "0.8rem", color: OG, fontWeight: 800, letterSpacing: "0.12em", marginBottom: "8px" }}>THANH TOÁN THÀNH CÔNG</motion.p>
               <motion.h3 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} style={{ fontSize: "1.75rem", fontWeight: 900, color: "#fff", lineHeight: 1.2, marginBottom: "10px" }}>Chúc mừng bạn đã nâng cấp gói!</motion.h3>
               <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} style={{ fontSize: "0.92rem", color: "rgba(255,255,255,0.62)", maxWidth: "380px", lineHeight: 1.6, marginBottom: "6px" }}>
                 Gói <span style={{ color: "#fff", fontWeight: 700 }}>{selectedPlan === "premium" ? "Career Premium" : "Skill Builder"}</span> đã được kích hoạt.
@@ -829,7 +829,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", width: "100%", maxWidth: "360px" }}>
                 <button
                   onClick={() => navigate("/app/workspaces", { replace: true })}
-                  style={{ width: "100%", padding: "12px", borderRadius: "10px", border: "none", background: "linear-gradient(135deg, #7C3AED, #6D28D9)", color: "#fff", fontFamily: F, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 22px rgba(124,58,237,0.38)", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                  style={{ width: "100%", padding: "12px", borderRadius: "10px", border: "none", background: OG, color: "#fff", fontFamily: F, fontWeight: 700, cursor: "pointer", boxShadow: `0 6px 22px rgba(255,107,0,0.38)`, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
                 >
                   Bắt đầu học ngay →
                 </button>

@@ -750,7 +750,7 @@ export default function DashboardLayout() {
       <PricingModal
         isOpen={pricingOpen}
         onClose={()=>setPricingOpen(false)}
-        onSuccess={(plan) => navigate("/app/upgraded", { state: { plan } })}
+        onSuccess={() => {}}
         currentPlan="FREE"
       />
     </div>
