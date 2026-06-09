@@ -3,7 +3,7 @@ import OnboardingModal from "../../components/modals/OnboardingModal";
 import useOnboardingProfile from "../../hooks/useOnboardingProfile";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useLocation } from "react-router";
 // SyllabusInput removed — chức năng gộp vào Tài liệu
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
 import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
@@ -232,6 +232,8 @@ function normalizeMaterialUploadFile(material: MaterialUploadedMaterialResponse,
 export default function WorkspaceDetail(){
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const shouldOpenOnboarding = !!(location.state as { openOnboarding?: boolean } | null)?.openOnboarding;
   const authSession = getStoredAuthSession();
   const token = authSession?.accessToken ?? null;
   const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -371,7 +373,7 @@ export default function WorkspaceDetail(){
       // fetch onboarding profile; open onboarding modal if none
       try{
         const p = await onboarding.fetchOnboardingProfile();
-        if (!p) setIsOnboardingOpen(true);
+        if (!p || shouldOpenOnboarding) setIsOnboardingOpen(true);
       }catch(err:any){
         console.error('Failed to load onboarding profile', err);
         toast.error('Không thể tải cài đặt lộ trình (server lỗi)');
@@ -909,8 +911,8 @@ export default function WorkspaceDetail(){
           <div className="col-span-12 lg:col-span-5 space-y-5">
             <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 border border-violet-100">
-                  <BrainCircuit className="h-4 w-4 text-violet-500" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 border border-orange-100">
+                  <BrainCircuit className="h-4 w-4 text-orange-500" />
                 </div>
                 <div>
                   <div className="text-sm font-bold text-slate-800">AI Engine Pipeline</div>
@@ -1179,7 +1181,7 @@ export default function WorkspaceDetail(){
             type="button"
             onClick={() => setWorkspaceTutorOpen(true)}
             title="Hỏi AI Tutor về Workspace"
-            className="fixed bottom-6 right-6 z-40 flex h-13 w-13 items-center justify-center rounded-full bg-violet-600 text-white shadow-xl hover:bg-violet-700 hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-violet-400/30"
+            className="fixed bottom-6 right-6 z-40 flex h-13 w-13 items-center justify-center rounded-full bg-[#FF6B00] text-white shadow-xl hover:bg-[#E05E00] hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-orange-400/30"
           >
             <Bot className="h-6 w-6" />
           </button>
@@ -1193,8 +1195,8 @@ export default function WorkspaceDetail(){
               <div className="relative w-full sm:w-[420px] h-[78vh] sm:h-[580px] rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl flex flex-col overflow-hidden border border-slate-200/60">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0 bg-white">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 border border-violet-100 shadow-sm">
-                      <Bot className="h-4.5 w-4.5 text-violet-600" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 border border-orange-100 shadow-sm">
+                      <Bot className="h-4.5 w-4.5 text-orange-600" />
                     </div>
                     <div>
                       <p className="text-sm font-extrabold text-slate-800 leading-snug">AI Tutor</p>

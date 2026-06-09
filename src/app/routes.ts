@@ -32,6 +32,7 @@ import Workspaces from "./pages/workspace/Workspaces";
 import WorkspaceDetail from "./pages/workspace/WorkspaceDetail";
 import WorkspacesNew from "./pages/deprecated/WorkspacesNew";
 import NotificationsPage from "./pages/core/NotificationsPage";
+import FeedbackPage from "./pages/core/FeedbackPage";
 
 export const routeRegistry = {
   public: {
@@ -72,6 +73,7 @@ export const routeRegistry = {
     leaderboard: "leaderboard",
     notifications: "notifications",
     upgraded: "upgraded",
+    feedback: "feedback",
     learning: "learning",
     learningCourse: "learning/course",
     learningQuiz: "learning/quiz/:quizId",
@@ -132,6 +134,7 @@ export const router = createBrowserRouter([
           { path: appRoutes.leaderboard, Component: Leaderboard },
           { path: appRoutes.notifications, Component: NotificationsPage },
           { path: appRoutes.upgraded, Component: PostUpgradeDashboard },
+          { path: appRoutes.feedback, Component: FeedbackPage },
           { path: appRoutes.learningCourse, Component: CoursePlayer },
           { path: appRoutes.learningQuiz, Component: QuizPage },
           { path: appRoutes.quizReview, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },

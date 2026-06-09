@@ -63,12 +63,13 @@ export default function AdminFeedback() {
     if (!selected) return;
     setUpdating(true);
     try {
-      const updated = await updateFeedbackStatus(selected.feedbackId, statusDraft, adminNote || undefined);
+      const updated = await updateFeedbackStatus(selected.feedbackId, statusDraft, adminNote.trim() || undefined);
       setSelected(updated);
       setFeedbacks(prev => prev.map(fb => fb.feedbackId === updated.feedbackId ? updated : fb));
       toast.success("Cập nhật thành công");
-    } catch (err) {
-      toast.error((err as Error).message || "Lỗi cập nhật");
+    } catch (err: any) {
+      const code = err?.status ? `[${err.status}] ` : "";
+      toast.error(`${code}${err?.message || "Lỗi cập nhật"}`);
     } finally {
       setUpdating(false);
     }

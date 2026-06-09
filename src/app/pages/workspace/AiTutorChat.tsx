@@ -106,36 +106,52 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
   const charsLeft = MAX_CHARS - input.length;
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-[#F8F9FB] text-slate-800 border border-slate-100 rounded-xl overflow-hidden">
-      {/* Context badge */}
-      <div className="flex items-center gap-2 px-4 pt-3 pb-2.5 shrink-0 border-b border-slate-100 bg-white">
-        <div className="flex h-5 w-5 items-center justify-center rounded-md bg-violet-50 border border-violet-100 shrink-0">
-          <Sparkles className="h-3 w-3 text-violet-500" />
+    <div className="flex flex-col h-full min-h-0 bg-[#F9FAFB] text-slate-800 rounded-xl overflow-hidden border border-slate-100/80">
+      {/* Context badge — slim header */}
+      <div className="flex items-center gap-2 px-3.5 pt-2.5 pb-2 shrink-0 border-b border-slate-100 bg-white">
+        <div className="flex h-5 w-5 items-center justify-center rounded-md bg-orange-50 border border-orange-100 shrink-0">
+          <Sparkles className="h-2.5 w-2.5 text-orange-500" />
         </div>
         <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Phạm vi:</span>
-        <span className="text-[9px] font-semibold text-slate-600 truncate">{contextTitle}</span>
+        <span className="text-[9px] font-semibold text-slate-700 truncate flex-1">{contextTitle}</span>
+        <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-orange-50 border border-orange-100 px-1.5 py-0.5 text-[8px] font-bold text-orange-600">
+          <Bot className="h-2 w-2" /> AI
+        </span>
       </div>
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 min-h-0 px-4 py-3 bg-[#F8F9FB]">
+      <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3.5 min-h-0 px-3.5 py-3 bg-[#F9FAFB]">
         {messages.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center h-full py-8 text-center px-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 border border-violet-100 mb-3 shadow-sm">
-              <Bot className="h-6 w-6 text-violet-500" />
+          <div className="flex flex-col items-center justify-center h-full py-6 text-center px-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100 mb-3 shadow-sm">
+              <Bot className="h-5.5 w-5.5 text-orange-500" />
             </div>
-            <p className="text-xs font-bold text-slate-700">Hỏi AI Tutor</p>
-            <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed max-w-[200px]">
+            <p className="text-[11px] font-bold text-slate-700">Hỏi AI Tutor</p>
+            <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed max-w-[180px]">
               {mode === "step"
                 ? "Đặt câu hỏi về cột mốc này. AI trả lời dựa trên tài liệu tương ứng."
                 : "Đặt câu hỏi về workspace. AI phân tích lộ trình và tài liệu học tập của bạn."}
             </p>
+            <div className="mt-4 flex flex-col gap-1.5 w-full max-w-[200px]">
+              {["Cột mốc này học gì?", "Mất bao lâu để hoàn thành?"].map((hint, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => void sendQuestion(hint)}
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[9px] font-medium text-slate-500 hover:text-orange-600 hover:bg-orange-50 hover:border-orange-200 transition-all text-left"
+                >
+                  <ChevronRight className="h-2.5 w-2.5 shrink-0 text-slate-300" />
+                  {hint}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
         {messages.map((msg) =>
           msg.role === "user" ? (
             <div key={msg.id} className="flex justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-tr-none bg-[#f37021] px-3.5 py-2.5 shadow-sm shadow-orange-600/10">
+              <div className="max-w-[85%] rounded-2xl rounded-tr-none bg-[#FF6B00] px-3.5 py-2.5 shadow-sm shadow-orange-600/10">
                 <p className="text-xs font-medium text-white leading-relaxed whitespace-pre-wrap">
                   {msg.content}
                 </p>
@@ -146,8 +162,8 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
               {/* AI answer bubble */}
               <div className="max-w-[92%] rounded-2xl rounded-tl-none bg-white border border-slate-100 shadow-sm px-3.5 py-3">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <div className="flex h-[18px] w-[18px] items-center justify-center rounded bg-violet-50 border border-violet-100 shrink-0">
-                    <Bot className="h-2.5 w-2.5 text-violet-500" />
+                  <div className="flex h-[18px] w-[18px] items-center justify-center rounded bg-orange-50 border border-orange-100 shrink-0">
+                    <Bot className="h-2.5 w-2.5 text-orange-500" />
                   </div>
                   <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">
                     AI Tutor
@@ -170,7 +186,7 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
                 {/* Show matched step badge only in workspace mode */}
                 {mode === "workspace" && msg.context?.matchedStepTitle && (
                   <div className="mt-2.5 pt-2 border-t border-slate-100/80">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 border border-violet-100/60 px-2 py-0.5 text-[8px] font-bold text-violet-600">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 border border-orange-100/60 px-2 py-0.5 text-[8px] font-bold text-orange-600">
                       🎯 Chủ đề: {msg.context.matchedStepTitle}
                     </span>
                   </div>
@@ -188,9 +204,9 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
                       key={i}
                       type="button"
                       onClick={() => void sendQuestion(q)}
-                      className="flex w-full items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-[10px] font-medium text-slate-600 hover:text-violet-600 hover:bg-violet-50 hover:border-violet-300 transition-all group shadow-xs"
+                      className="flex w-full items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-[10px] font-medium text-slate-600 hover:text-orange-600 hover:bg-orange-50 hover:border-orange-300 transition-all group shadow-xs"
                     >
-                      <ChevronRight className="h-3 w-3 text-slate-400 group-hover:text-violet-500 shrink-0 mt-0.5" />
+                      <ChevronRight className="h-3 w-3 text-slate-400 group-hover:text-orange-500 shrink-0 mt-0.5" />
                       <span className="flex-1 leading-snug">{q}</span>
                     </button>
                   ))}
@@ -205,15 +221,15 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
             <div className="flex items-center gap-2.5 rounded-2xl rounded-bl-sm bg-white border border-slate-200 shadow-xs px-4 py-3">
               <div className="flex items-center gap-1">
                 <span
-                  className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-bounce"
+                  className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-bounce"
                   style={{ animationDelay: "0ms" }}
                 />
                 <span
-                  className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-bounce"
+                  className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-bounce"
                   style={{ animationDelay: "150ms" }}
                 />
                 <span
-                  className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-bounce"
+                  className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-bounce"
                   style={{ animationDelay: "300ms" }}
                 />
               </div>
@@ -232,8 +248,8 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
       </div>
 
       {/* Input area */}
-      <div className="px-4 pb-3 pt-2.5 shrink-0 border-t border-slate-100">
-        <div className="relative rounded-xl border border-slate-200 bg-slate-50 focus-within:bg-white focus-within:border-violet-400 transition-all shadow-sm">
+      <div className="px-3.5 pb-3 pt-2 shrink-0 border-t border-slate-100 bg-white">
+        <div className="relative rounded-xl border border-slate-200 bg-slate-50/80 focus-within:bg-white focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-400/10 transition-all shadow-sm">
           <textarea
             ref={textareaRef}
             rows={2}
@@ -245,7 +261,7 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
             placeholder={
               mode === "step" ? "Hỏi về cột mốc này..." : "Hỏi về workspace của bạn..."
             }
-            className="w-full resize-none bg-transparent px-3 pt-2.5 pb-8 text-xs text-slate-800 placeholder-slate-400 outline-none disabled:opacity-60 leading-relaxed"
+            className="w-full resize-none bg-transparent px-3 pt-2.5 pb-7 text-xs text-slate-800 placeholder-slate-400 outline-none disabled:opacity-60 leading-relaxed"
           />
           <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
             <span
@@ -259,7 +275,7 @@ export default function AiTutorChat({ mode, contextId, contextTitle }: AiTutorCh
               type="button"
               disabled={!input.trim() || loading}
               onClick={() => void sendQuestion(input)}
-              className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 px-2.5 py-1.5 text-[9px] font-bold text-white shadow-sm shadow-violet-600/20 disabled:cursor-not-allowed disabled:opacity-40 transition-all"
+              className="flex items-center gap-1 rounded-lg bg-orange-500 hover:bg-orange-600 active:bg-orange-700 px-2.5 py-1.5 text-[9px] font-bold text-white shadow-sm shadow-orange-500/20 disabled:cursor-not-allowed disabled:opacity-40 transition-all"
             >
               <Send className="h-2.5 w-2.5" />
               Gửi

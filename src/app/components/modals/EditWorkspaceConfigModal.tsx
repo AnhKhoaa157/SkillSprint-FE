@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Clock3, Loader2, Plus, Sparkles, Trash2, X, Calendar, Award } from "lucide-react";
+import { Calendar, Check, Clock3, Compass, Plus, Sparkles, Target, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import onboardingService, { type OnboardingProfileResponse } from "../../../api/onboardingService";
@@ -49,6 +50,15 @@ type TimeSlotBadgeProps = {
   onRemove: () => void;
 };
 
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{children}</span>
+      <div className="flex-1 h-px bg-slate-100" />
+    </div>
+  );
+}
+
 function TimeSlotBadge({ label, onRemove }: TimeSlotBadgeProps) {
   return (
     <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm">
@@ -67,31 +77,26 @@ function TimeSlotBadge({ label, onRemove }: TimeSlotBadgeProps) {
 }
 
 function ConfidenceCard({ active, title, description, onClick }: { active: boolean; title: string; description: string; onClick: () => void; }) {
+  const [emoji, ...titleWords] = title.split(" ");
+  const titleText = titleWords.join(" ");
   return (
     <button
       type="button"
       onClick={onClick}
       className={
-        "group w-full rounded-2xl border p-4 text-left transition-all duration-200 " +
+        "flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all duration-150 " +
         (active
-          ? "border-[#FF6B00] bg-orange-50/20 shadow-sm scale-[1.02]"
-          : "border-slate-200 bg-white hover:border-orange-200 hover:bg-orange-50/10")
+          ? "border-[#FF6B00] bg-orange-50/60 ring-1 ring-[#FF6B00]/15 shadow-sm"
+          : "border-slate-200 bg-slate-50/40 hover:border-orange-200 hover:bg-orange-50/20")
       }
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-extrabold text-slate-800">{title}</div>
-          <div className="mt-1 text-xs leading-5 text-slate-400 font-medium">{description}</div>
-        </div>
-        <div
-          className={
-            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all " +
-            (active ? "border-[#FF6B00] bg-[#FF6B00] text-white" : "border-slate-200 text-transparent")
-          }
-        >
-          <Check className="h-3 w-3" />
-        </div>
-      </div>
+      <span className="text-xl leading-none">{emoji}</span>
+      <span className={`text-[10px] font-extrabold leading-tight ${active ? "text-orange-700" : "text-slate-700"}`}>
+        {titleText}
+      </span>
+      <span className={`text-[9px] leading-snug ${active ? "text-orange-500" : "text-slate-400"}`}>
+        {description}
+      </span>
     </button>
   );
 }
@@ -266,9 +271,7 @@ export default function EditWorkspaceConfigModal({
       });
 
       toast.success("Lưu thay đổi thành công");
-      if (updatedProfile.data) {
-        onSaved?.(updatedProfile.data);
-      }
+      onSaved?.(updatedProfile);
       onClose();
     } catch (error: any) {
       toast.error(error?.message || "Lỗi khi lưu thay đổi");
@@ -280,119 +283,144 @@ export default function EditWorkspaceConfigModal({
   /* ── Inline render (Config tab) ── */
   if (inline) {
     return (
-      <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden">
-        {/* Inline Header */}
-        <div className="px-6 py-5 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 border border-orange-100 text-[#FF6B00]">
-              <Sparkles className="h-4.5 w-4.5" />
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-[#FF6B00] uppercase tracking-[0.2em] mb-0.5">Cấu hình lộ trình</div>
-              <h2 className="text-base font-extrabold text-slate-800">
-                {workspaceName ? workspaceName : "Cấu hình học tập AI"}
-              </h2>
-            </div>
+      <div className="rounded-2xl border border-slate-200/60 bg-[#F8FAFC] shadow-sm overflow-hidden">
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-slate-100 bg-white flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 border border-orange-100 text-[#FF6B00] shrink-0">
+            <Sparkles className="h-3.5 w-3.5" />
+          </div>
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#FF6B00]">Cấu hình lộ trình</p>
+            <h2 className="text-sm font-extrabold text-slate-800 leading-tight">
+              {workspaceName || "Cấu hình học tập AI"}
+            </h2>
           </div>
         </div>
 
-        <div className="px-6 py-6 bg-slate-50/20">
-          <form id="edit-workspace-config-form-inline" onSubmit={onSubmit} className="space-y-6">
-            
-            {/* NHÓM 1: MỤC TIÊU & THỜI GIAN */}
-            <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-4">
-              <div className="flex items-center gap-2.5 pb-3.5 border-b border-slate-100">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-[#FF6B00]">
-                  <Sparkles className="h-3.5 w-3.5" />
+        {/* Unified form body — 4 modern minimalist cards */}
+        <form id="edit-workspace-config-form-inline" onSubmit={onSubmit} className="p-5 space-y-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Card 1: Mục tiêu học tập */}
+            <div className="flex flex-col rounded-2xl border border-slate-200/50 bg-white p-5 shadow-sm hover:border-orange-200/40 hover:shadow-md/5 transition-all duration-200">
+              <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                    <Target className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Mục tiêu học tập</h3>
                 </div>
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Mục tiêu & Cam kết thời gian</span>
+                <span className="text-[10px] font-bold text-slate-400">{targetGoalValue.length}/2000</span>
+              </div>
+              
+              <div className="flex-1 flex flex-col justify-between space-y-3">
+                <textarea
+                  {...register("targetGoal")}
+                  rows={4}
+                  maxLength={2000}
+                  placeholder="Ví dụ: Nắm vững ReactJS và Hooks để tự xây dựng ứng dụng web hiện đại..."
+                  className="w-full flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-3.5 py-3 text-sm leading-relaxed text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-orange-500/5 resize-none transition"
+                />
+                {errors.targetGoal && (
+                  <p className="text-[11px] text-red-500">{errors.targetGoal.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Card 2: Cam kết & Thời hạn */}
+            <div className="rounded-2xl border border-slate-200/50 bg-white p-5 shadow-sm hover:border-orange-200/40 hover:shadow-md/5 transition-all duration-200 flex flex-col justify-between">
+              <div className="flex items-center gap-2 mb-4 border-b border-slate-50 pb-3">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                  <Clock3 className="h-4 w-4" />
+                </div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Cam kết & Thời hạn</h3>
               </div>
 
-              <div className="grid gap-5 md:grid-cols-12">
-                {/* Target Goal */}
-                <div className="col-span-12 md:col-span-7 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Mục tiêu học tập của bạn</label>
-                    <span className="text-xs font-semibold text-slate-400">{targetGoalValue.length}/2000</span>
+              <div className="space-y-4 flex-1 flex flex-col justify-center">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Giờ học mỗi tuần
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number" min={1} max={40}
+                      {...register("studyHoursPerWeek", { valueAsNumber: true })}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3.5 py-2.5 pr-20 text-sm font-bold text-slate-800 outline-none focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition"
+                    />
+                    <span className="absolute inset-y-0 right-3 flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-wide pointer-events-none">
+                      giờ / tuần
+                    </span>
                   </div>
-                  <textarea
-                    {...register("targetGoal")}
-                    rows={4}
-                    maxLength={2000}
-                    placeholder="Ví dụ: Nắm vững kiến thức ReactJS và Hooks để tự tay xây dựng ứng dụng web hiện đại..."
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm leading-relaxed text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-orange-500/10 resize-none font-medium"
+                  {errors.studyHoursPerWeek && (
+                    <p className="text-[11px] text-red-500">{errors.studyHoursPerWeek.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Hạn hoàn thành
+                  </label>
+                  <input
+                    type="date"
+                    value={targetDeadlineValue}
+                    onChange={(e) => setValue("targetDeadline", e.target.value, { shouldDirty: true })}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3.5 py-2.5 text-sm font-bold text-slate-800 outline-none focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition"
                   />
-                  {errors.targetGoal && <p className="text-xs text-red-500 font-medium">{errors.targetGoal.message}</p>}
-                </div>
-
-                {/* Hours & Deadline */}
-                <div className="col-span-12 md:col-span-5 space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400 block">Số giờ học mỗi tuần</label>
-                    <div className="relative">
-                      <input type="number" min={1} max={40} {...register("studyHoursPerWeek", { valueAsNumber: true })}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 pr-24 text-sm font-bold text-slate-800 outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-orange-500/10" />
-                      <span className="absolute inset-y-0 right-4 flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-wide">giờ/tuần</span>
-                    </div>
-                    {errors.studyHoursPerWeek && <p className="text-xs text-red-500 font-medium">{errors.studyHoursPerWeek.message}</p>}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400 block">Ngày hoàn thành dự kiến</label>
-                    <input type="date" value={targetDeadlineValue}
-                      onChange={e => setValue("targetDeadline", e.target.value, { shouldDirty: true })}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm font-bold text-slate-800 outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-orange-500/10" />
-                    {errors.targetDeadline && <p className="text-xs text-red-500 font-medium">{errors.targetDeadline.message}</p>}
-                  </div>
+                  {errors.targetDeadline && (
+                    <p className="text-[11px] text-red-500">{errors.targetDeadline.message}</p>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* NHÓM 2: MỨC TỰ TIN */}
-            <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-4">
-              <div className="flex items-center gap-2.5 pb-3.5 border-b border-slate-100">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500">
-                  <Award className="h-3.5 w-3.5" />
+            {/* Card 3: Mức độ tự tin */}
+            <div className="rounded-2xl border border-slate-200/50 bg-white p-5 shadow-sm hover:border-orange-200/40 hover:shadow-md/5 transition-all duration-200">
+              <div className="flex items-center gap-2 mb-4 border-b border-slate-50 pb-3">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                  <Compass className="h-4 w-4" />
                 </div>
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Mức độ tự tin hiện tại</span>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Mức độ tự tin ban đầu</h3>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {confidenceOptions.map((option) => (
+                  <ConfidenceCard
+                    key={option.value}
+                    active={currentConfidence === option.value}
+                    title={option.title}
+                    description={option.description}
+                    onClick={() => setValue("confidence", option.value, { shouldValidate: true, shouldDirty: true })}
+                  />
+                ))}
+              </div>
+              {errors.confidence && (
+                <p className="text-[11px] text-red-500 mt-2">{errors.confidence.message}</p>
+              )}
+            </div>
+
+            {/* Card 4: Lịch học ưu tiên */}
+            <div className="rounded-2xl border border-slate-200/50 bg-white p-5 shadow-sm hover:border-orange-200/40 hover:shadow-md/5 transition-all duration-200 space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-50 pb-3">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                  <Calendar className="h-4 w-4" />
+                </div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Lịch học ưu tiên</h3>
+              </div>
+
+              {/* Day chips */}
               <div className="space-y-2">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {confidenceOptions.map(option => (
-                    <ConfidenceCard key={option.value} active={currentConfidence === option.value}
-                      title={option.title} description={option.description}
-                      onClick={() => setValue("confidence", option.value, { shouldValidate: true, shouldDirty: true })} />
-                  ))}
-                </div>
-                {errors.confidence && <p className="text-xs text-red-500 font-medium">{errors.confidence.message}</p>}
-              </div>
-            </div>
-
-            {/* NHÓM 3: LỊCH HỌC DỰ KIẾN */}
-            <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-5">
-              <div className="flex items-center gap-2.5 pb-3.5 border-b border-slate-100">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-500">
-                  <Clock3 className="h-3.5 w-3.5" />
-                </div>
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Lịch rảnh của bạn</span>
-              </div>
-
-              {/* Day chips preferredDays */}
-              <div className="space-y-3">
-                <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400 block">Ngày học ưu tiên trong tuần</label>
-                <div className="flex flex-wrap gap-2">
-                  {dayOptions.map(day => {
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Các ngày trong tuần</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {dayOptions.map((day) => {
                     const isActive = selectedDays.includes(day.value);
                     return (
                       <button
                         key={day.value}
                         type="button"
                         onClick={() => toggleDay(day.value)}
-                        className={`h-10 w-10 rounded-xl border text-xs font-bold transition-all duration-150 flex items-center justify-center ${
-                          isActive 
-                            ? "bg-[#FF6B00] border-[#FF6B00] text-white shadow-md shadow-[#FF6B00]/25 scale-105" 
-                            : "bg-slate-50 border-slate-200 text-slate-500 hover:border-orange-200 hover:bg-orange-50/30"
+                        className={`h-8 w-8 rounded-lg border text-[10px] font-extrabold transition-all duration-150 flex items-center justify-center ${
+                          isActive
+                            ? "bg-[#FF6B00] border-[#FF6B00] text-white shadow-sm shadow-[#FF6B00]/20 scale-105"
+                            : "bg-slate-50 border-slate-200 text-slate-500 hover:border-orange-200 hover:bg-orange-50/20"
                         }`}
                       >
                         {day.label}
@@ -402,45 +430,70 @@ export default function EditWorkspaceConfigModal({
                 </div>
               </div>
 
-              {/* Time Slots preferredTimeSlots */}
-              <div className="space-y-3 pt-2">
-                <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400 block">Khung giờ rảnh trong ngày</label>
-                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              {/* Time slots */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Khung giờ rảnh trong ngày</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                   {TIME_SLOTS_OPTIONS.map((slot, index) => {
                     const isSelected = timeSlots.includes(slot.value);
+                    const [st, et] = slot.value.split("-");
+                    const fmt = (t: string) => t.replace(/^0/, "").replace(":00", "");
+                    const range = `${fmt(st)}–${fmt(et)}`;
+                    const period = slot.label.split(" (")[0];
                     return (
-                      <button key={`time-preset-${index}`} type="button"
-                        onClick={() => setTimeSlots(curr => curr.includes(slot.value) ? curr.filter(s => s !== slot.value) : [...curr, slot.value])}
-                        className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold transition-all duration-150 ${
-                          isSelected 
-                            ? "border-[#FF6B00] bg-orange-50/40 text-[#FF6B00] font-extrabold shadow-sm scale-[1.01]" 
-                            : "border-slate-200 bg-slate-50/30 text-slate-600 hover:border-[#FF6B00]/30 hover:bg-orange-50/10"
-                        }`}>
-                        {isSelected && <Check className="h-3.5 w-3.5 shrink-0 text-[#FF6B00]" />}
-                        <span className="truncate">{slot.label.replace(/ \(.*\)/, "")}</span>
+                      <button
+                        key={`time-preset-${index}`}
+                        type="button"
+                        onClick={() =>
+                          setTimeSlots((curr) =>
+                            curr.includes(slot.value)
+                              ? curr.filter((s) => s !== slot.value)
+                              : [...curr, slot.value],
+                          )
+                        }
+                        className={`flex flex-col items-center justify-center rounded-xl border p-2 text-center transition-all duration-150 gap-0.5 ${
+                          isSelected
+                            ? "border-[#FF6B00] bg-orange-50/50 shadow-sm"
+                            : "border-slate-200 bg-slate-50/30 hover:border-orange-200 hover:bg-orange-50/10"
+                        }`}
+                      >
+                        <span className={`text-[9px] font-semibold leading-none truncate w-full text-center ${isSelected ? "text-[#FF6B00]" : "text-slate-400"}`}>
+                          {period}
+                        </span>
+                        <span className={`text-[10px] font-extrabold leading-tight ${isSelected ? "text-[#FF6B00]" : "text-slate-600"}`}>
+                          {range}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
               </div>
             </div>
+          </div>
 
-          </form>
-        </div>
-
-        {/* Inline Footer Actions */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
-          <button type="button" onClick={onClose}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-800">
-            Hủy
-          </button>
-          <button type="submit" form="edit-workspace-config-form-inline"
-            disabled={isSubmitting || loadingProfile}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 hover:bg-[#E05E00] disabled:opacity-70 transition">
-            {isSubmitting || loadingProfile ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <Check className="h-4 w-4" />}
-            {isSubmitting || loadingProfile ? "Đang lưu..." : "Lưu thay đổi"}
-          </button>
-        </div>
+          {/* Footer actions */}
+          <div className="px-5 py-4 border border-slate-200/50 bg-white rounded-2xl flex items-center justify-end gap-2.5 shadow-sm">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || loadingProfile}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B00] px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-[#E05E00] disabled:opacity-70 transition"
+            >
+              {isSubmitting || loadingProfile ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              ) : (
+                <Check className="h-3.5 w-3.5" />
+              )}
+              {isSubmitting || loadingProfile ? "Đang lưu..." : "Lưu thay đổi"}
+            </button>
+          </div>
+        </form>
       </div>
     );
   }
