@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { MessageSquare, Search, RefreshCw, LoaderCircle } from "lucide-react";
+import { MessageSquare, Search, RefreshCw, LoaderCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   getAdminFeedbacks,
+  getFeedbackDetail,
   updateFeedbackStatus,
   type FeedbackResponse,
 } from "../../../api/feedbackService";
@@ -16,10 +17,19 @@ const FEEDBACK_TYPE_LABEL: Record<string, { label: string; color: string; bg: st
 };
 
 const FEEDBACK_STATUS_LABEL: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  PENDING:  { label: "Chờ xử lý",      color: "#B45309", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.28)" },
-  REVIEWED: { label: "Đã xem",         color: "#0284C7", bg: "rgba(2,132,199,0.08)",   border: "rgba(2,132,199,0.28)"  },
-  RESOLVED: { label: "Đã giải quyết",  color: "#15803D", bg: "rgba(34,197,94,0.08)",   border: "rgba(34,197,94,0.28)"  },
-  CLOSED:   { label: "Đã đóng",        color: "#64748B", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.28)" },
+  OPEN:        { label: "Chờ xử lý",      color: "#B45309", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.28)" },
+  IN_PROGRESS: { label: "Đang xử lý",     color: "#0284C7", bg: "rgba(2,132,199,0.08)",   border: "rgba(2,132,199,0.28)"  },
+  RESOLVED:    { label: "Đã giải quyết",  color: "#15803D", bg: "rgba(34,197,94,0.08)",   border: "rgba(34,197,94,0.28)"  },
+  CLOSED:      { label: "Đã đóng",        color: "#64748B", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.28)" },
+};
+
+// Defensive status fallback transformer to handle old legacy database values
+const sanitizeStatus = (status: string | undefined | null): string => {
+  if (!status) return "OPEN";
+  const upperStatus = status.toUpperCase();
+  if (upperStatus === "PENDING") return "OPEN";
+  if (upperStatus === "REVIEWED") return "IN_PROGRESS"; // Safe fallback to your new "Đang xử lý" status
+  return upperStatus;
 };
 
 const PAGE_SIZE = 15;
@@ -35,6 +45,8 @@ export default function AdminFeedback() {
   const [updating, setUpdating] = useState(false);
   const [adminNote, setAdminNote] = useState("");
   const [statusDraft, setStatusDraft] = useState("");
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const load = async (p: number, status = statusFilter) => {
     setLoading(true);
@@ -53,14 +65,48 @@ export default function AdminFeedback() {
 
   useEffect(() => { load(0); }, []);
 
+  const fetchDetail = async (fb: FeedbackResponse) => {
+    if (!fb.feedbackId || typeof fb.feedbackId !== "string" || !fb.feedbackId.trim()) {
+      const msg = "ID phản hồi không hợp lệ — không thể tải chi tiết";
+      setDetailError(msg);
+      toast.error(msg);
+      return;
+    }
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
+      const fresh = await getFeedbackDetail(fb.feedbackId);
+      setSelected(fresh);
+      setStatusDraft(sanitizeStatus(fresh.status));
+      setAdminNote(fresh.adminNote || "");
+    } catch (err: any) {
+      const status: number | undefined = err?.status;
+      const msg: string = err?.message || "Không thể tải chi tiết phản hồi";
+      setDetailError(msg);
+      toast.error(status ? `[${status}] ${msg}` : msg, { duration: 6000 });
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   const handleSelect = (fb: FeedbackResponse) => {
     setSelected(fb);
-    setStatusDraft(fb.status || "PENDING");
+    setStatusDraft(sanitizeStatus(fb.status));
     setAdminNote(fb.adminNote || "");
+    fetchDetail(fb);
+  };
+
+  const handleRetryDetail = () => {
+    if (selected) fetchDetail(selected);
   };
 
   const handleUpdate = async () => {
     if (!selected) return;
+    const validStatuses = Object.keys(FEEDBACK_STATUS_LABEL);
+    if (!statusDraft || !validStatuses.includes(statusDraft)) {
+      toast.error(`Trạng thái không hợp lệ: "${statusDraft}". Vui lòng chọn lại.`);
+      return;
+    }
     setUpdating(true);
     try {
       const updated = await updateFeedbackStatus(selected.feedbackId, statusDraft, adminNote.trim() || undefined);
@@ -104,10 +150,9 @@ export default function AdminFeedback() {
             className="h-9 px-3 rounded-xl border border-slate-200 text-sm text-slate-700 font-semibold outline-none focus:border-violet-400"
           >
             <option value="">Tất cả trạng thái</option>
-            <option value="PENDING">Chờ xử lý</option>
-            <option value="REVIEWED">Đã xem</option>
-            <option value="RESOLVED">Đã giải quyết</option>
-            <option value="CLOSED">Đã đóng</option>
+            {Object.entries(FEEDBACK_STATUS_LABEL).map(([key, { label }]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
           </select>
           <button
             onClick={() => load(page)}
@@ -126,7 +171,7 @@ export default function AdminFeedback() {
           {totalItems} phản hồi
         </span>
         <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
-          {feedbacks.filter(f => f.status === "PENDING").length} chờ xử lý trang này
+          {feedbacks.filter(f => sanitizeStatus(f.status) === "OPEN").length} chờ xử lý trang này
         </span>
       </div>
 
@@ -162,7 +207,8 @@ export default function AdminFeedback() {
           {/* Data rows */}
           {!loading && feedbacks.map((fb, i) => {
             const typeInfo = FEEDBACK_TYPE_LABEL[fb.type] ?? FEEDBACK_TYPE_LABEL.OTHER;
-            const statusInfo = FEEDBACK_STATUS_LABEL[fb.status] ?? FEEDBACK_STATUS_LABEL.PENDING;
+            const currentSanitizedStatus = sanitizeStatus(fb.status);
+            const statusInfo = FEEDBACK_STATUS_LABEL[currentSanitizedStatus] ?? FEEDBACK_STATUS_LABEL.OPEN;
             const isActive = selected?.feedbackId === fb.feedbackId;
 
             return (
@@ -229,6 +275,47 @@ export default function AdminFeedback() {
               <MessageSquare size={28} className="mx-auto mb-3 text-slate-200" />
               <p className="text-sm text-slate-400 font-medium">Chọn một dòng để xem chi tiết</p>
             </div>
+          ) : detailLoading ? (
+            <div className="space-y-4 animate-pulse">
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 space-y-2">
+                <div className="h-4 bg-slate-200 rounded-full w-3/4" />
+                <div className="h-3 bg-slate-100 rounded-full w-1/2" />
+                <div className="h-3 bg-slate-100 rounded-full w-1/3" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 bg-slate-200 rounded-full w-1/4" />
+                <div className="h-24 bg-slate-100 rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 bg-slate-200 rounded-full w-1/3" />
+                <div className="h-9 bg-slate-100 rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 bg-slate-200 rounded-full w-1/4" />
+                <div className="h-20 bg-slate-100 rounded-xl" />
+              </div>
+              <div className="h-10 bg-slate-100 rounded-xl" />
+            </div>
+          ) : detailError ? (
+            <div className="py-10 flex flex-col items-center text-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center">
+                <AlertCircle size={24} className="text-red-500" />
+              </div>
+              <div>
+                <p className="text-sm font-extrabold text-slate-800">Không thể tải chi tiết phản hồi</p>
+                <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-[220px]">
+                  {detailError}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">Vui lòng thử lại sau hoặc liên hệ quản trị viên hệ thống.</p>
+              </div>
+              <button
+                onClick={handleRetryDetail}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition cursor-pointer"
+              >
+                <RefreshCw size={13} />
+                Thử lại
+              </button>
+            </div>
           ) : (
             <div className="space-y-4">
               {/* User info */}
@@ -261,10 +348,9 @@ export default function AdminFeedback() {
                   onChange={e => setStatusDraft(e.target.value)}
                   className="w-full h-9 px-3 rounded-xl border border-slate-200 text-sm text-slate-700 font-semibold outline-none focus:border-violet-400"
                 >
-                  <option value="PENDING">Chờ xử lý</option>
-                  <option value="REVIEWED">Đã xem</option>
-                  <option value="RESOLVED">Đã giải quyết</option>
-                  <option value="CLOSED">Đã đóng</option>
+                  {Object.entries(FEEDBACK_STATUS_LABEL).map(([key, { label }]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
                 </select>
               </div>
 

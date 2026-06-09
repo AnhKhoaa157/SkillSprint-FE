@@ -49,6 +49,15 @@ export async function getAdminFeedbacks(page = 0, size = 15, status?: string): P
   return res.data;
 }
 
+export async function getFeedbackDetail(feedbackId: string): Promise<FeedbackResponse> {
+  if (!feedbackId || typeof feedbackId !== "string" || !feedbackId.trim()) {
+    throw new Error("Feedback ID không hợp lệ");
+  }
+  const res = await requestJson<FeedbackResponse>(`/api/admin/feedback/${encodeURIComponent(feedbackId.trim())}`);
+  if (!res.data) throw new Error(res.message || "Không tải được chi tiết feedback");
+  return res.data;
+}
+
 export async function updateFeedbackStatus(feedbackId: string, status: string, adminNote?: string): Promise<FeedbackResponse> {
   const res = await requestJson<FeedbackResponse>(`/api/admin/feedback/${feedbackId}/status`, {
     method: "PATCH",
@@ -58,4 +67,4 @@ export async function updateFeedbackStatus(feedbackId: string, status: string, a
   return res.data;
 }
 
-export default { createFeedback, getAdminFeedbacks, updateFeedbackStatus };
+export default { createFeedback, getAdminFeedbacks, getFeedbackDetail, updateFeedbackStatus };

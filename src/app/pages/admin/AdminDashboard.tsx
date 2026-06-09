@@ -697,10 +697,10 @@ const FEEDBACK_TYPE_LABEL: Record<string, { label: string; color: string; bg: st
 };
 
 const FEEDBACK_STATUS_LABEL: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  PENDING:   { label: "Chờ xử lý", color: "#B45309", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.28)" },
-  REVIEWED:  { label: "Đã xem",    color: "#0284C7", bg: "rgba(2,132,199,0.08)",  border: "rgba(2,132,199,0.28)"  },
-  RESOLVED:  { label: "Đã giải quyết", color: "#15803D", bg: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.28)" },
-  CLOSED:    { label: "Đã đóng",   color: "#64748B", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.28)" },
+  OPEN:        { label: "Chờ xử lý",      color: "#B45309", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.28)" },
+  IN_PROGRESS: { label: "Đang xử lý",     color: "#0284C7", bg: "rgba(2,132,199,0.08)",   border: "rgba(2,132,199,0.28)"  },
+  RESOLVED:    { label: "Đã giải quyết",  color: "#15803D", bg: "rgba(34,197,94,0.08)",   border: "rgba(34,197,94,0.28)"  },
+  CLOSED:      { label: "Đã đóng",        color: "#64748B", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.28)" },
 };
 
 function FeedbackView() {
@@ -902,8 +902,8 @@ function FeedbackView() {
                 <label style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: 700, display: "block", marginBottom: 4 }}>Cập nhật trạng thái</label>
                 <select value={statusDraft} onChange={e => setStatusDraft(e.target.value)}
                   style={{ width: "100%", height: 36, borderRadius: 8, border: "1px solid #E2E8F0", padding: "0 10px", fontSize: "0.82rem" }}>
-                  <option value="PENDING">Chờ xử lý</option>
-                  <option value="REVIEWED">Đã xem</option>
+                  <option value="OPEN">Chờ xử lý</option>
+                  <option value="IN_PROGRESS">Đang xử lý</option>
                   <option value="RESOLVED">Đã giải quyết</option>
                   <option value="CLOSED">Đã đóng</option>
                 </select>
