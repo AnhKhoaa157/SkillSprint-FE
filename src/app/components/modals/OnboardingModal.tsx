@@ -2,7 +2,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { BookOpen, Calendar, Check, ChevronLeft, ChevronRight, Clock, Clock3, Loader2, Plus, Sparkles, Target, Trash2, X } from "lucide-react";
+import { BookOpen, Calendar, Check, ChevronLeft, ChevronRight, Clock3, Loader2, Sparkles, Target, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { fetchOnboardingProfile, upsertOnboardingProfile, type OnboardingProfileResponse } from "../../../api/onboardingService";
@@ -21,6 +21,17 @@ const confidenceOptions = [
   { value: "LOW", title: "🥲 Bắt đầu từ số 0", description: "Cần xây dựng lộ trình chi tiết từng bước căn bản nhất." },
   { value: "MEDIUM", title: "🤔 Đã biết chút ít", description: "Muốn củng cố kiến thức với nhịp độ học tập vừa phải." },
   { value: "HIGH", title: "😎 Rất tự tin", description: "Đã có nền tảng vững chắc và muốn tăng tốc đi nhanh hơn." },
+] as const;
+
+const timeSlotOptions = [
+  { label: "Sáng sớm",   time: "6-8",   value: "06:00-08:00" },
+  { label: "Sáng",       time: "8-10",  value: "08:00-10:00" },
+  { label: "Trước trưa", time: "10-12", value: "10:00-12:00" },
+  { label: "Chiều",      time: "12-14", value: "12:00-14:00" },
+  { label: "Chiều",      time: "14-16", value: "14:00-16:00" },
+  { label: "Chiều tối",  time: "16-18", value: "16:00-18:00" },
+  { label: "Tối",        time: "18-20", value: "18:00-20:00" },
+  { label: "Tối muộn",   time: "20-22", value: "20:00-22:00" },
 ] as const;
 
 const schema = z.object({
@@ -100,25 +111,31 @@ function DayChip({ label, active, onClick }: ChipProps) {
   );
 }
 
-type TimeSlotTagProps = {
+type TimeSlotCardProps = {
   label: string;
-  onRemove: () => void;
+  time: string;
+  active: boolean;
+  onClick: () => void;
 };
 
-function TimeSlotTag({ label, onRemove }: TimeSlotTagProps) {
+function TimeSlotCard({ label, time, active, onClick }: TimeSlotCardProps) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-xl border border-orange-100 bg-orange-50/60 px-3.5 py-2 text-xs font-semibold text-orange-700 shadow-sm">
-      <Clock className="h-3.5 w-3.5 text-[#FF6B00]" />
-      <span>{label}</span>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-lg text-orange-400 hover:bg-orange-100 hover:text-orange-700 transition cursor-pointer"
-        aria-label={`Remove ${label}`}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center rounded-2xl border py-3 px-2 transition-all duration-200 cursor-pointer ${
+        active
+          ? "bg-orange-50 border-[#FF6B00] shadow-sm shadow-orange-600/10"
+          : "bg-white border-slate-200 hover:border-orange-300 hover:bg-slate-50/50"
+      }`}
+    >
+      <span className={`text-[11px] font-medium ${active ? "text-[#FF6B00]" : "text-slate-500"}`}>
+        {label}
+      </span>
+      <span className={`text-sm font-bold mt-0.5 ${active ? "text-[#FF6B00]" : "text-slate-800"}`}>
+        {time}
+      </span>
+    </button>
   );
 }
 
@@ -164,8 +181,6 @@ export default function OnboardingModal({
   const [step, setStep] = React.useState(0);
   const [selectedDays, setSelectedDays] = React.useState<string[]>([]);
   const [timeSlots, setTimeSlots] = React.useState<string[]>([]);
-  const [slotStart, setSlotStart] = React.useState("");
-  const [slotEnd, setSlotEnd] = React.useState("");
   const [loadingProfile, setLoadingProfile] = React.useState(false);
 
   const targetGoalValue = watch("targetGoal") || "";
@@ -186,8 +201,6 @@ export default function OnboardingModal({
       });
       setSelectedDays(profile?.preferredDays ?? []);
       setTimeSlots((profile?.preferredTimeSlots ?? []).filter(isValidTimeSlot));
-      setSlotStart("");
-      setSlotEnd("");
       setStep(0);
     };
 
@@ -227,28 +240,10 @@ export default function OnboardingModal({
     );
   };
 
-  const addTimeSlot = () => {
-    const start = slotStart.trim();
-    const end = slotEnd.trim();
-
-    if (!start || !end) {
-      toast.error("Vui lòng chọn cả thời gian bắt đầu và kết thúc");
-      return;
-    }
-    if (start >= end) {
-      toast.error("Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc");
-      return;
-    }
-
-    const slot = `${start}-${end}`;
-    if (timeSlots.includes(slot)) {
-      toast.info("Khung giờ này đã được thêm");
-      return;
-    }
-
-    setTimeSlots((current) => [...current, slot]);
-    setSlotStart("");
-    setSlotEnd("");
+  const toggleTimeSlot = (value: string) => {
+    setTimeSlots((current) =>
+      current.includes(value) ? current.filter((s) => s !== value) : [...current, value],
+    );
   };
 
   const onSubmit = handleSubmit(async (values) => {
@@ -481,57 +476,26 @@ export default function OnboardingModal({
 
                   {/* Time Slots Selection */}
                   <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-5 space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center border border-orange-100">
-                        <Clock3 className="h-4 w-4 text-[#FF6B00]" />
-                      </div>
-                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Khung thời gian rảnh</span>
-                    </div>
-
-                    <div className="grid gap-3 grid-cols-1 sm:grid-cols-[1fr_auto_1fr_auto] items-end">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-500">Giờ bắt đầu</label>
-                        <input
-                          type="time"
-                          value={slotStart}
-                          onChange={(e) => setSlotStart(e.target.value)}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#FF6B00]"
-                        />
-                      </div>
-                      <div className="hidden h-9 items-center justify-center text-slate-400 font-bold sm:flex">→</div>
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-500">Giờ kết thúc</label>
-                        <input
-                          type="time"
-                          value={slotEnd}
-                          onChange={(e) => setSlotEnd(e.target.value)}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#FF6B00]"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={addTimeSlot}
-                        className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-orange-50 px-4 text-xs font-extrabold text-orange-700 border border-orange-100 hover:bg-orange-100 transition cursor-pointer"
-                      >
-                        <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-                        Thêm khung giờ
-                      </button>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      {timeSlots.length === 0 ? (
-                        <div className="w-full rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-4 text-center text-xs font-semibold text-slate-400">
-                          Chưa có khung giờ cụ thể nào được cấu hình bổ sung.
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center border border-orange-100">
+                          <Clock3 className="h-4 w-4 text-[#FF6B00]" />
                         </div>
-                      ) : (
-                        timeSlots.map((slot, index) => (
-                          <TimeSlotTag
-                            key={`time-badge-${index}`}
-                            label={slot.replace('-', ' - ')}
-                            onRemove={() => setTimeSlots((current) => current.filter((item) => item !== slot))}
-                          />
-                        ))
-                      )}
+                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Khung giờ rảnh trong ngày</span>
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-400">Chọn tối thiểu 1 khung giờ</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {timeSlotOptions.map((slot) => (
+                        <TimeSlotCard
+                          key={slot.value}
+                          label={slot.label}
+                          time={slot.time}
+                          active={timeSlots.includes(slot.value)}
+                          onClick={() => toggleTimeSlot(slot.value)}
+                        />
+                      ))}
                     </div>
 
                     <div className="rounded-xl border border-orange-100 bg-orange-50/40 p-4 text-xs leading-relaxed text-orange-800 font-medium">
