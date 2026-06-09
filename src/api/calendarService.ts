@@ -9,40 +9,17 @@ export type WeekDay =
   | "SATURDAY"
   | "SUNDAY";
 
-export type WeekDayShort =
-  | "MON"
-  | "TUE"
-  | "WED"
-  | "THU"
-  | "FRI"
-  | "SAT"
-  | "SUN";
-
 export type GenerateCalendarRequest = {
   startDate?: string | null;
-  start_date?: string | null;
   endDate?: string | null;
-  end_date?: string | null;
   
-  studyDays?: WeekDay[] | null;
-  study_days?: WeekDay[] | null;
-  
-  studyDaysShort?: WeekDayShort[] | null;
-  study_days_short?: WeekDayShort[] | null;
-  studyDayNumbers?: number[] | null;
-  study_day_numbers?: number[] | null;
+  preferredDays: WeekDay[];
 
   dailyStartTime?: string | null;
-  daily_start_time?: string | null;
   sessionMinutes?: number | null;
-  session_minutes?: number | null;
   sessionsPerDay?: number | null;
-  sessions_per_day?: number | null;
   includeReviewSessions?: boolean | null;
-  include_review_sessions?: boolean | null;
 
-  // Khai báo động cho cấu trúc bọc lồng phòng thủ
-  [key: string]: any;
 };
 
 export type CalendarTaskResponse = {
@@ -88,30 +65,21 @@ export type UpdateCalendarTaskRequest = {
   endTime?: string | null;
 };
 
-// Hàm tạo lịch học nâng cấp cơ chế gửi song song URL Params + JSON Body
+// Sends a single JSON DTO; do not append duplicated query-string aliases.
 export async function generateCalendarSchedule(workspaceId: string, body: GenerateCalendarRequest): Promise<CalendarScheduleRunResponse> {
-  const queryParams = new URLSearchParams();
-  
-  if (body.start_date) queryParams.append("start_date", body.start_date);
-  if (body.end_date) queryParams.append("end_date", body.end_date);
-  if (body.daily_start_time) queryParams.append("daily_start_time", body.daily_start_time);
-  if (body.session_minutes) queryParams.append("session_minutes", String(body.session_minutes));
-  if (body.sessions_per_day) queryParams.append("sessions_per_day", String(body.sessions_per_day));
-  
-  // Đẩy mảng ngày học lên URL dưới dạng multi-value params đề phòng trường hợp Backend nhận qua @RequestParam/@ModelAttribute
-  if (body.study_days && body.study_days.length > 0) {
-    body.study_days.forEach(day => queryParams.append("study_days", day));
-    body.study_days.forEach(day => queryParams.append("studyDays", day));
-  }
-  if (body.study_day_numbers && body.study_day_numbers.length > 0) {
-    body.study_day_numbers.forEach(num => queryParams.append("study_day_numbers", String(num)));
-  }
+  const payload: GenerateCalendarRequest = {
+    startDate: body.startDate ?? null,
+    endDate: body.endDate ?? null,
+    preferredDays: Array.from(new Set(body.preferredDays.map(day => day.trim().toUpperCase() as WeekDay).filter(Boolean))),
+    dailyStartTime: body.dailyStartTime ?? null,
+    sessionMinutes: body.sessionMinutes ?? null,
+    sessionsPerDay: body.sessionsPerDay ?? null,
+    includeReviewSessions: body.includeReviewSessions ?? null,
+  };
 
-  const urlWithParams = `/api/workspaces/${workspaceId}/calendar/generate?${queryParams.toString()}`;
-
-  const res = await requestJson<CalendarScheduleRunResponse>(urlWithParams, {
+  const res = await requestJson<CalendarScheduleRunResponse>(`/api/workspaces/${workspaceId}/calendar/generate`, {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify(payload),
   });
 
   if (!res.data) {

@@ -6,7 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Calendar, Check, Clock3, Compass, Plus, Sparkles, Target, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
-import onboardingService, { type OnboardingProfileResponse } from "../../../api/onboardingService";
+import onboardingService, {
+  type OnboardingProfileResponse,
+  type UpsertOnboardingProfileRequest,
+} from "../../../api/onboardingService";
 
 const dayOptions = [
   { label: "T2", value: "MONDAY" },
@@ -101,23 +104,6 @@ function ConfidenceCard({ active, title, description, onClick }: { active: boole
   );
 }
 
-function DayChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void; }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        "rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 " +
-        (active
-          ? "bg-orange-500 text-white shadow-md shadow-orange-500/25"
-          : "bg-gray-100 text-gray-600 hover:bg-gray-200")
-      }
-    >
-      {label}
-    </button>
-  );
-}
-
 const TIME_SLOTS_OPTIONS = [
   { label: "Sáng sớm (6:00 - 8:00)", value: "06:00-08:00" },
   { label: "Sáng (8:00 - 10:00)", value: "08:00-10:00" },
@@ -130,10 +116,7 @@ const TIME_SLOTS_OPTIONS = [
 ];
 
 function normalizeDateInput(value: string | null | undefined) {
-  if (!value) {
-    return "";
-  }
-
+  if (!value) return "";
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().split("T")[0];
 }
@@ -188,9 +171,7 @@ export default function EditWorkspaceConfigModal({
   const currentConfidence = watch("confidence");
 
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
+    if (!isOpen) return;
 
     const profile = initialConfig ?? null;
     reset({
@@ -211,9 +192,7 @@ export default function EditWorkspaceConfigModal({
     [initialConfig],
   );
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   const toggleDay = (day: DayValue) => {
     setSelectedDays(current => current.includes(day) ? current.filter(item => item !== day) : [...current, day]);
@@ -261,14 +240,16 @@ export default function EditWorkspaceConfigModal({
 
     try {
       setLoadingProfile(true);
-      const updatedProfile = await onboardingService.upsertOnboardingProfile(workspaceId, {
+      const payload: UpsertOnboardingProfileRequest = {
         targetGoal: values.targetGoal.trim(),
         studyHoursPerWeek: values.studyHoursPerWeek,
         targetDeadline: values.targetDeadline.trim() || null,
         confidence: values.confidence,
-        preferredDays: selectedDays,
+        preferredDays: selectedDays.map(day => day.toUpperCase()),
         preferredTimeSlots: timeSlots,
-      });
+      };
+
+      const updatedProfile = await onboardingService.upsertOnboardingProfile(workspaceId, payload);
 
       toast.success("Lưu thay đổi thành công");
       onSaved?.(updatedProfile);
@@ -279,6 +260,9 @@ export default function EditWorkspaceConfigModal({
       setLoadingProfile(false);
     }
   });
+
+  // Xác định ID form động dựa trên chế độ hiển thị để không lệch thuộc tính submit
+  const formId = inline ? "edit-workspace-config-form-inline" : "edit-workspace-config-form";
 
   /* ── Inline render (Config tab) ── */
   if (inline) {
@@ -297,8 +281,8 @@ export default function EditWorkspaceConfigModal({
           </div>
         </div>
 
-        {/* Unified form body — 4 modern minimalist cards */}
-        <form id="edit-workspace-config-form-inline" onSubmit={onSubmit} className="p-5 space-y-5">
+        {/* Unified form body */}
+        <form id={formId} onSubmit={onSubmit} className="p-5 space-y-5">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Card 1: Mục tiêu học tập */}
             <div className="flex flex-col rounded-2xl border border-slate-200/50 bg-white p-5 shadow-sm hover:border-orange-200/40 hover:shadow-md/5 transition-all duration-200">
@@ -482,6 +466,7 @@ export default function EditWorkspaceConfigModal({
             </button>
             <button
               type="submit"
+              form={formId}
               disabled={isSubmitting || loadingProfile}
               className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B00] px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-[#E05E00] disabled:opacity-70 transition"
             >
@@ -529,7 +514,7 @@ export default function EditWorkspaceConfigModal({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-6">
-          <form id="edit-workspace-config-form" onSubmit={onSubmit} className="space-y-6 pb-28">
+          <form id={formId} onSubmit={onSubmit} className="space-y-6 pb-28">
             <section className="space-y-6">
               <div>
                 <div className="mb-2 flex items-center justify-between gap-4">
@@ -752,7 +737,7 @@ export default function EditWorkspaceConfigModal({
             </button>
             <button
               type="submit"
-              form="edit-workspace-config-form"
+              form={formId}
               disabled={isSubmitting || loadingProfile}
               className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
             >

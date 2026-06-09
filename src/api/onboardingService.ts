@@ -6,7 +6,7 @@ export type UpsertOnboardingProfileRequest = {
   targetDeadline?: string | null; // YYYY-MM-DD
   confidence: "HIGH" | "MEDIUM" | "LOW";
   preferredLanguage?: string | null;
-  preferredDays?: string[] | null;
+  preferredDays: string[];
   preferredTimeSlots?: string[] | null;
 };
 
@@ -42,9 +42,24 @@ export async function upsertOnboardingProfile(
   workspaceId: string,
   body: UpsertOnboardingProfileRequest,
 ): Promise<OnboardingProfileResponse> {
+  const payload: UpsertOnboardingProfileRequest = {
+    targetGoal: body.targetGoal,
+    studyHoursPerWeek: body.studyHoursPerWeek ?? null,
+    targetDeadline: body.targetDeadline ?? null,
+    confidence: body.confidence,
+    preferredLanguage: body.preferredLanguage ?? null,
+    preferredDays: Array.from(new Set(body.preferredDays.map(day => day.trim().toUpperCase()).filter(Boolean))),
+    preferredTimeSlots: body.preferredTimeSlots
+      ? Array.from(new Set(body.preferredTimeSlots.map(slot => slot.trim()).filter(Boolean)))
+      : [],
+  };
+
   const res = await requestJson<OnboardingProfileResponse>(
     `/api/workspaces/${workspaceId}/onboarding`,
-    { method: "PUT", body: JSON.stringify(body) },
+    {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    },
   );
   if (!res.data) throw new Error(res.message || "Upsert onboarding profile failed");
   return res.data;

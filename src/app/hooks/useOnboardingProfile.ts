@@ -28,9 +28,9 @@ export function useOnboardingProfile(workspaceId?: string) {
     if (!workspaceId) throw new Error("workspaceId missing");
     setLoading(true); setError(null);
     try {
-      const res = await onboardingService.upsertOnboardingProfile(workspaceId, body);
-      setProfile(res.data);
-      return res.data;
+      const profile = await onboardingService.upsertOnboardingProfile(workspaceId, body);
+      setProfile(profile);
+      return profile;
     } catch (err: any) {
       setError(err);
       throw err;

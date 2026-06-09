@@ -29,7 +29,8 @@ import type {
 import {
   getAdminFeedbacks,
   updateFeedbackStatus,
-  type FeedbackResponse,
+  type FeedbackAdminResponse,
+  type FeedbackStatus,
 } from "../../../api/feedbackService";
 
 const ACCENT = "#FF6B00";
@@ -703,17 +704,28 @@ const FEEDBACK_STATUS_LABEL: Record<string, { label: string; color: string; bg: 
   CLOSED:      { label: "Đã đóng",        color: "#64748B", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.28)" },
 };
 
+function sanitizeFeedbackStatus(status: string | undefined | null): FeedbackStatus {
+  if (!status) return "OPEN";
+  const value = status.toUpperCase();
+  if (value === "PENDING") return "OPEN";
+  if (value === "REVIEWED") return "IN_PROGRESS";
+  if (value === "OPEN" || value === "IN_PROGRESS" || value === "RESOLVED" || value === "CLOSED") {
+    return value;
+  }
+  return "OPEN";
+}
+
 function FeedbackView() {
-  const [feedbacks, setFeedbacks] = useState<FeedbackResponse[]>([]);
+  const [feedbacks, setFeedbacks] = useState<FeedbackAdminResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
-  const [selected, setSelected] = useState<FeedbackResponse | null>(null);
+  const [selected, setSelected] = useState<FeedbackAdminResponse | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [updating, setUpdating] = useState(false);
   const [adminNote, setAdminNote] = useState("");
-  const [statusDraft, setStatusDraft] = useState("");
+  const [statusDraft, setStatusDraft] = useState<FeedbackStatus>("OPEN");
   const PAGE_SIZE = 15;
 
   const load = async (p: number, status = statusFilter) => {
@@ -733,9 +745,9 @@ function FeedbackView() {
 
   useEffect(() => { load(0); }, []);
 
-  const handleSelect = (fb: FeedbackResponse) => {
+  const handleSelect = (fb: FeedbackAdminResponse) => {
     setSelected(fb);
-    setStatusDraft(fb.status || "PENDING");
+    setStatusDraft(sanitizeFeedbackStatus(fb.status));
     setAdminNote(fb.adminNote || "");
   };
 
@@ -778,10 +790,9 @@ function FeedbackView() {
               style={{ height: 32, padding: "0 10px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: "0.82rem", color: "#334155" }}
             >
               <option value="">Tất cả trạng thái</option>
-              <option value="PENDING">Chờ xử lý</option>
-              <option value="REVIEWED">Đã xem</option>
-              <option value="RESOLVED">Đã giải quyết</option>
-              <option value="CLOSED">Đã đóng</option>
+              {Object.entries(FEEDBACK_STATUS_LABEL).map(([key, { label }]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -818,7 +829,8 @@ function FeedbackView() {
 
           {!loading && feedbacks.map((fb, i) => {
             const typeInfo = FEEDBACK_TYPE_LABEL[fb.type] ?? FEEDBACK_TYPE_LABEL.OTHER;
-            const statusInfo = FEEDBACK_STATUS_LABEL[fb.status] ?? FEEDBACK_STATUS_LABEL.PENDING;
+            const currentStatus = sanitizeFeedbackStatus(fb.status);
+            const statusInfo = FEEDBACK_STATUS_LABEL[currentStatus] ?? FEEDBACK_STATUS_LABEL.OPEN;
             const isActive = selected?.feedbackId === fb.feedbackId;
             return (
               <motion.div key={fb.feedbackId}
@@ -837,7 +849,7 @@ function FeedbackView() {
               >
                 <div className="min-w-0 pr-2">
                   <p style={{ fontWeight: 600, fontSize: "0.8rem", color: "#111827" }} className="truncate">{fb.title}</p>
-                  <p style={{ fontSize: "0.7rem", color: "#9CA3AF" }} className="truncate">{fb.userFullName || fb.userEmail}</p>
+                  <p style={{ fontSize: "0.7rem", color: "#9CA3AF" }} className="truncate">{fb.userFullName || fb.userEmail || "Unknown user"}</p>
                 </div>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold w-fit"
                   style={{ background: typeInfo.bg, color: typeInfo.color }}>
@@ -882,7 +894,9 @@ function FeedbackView() {
             <div className="space-y-4">
               <div className="rounded-xl p-3" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
                 <p style={{ fontWeight: 700, fontSize: "0.88rem", color: "#0F172A" }}>{selected.title}</p>
-                <p style={{ fontSize: "0.75rem", color: "#64748B", marginTop: 2 }}>{selected.userFullName} · {selected.userEmail}</p>
+                <p style={{ fontSize: "0.75rem", color: "#64748B", marginTop: 2 }}>
+                  {selected.userFullName || selected.userEmail || "Unknown user"} · {selected.userEmail || "No email"}
+                </p>
                 <p style={{ fontSize: "0.72rem", color: "#9CA3AF", marginTop: 2 }}>ID: {selected.feedbackId.slice(0, 12)}…</p>
               </div>
 
@@ -900,7 +914,7 @@ function FeedbackView() {
 
               <div>
                 <label style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: 700, display: "block", marginBottom: 4 }}>Cập nhật trạng thái</label>
-                <select value={statusDraft} onChange={e => setStatusDraft(e.target.value)}
+                <select value={statusDraft} onChange={e => setStatusDraft(e.target.value as FeedbackStatus)}
                   style={{ width: "100%", height: 36, borderRadius: 8, border: "1px solid #E2E8F0", padding: "0 10px", fontSize: "0.82rem" }}>
                   <option value="OPEN">Chờ xử lý</option>
                   <option value="IN_PROGRESS">Đang xử lý</option>
