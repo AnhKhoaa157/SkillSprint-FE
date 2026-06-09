@@ -24,22 +24,19 @@ type QuizPhase = "start" | "active" | "result";
 
 interface QuizContainerProps {
   stepId: string;
-  currentPlan: string | null | undefined; // Cho phép nhận null hoặc undefined một cách an toàn
+  currentPlan: string | null | undefined;
   onCompleteSession?: (result: QuizAttemptResponse) => void;
 }
 
-// Hàm kiểm tra quyền Premium có fallback an toàn, chấp nhận mọi gói chứa chữ "PREMIUM"
 function hasPremiumAccess(plan: string | null | undefined): boolean {
-  if (!plan) return false; 
+  if (!plan) return false;
   return plan === "PREMIUM" || plan.includes("PREMIUM");
 }
 
-// Guarantees an array regardless of null / undefined / non-array input.
 function safeArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
 }
 
-// Normalises a raw quiz payload so every array field is always a real array.
 function normaliseQuiz(raw: QuizResponse | null): QuizResponse | null {
   if (!raw) return null;
   return {
@@ -71,13 +68,10 @@ export default function QuizContainer({
 
   // ── Derived state ────────────────────────────────────────────────────────────
 
-  // Tự động tính toán trạng thái khóa trực tiếp từ prop currentPlan trong mỗi lần render
   const isPremiumLocked = !hasPremiumAccess(currentPlan);
 
-  // Always a real array — never null, never undefined.
   const questions: QuizQuestionResponse[] = safeArray(quiz?.questions);
   const totalQuestions = questions.length;
-  // Clamp so a stale index never exceeds the array after a re-generate.
   const safeIndex = totalQuestions > 0 ? Math.min(currentIndex, totalQuestions - 1) : 0;
   const currentQuestion: QuizQuestionResponse | null = questions[safeIndex] ?? null;
   const currentOptions = safeArray(currentQuestion?.options);
@@ -92,7 +86,6 @@ export default function QuizContainer({
   // ── Effects ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    // Nếu không có quyền premium, tắt trạng thái tải và dừng fetch API câu hỏi
     if (!hasPremiumAccess(currentPlan)) {
       setIsLoading(false);
       return;
@@ -193,7 +186,6 @@ export default function QuizContainer({
   if (isPremiumLocked) {
     return (
       <div className="relative overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
-        {/* Blurred quiz skeleton background */}
         <div className="pointer-events-none select-none blur-[2px] opacity-30 p-6 md:p-8 space-y-5">
           <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
             <div className="h-11 w-11 shrink-0 rounded-2xl bg-orange-200" />
@@ -217,7 +209,6 @@ export default function QuizContainer({
           <div className="h-12 rounded-2xl bg-orange-100" />
         </div>
 
-        {/* Lock overlay */}
         <div className="absolute inset-0 flex items-center justify-center bg-white/50 p-6 backdrop-blur-[2px]">
           <div className="w-full max-w-sm rounded-2xl border border-orange-100 bg-white p-8 text-center shadow-[0_20px_40px_-10px_rgba(0,0,0,0.12)]">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-[0_8px_20px_-6px_rgba(249,115,22,0.5)]">
@@ -248,10 +239,8 @@ export default function QuizContainer({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center gap-3 rounded-[24px] border border-slate-100 bg-white p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
-        <LoaderCircle size={20} className="animate-spin text-orange-500" />
-        <p className="text-sm font-semibold text-slate-400">
-          Đang tải câu hỏi quiz...
-        </p>
+        <LoaderCircle size={20} className="animate-spin text-violet-500" />
+        <p className="text-sm font-semibold text-slate-400">Đang tải câu hỏi quiz...</p>
       </div>
     );
   }
@@ -276,25 +265,22 @@ export default function QuizContainer({
 
   if (!quiz) {
     return (
-      <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)] md:p-8">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-[0_8px_20px_-6px_rgba(249,115,22,0.4)]">
-            <WandSparkles size={18} />
+      <div className="rounded-[24px] border border-slate-100 bg-white overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
+        <div className="px-6 py-8 text-center bg-gradient-to-b from-violet-50/70 to-transparent border-b border-slate-100">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-500 text-white shadow-[0_8px_20px_-6px_rgba(124,58,237,0.4)]">
+            <WandSparkles size={22} />
           </div>
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-600">
-              AI Quiz
-            </p>
-            <h3 className="text-sm font-extrabold text-slate-800">
-              Chưa có quiz cho bước học này
-            </h3>
-          </div>
-        </div>
-        <div className="mt-5 space-y-4">
-          <p className="text-xs leading-6 text-slate-500">
-            Hệ thống chưa tạo quiz cho bước học này. Nhấn nút bên dưới để AI
-            tự động sinh bộ câu hỏi dựa trên nội dung bài học.
+          <span className="text-[9px] font-black uppercase tracking-[0.22em] text-violet-600">
+            AI Quiz
+          </span>
+          <h3 className="mt-1.5 text-sm font-extrabold text-slate-800">
+            Chưa có quiz cho bước học này
+          </h3>
+          <p className="mt-2 text-xs leading-5 text-slate-400 max-w-xs mx-auto">
+            AI phân tích nội dung bài học và tự động tạo bộ câu hỏi phù hợp giúp bạn ôn tập hiệu quả.
           </p>
+        </div>
+        <div className="p-6 space-y-3">
           {error && (
             <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
               {error}
@@ -313,6 +299,11 @@ export default function QuizContainer({
             )}
             {isGenerating ? "Đang tạo quiz..." : "✨ Tạo Quiz bằng AI"}
           </button>
+          {isGenerating && (
+            <p className="text-center text-[10px] text-slate-400">
+              AI đang phân tích nội dung bài học, vui lòng đợi...
+            </p>
+          )}
         </div>
       </div>
     );
@@ -322,20 +313,20 @@ export default function QuizContainer({
 
   if (phase === "start") {
     return (
-      <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)] md:p-8">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-[0_8px_20px_-6px_rgba(249,115,22,0.4)]">
+      <div className="rounded-[24px] border border-slate-100 bg-white overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
+        <div className="flex items-center gap-3 px-6 py-5 bg-gradient-to-r from-violet-50/80 to-slate-50/40 border-b border-slate-100">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-500 text-white shadow-[0_8px_20px_-6px_rgba(124,58,237,0.4)]">
             <Sparkles size={18} />
           </div>
           <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-600">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-violet-600">
               Kiểm tra kiến thức
             </p>
             <h3 className="text-sm font-extrabold text-slate-800">{quiz.title}</h3>
           </div>
         </div>
 
-        <div className="mt-5 space-y-4">
+        <div className="p-6 md:p-8 space-y-4">
           {quiz.description && (
             <p className="text-xs leading-5 text-slate-500 font-medium">
               {quiz.description}
@@ -354,10 +345,9 @@ export default function QuizContainer({
             />
           </div>
 
-          <div className="rounded-xl border border-orange-100/60 bg-orange-50/40 p-3.5 text-[11px] leading-5 text-slate-500 font-medium">
-            💡 Trả lời lần lượt từng câu, chọn một đáp án đúng nhất cho mỗi
-            câu hỏi. Bạn cần đạt{" "}
-            <strong className="text-orange-600">≥ {quiz.passingScore}%</strong> để pass.
+          <div className="rounded-xl border border-violet-100/60 bg-violet-50/40 p-3.5 text-[11px] leading-5 text-slate-500 font-medium">
+            💡 Trả lời lần lượt từng câu, chọn một đáp án đúng nhất. Bạn cần đạt{" "}
+            <strong className="text-violet-600">≥ {quiz.passingScore}%</strong> để pass.
           </div>
 
           <div className="flex gap-3">
@@ -395,75 +385,83 @@ export default function QuizContainer({
     if (!quiz || totalQuestions === 0 || !currentQuestion) {
       return (
         <div className="flex items-center justify-center gap-3 rounded-[24px] border border-slate-100 bg-white p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
-          <LoaderCircle size={20} className="animate-spin text-orange-500" />
+          <LoaderCircle size={20} className="animate-spin text-violet-500" />
           <p className="text-sm font-semibold text-slate-400">Đang tải câu hỏi...</p>
         </div>
       );
     }
 
-    return (
-      <div className="space-y-5 rounded-[24px] border border-slate-100 bg-white p-6 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)] md:p-8">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-600">
-              Câu hỏi
-            </p>
-            <p className="mt-0.5 text-xs font-extrabold text-slate-600">
-              {safeIndex + 1} / {totalQuestions}
-            </p>
-          </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-[10px] font-bold text-orange-600">
-            <Sparkles size={11} /> AI Quiz
-          </span>
-        </div>
+    const optionLetters = ["A", "B", "C", "D", "E"];
 
-        {/* Animated progress bar */}
-        <div className="w-full overflow-hidden rounded-full bg-slate-100" style={{ height: 6 }}>
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-500 ease-out"
-            style={{ width: `${progressPercent}%` }}
-          />
+    return (
+      <div className="rounded-[24px] border border-slate-100 bg-white overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
+        {/* Progress header */}
+        <div className="px-6 pt-5 pb-4 border-b border-slate-100 bg-slate-50/60">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-violet-500 text-white text-[11px] font-black shadow-[0_4px_12px_-3px_rgba(124,58,237,0.45)]">
+                {safeIndex + 1}
+              </div>
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                  Câu hỏi
+                </p>
+                <p className="text-xs font-extrabold text-slate-700 leading-none">
+                  {safeIndex + 1} / {totalQuestions}
+                </p>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-100 bg-violet-50 px-2.5 py-1 text-[9px] font-bold text-violet-600">
+              <Sparkles size={9} /> AI Quiz
+            </span>
+          </div>
+          <div className="w-full overflow-hidden rounded-full bg-slate-200/70" style={{ height: 4 }}>
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-500 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <div className="flex justify-between mt-1.5">
+            <span className="text-[9px] text-slate-400">{Math.round(progressPercent)}% hoàn thành</span>
+            <span className="text-[9px] text-slate-400">
+              {totalQuestions - safeIndex - 1} câu còn lại
+            </span>
+          </div>
         </div>
 
         {/* Question text */}
-        <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-5">
+        <div className="px-6 pt-5 pb-3">
           <p className="text-sm font-bold leading-6 text-slate-800">
             {currentQuestion.question}
           </p>
         </div>
 
-        {/* Single-choice options */}
-        <div className="space-y-2.5">
+        {/* Options */}
+        <div className="px-6 pb-4 space-y-2">
           {currentOptions.length > 0 ? (
-            currentOptions.map((opt) => {
+            currentOptions.map((opt, optIdx) => {
               const isSelected = selectedOptionId === opt.optionId;
               return (
                 <button
                   key={opt.optionId}
                   type="button"
                   onClick={() => handleSelectOption(opt.optionId)}
-                  className={`group w-full rounded-xl border px-4 py-3.5 text-left text-sm font-semibold transition-all duration-150 active:scale-[0.99] ${
+                  className={`group w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold transition-all duration-150 active:scale-[0.99] ${
                     isSelected
-                      ? "border-orange-300 bg-orange-50 text-orange-800 shadow-sm shadow-orange-500/10"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-orange-200 hover:bg-orange-50/40"
+                      ? "border-violet-300 bg-violet-50 text-violet-800 shadow-sm shadow-violet-500/10"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-violet-200 hover:bg-violet-50/40"
                   }`}
                 >
-                  <span className="inline-flex items-center gap-3">
-                    <span
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
-                        isSelected
-                          ? "border-orange-500 bg-orange-500"
-                          : "border-slate-300 bg-white group-hover:border-orange-300"
-                      }`}
-                      aria-hidden="true"
-                    >
-                      {isSelected && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                      )}
-                    </span>
-                    {opt.text}
+                  <span
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-black transition-colors ${
+                      isSelected
+                        ? "bg-violet-500 text-white"
+                        : "bg-slate-100 text-slate-500 group-hover:bg-violet-100 group-hover:text-violet-600"
+                    }`}
+                  >
+                    {optionLetters[optIdx] ?? optIdx + 1}
                   </span>
+                  <span className="flex-1 leading-snug">{opt.text}</span>
                 </button>
               );
             })
@@ -472,21 +470,21 @@ export default function QuizContainer({
           )}
         </div>
 
-        {/* Submit error banner */}
+        {/* Submit error */}
         {error && (
-          <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+          <div className="mx-6 mb-3 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
             {error}
           </div>
         )}
 
-        {/* Navigation CTA */}
-        <div className="flex justify-end pt-1">
+        {/* Navigation footer */}
+        <div className="px-6 pb-6 pt-3 border-t border-slate-100 bg-slate-50/40">
           {isLastQuestion ? (
             <button
               type="button"
               onClick={handleSubmit}
               disabled={!selectedOptionId || isSubmitting}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting ? (
                 <LoaderCircle size={14} className="animate-spin" />
@@ -500,10 +498,15 @@ export default function QuizContainer({
               type="button"
               onClick={handleNext}
               disabled={!selectedOptionId}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-violet-500 px-6 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-violet-500/20 transition hover:from-violet-700 hover:to-violet-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Câu tiếp theo <ChevronRight size={14} />
             </button>
+          )}
+          {!selectedOptionId && (
+            <p className="mt-2 text-center text-[10px] text-slate-400">
+              Chọn một đáp án để tiếp tục
+            </p>
           )}
         </div>
       </div>
@@ -520,13 +523,13 @@ export default function QuizContainer({
     const quizQuestions = safeArray(quiz?.questions);
 
     return (
-      <div className="space-y-5 rounded-[24px] border border-slate-100 bg-white p-6 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)] md:p-8">
-        {/* Hero score card */}
+      <div className="rounded-[24px] border border-slate-100 bg-white overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
+        {/* Hero score */}
         <div
-          className={`rounded-2xl border p-6 text-center ${
+          className={`px-6 py-8 text-center border-b border-slate-100 ${
             passed
-              ? "border-emerald-100 bg-gradient-to-br from-emerald-50/60 to-teal-50/20"
-              : "border-rose-100 bg-gradient-to-br from-rose-50/60 to-orange-50/20"
+              ? "bg-gradient-to-b from-emerald-50/70 to-transparent"
+              : "bg-gradient-to-b from-rose-50/60 to-transparent"
           }`}
         >
           <div
@@ -543,17 +546,12 @@ export default function QuizContainer({
           >
             {passed ? "Xuất sắc! Đã pass" : "Chưa đạt yêu cầu"}
           </p>
-          <p className="mt-2 text-4xl font-black tracking-tight text-slate-900">
-            {score}%
-          </p>
+          <p className="mt-2 text-4xl font-black tracking-tight text-slate-900">{score}%</p>
           <p className="mt-1 text-xs font-semibold text-slate-500">
             Đúng {result.correctAnswers}/{result.totalQuestions} câu
           </p>
 
-          <div
-            className="mt-4 w-full overflow-hidden rounded-full bg-slate-100"
-            style={{ height: 8 }}
-          >
+          <div className="mt-4 w-full overflow-hidden rounded-full bg-slate-200" style={{ height: 6 }}>
             <div
               className={`h-full rounded-full transition-all duration-700 ${
                 passed
@@ -574,87 +572,89 @@ export default function QuizContainer({
           )}
         </div>
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-3 gap-3">
-          <ResultStat label="Tổng câu" value={String(result.totalQuestions)} accent="slate" />
-          <ResultStat label="Đúng" value={String(result.correctAnswers)} accent="emerald" />
-          <ResultStat label="Sai" value={String(incorrectAnswers)} accent="rose" />
-        </div>
+        <div className="p-6 space-y-5">
+          {/* Stats grid */}
+          <div className="grid grid-cols-3 gap-3">
+            <ResultStat label="Tổng câu" value={String(result.totalQuestions)} accent="slate" />
+            <ResultStat label="Đúng" value={String(result.correctAnswers)} accent="emerald" />
+            <ResultStat label="Sai" value={String(incorrectAnswers)} accent="rose" />
+          </div>
 
-        {/* Per-question breakdown */}
-        <div className="space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-            Chi tiết từng câu
-          </p>
+          {/* Per-question breakdown */}
           <div className="space-y-2">
-            {finalResults.length > 0 ? (
-              finalResults.map((item, idx) => {
-                const question = quizQuestions.find(
-                  (q) => q.questionId === item.questionId,
-                );
-                const opts = safeArray(question?.options);
-                const selectedOpt = opts.find((o) => o.optionId === item.selectedOptionId);
-                return (
-                  <div
-                    key={item.questionId}
-                    className={`rounded-xl border p-3.5 text-xs ${
-                      item.correct
-                        ? "border-emerald-100 bg-emerald-50/50"
-                        : "border-rose-100 bg-rose-50/50"
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      {item.correct ? (
-                        <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-500" />
-                      ) : (
-                        <XCircle size={13} className="mt-0.5 shrink-0 text-rose-400" />
-                      )}
-                      <div className="min-w-0">
-                        <p className="font-bold text-slate-700">
-                          Câu {idx + 1}: {question?.question ?? "—"}
-                        </p>
-                        {!item.correct && (
-                          <p className="mt-1 text-slate-500">
-                            Bạn chọn:{" "}
-                            <span className="font-semibold text-rose-600">
-                              {selectedOpt?.text ?? "—"}
-                            </span>
-                          </p>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+              Chi tiết từng câu
+            </p>
+            <div className="space-y-2">
+              {finalResults.length > 0 ? (
+                finalResults.map((item, idx) => {
+                  const question = quizQuestions.find(
+                    (q) => q.questionId === item.questionId,
+                  );
+                  const opts = safeArray(question?.options);
+                  const selectedOpt = opts.find((o) => o.optionId === item.selectedOptionId);
+                  return (
+                    <div
+                      key={item.questionId}
+                      className={`rounded-xl border p-3.5 text-xs ${
+                        item.correct
+                          ? "border-emerald-100 bg-emerald-50/50"
+                          : "border-rose-100 bg-rose-50/50"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {item.correct ? (
+                          <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-500" />
+                        ) : (
+                          <XCircle size={13} className="mt-0.5 shrink-0 text-rose-400" />
                         )}
-                        {item.explanation && (
-                          <p className="mt-1.5 italic leading-4 text-slate-400">
-                            {item.explanation}
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-700">
+                            Câu {idx + 1}: {question?.question ?? "—"}
                           </p>
-                        )}
+                          {!item.correct && (
+                            <p className="mt-1 text-slate-500">
+                              Bạn chọn:{" "}
+                              <span className="font-semibold text-rose-600">
+                                {selectedOpt?.text ?? "—"}
+                              </span>
+                            </p>
+                          )}
+                          {item.explanation && (
+                            <p className="mt-1.5 italic leading-4 text-slate-400">
+                              {item.explanation}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="py-2 text-xs italic text-slate-400">
-                Không có dữ liệu chi tiết câu hỏi.
-              </p>
-            )}
+                  );
+                })
+              ) : (
+                <p className="py-2 text-xs italic text-slate-400">
+                  Không có dữ liệu chi tiết câu hỏi.
+                </p>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Action buttons */}
-        <div className="grid grid-cols-2 gap-3 pt-1">
-          <button
-            type="button"
-            onClick={handleRetry}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 active:scale-[0.98]"
-          >
-            <RotateCcw size={14} /> Làm lại
-          </button>
-          <button
-            type="button"
-            onClick={() => onCompleteSession?.(result)}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98]"
-          >
-            <CheckCircle2 size={14} /> Hoàn thành
-          </button>
+          {/* Action buttons */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 active:scale-[0.98]"
+            >
+              <RotateCcw size={14} /> Làm lại
+            </button>
+            <button
+              type="button"
+              onClick={() => onCompleteSession?.(result)}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98]"
+            >
+              <CheckCircle2 size={14} /> Hoàn thành
+            </button>
+          </div>
         </div>
       </div>
     );

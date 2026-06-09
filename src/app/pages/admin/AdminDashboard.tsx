@@ -691,7 +691,7 @@ function PaymentsView() {
 ───────────────────────────────────────────────────────── */
 const FEEDBACK_TYPE_LABEL: Record<string, { label: string; color: string; bg: string }> = {
   BUG:         { label: "Bug",         color: "#DC2626", bg: "rgba(220,38,38,0.08)" },
-  IMPROVEMENT: { label: "Cải tiến",    color: "#7C3AED", bg: "rgba(124,58,237,0.08)" },
+  IMPROVEMENT: { label: "Cải tiến",    color: "#C2410C", bg: "rgba(255,107,0,0.08)" },
   QUESTION:    { label: "Câu hỏi",     color: "#0284C7", bg: "rgba(2,132,199,0.08)" },
   OTHER:       { label: "Khác",        color: "#64748B", bg: "rgba(100,116,139,0.08)" },
 };
@@ -720,8 +720,8 @@ function FeedbackView() {
     setLoading(true);
     try {
       const res = await getAdminFeedbacks(p, PAGE_SIZE, status || undefined);
-      setFeedbacks(res.content ?? []);
-      setTotalItems(res.totalElements ?? 0);
+      setFeedbacks(res.items ?? []);
+      setTotalItems(res.totalItems ?? 0);
       setTotalPages(res.totalPages ?? 0);
       setPage(p);
     } catch (err) {
@@ -761,7 +761,7 @@ function FeedbackView() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
       {/* Header banner */}
       <div className="rounded-2xl p-5"
-        style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#F5F3FF 100%)", border: "1px solid #DDD6FE" }}>
+        style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#FFF7ED 100%)", border: "1px solid #FFEDD5" }}>
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <div>
             <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0F172A" }}>Feedback người dùng</h2>
@@ -829,8 +829,8 @@ function FeedbackView() {
                   gridTemplateColumns: "2fr 1fr 1.2fr 1.2fr",
                   borderBottom: "1px solid #F9FAFB",
                   alignItems: "center",
-                  background: isActive ? "#F5F3FF" : "#FFFFFF",
-                  borderLeft: isActive ? "3px solid #7C3AED" : "3px solid transparent",
+                  background: isActive ? "#FFF7ED" : "#FFFFFF",
+                  borderLeft: isActive ? "3px solid #FF6B00" : "3px solid transparent",
                 }}
                 onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = "#F8FAFC"; }}
                 onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = "#FFFFFF"; }}
@@ -894,7 +894,7 @@ function FeedbackView() {
               {selected.relatedUrl && (
                 <div>
                   <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748B", marginBottom: 2 }}>URL liên quan</p>
-                  <p style={{ fontSize: "0.75rem", color: "#7C3AED", wordBreak: "break-all" }}>{selected.relatedUrl}</p>
+                  <p style={{ fontSize: "0.75rem", color: "#FF6B00", wordBreak: "break-all" }}>{selected.relatedUrl}</p>
                 </div>
               )}
 
@@ -918,7 +918,7 @@ function FeedbackView() {
 
               <button onClick={handleUpdate} disabled={updating}
                 className="w-full py-2 rounded-xl text-sm font-semibold"
-                style={{ background: "#7C3AED", color: "#fff", opacity: updating ? 0.6 : 1, cursor: updating ? "not-allowed" : "pointer" }}>
+                style={{ background: "#FF6B00", color: "#fff", opacity: updating ? 0.6 : 1, cursor: updating ? "not-allowed" : "pointer" }}>
                 {updating ? "Đang lưu..." : "Lưu cập nhật"}
               </button>
             </div>
@@ -1194,20 +1194,6 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        {/* Health quick link in sidebar (open inline panel) */}
-        <div className="px-4 pb-3">
-          <button onClick={() => setShowHealthPanel(true)} className="flex items-center gap-3 px-3 py-2 rounded-xl"
-            style={{ background: "#FFFFFF", border: "1px solid rgba(226,232,240,0.6)", color: "#374151" }}>
-            <div style={{ width: 10, height: 10, borderRadius: 999, background: healthStatus === 'up' ? '#22c55e' : healthStatus === 'down' ? '#ef4444' : '#94A3B8', boxShadow: healthStatus === 'up' ? '0 0 6px #22c55e' : healthStatus === 'down' ? '0 0 6px #ef4444' : 'none' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-              <span style={{ fontSize: '13px', fontWeight: 700 }}>{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</span>
-              {lastHealthPayload?.timestamp && (
-                <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Cập nhật: {new Date(lastHealthPayload.timestamp).toLocaleTimeString()}</span>
-              )}
-            </div>
-          </button>
-        </div>
-
         {/* Nav */}
         <nav className="flex-1 px-3 space-y-0.5">
           {navItems.map(item => {
@@ -1220,18 +1206,18 @@ export default function AdminDashboard() {
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 text-left"
                 style={{
-                  background: isActive ? "rgba(124,58,237,0.07)" : "transparent",
-                  border: isActive ? "1px solid rgba(124,58,237,0.18)" : "1px solid transparent",
-                  color: isActive ? "#5B21B6" : "#334155",
+                  background: isActive ? "rgba(255,107,0,0.07)" : "transparent",
+                  border: isActive ? "1px solid rgba(255,107,0,0.18)" : "1px solid transparent",
+                  color: isActive ? "#C2410C" : "#334155",
                   fontWeight: isActive ? 700 : 400,
                 }}
                 onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(148,163,184,0.10)"; e.currentTarget.style.color = "#0F172A"; } }}
                 onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#334155"; } }}
               >
-                <item.icon size={15} style={{ color: isActive ? "#7C3AED" : "#64748B", flexShrink: 0 }} />
+                <item.icon size={15} style={{ color: isActive ? "#FF6B00" : "#64748B", flexShrink: 0 }} />
                 <span style={{ flex: 1 }}>{item.label}</span>
                 {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#7C3AED" }} />
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#FF6B00" }} />
                 )}
               </button>
             );
@@ -1292,9 +1278,9 @@ export default function AdminDashboard() {
               <div className="sr-only" aria-live="polite">{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</div>
             </button>
             <button className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-              style={{ background: "rgba(124,58,237,0.07)", color: "#5B21B6", border: "1px solid rgba(124,58,237,0.18)" }}
-              onMouseEnter={e => { e.currentTarget.style.color = "#4C1D95"; e.currentTarget.style.background = "rgba(124,58,237,0.12)"; }}
-              onMouseLeave={e => { e.currentTarget.style.color = "#5B21B6"; e.currentTarget.style.background = "rgba(124,58,237,0.07)"; }}
+              style={{ background: "rgba(255,107,0,0.07)", color: "#C2410C", border: "1px solid rgba(255,107,0,0.18)" }}
+              onMouseEnter={e => { e.currentTarget.style.color = "#9A3412"; e.currentTarget.style.background = "rgba(255,107,0,0.12)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "#C2410C"; e.currentTarget.style.background = "rgba(255,107,0,0.07)"; }}
               onClick={handleExport}>
               <Download size={12} /> Xuất dữ liệu
             </button>
@@ -1340,7 +1326,7 @@ export default function AdminDashboard() {
         {/* ── SCROLLABLE CONTENT ── */}  
         <div className="flex-1 overflow-y-auto p-7">
           {actionMessage && (
-            <div className="mb-4 px-4 py-2 rounded-xl text-sm" style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)", color: "#5B21B6" }}>
+            <div className="mb-4 px-4 py-2 rounded-xl text-sm" style={{ background: "rgba(255,107,0,0.06)", border: "1px solid rgba(255,107,0,0.18)", color: "#C2410C" }}>
               {actionMessage}
             </div>
           )}
@@ -1405,7 +1391,7 @@ export default function AdminDashboard() {
               <div>
                 <div className="space-y-4">
                   {mgmtMessage && (
-                    <div className="px-4 py-2 rounded-xl text-sm" style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)", color: "#5B21B6" }}>
+                    <div className="px-4 py-2 rounded-xl text-sm" style={{ background: "rgba(255,107,0,0.06)", border: "1px solid rgba(255,107,0,0.18)", color: "#C2410C" }}>
                       {mgmtMessage}
                     </div>
                   )}
@@ -1492,7 +1478,7 @@ export default function AdminDashboard() {
                                 <tr key={user.id} style={{ borderTop: "1px solid #F1F5F9", background: mgmtSelected?.id === user.id ? "#EEF2FF" : "#FFFFFF" }}>
                                   <td style={{ padding: "12px 14px" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                      <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#7C3AED,#FF6B00)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.82rem", flexShrink: 0 }}>
+                                      <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#FF6B00,#F97316)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.82rem", flexShrink: 0 }}>
                                         {(user.fullName || user.email || "?").charAt(0).toUpperCase()}
                                       </div>
                                       <div>
@@ -1510,9 +1496,9 @@ export default function AdminDashboard() {
                                     <button
                                       onClick={() => openMgmtDetail(user.id)}
                                       className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                                      style={{ background: "rgba(124,58,237,0.07)", border: "1px solid rgba(124,58,237,0.2)", color: "#5B21B6" }}
-                                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.14)"; }}
-                                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.07)"; }}
+                                      style={{ background: "rgba(255,107,0,0.07)", border: "1px solid rgba(255,107,0,0.2)", color: "#C2410C" }}
+                                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,107,0,0.14)"; }}
+                                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,107,0,0.07)"; }}
                                     >
                                       Chi tiết →
                                     </button>
@@ -1547,7 +1533,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderTop: "3px solid #7C3AED" }}>
+                    <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderTop: "3px solid #FF6B00" }}>
                       <h3 style={{ margin: "0 0 8px", fontSize: "0.95rem", fontWeight: 800, color: "#0F172A" }}>Chi tiết & cập nhật</h3>
                       {!mgmtSelected ? (
                         <div className="py-8 text-center">
@@ -1556,7 +1542,7 @@ export default function AdminDashboard() {
                       ) : (
                         <div className="space-y-3 mt-3">
                           <div className="rounded-xl p-3 flex items-center gap-3" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
-                            <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg,#7C3AED,#FF6B00)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "1.1rem", flexShrink: 0 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg,#FF6B00,#F97316)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "1.1rem", flexShrink: 0 }}>
                               {(mgmtSelected.fullName || mgmtSelected.email || "?").charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
@@ -1687,7 +1673,7 @@ export default function AdminDashboard() {
                   onClick={() => executeCommand(command.id)}
                   className="w-full text-left px-3 py-2.5 rounded-xl transition-all"
                   style={{ color: "#374151" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(124,58,237,0.07)"; e.currentTarget.style.color = "#5B21B6"; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,107,0,0.07)"; e.currentTarget.style.color = "#C2410C"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#374151"; }}
                 >
                   <p style={{ fontWeight: 600, fontSize: "0.83rem" }}>{command.label}</p>

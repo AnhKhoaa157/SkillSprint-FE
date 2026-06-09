@@ -25,10 +25,10 @@ export type FeedbackResponse = {
 };
 
 export type FeedbackListResponse = {
-  content: FeedbackResponse[];
-  totalElements: number;
+  items: FeedbackResponse[];
+  totalItems: number;
   totalPages: number;
-  number: number;
+  page: number;
   size: number;
 };
 
@@ -50,9 +50,9 @@ export async function getAdminFeedbacks(page = 0, size = 15, status?: string): P
 }
 
 export async function updateFeedbackStatus(feedbackId: string, status: string, adminNote?: string): Promise<FeedbackResponse> {
-  const res = await requestJson<FeedbackResponse>(`/api/admin/feedback/${feedbackId}`, {
+  const res = await requestJson<FeedbackResponse>(`/api/admin/feedback/${feedbackId}/status`, {
     method: "PATCH",
-    body: JSON.stringify({ status, adminNote }),
+    body: JSON.stringify({ status, adminNote: adminNote ?? null }),
   });
   if (!res.data) throw new Error(res.message || "Cập nhật feedback thất bại");
   return res.data;

@@ -597,7 +597,7 @@ function formatVnd(amount: number) {
   return new Intl.NumberFormat("vi-VN", { style:"currency", currency:"VND" }).format(amount);
 }
 
-function SubscriptionTab() {
+function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: () => void }) {
   /* ── Server data ── */
   const [subData,   setSubData]   = useState<CurrentSubscriptionResponse | null>(null);
   const [quotaData, setQuotaData] = useState<QuotaStatusResponse | null>(null);
@@ -678,7 +678,8 @@ function SubscriptionTab() {
       if (s === "SUCCESS" || s === "COMPLETED" || s === "PAID") {
         stopPolling();
         setCheckoutStep("success");
-        void loadData(); // refresh subscription after payment confirmed
+        void loadData();
+        onSubscriptionChanged?.();
         return;
       }
       if (s === "FAILED" || s === "EXPIRED" || s === "CANCELED") {
@@ -798,6 +799,7 @@ function SubscriptionTab() {
       setCancelConfirmOpen(false);
       toast.success("Đã hủy gói thành công. Gói của bạn sẽ hết hạn vào cuối kỳ thanh toán.");
       void loadData();
+      onSubscriptionChanged?.();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Không thể hủy gói. Vui lòng thử lại.");
     } finally {
@@ -1349,7 +1351,9 @@ export default function Profile() {
               transition={{duration:0.2}}
             >
               {activeTab === "account"       && <AccountTab profile={profile} onSave={handleUpdateProfile} saving={savingProfile} onAvatarUploaded={(updated) => setProfile(mapMeResponse(updated))}/>}
-              {activeTab === "subscription"  && <SubscriptionTab/>}
+              {activeTab === "subscription"  && <SubscriptionTab onSubscriptionChanged={() => {
+                getCurrentSubscription().then(sub => setSubData(sub)).catch(() => {});
+              }}/>}
               {activeTab === "achievements"  && <DevPlaceholderTab label="Thành tựu" icon="🏆" description="Hệ thống huy hiệu và thành tựu học tập đang được xây dựng. Sẽ ra mắt trong phiên bản tới."/>}
               {activeTab === "notifications" && <DevPlaceholderTab label="Cài đặt thông báo" icon="🔔" description="Tính năng tùy chỉnh thông báo đang phát triển. API backend chưa sẵn sàng."/>}
               {activeTab === "privacy"       && <DevPlaceholderTab label="Bảo mật & Quyền riêng tư" icon="🔒" description="Tính năng bảo mật nâng cao (2FA, nhật ký đăng nhập) đang được tích hợp."/>}

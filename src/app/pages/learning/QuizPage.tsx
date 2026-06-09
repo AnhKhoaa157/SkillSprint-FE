@@ -21,7 +21,7 @@ export default function QuizPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8 md:px-8">
+    <div className="min-h-screen bg-[#F1F5F9] px-4 py-8 md:px-8">
       <div className="mx-auto max-w-2xl">
         {/* Sửa lại prop truyền vào: đổi từ isPremium thành currentPlan và truyền trực tiếp planId */}
         <QuizContainer

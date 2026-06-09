@@ -375,10 +375,16 @@ export default function Roadmap() {
         if (!mounted) return;
 
         if (roadmapResult.status === "fulfilled") {
-          setRoadmapData(roadmapResult.value);
+          setRoadmapData(roadmapResult.value ?? null);
         } else {
-          setRoadmapData(null);
-          setError(roadmapResult.reason?.message || "Không thể tải lộ trình");
+          const reason = roadmapResult.reason;
+          // 404 = chưa generate, không phải lỗi → để render hiện generate UI
+          if (reason?.status === 404) {
+            setRoadmapData(null);
+          } else {
+            setRoadmapData(null);
+            setError(reason?.message || "Không thể tải lộ trình");
+          }
         }
 
         if (taskResult.status === "fulfilled") {
@@ -407,9 +413,9 @@ export default function Roadmap() {
     setError(null);
 
     try {
-      const data = await roadmapService.generateRoadmap(workspaceId);
-      setRoadmapData(data);
-      // No auto-select on generate either, keep centered
+      await roadmapService.generateRoadmap(workspaceId);
+      const fresh = await roadmapService.getRoadmap(workspaceId);
+      setRoadmapData(fresh);
     } catch (err: any) {
       setError(err?.message || "Không thể khởi tạo lộ trình");
     } finally {
@@ -491,15 +497,15 @@ export default function Roadmap() {
             </button>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex gap-4 mt-5 border-b border-slate-100 text-xs">
+          {/* Navigation Tabs — even pill strip */}
+          <div className="flex mt-4 rounded-xl bg-slate-50 border border-slate-100 p-1 gap-1">
             <button
               type="button"
               onClick={() => setDetailTab("overview")}
-              className={`pb-2.5 px-1 transition-all font-bold border-b-2 ${
+              className={`flex-1 py-2 px-2 rounded-lg text-[11px] font-bold transition-all ${
                 detailTab === "overview"
-                  ? "border-[#FF7E21] text-[#FF7E21]"
-                  : "border-transparent text-slate-500 hover:text-slate-850"
+                  ? "bg-white text-[#FF7E21] shadow-sm border border-orange-100/60"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-white/60"
               }`}
             >
               Tổng quan
@@ -507,15 +513,15 @@ export default function Roadmap() {
             <button
               type="button"
               onClick={() => setDetailTab("resources")}
-              className={`pb-2.5 px-1 transition-all font-bold border-b-2 flex items-center gap-1.5 ${
+              className={`flex-1 py-2 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 ${
                 detailTab === "resources"
-                  ? "border-[#FF7E21] text-[#FF7E21]"
-                  : "border-transparent text-slate-500 hover:text-slate-850"
+                  ? "bg-white text-[#FF7E21] shadow-sm border border-orange-100/60"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-white/60"
               }`}
             >
-              <span>Tài nguyên học</span>
+              <span>Tài nguyên</span>
               <span className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                detailTab === "resources" ? "bg-orange-50 text-[#FF7E21]" : "bg-slate-100 text-slate-600"
+                detailTab === "resources" ? "bg-orange-50 text-[#FF7E21]" : "bg-slate-200 text-slate-500"
               }`}>
                 {stepResources.length}
               </span>
@@ -523,20 +529,24 @@ export default function Roadmap() {
             <button
               type="button"
               onClick={() => setDetailTab("tutor")}
-              className={`pb-2.5 px-1 transition-all font-bold border-b-2 flex items-center gap-1.5 ml-auto ${
+              className={`flex-1 py-2 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 ${
                 detailTab === "tutor"
-                  ? "border-violet-500 text-violet-600"
-                  : "border-transparent text-slate-500 hover:text-slate-850"
+                  ? "bg-white text-orange-600 shadow-sm border border-orange-100/60"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-white/60"
               }`}
             >
-              <Bot className="h-3.5 w-3.5" />
+              <Bot className="h-3 w-3" />
               <span>Hỏi AI</span>
             </button>
           </div>
         </div>
 
         {/* Tab Contents */}
-        <div className={`flex-1 bg-white ${detailTab === "tutor" ? "overflow-hidden flex flex-col min-h-0 p-4" : "overflow-y-auto custom-scrollbar p-6"}`}>
+        <div className={`flex-1 bg-white ${
+          detailTab === "tutor"
+            ? "overflow-hidden flex flex-col min-h-0 px-4 pt-3 pb-4"
+            : "overflow-y-auto custom-scrollbar px-6 pt-5 pb-6"
+        }`}>
           {detailTab === "tutor" ? (
             <AiTutorChat
               key={getStepKey(step) ?? ""}
@@ -1045,7 +1055,7 @@ export default function Roadmap() {
                           <h3 className="text-[10px] font-bold tracking-tight text-slate-400 truncate leading-snug relative z-10 blur-[2px]" title={title}>
                             {title}
                           </h3>
-                          <span className="block text-[9px] font-semibold text-violet-500 relative z-10 mt-0.5">🔒 Mở khoá Pro</span>
+                          <span className="block text-[9px] font-semibold text-orange-500 relative z-10 mt-0.5">🔒 Mở khoá Pro</span>
                         </div>
                       </button>
                     ) : (
@@ -1191,21 +1201,21 @@ export default function Roadmap() {
             onClick={e => e.stopPropagation()}
           >
             {/* gradient banner */}
-            <div className="h-2 w-full bg-gradient-to-r from-violet-500 via-purple-500 to-orange-400" />
+            <div className="h-2 w-full bg-gradient-to-r from-orange-400 via-orange-500 to-amber-400" />
             <div className="px-7 pt-7 pb-8 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 border border-violet-100">
-                <Lock className="h-6 w-6 text-violet-600" />
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 border border-orange-100">
+                <Lock className="h-6 w-6 text-orange-500" />
               </div>
               <h2 className="text-xl font-extrabold text-slate-900 mb-2">Cột mốc bị khoá</h2>
               <p className="text-sm text-slate-500 leading-relaxed mb-6">
                 Gói <span className="font-bold text-slate-700">Miễn phí</span> chỉ mở 2 cột mốc đầu tiên.
-                Nâng cấp lên <span className="font-bold text-violet-600">Pro</span> để mở khoá toàn bộ lộ trình học tập.
+                Nâng cấp lên <span className="font-bold text-orange-600">Pro</span> để mở khoá toàn bộ lộ trình học tập.
               </p>
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => { setShowUpgradeModal(false); navigate("/pricing"); }}
                   className="w-full py-3 rounded-2xl text-sm font-bold text-white transition"
-                  style={{ background: "linear-gradient(135deg,#7C3AED,#FF6B00)" }}
+                  style={{ background: "linear-gradient(135deg,#EA580C,#FF6B00)" }}
                 >
                   Nâng cấp ngay →
                 </button>

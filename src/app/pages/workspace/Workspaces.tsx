@@ -317,7 +317,7 @@ export default function Workspaces() {
       setShowCreateModal(false);
       addNotification("create", "Tạo workspace thành công");
       window.dispatchEvent(new CustomEvent("workspace_created", { detail: { workspaceId: created.workspaceId } }));
-      navigate(`/app/workspaces/${normalized.id}`);
+      navigate(`/app/workspaces/${normalized.id}`, { state: { openOnboarding: true } });
     } catch (error) {
       console.error(error);
       addNotification("error", error instanceof Error ? error.message : "Tạo workspace thất bại");

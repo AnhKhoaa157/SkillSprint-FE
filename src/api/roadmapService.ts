@@ -65,21 +65,16 @@ export async function generateRoadmap(workspaceId: string): Promise<GenerateRoad
 /**
  * GET /api/workspaces/{workspaceId}/roadmaps/current
  * Lấy lộ trình hiện tại (đã generate) của workspace.
+ * Trả về null nếu backend trả 200 nhưng data = null (chưa generate).
  */
-export async function getMyRoadmap(workspaceId: string): Promise<RoadmapResponse> {
-  const res = await requestJson<RoadmapResponse>(`/api/workspaces/${workspaceId}/roadmaps/current`, { 
-    method: "GET" 
+export async function getMyRoadmap(workspaceId: string): Promise<RoadmapResponse | null> {
+  const res = await requestJson<RoadmapResponse>(`/api/workspaces/${workspaceId}/roadmaps/current`, {
+    method: "GET",
   });
 
-  // Safely unwrap the unified backend response.
-  const cleanData = res?.data || res;
+  if (!res.data) return null;
 
-  // If cleanData contains a steps array or roadmapId, return it immediately.
-  if (cleanData && typeof cleanData === "object" && (Array.isArray((cleanData as any).steps) || (cleanData as any).roadmapId)) {
-    return cleanData as RoadmapResponse;
-  }
-
-  throw new Error((res as any)?.message || "Operation failed");
+  return res.data;
 }
 
 // 👇 Alias export — MUST be declared BELOW the actual function to avoid hoisting issues.
