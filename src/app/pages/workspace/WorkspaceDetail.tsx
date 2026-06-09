@@ -344,6 +344,8 @@ export default function WorkspaceDetail() {
   const [roadmapError, setRoadmapError] = useState<string | null>(null);
   const [workspaceTutorOpen, setWorkspaceTutorOpen] = useState(false);
   
+  const generating = isGeneratingStructure || generateLoading;
+  
   const workspaceTabs: Array<{ id: WorkspaceDetailTab; label: string; icon: any }> = [
     { id: "files", label: "Tài liệu", icon: FileText },
     { id: "roadmap", label: "Roadmap", icon: Layers3 },
@@ -659,8 +661,73 @@ export default function WorkspaceDetail() {
 
         {/* ROADMAP TAB */}
         <div className={`${activeTab === "roadmap" ? "" : "hidden"}`}>
-          <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden p-6">
-            <LearningStructureDisplay chapters={visibleChapters} />
+          <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 border border-orange-100">
+                  <Layers3 className="h-4 w-4 text-[#FF6B00]" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-slate-800">Cấu trúc học tập AI</div>
+                  <div className="text-xs text-slate-400">Lộ trình được sinh tự động từ nội dung tài liệu</div>
+                </div>
+              </div>
+              {results && (
+                normalizedStatus === 'CONFIRMED' ? (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    <CheckCircle2 className="w-3.5 h-3.5" />Đã xác nhận
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[#FFF7ED] border border-[#FFEDD5] px-3 py-1 text-xs font-semibold text-[#FF6B00]">
+                    <ShieldCheck className="w-3.5 h-3.5" />Chờ xác nhận
+                  </div>
+                )
+              )}
+            </div>
+            <div className="p-6">
+              {!results ? (
+                (isGeneratingStructure || generateLoading) ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-orange-50 border border-orange-100 text-[#FF6B00]"><LoaderCircle className="h-9 w-9 animate-spin" /></div>
+                    <div>
+                      <div className="text-base font-bold text-slate-800">Đang sinh lộ trình...</div>
+                      <div className="text-sm text-slate-400 mt-1">Hệ thống đang phân tích và tổng hợp nội dung. Vui lòng chờ.</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-slate-50 border border-slate-200 text-slate-300"><Layers3 className="h-9 w-9" /></div>
+                    <div>
+                      <div className="text-base font-bold text-slate-700">Chưa có cấu trúc học tập</div>
+                      <div className="text-sm text-slate-400 mt-1 max-w-sm">Tải lên tài liệu và chờ xử lý xong để sinh lộ trình học bằng AI.</div>
+                    </div>
+                    <button type="button" onClick={handleRegenerateStructure} disabled={generating || confirming} className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] disabled:cursor-not-allowed disabled:opacity-50 transition">
+                      <Sparkles className="h-4 w-4" />{generating ? "Đang phân tích..." : "Phân tích AI"}
+                    </button>
+                  </div>
+                )
+              ) : (
+                <div className="space-y-5">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {normalizedStatus === 'CONFIRMED' ? (
+                      <button type="button" onClick={() => navigate(`/app/workspaces/${id}/roadmap`)} className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] transition">
+                        <Sparkles className="h-4 w-4" />Xem lộ trình học tập chi tiết
+                      </button>
+                    ) : (
+                      <>
+                        <button type="button" onClick={handleRegenerateStructure} disabled={generating || confirming} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 transition">
+                          {generating ? '⏳ Đang tạo lại...' : '🔄 Tạo lại cấu trúc'}
+                        </button>
+                        <button type="button" onClick={handleConfirm} disabled={confirming || generating} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-500/15 hover:bg-emerald-700 disabled:opacity-50 transition">
+                          <Check size={16} />{confirming ? 'Đang lưu...' : 'Chấp nhận lộ trình'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <LearningStructureDisplay chapters={visibleChapters} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
