@@ -6,7 +6,8 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
 import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
-import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Zap, LoaderCircle, SlidersHorizontal, Check, Calendar } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Zap, LoaderCircle, SlidersHorizontal, Check, Calendar, RefreshCw, type LucideIcon } from "lucide-react";
+import EmptyState from "../../components/ui/EmptyState";
 import { getStoredAuthSession } from "../../../api/authService";
 import AiTutorChat from "./AiTutorChat";
 import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/materialService.ts";
@@ -25,11 +26,17 @@ type UploadFile = {
   materialId?: string;
 };
 
+type LearningStructureTopic = {
+  title: string;
+  summaryContent: string;
+  keyConcepts: string[];
+};
+
 type LearningStructureChapter = {
   title: string;
   summary: string;
   keyConcepts: string[];
-  topics: any[];
+  topics: LearningStructureTopic[];
 };
 
 type LearningStructureResponse = {
@@ -43,23 +50,12 @@ type ApiResponse<T> = { data?: T; [key: string]: unknown; };
 type StepStatus = 'completed' | 'active' | 'pending';
 type WorkspaceDetailTab = "files" | "roadmap" | "progress" | "config";
 
-function toWorkspaceCode(rawId?: string) {
-  if (!rawId) return "WS-CHUA-CO";
-  const num = Number(rawId);
-  if (Number.isFinite(num)) return `WS-${Math.abs(Math.floor(num)).toString(36).toUpperCase().slice(-6).padStart(6, "0")}`;
-  return `WS-${rawId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(-6).padStart(6, "0")}`;
-}
-
 function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
   const headers: Record<string, string> = includeJsonContentType ? { "Content-Type": "application/json" } : {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const session = getStoredAuthSession();
   if (session?.sessionId) headers["X-Session-Id"] = session.sessionId;
   return headers;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isProcessingState(status: string | null | undefined): boolean {
@@ -176,8 +172,7 @@ export default function WorkspaceDetail() {
         if (!p && !shouldOpenOnboarding) {
           setIsOnboardingOpen(true);
         }
-      } catch (err: any) {
-        console.error('Failed to load onboarding profile', err);
+      } catch {
         if (!shouldOpenOnboarding) toast.error('Không thể tải cài đặt lộ trình (server lỗi)');
       }
     })();
@@ -189,17 +184,17 @@ export default function WorkspaceDetail() {
         const current = list.find(item => item.id === id);
         if (current?.name) setWorkspaceName(current.name);
       }
-    } catch (e) {}
+    } catch { /* ignore malformed local cache */ }
 
     if (id) {
       workspaceService.getWorkspace(id)
         .then(data => { if (data && data.name) setWorkspaceName(data.name); })
-        .catch(err => console.error("Failed to fetch workspace detail", err));
+        .catch(() => toast.error("Không thể tải thông tin workspace"));
     }
     void reloadWorkspaceMaterials();
 
     return () => {
-      try { Object.values(processingIntervals.current).forEach(iv => clearInterval(iv)); } catch (e) {}
+      Object.values(processingIntervals.current).forEach(iv => clearInterval(iv));
       processingIntervals.current = {};
       stopStructurePolling();
     };
@@ -265,8 +260,7 @@ export default function WorkspaceDetail() {
         setFiles(prev => prev.filter(item => item.materialId !== file.materialId));
         toast.success('Đã xóa file khỏi backend');
         return;
-      } catch (error) {
-        console.error('Delete material error', error);
+      } catch {
         toast.error('Không thể xóa file trên backend');
         return;
       }
@@ -275,18 +269,18 @@ export default function WorkspaceDetail() {
     toast.info('Đã ẩn file khỏi danh sách');
   }
 
-  async function fetchLearningStructure(): Promise<any> {
+  async function fetchLearningStructure(): Promise<ApiResponse<LearningStructureResponse> | LearningStructureResponse | null> {
     if (!id) return null;
     try {
       const headers = buildAuthHeaders(token);
       const resp = await fetch(`${API_BASE}/api/workspaces/${id}/learning-structure`, { method: 'GET', headers });
       if (resp.status === 404) { setResults(null); return null; }
       if (!resp.ok) throw new Error(`Learning structure fetch failed: ${resp.status}`);
-      const res = await resp.json().catch(() => null);
+      const res = (await resp.json().catch(() => null)) as ApiResponse<LearningStructureResponse> | LearningStructureResponse | null;
       setResults(res);
       return res;
-    } catch (err: any) {
-      if (String(err?.message || '').includes('404')) setResults(null);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message.includes('404')) setResults(null);
       return null;
     }
   }
@@ -295,12 +289,11 @@ export default function WorkspaceDetail() {
   const [isGeneratingStructure, setIsGeneratingStructure] = useState(false);
   const [structureGenerationRequested, setStructureGenerationRequested] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const [roadmapError] = useState<string | null>(null);
   const [workspaceTutorOpen, setWorkspaceTutorOpen] = useState(false);
-  
+
   const generating = isGeneratingStructure || generateLoading;
-  
-  const workspaceTabs: Array<{ id: WorkspaceDetailTab; label: string; icon: any }> = [
+
+  const workspaceTabs: Array<{ id: WorkspaceDetailTab; label: string; icon: LucideIcon }> = [
     { id: "files", label: "Tài liệu", icon: FileText },
     { id: "roadmap", label: "Roadmap", icon: Layers3 },
     { id: "progress", label: "Tiến độ", icon: Radar },
@@ -312,11 +305,11 @@ export default function WorkspaceDetail() {
     setMaterialsLoading(true);
     try {
       const materials = await materialService.getWorkspaceMaterials(id);
-      const mapped = materials.map((m: any, idx: number) => normalizeMaterialUploadFile(m, idx));
+      const mapped = materials.map((m, idx) => normalizeMaterialUploadFile(m, idx));
       setFiles(mapped);
-      mapped.filter((item: any) => item.status === "processing").forEach((item: any) => startProcessingPolling(item.materialId ?? item.id));
-    } catch (err) {
-      console.error("Failed to load materials", err);
+      mapped.filter((item) => item.status === "processing").forEach((item) => startProcessingPolling(item.materialId ?? item.id));
+    } catch {
+      toast.error("Không thể tải danh sách tài liệu");
     } finally {
       setMaterialsLoading(false);
     }
@@ -341,8 +334,7 @@ export default function WorkspaceDetail() {
       stopStructurePolling();
       startStructurePolling();
       await fetchLearningStructure();
-    } catch (err: any) {
-      console.error('Generate error', err);
+    } catch {
       toast.error(isRegenerate ? 'Không thể tạo lại cấu trúc' : 'Không thể bắt đầu phân tích', { id: 'structure-generation' });
       setIsGeneratingStructure(false);
       setStructureGenerationRequested(false);
@@ -362,7 +354,7 @@ export default function WorkspaceDetail() {
       toast.success('Lộ trình đã được xác nhận');
       if (confPayload) setResults(confPayload);
       setStructureGenerationRequested(true);
-    } catch (err: any) { console.error('Confirm error', err); toast.error('Không thể xác nhận lộ trình'); }
+    } catch { toast.error('Không thể xác nhận lộ trình'); }
     finally { setConfirming(false); }
   }
 
@@ -409,10 +401,11 @@ export default function WorkspaceDetail() {
           setFiles(prev => prev.map(x => x.id === localId ? { ...x, materialId: String(returnedMaterialId || objectKey || localId), progress: Number.isFinite(returnedProgress) ? Number(returnedProgress) : 0, status: String(returnedJobStatus || '').toUpperCase() === 'COMPLETED' ? 'done' : 'processing', jobStatus: returnedJobStatus || 'PENDING' } : x));
           startProcessingPolling(String(returnedMaterialId || objectKey || localId));
           toast.success('Tải lên thành công — bắt đầu phân tích');
-        } catch (err: any) {
-          console.error('Upload error', err);
+        } catch (err: unknown) {
           setFiles(prev => prev.map(x => x.id === localId ? { ...x, status: 'idle' } : x));
-          toast.error('Không thể tải lên file');
+          if (!(err instanceof DOMException && err.name === 'AbortError')) {
+            toast.error('Không thể tải lên file');
+          }
         }
       })();
     });
@@ -452,8 +445,6 @@ export default function WorkspaceDetail() {
             );
           })}
         </div>
-
-        {roadmapError && <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">{roadmapError}</div>}
 
         {/* FILES TAB */}
         <div className={`${activeTab === "files" ? "flex flex-col lg:flex-row gap-6 mb-6" : "hidden"}`}>
@@ -495,11 +486,29 @@ export default function WorkspaceDetail() {
                 {materialsLoading && <LoaderCircle className="h-4 w-4 animate-spin text-[#FF6B00]" />}
               </div>
 
-              {files.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
-                  <div className="mb-3 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-slate-50 text-slate-300"><FileText className="h-6 w-6 sm:h-7 sm:w-7" /></div>
-                  <div className="text-sm font-semibold text-slate-500">Chưa có tài liệu nào</div>
+              {materialsLoading && files.length === 0 ? (
+                <div className="divide-y divide-slate-50" aria-busy="true">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="flex items-center gap-4 px-6 py-4">
+                      <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-200/80 animate-pulse" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3.5 w-2/3 rounded bg-slate-200/80 animate-pulse" />
+                        <div className="h-2.5 w-1/3 rounded bg-slate-100 animate-pulse" />
+                      </div>
+                      <div className="h-6 w-20 rounded-full bg-slate-100 animate-pulse" />
+                    </div>
+                  ))}
                 </div>
+              ) : files.length === 0 ? (
+                <EmptyState
+                  variant="plain"
+                  icon={FileText}
+                  title="Chưa có tài liệu nào — hãy tải lên tài liệu đầu tiên!"
+                  description="Thêm PDF, DOCX hoặc TXT để AI bắt đầu phân tích và xây dựng lộ trình học cho bạn."
+                  actionLabel="Chọn file ngay"
+                  actionIcon={FileUp}
+                  onAction={() => fileRef.current?.click()}
+                />
               ) : (
                 <div className="divide-y divide-slate-50">
                   {files.map(f => (
@@ -561,8 +570,9 @@ export default function WorkspaceDetail() {
                   })}
                 </ol>
                 {files.length > 0 && !results && (
-                  <button type="button" onClick={handleGenerate} disabled={generateLoading} className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#E05E00]">
-                    <Sparkles className="h-4 w-4" /> Phân tích AI ngay
+                  <button type="button" onClick={handleGenerate} disabled={generateLoading} className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#E05E00] disabled:opacity-60 disabled:cursor-not-allowed">
+                    {generateLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {generateLoading ? "Đang phân tích..." : "Phân tích AI ngay"}
                   </button>
                 )}
               </div>
@@ -668,11 +678,13 @@ export default function WorkspaceDetail() {
                       </button>
                     ) : (
                       <>
-                        <button type="button" onClick={handleRegenerateStructure} disabled={generating || confirming} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 transition">
-                          {generating ? '⏳ Đang tạo lại...' : '🔄 Tạo lại cấu trúc'}
+                        <button type="button" onClick={handleRegenerateStructure} disabled={generating || confirming} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed transition">
+                          {generating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          {generating ? 'Đang tạo lại...' : 'Tạo lại cấu trúc'}
                         </button>
-                        <button type="button" onClick={handleConfirm} disabled={confirming || generating} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-500/15 hover:bg-emerald-700 disabled:opacity-50 transition">
-                          <Check size={16} />{confirming ? 'Đang lưu...' : 'Chấp nhận lộ trình'}
+                        <button type="button" onClick={handleConfirm} disabled={confirming || generating} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-500/15 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition">
+                          {confirming ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check size={16} />}
+                          {confirming ? 'Đang lưu...' : 'Chấp nhận lộ trình'}
                         </button>
                       </>
                     )}

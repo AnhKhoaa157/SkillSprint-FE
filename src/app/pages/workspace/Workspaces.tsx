@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import workspaceService from "../../../api/workspaceService";
 import {
   AlertTriangle,
@@ -7,7 +8,6 @@ import {
   BookOpenCheck,
   Check,
   LayoutGrid,
-  PencilLine,
   Plus,
   Sparkles,
   Trash2,
@@ -17,6 +17,7 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import WorkspaceCard from "../../components/workspace/WorkspaceCard";
+import EmptyState from "../../components/ui/EmptyState";
 
 type WorkspaceLearningStructure = {
   status?: "DRAFT" | "CONFIRMED" | string;
@@ -59,13 +60,7 @@ type WorkspaceItem = {
   raw: WorkspaceApiItem;
 };
 
-type NotificationVariant = "create" | "update" | "delete" | "error" | "success";
-
-type NotificationItem = {
-  id: string;
-  variant: NotificationVariant;
-  message: string;
-};
+type SortOption = "newest" | "alphabetical" | "documents";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -198,8 +193,6 @@ export default function Workspaces() {
   const navigate = useNavigate();
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reloadToken, setReloadToken] = useState(0);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [nameError, setNameError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("");
@@ -207,7 +200,7 @@ export default function Workspaces() {
   const [deleteTarget, setDeleteTarget] = useState<WorkspaceItem | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"newest" | "alphabetical" | "documents">("newest");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   useEffect(() => {
     let active = true;
@@ -217,17 +210,15 @@ export default function Workspaces() {
 
       try {
         const res = (await workspaceService.getMyWorkspaces()) as unknown;
-        console.log("DEBUG_RAW_WORKSPACES_PAYLOAD:", res);
         const mapped = extractWorkspaceItems(res).map((workspace, index) => normalizeWorkspaceItem(workspace, index));
 
         if (active) {
           setWorkspaces(mapped);
         }
       } catch (error) {
-        console.error(error);
         if (active) {
           setWorkspaces([]);
-          addNotification("error", error instanceof Error ? error.message : "Không thể tải workspaces");
+          toast.error(error instanceof Error ? error.message : "Không thể tải workspaces");
         }
       } finally {
         if (active) {
@@ -241,7 +232,7 @@ export default function Workspaces() {
     return () => {
       active = false;
     };
-  }, [reloadToken]);
+  }, []);
 
   const filteredAndSortedWorkspaces = useMemo(() => {
     let result = [...workspaces];
@@ -272,15 +263,6 @@ export default function Workspaces() {
     return result;
   }, [workspaces, searchQuery, sortBy]);
 
-  function addNotification(variant: NotificationVariant, message: string) {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    setNotifications((current) => [{ id, variant, message }, ...current].slice(0, 4));
-
-    window.setTimeout(() => {
-      setNotifications((current) => current.filter((item) => item.id !== id));
-    }, 3500);
-  }
-
   const openCreateModal = () => {
     setNameError(null);
     setWorkspaceName("");
@@ -303,7 +285,7 @@ export default function Workspaces() {
 
     if (workspaces.some((workspace) => workspace.name.trim().toLowerCase() === trimmedName.toLowerCase())) {
       setNameError("Tên workspace đã tồn tại");
-      addNotification("error", "Tên workspace đã tồn tại");
+      toast.error("Tên workspace đã tồn tại");
       return;
     }
 
@@ -315,12 +297,11 @@ export default function Workspaces() {
       setWorkspaces((current) => [normalized, ...current]);
       setWorkspaceName("");
       setShowCreateModal(false);
-      addNotification("create", "Tạo workspace thành công");
+      toast.success("Tạo workspace thành công");
       window.dispatchEvent(new CustomEvent("workspace_created", { detail: { workspaceId: created.workspaceId } }));
       navigate(`/app/workspaces/${normalized.id}`, { state: { openOnboarding: true } });
     } catch (error) {
-      console.error(error);
-      addNotification("error", error instanceof Error ? error.message : "Tạo workspace thất bại");
+      toast.error(error instanceof Error ? error.message : "Tạo workspace thất bại");
     } finally {
       setActionBusy(false);
     }
@@ -338,7 +319,7 @@ export default function Workspaces() {
 
     if (workspaces.some((workspace) => workspace.id !== editTarget.id && workspace.name.trim().toLowerCase() === trimmedName.toLowerCase())) {
       setNameError("Tên workspace đã tồn tại");
-      addNotification("error", "Tên workspace đã tồn tại");
+      toast.error("Tên workspace đã tồn tại");
       return;
     }
 
@@ -360,11 +341,10 @@ export default function Workspaces() {
       );
       setWorkspaceName("");
       setEditTarget(null);
-      addNotification("update", "Cập nhật workspace thành công");
+      toast.success("Cập nhật workspace thành công");
       window.dispatchEvent(new CustomEvent("workspace_updated", { detail: { workspaceId: editTarget.id } }));
     } catch (error) {
-      console.error(error);
-      addNotification("error", error instanceof Error ? error.message : "Cập nhật workspace thất bại");
+      toast.error(error instanceof Error ? error.message : "Cập nhật workspace thất bại");
     } finally {
       setActionBusy(false);
     }
@@ -379,12 +359,11 @@ export default function Workspaces() {
       await workspaceService.deleteWorkspace(deleteTarget.id);
       setWorkspaces((current) => current.filter((workspace) => workspace.id !== deleteTarget.id));
       setDeleteTarget(null);
-      addNotification("delete", "Xóa workspace thành công");
+      toast.success("Xóa workspace thành công");
       window.dispatchEvent(new CustomEvent("workspace_deleted", { detail: { workspaceId: deleteTarget.id } }));
       navigate("/app/workspaces");
     } catch (error) {
-      console.error(error);
-      addNotification("error", error instanceof Error ? error.message : "Xóa workspace thất bại");
+      toast.error(error instanceof Error ? error.message : "Xóa workspace thất bại");
     } finally {
       setActionBusy(false);
     }
@@ -458,28 +437,40 @@ export default function Workspaces() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm p-12 text-sm font-semibold text-slate-500 shadow-sm">
-            <LoaderCircle className="h-5 w-5 animate-spin text-[#FF7E21] mr-2.5" />
-            Đang tải danh sách các không gian học tập của bạn...
+          <div className="flex flex-col gap-6" aria-busy="true">
+            {/* Search/filter bar skeleton */}
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/50 bg-white/60 p-4">
+              <div className="h-10 w-full max-w-md rounded-xl bg-slate-200/80 animate-pulse" />
+              <div className="hidden h-10 w-40 rounded-xl bg-slate-100 animate-pulse md:block" />
+            </div>
+            {/* Card grid skeleton mirroring WorkspaceCard dimensions */}
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-2xl bg-slate-200/80 animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-3/4 rounded bg-slate-200/80 animate-pulse" />
+                      <div className="h-3 w-1/2 rounded bg-slate-100 animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="h-3 w-full rounded bg-slate-100 animate-pulse" />
+                  <div className="h-3 w-2/3 rounded bg-slate-100 animate-pulse" />
+                  <div className="mt-2 h-9 w-full rounded-xl bg-slate-200/80 animate-pulse" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : workspaces.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white/80 p-16 text-center shadow-sm backdrop-blur-sm">
-            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#FFF7ED] text-[#FF7E21] border border-[#FFEDD5] shadow-lg shadow-[#FF7E21]/5">
-              <LayoutGrid className="h-9 w-9" />
-            </div>
-            <h3 className="text-xl font-extrabold text-slate-900">Chưa có workspace nào</h3>
-            <p className="mx-auto mt-2.5 max-w-md text-sm leading-relaxed text-slate-500">
-              Hãy tạo không gian học tập đầu tiên của bạn để bắt đầu tải tài liệu học tập lên S3 và thiết lập lộ trình học tập thông minh AI.
-            </p>
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
-            >
-              <Sparkles className="h-4 w-4 text-amber-400" />
-              Tạo workspace ngay
-            </button>
-          </div>
+          <EmptyState
+            icon={LayoutGrid}
+            title="Chưa có workspace nào — hãy khởi động dự án đầu tiên của bạn!"
+            description="Tạo không gian học tập đầu tiên để bắt đầu tải tài liệu lên và thiết lập lộ trình học tập thông minh bằng AI."
+            actionLabel="Tạo workspace ngay"
+            actionIcon={Sparkles}
+            onAction={openCreateModal}
+            className="p-16"
+          />
         ) : (
           <div className="flex flex-col gap-6">
             {/* Search and filter bar */}
@@ -510,7 +501,7 @@ export default function Workspaces() {
                 </div>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
                   className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-600 outline-none transition focus:border-[#FF7E21]/60 focus:ring-4 focus:ring-[#FF7E21]/5 cursor-pointer shadow-sm"
                 >
                   <option value="newest">Mới nhất</option>
@@ -597,10 +588,13 @@ export default function Workspaces() {
                     type="button"
                     onClick={() => void submitCreateWorkspace()}
                     disabled={actionBusy}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-md shadow-emerald-500/10 hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98] transition-all duration-300 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-md shadow-emerald-500/10 hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {actionBusy ? "Đang tạo..." : "Tạo workspace"}
-                    <ArrowRight className="h-4 w-4" />
+                    {actionBusy ? (
+                      <><LoaderCircle className="h-4 w-4 animate-spin" />Đang tạo...</>
+                    ) : (
+                      <>Tạo workspace<ArrowRight className="h-4 w-4" /></>
+                    )}
                   </button>
                   <button
                     type="button"
@@ -686,9 +680,9 @@ export default function Workspaces() {
                   type="button"
                   onClick={() => void submitRenameWorkspace()}
                   disabled={actionBusy}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-md shadow-emerald-500/10 hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98] transition-all duration-300 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-md shadow-emerald-500/10 hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Check className="h-4 w-4" />
+                  {actionBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   {actionBusy ? "Đang lưu..." : "Lưu thay đổi"}
                 </button>
                 <button
@@ -724,9 +718,9 @@ export default function Workspaces() {
                   type="button"
                   onClick={() => void submitDeleteWorkspace()}
                   disabled={actionBusy}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  {actionBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   {actionBusy ? "Đang xóa..." : "Xóa workspace"}
                 </button>
                 <button
@@ -742,38 +736,6 @@ export default function Workspaces() {
         </div>
       )}
 
-      <div className="fixed right-4 top-20 z-[600] flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-hidden">
-        {notifications.map((notification) => {
-          let classes = "border-emerald-200 bg-emerald-50 text-emerald-800";
-          let icon = <Check className="h-4 w-4" />;
-
-          if (notification.variant === "update") {
-            classes = "border-amber-200 bg-amber-50 text-amber-800";
-            icon = <PencilLine className="h-4 w-4" />;
-          } else if (notification.variant === "delete") {
-            classes = "border-rose-200 bg-rose-50 text-rose-800";
-            icon = <Trash2 className="h-4 w-4" />;
-          } else if (notification.variant === "error") {
-            classes = "border-rose-200 bg-rose-50 text-rose-800";
-            icon = <AlertTriangle className="h-4 w-4" />;
-          } else if (notification.variant === "create") {
-            classes = "border-emerald-200 bg-emerald-50 text-emerald-800";
-            icon = <Sparkles className="h-4 w-4" />;
-          }
-
-          return (
-            <div
-              key={notification.id}
-              className={`min-w-[280px] max-w-[380px] rounded-2xl border px-4 py-3 shadow-[0_10px_30px_rgba(2,6,23,0.12)] ${classes}`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/70">{icon}</div>
-                <div className="text-sm font-bold leading-5">{notification.message}</div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
