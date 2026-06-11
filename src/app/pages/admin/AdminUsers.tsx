@@ -15,6 +15,78 @@ function statusBadge(status: string) {
   return STATUS_BADGE[String(status).toUpperCase()] ?? { bg: "#F3F4F6", text: "#6B7280", border: "#E5E7EB", label: status };
 }
 
+type AvatarCapableUser = AdminUserSummary & {
+  avatarUrl?: string | null;
+  avatar?: string | null;
+  userAvatar?: string | null;
+};
+
+function getUserInitial(user: AdminUserSummary) {
+  return (user.fullName || user.email || "?").charAt(0).toUpperCase();
+}
+
+// HÀM TẠO AVATAR THÔNG MINH: Tự sinh ảnh avatar đẹp từ UI-Avatars bằng tên user nếu DB không trả về link ảnh
+function getUserAvatarUrl(user: AdminUserSummary) {
+  const avatarUser = user as AvatarCapableUser;
+  const candidate = avatarUser.avatarUrl || avatarUser.avatar || avatarUser.userAvatar;
+
+  if (typeof candidate !== "string") return "";
+
+  const trimmedCandidate = candidate.trim();
+  const normalizedCandidate = trimmedCandidate.toLowerCase();
+
+  if (
+    !trimmedCandidate ||
+    normalizedCandidate === "null" ||
+    normalizedCandidate === "undefined"
+  ) {
+    return "";
+  }
+
+  return trimmedCandidate;
+}
+
+function UserAvatar({ user }: { user: AdminUserSummary }) {
+  const avatarUrl = getUserAvatarUrl(user);
+  const initial = getUserInitial(user);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [avatarUrl]);
+
+  const hasValidAvatarUrl = avatarUrl.trim().length > 0;
+  const shouldShowImage = hasValidAvatarUrl && !imgError;
+
+  return (
+    <div className="relative flex w-10 h-10 shrink-0 items-center justify-center">
+      {shouldShowImage ? (
+        <img
+          src={avatarUrl}
+          alt={user.fullName || user.email || "User avatar"}
+          className="w-10 h-10 rounded-full object-cover border border-slate-100 shadow-sm"
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+            setImgError(true);
+          }}
+        />
+      ) : (
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm text-center"
+          style={{
+            background: "linear-gradient(135deg,#7C3AED,#FF6B00)",
+            color: "#fff",
+            fontWeight: 800,
+            fontSize: "0.88rem",
+          }}
+        >
+          {initial}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -39,7 +111,10 @@ export default function AdminUsers() {
     return () => { cancelled = true; };
   };
 
-  useEffect(() => load(0), []);
+  useEffect(() => {
+    const cancel = load(0);
+    return () => cancel?.();
+  }, []);
 
   return (
     <div className="min-h-screen p-7" style={{ background: "#F1F5F9", fontFamily: "'Inter',sans-serif" }}>
@@ -95,12 +170,12 @@ export default function AdminUsers() {
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => load(0)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm active:scale-[0.98]"
                 style={{ background: "linear-gradient(135deg,#FF6B00,#EA580C)" }}>
                 Tìm kiếm
               </button>
               <button onClick={() => { setSearch(""); load(0, ""); }}
-                className="px-4 py-2 rounded-xl text-xs font-semibold transition-all"
+                className="px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
                 style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#64748B" }}>
                 Xóa lọc
               </button>
@@ -147,9 +222,7 @@ export default function AdminUsers() {
                       onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
                       <td style={{ padding: "12px 16px" }}>
                         <div className="flex items-center gap-3">
-                          <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#7C3AED,#FF6B00)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.88rem", flexShrink: 0 }}>
-                            {(u.fullName || u.email || "?").charAt(0).toUpperCase()}
-                          </div>
+                          <UserAvatar user={u} />
                           <div className="min-w-0">
                             <p style={{ fontWeight: 700, color: "#0F172A", fontSize: "0.85rem", lineHeight: 1.2 }}>{u.fullName || "Chưa cập nhật tên"}</p>
                             <p style={{ color: "#64748B", fontSize: "0.75rem", marginTop: 2 }} className="truncate max-w-[200px]">{u.email}</p>
@@ -172,10 +245,10 @@ export default function AdminUsers() {
                       <td style={{ padding: "12px 16px" }}>
                         <button
                           onClick={() => navigate(`/admin/users/${encodeURIComponent(u.id)}`)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer"
                           style={{ background: "rgba(124,58,237,0.07)", border: "1px solid rgba(124,58,237,0.2)", color: "#5B21B6" }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.14)"; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.07)"; }}>
+                          onMouseEnter={e => { if(e.currentTarget) e.currentTarget.style.background = "rgba(124,58,237,0.14)"; }}
+                          onMouseLeave={e => { if(e.currentTarget) e.currentTarget.style.background = "rgba(124,58,237,0.07)"; }}>
                           Chi tiết →
                         </button>
                       </td>
@@ -191,13 +264,11 @@ export default function AdminUsers() {
             <span style={{ fontSize: "0.8rem", color: "#64748B" }}>Hiển thị {users.length} / {total.toLocaleString()} người dùng</span>
             <div className="flex items-center gap-2">
               <button onClick={() => load(Math.max(0, page - 1))} disabled={page === 0 || loading}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                style={{ border: "1px solid #E2E8F0", background: "#fff", color: "#334155", opacity: page === 0 || loading ? 0.4 : 1, cursor: page === 0 || loading ? "not-allowed" : "pointer" }}>
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">
                 ← Trước
               </button>
               <button onClick={() => load(page + 1)} disabled={users.length < size || loading}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                style={{ border: "1px solid #E2E8F0", background: "#fff", color: "#334155", opacity: users.length < size || loading ? 0.4 : 1, cursor: users.length < size || loading ? "not-allowed" : "pointer" }}>
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">
                 Tiếp →
               </button>
             </div>
