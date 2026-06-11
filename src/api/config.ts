@@ -1,7 +1,7 @@
 const LOCAL_API_BASE = "http://localhost:8080";
 const PRODUCTION_API_BASE = "https://api.skillsprint.site";
 
-// Check trực tiếp client-side xem có phải môi trường production thật không
+// Kiểm tra nghiêm ngặt môi trường chạy thực tế dựa trên Hostname của trình duyệt
 const isStrictProd = window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
 
 const env = (import.meta as any).env as {
@@ -26,8 +26,10 @@ export const API_BASE = configuredApiBase;
 // 2. Cấu hình AWS Cognito Domain
 export const COGNITO_DOMAIN = env.VITE_COGNITO_DOMAIN?.replace(/\/$/, "") || "https://ap-southeast-1zylkslsqu.auth.ap-southeast-1.amazoncognito.com";
 
-// 3. Cấu hình Cognito Client ID (Bao gồm Fallback chuẩn SPA không secret cho cả local và prod)
+// 3. Cấu hình Cognito Client ID
 export const COGNITO_CLIENT_ID = env.VITE_COGNITO_CLIENT_ID || "6ovoqlj3dialglnc3j8pabpru8";
 
-// 4. Cấu hình Redirect URI tự động co giãn theo Origin hiện tại (Bảo đảm không lệch www / no-www)
-export const COGNITO_REDIRECT_URI = env.VITE_COGNITO_REDIRECT_URI || `${window.location.origin}/auth/callback`;
+// 4. KHÓA CỨNG REDIRECT URI THEO TRÌNH DUYỆT (Xóa bỏ hoàn toàn biến env gây nhiễu link)
+// User vào bằng https://skillsprint.site -> Redirect về đúng https://skillsprint.site/auth/callback
+// User vào bằng https://www.skillsprint.site -> Redirect về đúng https://www.skillsprint.site/auth/callback
+export const COGNITO_REDIRECT_URI = `${window.location.origin}/auth/callback`;
