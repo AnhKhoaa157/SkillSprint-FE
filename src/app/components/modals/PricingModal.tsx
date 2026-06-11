@@ -563,7 +563,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
             </>
           )}
 
-          {/* ════ STEP 2: CỔNG QR CHECKOUT LÊN LIGHT MODE (Đã sửa lỗi thanh quét đơ) ════ */}
+          {/* ════ STEP 2: CỔNG QR CHECKOUT ════ */}
           {step === "checkout" && paymentData && (
             <div className="grid grid-cols-1 md:grid-cols-12 min-h-[500px]">
               
@@ -581,7 +581,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
 
                   <div className="mb-8">
                     <p className="text-3xl font-black text-[#FF6B00] tracking-tight">{formatVnd(paymentData.amount)}</p>
-                    <p className="text-xs text-slate-400 font-medium mt-1">Gia gia hạn tự động hàng tháng an toàn</p>
+                    <p className="text-xs text-slate-400 font-medium mt-1">Gia gia hạn tự động hàng tháng an sau an toàn</p>
                   </div>
 
                   {/* Khối MEMO chuyển khoản */}
@@ -630,7 +630,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                 {/* Khung chứa ảnh QR Code */}
                 <div className="relative w-52 h-52 bg-white p-3 rounded-2xl border border-slate-200 shadow-[0_12px_40px_rgba(0,0,0,0.06)] flex items-center justify-center group overflow-hidden">
                   
-                  {/* FIX CHÍ MẠNG: Thanh quét quét Laser tịnh tiến lên xuống mượt mà vô hạn */}
+                  {/* Thanh quét quét Laser tịnh tiến lên xuống mượt mà vô hạn */}
                   <div 
                     className="absolute left-0 right-0 h-0.5 bg-[#FF6B00] shadow-[0_0_12px_4px_rgba(255,107,0,0.8)] z-10 pointer-events-none" 
                     style={{
@@ -684,25 +684,34 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
             </div>
           )}
 
-          {/* ════ STEP 3: MÀN HÌNH SUCCESS ════ */}
+          {/* ════ STEP 3: MÀN HÌNH SUCCESS (TEMPLATE TRẮNG CAM + DYNAMIC NAME TỪ API) ════ */}
           {step === "success" && (
             <div className="flex flex-col items-center justify-center text-center p-10 py-14 bg-white relative overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.04)_0%,transparent_70%)] pointer-events-none" />
+              {/* Background Ambient Glow màu cam thương hiệu */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,107,0,0.06)_0%,transparent_70%)] pointer-events-none" />
 
+              {/* Vòng tròn checkmark nhảy Bounce động - Màu cam đồng bộ */}
               <motion.div 
                 initial={{ scale: 0 }} animate={{ scale: 1 }} 
                 transition={{ type: "spring", stiffness: 220, damping: 12, delay: 0.1 }}
-                className="w-20 h-20 bg-green-50 border-4 border-green-100 text-green-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/5 mb-6"
+                className="w-20 h-20 bg-orange-50 border-4 border-orange-100 text-[#FF6B00] rounded-full flex items-center justify-center shadow-lg shadow-orange-500/10 mb-6"
               >
-                <Check size={36} strokeWidth={3} className="animate-pulse" />
+                <Check size={36} strokeWidth={3.5} className="animate-pulse" />
               </motion.div>
 
-              <p className="text-[10px] text-green-600 font-black tracking-widest uppercase mb-1.5">NÂNG CẤP THÀNH CÔNG</p>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Chào mừng ông tới Gói Premium! 🎉</h3>
+              <p className="text-[10px] text-[#FF6B00] font-black tracking-widest uppercase mb-1.5">NÂNG CẤP THÀNH CÔNG</p>
+              
+              {/* TIÊU ĐỀ ĐỘNG: Đọc trực tiếp trường learnerName từ cổng API SePay */}
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">
+                Chào mừng {paymentDetail?.learnerName || "Bảo VC"} tới Gói Premium! 🎉
+              </h3>
+              
+              {/* NỘI DUNG MÔ TẢ ĐỘNG: Đồng bộ template trắng cam rực rỡ */}
               <p className="text-sm text-slate-500 max-w-sm font-medium leading-relaxed mb-6">
-                Hệ thống đám mây AWS đã kích hoạt toàn bộ đặc quyền Gia sư AI 24/7 và công cụ quét lộ trình học tập cho tài khoản của ông.
+                Hệ thống đã kích hoạt toàn bộ đặc quyền <span className="text-[#FF6B00] font-bold">Gia sư AI 24/7</span> và bộ công cụ tăng tốc học tập. Sẵn sàng bứt phá điểm số cùng SkillSprint chưa <span className="text-[#FF6B00] font-bold">{paymentDetail?.learnerName || "Bảo VC"}</span>? 🚀
               </p>
 
+              {/* Khung biên lai mini đồng bộ sắc cam */}
               {paymentData && (
                 <div className="w-full max-w-xs bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-8 text-xs space-y-2.5 text-left divide-y divide-slate-200/50 shadow-sm">
                   <div className="flex justify-between font-medium text-slate-500 pt-0">
@@ -720,10 +729,11 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                 </div>
               )}
 
+              {/* Nút Call To Action */}
               <div className="w-full max-w-xs space-y-3">
                 <button
                   onClick={() => navigate("/app/workspaces", { replace: true })}
-                  className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm border-none rounded-xl cursor-pointer shadow-md shadow-slate-900/10 transition-colors block text-center"
+                  className="w-full py-3.5 bg-[#FF6B00] hover:bg-[#FF5500] text-white font-black text-sm border-none rounded-xl cursor-pointer shadow-lg shadow-orange-500/20 transition-all block text-center"
                 >
                   Bắt đầu học ngay thôi 🚀
                 </button>
