@@ -1,20 +1,43 @@
 import { Link, useLocation } from "react-router";
-import { Menu, X, Zap } from "lucide-react";
+import { Menu, X, Zap, ChevronDown, Facebook } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { BrandLogo } from "./BrandLogo";
 
 /* ─── Nav items ─── */
-const NAV_LINKS = [
+interface NavLink {
+  to: string;
+  label: string;
+  isDropdown?: false;
+}
+
+interface NavDropdown {
+  label: string;
+  isDropdown: true;
+  items: { label: string; href: string }[];
+}
+
+type NavItem = NavLink | NavDropdown;
+
+const NAV_LINKS: NavItem[] = [
   { to: "/about",    label: "Giới thiệu" },
   { to: "/features", label: "Tính năng"  },
   { to: "/pricing",  label: "Bảng giá"   },
   { to: "/contact",  label: "Liên hệ"    },
+  {
+    label: "Cộng đồng",
+    isDropdown: true,
+    items: [
+      { label: "Facebook", href: "https://www.facebook.com/profile.php?id=61590323403077" },
+      { label: "TikTok", href: "https://www.tiktok.com/@skillsprint26" },
+    ]
+  }
 ];
 
 export function PublicNavbar() {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
 
   /* Refs for sliding calculations */
   const navContainerRef = useRef<HTMLDivElement>(null);
@@ -42,7 +65,7 @@ export function PublicNavbar() {
 
   /* ── Update active underline position ── */
   const updateActiveIndicator = useCallback(() => {
-    const activeIdx = NAV_LINKS.findIndex(l => l.to === location.pathname);
+    const activeIdx = NAV_LINKS.findIndex(l => !l.isDropdown && l.to === location.pathname);
     if (activeIdx !== -1) {
       const el = linkRefs.current[activeIdx];
       const parent = el?.parentElement;
@@ -243,12 +266,65 @@ export function PublicNavbar() {
             />
 
             {/* Links */}
-            {NAV_LINKS.map(({ to, label }, idx) => {
-              const active = isActive(to);
+            {NAV_LINKS.map((link, idx) => {
+              if (link.isDropdown) {
+                return (
+                  <div
+                    key={link.label}
+                    className="relative group flex items-center h-full"
+                    ref={el => { linkRefs.current[idx] = el as unknown as HTMLAnchorElement; }}
+                    onMouseEnter={e => handleMouseEnter(idx, e.currentTarget)}
+                  >
+                    <button
+                      type="button"
+                      className="relative z-10 flex items-center gap-1 px-4.5 py-2 text-xs font-semibold tracking-tight transition-colors duration-200 bg-transparent border-none cursor-pointer"
+                      style={{
+                        fontSize: "0.85rem",
+                        fontWeight: 500,
+                        fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                        letterSpacing: "-0.01em",
+                        color: hoveredIdx === idx ? "#FF6B00" : "#4B5563"
+                      }}
+                    >
+                      {link.label}
+                      <ChevronDown size={13} className="text-slate-400 group-hover:text-[#FF6B00] transition-colors duration-200" />
+                    </button>
+                    {/* Dropdown Menu */}
+                    <div className="absolute top-[80%] left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.08)] py-1.5 min-w-[140px] flex flex-col">
+                        {link.items.map((item) => (
+                          <a
+                            key={item.label}
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={item.label}
+                            className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-400 hover:text-[#FF6B00] hover:bg-slate-50 transition-all duration-200 hover:-translate-y-0.5 no-underline"
+                            style={{
+                              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                              fontSize: "0.85rem",
+                            }}
+                          >
+                            {item.label === "Facebook" ? (
+                              <Facebook size={14} />
+                            ) : (
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .79.11V9.5a6.27 6.27 0 0 0-3.1-1.74 6.36 6.36 0 0 0-6 5.56 6.34 6.34 0 0 0 6.1 7.18A6.3 6.3 0 0 0 15.82 16c0-.05.02-.1.02-.15V8.82a8.17 8.17 0 0 0 4.85 1.58V7a4.83 4.83 0 0 1-1.1-.31z" />
+                              </svg>
+                            )}
+                            <span>{item.label}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              const active = isActive(link.to);
               return (
                 <Link
-                  key={to}
-                  to={to}
+                  key={link.to}
+                  to={link.to}
                   ref={el => { linkRefs.current[idx] = el; }}
                   style={{
                     position: "relative",
@@ -258,7 +334,7 @@ export function PublicNavbar() {
                     fontWeight: active ? 700 : 500,
                     fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
                     letterSpacing: "-0.01em",
-                    color: getLinkColor(to, idx),
+                    color: getLinkColor(link.to, idx),
                     textDecoration: "none",
                     whiteSpace: "nowrap",
                     transition: "color 0.2s ease",
@@ -266,7 +342,7 @@ export function PublicNavbar() {
                   }}
                   onMouseEnter={e => handleMouseEnter(idx, e.currentTarget)}
                 >
-                  {label}
+                  {link.label}
                 </Link>
               );
             })}
@@ -387,12 +463,55 @@ export function PublicNavbar() {
               gap: "8px",
             }}
           >
-            {NAV_LINKS.map(({ to, label }) => {
-              const active = isActive(to);
+            {NAV_LINKS.map((link) => {
+              if (link.isDropdown) {
+                return (
+                  <div key={link.label} className="w-full">
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileDropdownOpen(v => !v)}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 border-none bg-transparent cursor-pointer text-left"
+                      style={{
+                        fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      <span>{link.label}</span>
+                      <ChevronDown size={14} className={`text-slate-500 transition-transform ${isMobileDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isMobileDropdownOpen && (
+                      <div className="pl-6 mt-1 flex flex-col gap-1.5">
+                        {link.items.map((item) => (
+                          <a
+                            key={item.label}
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-[#FF6B00] hover:-translate-y-0.5 transition-all duration-200 no-underline"
+                            style={{
+                              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                            }}
+                          >
+                            {item.label === "Facebook" ? (
+                              <Facebook size={14} />
+                            ) : (
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .79.11V9.5a6.27 6.27 0 0 0-3.1-1.74 6.36 6.36 0 0 0-6 5.56 6.34 6.34 0 0 0 6.1 7.18A6.3 6.3 0 0 0 15.82 16c0-.05.02-.1.02-.15V8.82a8.17 8.17 0 0 0 4.85 1.58V7a4.83 4.83 0 0 1-1.1-.31z" />
+                              </svg>
+                            )}
+                            <span>{item.label}</span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              const active = isActive(link.to);
               return (
                 <Link
-                  key={to}
-                  to={to}
+                  key={link.to}
+                  to={link.to}
                   style={{
                     display: "block",
                     padding: "12px 16px",
@@ -407,7 +526,7 @@ export function PublicNavbar() {
                   }}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  {label}
+                  {link.label}
                 </Link>
               );
             })}

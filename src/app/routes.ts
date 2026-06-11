@@ -19,6 +19,9 @@ import AdminFeedback from "./pages/admin/AdminFeedback";
 import PostUpgradeDashboard from "./pages/core/PostUpgrade";
 import FeaturesLanding from "./pages/public/Features";
 import PricingPage from "./pages/public/PricingPage";
+import Privacy from "./pages/public/Privacy";
+import Terms from "./pages/public/Terms";
+import Cookies from "./pages/public/Cookies";
 import RequireAuth from "./components/auth/RequireAuth";
 import RequireAdminAuth from "./components/auth/RequireAdminAuth";
 import Loading from "./pages/core/Loading";
@@ -49,6 +52,9 @@ export const routeRegistry = {
     course: "/learning/course",
     quizReview: "/quiz-review",
     quizResult: "/quiz-review/result",
+    privacy: "/privacy",
+    terms: "/terms",
+    cookies: "/cookies",
   },
   admin: {
     root: "/admin",
@@ -104,6 +110,9 @@ export const router = createBrowserRouter([
       { path: publicRoutes.loading, Component: Loading },
       { path: publicRoutes.contact, Component: Contact },
       { path: publicRoutes.adminLogin, Component: AdminAuth },
+      { path: publicRoutes.privacy, Component: Privacy },
+      { path: publicRoutes.terms, Component: Terms },
+      { path: publicRoutes.cookies, Component: Cookies },
       {
         path: adminRoutes.root,
         Component: ProtectedAdminLayout,

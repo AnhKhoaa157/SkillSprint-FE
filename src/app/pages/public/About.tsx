@@ -196,7 +196,8 @@ export default function About() {
                         <h3 style={{ fontFamily:F, fontWeight:900, fontSize:"1.02rem", color:T1, letterSpacing:"-0.03em", lineHeight:1.06, marginBottom:"14px" }}>
                           {val.title}
                         </h3>
-                        <p style={{ fontFamily:F, fontSize:"0.86rem", color:T2, lineHeight:1.42, maxWidth:"100%" }}>
+                        {/* text-slate-600 — keeps descriptions WCAG-readable on white */}
+                        <p className="text-slate-600" style={{ fontFamily:F, fontSize:"0.9rem", lineHeight:1.6, maxWidth:"100%" }}>
                           {val.desc}
                         </p>
                       </div>

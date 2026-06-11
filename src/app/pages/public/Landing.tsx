@@ -5,7 +5,7 @@ import {
   ArrowRight, Zap, Map, FileText, FolderKanban, Star,
   CheckCircle, ChevronRight, Sparkles, Brain,
   TrendingUp, Shield, Users, Github,
-  Twitter, Linkedin, Menu, X, Target, Clock,
+  Twitter, Linkedin, Menu, X, Target, Clock, ChevronUp,
 } from "lucide-react";
 import { BrandLogo } from "../components/BrandLogo";
 import { PublicNavbar } from "../components/PublicNavbar";
@@ -144,17 +144,15 @@ function DashboardMockup() {
           pointerEvents: "none"
         }}/>
 
-        {/* Browser window */}
-        <div style={{
-          background: CARD,
-          borderRadius: "18px",
-          overflow: "hidden",
-          boxShadow: isHovered 
-            ? "0 30px 100px rgba(0,0,0,0.16), 0 10px 30px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)"
-            : "0 20px 80px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
-          transformStyle: "preserve-3d",
-          transition: "box-shadow 0.3s ease"
-        }}>
+        {/* Browser window — rounded-2xl + border-slate-200/80 + crisp layered shadow
+            so the mockup separates cleanly from the ambient gradient blur */}
+        <div
+          className="rounded-2xl border border-slate-200/80 shadow-[0_20px_50px_rgba(0,0,0,0.08)] bg-white overflow-hidden"
+          style={{
+            transformStyle: "preserve-3d",
+            transition: "box-shadow 0.3s ease"
+          }}
+        >
           {/* Chrome bar */}
           <div style={{
             display: "flex", alignItems: "center", gap: "8px", padding: "12px 16px",
@@ -594,7 +592,7 @@ function Features() {
                   }}>
                     <Brain size={22} color={OG}/>
                   </div>
-                  <h3 style={{ fontFamily:F, fontWeight:800, fontSize:"1.2rem", color:T1, marginBottom:"12px", letterSpacing: "-0.01em" }}>AI Phân Tích Skill Gap</h3>
+                  <h3 className="text-xl font-extrabold text-slate-800 mb-3" style={{ fontFamily:F, letterSpacing: "-0.01em" }}>AI Phân Tích Skill Gap</h3>
                   <p style={{ fontFamily:F, fontSize:"0.875rem", color:T2, lineHeight:1.7, margin: 0 }}>
                     Chỉ cần nhập mục tiêu nghề nghiệp, AI của SkillSprint tự động bóc tách các kỹ năng cốt lõi và định vị chính xác khoảng trống kiến thức của bạn.
                   </p>
@@ -670,7 +668,7 @@ function Features() {
                 }}>
                   <Map size={22} color="#7C3AED"/>
                 </div>
-                <h3 style={{ fontFamily:F, fontWeight:800, fontSize:"1.2rem", color:T1, marginBottom:"12px", letterSpacing: "-0.01em" }}>Lộ Trình Thích Ứng</h3>
+                <h3 className="text-xl font-extrabold text-slate-800 mb-3" style={{ fontFamily:F, letterSpacing: "-0.01em" }}>Lộ Trình Thích Ứng</h3>
                 <p style={{ fontFamily:F, fontSize:"0.875rem", color:T2, lineHeight:1.65, margin: 0 }}>
                   AI tự động điều chỉnh tốc độ học và các bài ôn tập theo tiến độ làm bài quiz thực tế của bạn trước thềm deadline.
                 </p>
@@ -722,7 +720,7 @@ function Features() {
                 }}>
                   <FolderKanban size={22} color="#0EA5E9"/>
                 </div>
-                <h3 style={{ fontFamily:F, fontWeight:800, fontSize:"1.2rem", color:T1, marginBottom:"12px", letterSpacing: "-0.01em" }}>Không Gian Học Tập</h3>
+                <h3 className="text-xl font-extrabold text-slate-800 mb-3" style={{ fontFamily:F, letterSpacing: "-0.01em" }}>Không Gian Học Tập</h3>
                 <p style={{ fontFamily:F, fontSize:"0.875rem", color:T2, lineHeight:1.65, margin: 0 }}>
                   Quản lý khoa học toàn bộ tài liệu, bài tập và ghi chú khóa học của bạn trong các không gian làm việc chuyên nghiệp.
                 </p>
@@ -770,7 +768,7 @@ function Features() {
                   }}>
                     <FileText size={22} color="#059669"/>
                   </div>
-                  <h3 style={{ fontFamily:F, fontWeight:800, fontSize:"1.2rem", color:T1, marginBottom:"12px", letterSpacing: "-0.01em" }}>Tối Ưu Hồ Sơ Học Tập</h3>
+                  <h3 className="text-xl font-extrabold text-slate-800 mb-3" style={{ fontFamily:F, letterSpacing: "-0.01em" }}>Tối Ưu Hồ Sơ Học Tập</h3>
                   <p style={{ fontFamily:F, fontSize:"0.875rem", color:T2, lineHeight:1.7, margin: 0 }}>
                     Hệ thống AI tự động dịch thuật và tối ưu hóa các dự án thực hành trong khóa học thành các luận điểm giá trị cao nổi bật trong mắt nhà tuyển dụng.
                   </p>
@@ -837,7 +835,7 @@ function Features() {
                 }}>
                   <TrendingUp size={22} color="#F59E0B"/>
                 </div>
-                <h3 style={{ fontFamily:F, fontWeight:800, fontSize:"1.2rem", color:T1, marginBottom:"12px", letterSpacing: "-0.01em" }}>Điểm Sẵn Sàng</h3>
+                <h3 className="text-xl font-extrabold text-slate-800 mb-3" style={{ fontFamily:F, letterSpacing: "-0.01em" }}>Điểm Sẵn Sàng</h3>
                 <p style={{ fontFamily:F, fontSize:"0.875rem", color:T2, lineHeight:1.65, margin: 0 }}>
                   Chỉ số tổng hợp theo thời gian thực giúp bạn biết độ sẵn sàng phỏng vấn trước các cơ hội thực tập lớn.
                 </p>
@@ -897,7 +895,7 @@ function Features() {
                   }}>
                     <Users size={22} color="#EC4899"/>
                   </div>
-                  <h3 style={{ fontFamily:F, fontWeight:800, fontSize:"1.2rem", color:T1, marginBottom:"12px", letterSpacing: "-0.01em" }}>Học Theo Nhóm Hiệu Quả</h3>
+                  <h3 className="text-xl font-extrabold text-slate-800 mb-3" style={{ fontFamily:F, letterSpacing: "-0.01em" }}>Học Theo Nhóm Hiệu Quả</h3>
                   <p style={{ fontFamily:F, fontSize:"0.875rem", color:T2, lineHeight:1.7, margin: 0 }}>
                     Lập nhóm học tập cùng bạn bè, thi đua điểm tích lũy XP hàng tuần và leo bảng xếp hạng năng lực học tập thực tế.
                   </p>
@@ -1022,8 +1020,7 @@ function HowItWorks() {
   const steps = [
     { n: "01", title: "Nhập mục tiêu & Dữ liệu", desc: "Thêm syllabus hoặc mục tiêu thực tập để AI xác định khoảng trống kỹ năng.", icon: Target, col: "#FF6B00", bgGlow: "rgba(255,107,0,0.04)" },
     { n: "02", title: "Bản đồ lộ trình AI", desc: "Học theo lộ trình cá nhân hóa tự động cập nhật theo tiến độ thực tế.", icon: Brain, col: "#7C3AED", bgGlow: "rgba(124,58,237,0.04)" },
-    { n: "03", title: "Quiz Cốt Lõi", desc: "Củng cố kiến thức nhanh qua các quiz tương tác ngắn sau mỗi chương học.", icon: Zap, col: "#0EA5E9", bgGlow: "rgba(14,165,233,0.04)" },
-    { n: "04", title: "Hồ Sơ Sẵn Sàng", desc: "Theo dõi tiến độ học tập theo sprint để sẵn sàng đón nhận cơ hội mới.", icon: Sparkles, col: "#059669", bgGlow: "rgba(5,150,105,0.04)" },
+    { n: "03", title: "Quiz Cốt Lõi", desc: "Củng cố kiến thức nhanh qua các quiz tương tác ngắn sau mỗi chương học.", icon: Zap, col: "#0EA5E9", bgGlow: "rgba(14,165,233,0.04)" }
   ];
 
   return (
@@ -1059,17 +1056,17 @@ function HowItWorks() {
               background: "linear-gradient(135deg, #FF6B00 0%, #EA580C 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent"
-            }}>sẵn sàng bứt phá</span> trong 4 bước.
+            }}>sẵn sàng bứt phá</span> trong 3 bước.
           </h2>
         </motion.div>
 
         {/* 3D Physical Cards Grid */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "24px",
-          perspective: "1000px"
-        }}>
+        <div
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          style={{
+            perspective: "1000px"
+          }}
+        >
           {steps.map((s, i) => {
             const Icon = s.icon;
             return (
@@ -1103,7 +1100,7 @@ function HowItWorks() {
                 <div style={{
                   fontSize: "3.2rem", fontWeight: 900, fontFamily: F, lineHeight: 1, marginBottom: "16px",
                   color: "transparent",
-                  WebkitTextStroke: `1.5px ${s.col}35`,
+                  WebkitTextStroke: "1.5px rgba(255, 107, 0, 0.4)",
                   letterSpacing: "-0.04em",
                   transform: "translateZ(20px)",
                   transformStyle: "preserve-3d"
@@ -1121,15 +1118,23 @@ function HowItWorks() {
                   <Icon size={18} color={s.col}/>
                 </div>
 
-                <h3 style={{
-                  fontFamily: F, fontWeight: 800, fontSize: "0.95rem", color: T1, marginBottom: "8px",
-                  transform: "translateZ(15px)"
-                }}>{s.title}</h3>
+                {/* text-slate-900 font-extrabold — keep every step title fully readable */}
+                <h3
+                  className="text-slate-900 font-extrabold"
+                  style={{
+                    fontFamily: F, fontSize: "1rem", marginBottom: "8px",
+                    transform: "translateZ(15px)"
+                  }}
+                >{s.title}</h3>
 
-                <p style={{
-                  fontFamily: F, fontSize: "0.85rem", color: T2, lineHeight: 1.6,
-                  transform: "translateZ(10px)", margin: 0
-                }}>{s.desc}</p>
+                {/* text-slate-600 minimum for body copy (WCAG-safe, no faded opacity) */}
+                <p
+                  className="text-slate-600"
+                  style={{
+                    fontFamily: F, fontSize: "0.875rem", lineHeight: 1.65,
+                    transform: "translateZ(10px)", margin: 0
+                  }}
+                >{s.desc}</p>
 
                 {i < steps.length - 1 && (
                   <div className="hidden lg:flex" style={{
@@ -1549,6 +1554,88 @@ function Footer() {
 }
 
 /* ─── Page ─── */
+/* ─────────────────────────────────────────────────────────────
+   FloatingWidget — HOMEPAGE ONLY
+   Renders a Zalo contact button (always visible) stacked above
+   a Back-to-Top button (fades in after 400 px of scroll).
+───────────────────────────────────────────────────────────── */
+function FloatingWidget() {
+  const [showTop, setShowTop] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 400);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
+  return (
+    <div className="flex flex-col gap-3 fixed bottom-6 right-6 z-50 items-center">
+
+      {/* ── Back to Top ── */}
+      <button
+        onClick={scrollTop}
+        aria-label="Cuộn lên đầu trang"
+        style={{
+          opacity: showTop ? 1 : 0,
+          transform: showTop ? "translateY(0)" : "translateY(12px)",
+          pointerEvents: showTop ? "auto" : "none",
+          transition: "opacity 0.3s ease, transform 0.3s ease",
+        }}
+        className="
+          w-12 h-12 rounded-full bg-white
+          border border-slate-200/80
+          shadow-[0_4px_20px_rgba(0,0,0,0.08)]
+          flex items-center justify-center
+          hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]
+          transition-all duration-200 group
+        "
+      >
+        <ChevronUp
+          size={20}
+          className="text-slate-600 group-hover:text-[#FF6B00] transition-colors duration-200"
+        />
+      </button>
+
+      {/* ── Zalo Contact ── */}
+      <div className="relative flex items-center justify-center">
+        {/* Ambient glow pulse ring */}
+        <span
+          aria-hidden="true"
+          className="absolute rounded-full animate-pulse"
+          style={{
+            inset: "-6px",
+            background: "radial-gradient(circle, rgba(0,104,255,0.25) 0%, transparent 70%)",
+            pointerEvents: "none",
+          }}
+        />
+        <a
+          href="https://zalo.me/0937839123"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Liên hệ qua Zalo"
+          className="
+            relative w-12 h-12 rounded-full flex items-center justify-center
+            bg-white border border-slate-100 overflow-hidden
+            shadow-[0_8px_30px_rgb(0,0,0,0.12)]
+            hover:-translate-y-1
+            hover:shadow-[0_12px_32px_rgba(0,104,255,0.28)]
+            transition-all duration-200
+          "
+        >
+          <img
+            src="https://icon2.cleanpng.com/20180604/rsu/aa9qr51q7.webp"
+            alt="Zalo Chat"
+            className="w-full h-full object-cover rounded-full"
+            draggable={false}
+          />
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing() {
   const globalCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -1749,6 +1836,7 @@ export default function Landing() {
           50% { transform: rotate(180deg) translate(30px, 40px) scale(1.08); }
           100% { transform: rotate(360deg) translate(0px, 0px) scale(1); }
         }
+
         @keyframes pulseGlow {
           0%, 100% { opacity: 0.5; transform: scale(1); }
           50% { opacity: 1; transform: scale(1.1); }
@@ -1800,6 +1888,9 @@ export default function Landing() {
         <FinalCTA/>
         <PublicFooter />
       </div>
+
+      {/* Floating Action Widget — Homepage only */}
+      <FloatingWidget />
     </div>
   );
 }
