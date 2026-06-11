@@ -5,7 +5,7 @@ import { Mail, Lock, ArrowLeft, Check } from "lucide-react";
 import { RegistrationSuccessModal } from "../../components/modals/RegistrationSuccessModal";
 import { BrandLogo } from "../../components/layout/BrandLogo";
 import { AuthForm, getEmailError } from "./AuthForm";
-import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens, getPostLoginPath } from "../../../api/authService";
+import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens, getPostLoginPath, redirectToCognitoGoogleSignIn } from "../../../api/authService";
 
 /* ─── Tokens ─── */
 const F   = "'Plus Jakarta Sans','Inter',sans-serif";
@@ -71,13 +71,13 @@ const FEATURES = [
 function LeftPanel() {
   return (
     <div
-      className="hidden md:flex w-[40%] flex-col pl-10 pr-12 py-12 relative overflow-hidden flex-shrink-0"
+      className="hidden md:flex h-screen w-[40%] flex-col pl-10 pr-12 py-12 relative overflow-hidden flex-shrink-0"
       style={{
         background: "linear-gradient(180deg, #FAF6F2 0%, #F3ECE3 100%)",
       }}
     >
       {/* Brand logo */}
-      <BrandLogo size={32} align="left" className="mb-7" />
+      <BrandLogo size={100} align="left" className="mb-7" />
 
       {/* Badge */}
       <div style={{
@@ -685,7 +685,7 @@ export default function Auth() {
 
   return (
     <div 
-      className="min-h-screen flex w-full bg-white font-sans"
+      className="h-screen min-h-screen flex w-full overflow-hidden bg-white font-sans"
       style={{ fontFamily: F }}
     >
       {/* Navigates immediately to app; loader displayed by dashboard layout when needed */}
@@ -693,7 +693,7 @@ export default function Auth() {
       <LeftPanel/>
 
       {/* ── Right white panel ── */}
-      <div className="w-full md:flex-1 flex flex-col bg-white overflow-y-auto">
+      <div className="h-screen min-h-screen w-full md:flex-1 flex flex-col bg-white overflow-hidden">
         {/* Top bar with back link */}
         <div style={{
           display:"flex", alignItems:"center", justifyContent:"flex-start",
@@ -713,7 +713,7 @@ export default function Auth() {
         </div>
 
         {/* Form content */}
-        <div className="w-full max-w-md mx-auto px-4 sm:px-6 py-8 flex flex-col justify-center min-h-screen">
+        <div className="w-full max-w-md mx-auto px-4 sm:px-6 py-8 flex flex-1 flex-col justify-center min-h-0">
           <div className="w-full">
 
             <AuthForm
@@ -727,6 +727,7 @@ export default function Auth() {
               authError={authError}
               isSubmitting={isSubmitting}
               onSubmit={handleSubmit}
+              onContinueWithGoogle={redirectToCognitoGoogleSignIn}
               onForgotPassword={() => setShowReset(true)}
               onSwitchMode={(mode) => { setTab(mode); setAuthError(""); }}
             />

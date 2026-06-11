@@ -7,6 +7,7 @@ import Profile from "./pages/core/Profile";
 import Landing from "./pages/public/Landing";
 import About from "./pages/public/About";
 import Auth from "./pages/auth/Auth";
+import AuthCallback from "./pages/auth/AuthCallback";
 import Contact from "./pages/public/Contact";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLayout from "./layouts/AdminLayout";
@@ -44,6 +45,7 @@ export const routeRegistry = {
     pricing: "/pricing",
     login: "/login",
     auth: "/auth",
+    authCallback: "/auth/callback",
     loading: "/loading",
     contact: "/contact",
     onboarding: "/onboarding",
@@ -106,6 +108,7 @@ export const router = createBrowserRouter([
       { path: publicRoutes.features, Component: FeaturesLanding },
       { path: publicRoutes.pricing, Component: PricingPage },
       { path: publicRoutes.login, Component: Auth },
+      { path: publicRoutes.authCallback, Component: AuthCallback },
       { path: publicRoutes.auth, element: React.createElement(Navigate, { to: "/login", replace: true }) },
       { path: publicRoutes.loading, Component: Loading },
       { path: publicRoutes.contact, Component: Contact },
