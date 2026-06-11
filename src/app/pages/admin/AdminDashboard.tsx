@@ -278,15 +278,26 @@ export default function AdminDashboard() {
         style={{ width: "224px", background: "linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)", borderRight: "1px solid #E2E8F0" }}
       >
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 py-5"
+        <div className="flex items-center gap-3 px-5 py-5"
           style={{ borderBottom: "1px solid rgba(148,163,184,0.18)" }}>
-          <div className="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center shrink-0"
-            style={{ background: "linear-gradient(135deg,#FF6B00,#EA580C)", padding: "6px" }}>
-            <img src="/brand-logo.svg" alt="SkillSprint" className="w-full h-full object-contain brightness-0 invert" />
+          <div
+            className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-slate-100"
+            style={{ background: "white" }}
+          >
+            <img
+              src="/logo.png"
+              alt="SkillSprint Logo"
+              className="w-full h-full object-contain p-1"
+            />
           </div>
-          <div>
-            <p style={{ fontWeight: 800, fontSize: "0.88rem", letterSpacing: "-0.03em", color: "#0F172A" }}>SkillSprint</p>
-            <p style={{ color: "#94A3B8", fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em" }}>B2B · CỔNG QUẢN TRỊ</p>
+
+          <div className="flex flex-col min-w-0">
+            <p style={{ fontWeight: 800, fontSize: "0.95rem", color: "#0F172A", lineHeight: 1.2 }}>
+              SkillSprint
+            </p>
+            <p style={{ color: "#94A3B8", fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: "2px" }}>
+              CỔNG QUẢN TRỊ
+            </p>
           </div>
         </div>
 
