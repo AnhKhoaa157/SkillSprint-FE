@@ -205,7 +205,7 @@ export function PublicNavbar() {
             >
               {/* h-12 bounding box lets the scale(2.2) zoom expand naturally without being clipped */}
               <div className="h-12 flex items-center overflow-visible">
-                <BrandLogo size={48} align="left" />
+                <BrandLogo size={60} align="left" />
               </div>
             </Link>
           </div>
