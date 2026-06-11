@@ -27,7 +27,7 @@ export const API_BASE = configuredApiBase;
 export const COGNITO_DOMAIN = env.VITE_COGNITO_DOMAIN?.replace(/\/$/, "") || "https://ap-southeast-1zylkslsqu.auth.ap-southeast-1.amazoncognito.com";
 
 // 3. Cấu hình Cognito Client ID
-export const COGNITO_CLIENT_ID = env.VITE_COGNITO_CLIENT_ID || "6ovoqlj3dialglnc3j8pabpru8";
+export const COGNITO_CLIENT_ID = env.VITE_COGNITO_CLIENT_ID || "j7rp3hnrq2lcncbhoj5dk0ab4";
 
 // 4. KHÓA CỨNG REDIRECT URI THEO TRÌNH DUYỆT (Xóa bỏ hoàn toàn biến env gây nhiễu link)
 // User vào bằng https://skillsprint.site -> Redirect về đúng https://skillsprint.site/auth/callback
