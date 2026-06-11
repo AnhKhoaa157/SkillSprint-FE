@@ -23,4 +23,4 @@ export const API_BASE = configuredApiBase;
 export const COGNITO_DOMAIN = env.VITE_COGNITO_DOMAIN?.replace(/\/$/, "") || "";
 export const COGNITO_CLIENT_ID = env.VITE_COGNITO_CLIENT_ID || "";
 export const COGNITO_REDIRECT_URI =
-  env.VITE_COGNITO_REDIRECT_URI || "https://www.skillsprint.site/auth/callback";
+  env.VITE_COGNITO_REDIRECT_URI || `${window.location.origin}/auth/callback`;
