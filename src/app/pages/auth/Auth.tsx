@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ArrowLeft, Check, Github } from "lucide-react";
 import { RegistrationSuccessModal } from "../../components/modals/RegistrationSuccessModal";
 import { BrandLogo } from "../../components/layout/BrandLogo";
 import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens, getPostLoginPath } from "../../../api/authService";
@@ -27,14 +27,15 @@ function GoogleIcon() {
 /* ─── Input field ─── */
 function Field({
   label, type="text", placeholder, icon: Icon, value, onChange,
-  right, error,
+  right, error, className="mb-5",
 }: {
   label: string; type?: string; placeholder: string;
   icon: React.ElementType; value: string;
   onChange: (v:string)=>void; right?: React.ReactNode; error?: string;
+  className?: string;
 }) {
   return (
-    <div className="mb-5">
+    <div className={className}>
       <label className="block text-[0.82rem] font-semibold text-gray-700 mb-2">
         {label}
       </label>
@@ -43,7 +44,7 @@ function Field({
         <input
           type={type} value={value} onChange={e=>onChange(e.target.value)}
           placeholder={placeholder}
-          className={`w-full pl-11 pr-11 py-3 text-sm bg-white rounded-xl outline-none transition-all duration-200 ${
+          className={`w-full pl-11 pr-11 py-3 text-base bg-white rounded-xl outline-none transition-all duration-200 ${
             error 
               ? 'border border-red-500 focus:border-red-500' 
               : 'border border-gray-200 focus:border-[#FF6B00]'
@@ -83,7 +84,7 @@ const FEATURES = [
 function LeftPanel() {
   return (
     <div
-      className="w-[40%] flex flex-col pl-10 pr-12 py-12 relative overflow-hidden flex-shrink-0"
+      className="hidden md:flex w-[40%] flex-col pl-10 pr-12 py-12 relative overflow-hidden flex-shrink-0"
       style={{
         background: "linear-gradient(180deg, #FAF6F2 0%, #F3ECE3 100%)",
       }}
@@ -280,18 +281,21 @@ function ResetPassword({ onBack }: { onBack:()=>void }) {
             <p style={{fontSize:"0.85rem",color:"#6B7280",marginBottom:"24px",lineHeight:1.6,fontFamily:F}}>
               Nhập email trường học để nhận mã đặt lại mật khẩu an toàn.
             </p>
-            <Field label="Email trường học" placeholder="student@gmail.com"
-              icon={Mail} value={email} onChange={setEmail}/>
+            <div className="space-y-4 mb-5">
+              <Field label="Email trường học" placeholder="student@gmail.com"
+                icon={Mail} value={email} onChange={setEmail} className=""/>
+            </div>
             {error && <p style={{fontSize:"0.72rem",color:"#EF4444",marginBottom:"12px",fontFamily:F}}>{error}</p>}
             <motion.button
               whileHover={{scale:1.02}} whileTap={{scale:0.98}}
               onClick={handleSendCode}
               disabled={loading}
+              className="w-full min-h-[44px] py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-all"
               style={{
-                width:"100%",padding:"13px",borderRadius:"10px",
-                background: loading ? "#FDBA74" : OG,color:"#fff",border:"none",cursor: loading ? "not-allowed" : "pointer",
-                fontFamily:F,fontWeight:700,fontSize:"0.95rem",
-                boxShadow:"0 4px 16px rgba(255,107,0,0.35)",marginBottom:"14px",
+                background: loading ? "#FDBA74" : "#FF6B00",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontFamily: F,
+                marginBottom: "14px",
               }}
             >
               {loading ? "Đang gửi..." : "Gửi mã đặt lại"}
@@ -310,19 +314,22 @@ function ResetPassword({ onBack }: { onBack:()=>void }) {
             <p style={{fontSize:"0.85rem",color:"#6B7280",lineHeight:1.65,fontFamily:F,marginBottom:"16px"}}>
               {notice || <>Mã đặt lại đã được gửi đến <strong>{email}</strong>. Vui lòng nhập mã và mật khẩu mới.</>}
             </p>
-            <Field label="Mã xác nhận" placeholder="123456" icon={Check} value={confirmationCode} onChange={setConfirmationCode}/>
-            <Field label="Mật khẩu mới" type="password" placeholder="Tối thiểu 8 ký tự" icon={Lock} value={newPassword} onChange={setNewPassword}/>
-            <Field label="Xác nhận mật khẩu" type="password" placeholder="Nhập lại mật khẩu mới" icon={Lock} value={confirmPassword} onChange={setConfirmPassword} error={error}/>
+            <div className="space-y-4 text-left mb-5">
+              <Field label="Mã xác nhận" placeholder="123456" icon={Check} value={confirmationCode} onChange={setConfirmationCode} className=""/>
+              <Field label="Mật khẩu mới" type="password" placeholder="Tối thiểu 8 ký tự" icon={Lock} value={newPassword} onChange={setNewPassword} className=""/>
+              <Field label="Xác nhận mật khẩu" type="password" placeholder="Nhập lại mật khẩu mới" icon={Lock} value={confirmPassword} onChange={setConfirmPassword} error={error} className=""/>
+            </div>
             {error && !confirmPassword && <p style={{fontSize:"0.72rem",color:"#EF4444",marginTop:"-8px",marginBottom:"12px",fontFamily:F}}>{error}</p>}
             <motion.button
               whileHover={{scale:1.02}} whileTap={{scale:0.98}}
               onClick={handleConfirmReset}
               disabled={loading}
+              className="w-full min-h-[44px] py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-all"
               style={{
-                width:"100%",padding:"13px",borderRadius:"10px",
-                background: loading ? "#FDBA74" : OG,color:"#fff",border:"none",cursor: loading ? "not-allowed" : "pointer",
-                fontFamily:F,fontWeight:700,fontSize:"0.95rem",
-                boxShadow:"0 4px 16px rgba(255,107,0,0.35)",marginBottom:"14px",
+                background: loading ? "#FDBA74" : "#FF6B00",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontFamily: F,
+                marginBottom: "14px",
               }}
             >
               {loading ? "Đang cập nhật..." : "Đặt lại mật khẩu"}
@@ -409,23 +416,27 @@ function NewPasswordRequiredModal({
           Tài khoản <strong>{email}</strong> cần đặt mật khẩu mới để hoàn tất đăng nhập.
         </p>
 
-        <Field
-          label="Mật khẩu mới"
-          type="password"
-          placeholder="Tối thiểu 8 ký tự"
-          icon={Lock}
-          value={newPassword}
-          onChange={setNewPassword}
-        />
-        <Field
-          label="Xác nhận mật khẩu"
-          type="password"
-          placeholder="Nhập lại mật khẩu mới"
-          icon={Lock}
-          value={confirmPassword}
-          onChange={setConfirmPassword}
-          error={error}
-        />
+        <div className="space-y-4 mb-5">
+          <Field
+            label="Mật khẩu mới"
+            type="password"
+            placeholder="Tối thiểu 8 ký tự"
+            icon={Lock}
+            value={newPassword}
+            onChange={setNewPassword}
+            className=""
+          />
+          <Field
+            label="Xác nhận mật khẩu"
+            type="password"
+            placeholder="Nhập lại mật khẩu mới"
+            icon={Lock}
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            error={error}
+            className=""
+          />
+        </div>
 
         {error && !confirmPassword && (
           <p style={{fontSize:"0.72rem",color:"#EF4444",marginTop:"-8px",marginBottom:"12px",fontFamily:F}}>{error}</p>
@@ -436,12 +447,13 @@ function NewPasswordRequiredModal({
           whileTap={{scale:0.98}}
           onClick={handleSubmit}
           disabled={loading}
+          className="w-full min-h-[44px] py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-all"
           style={{
-            width:"100%",padding:"13px",borderRadius:"10px",
-            background: loading ? "#FDBA74" : OG,
-            color:"#fff",border:"none",cursor: loading ? "not-allowed" : "pointer",
-            fontFamily:F,fontWeight:700,fontSize:"0.95rem",
-            boxShadow:"0 4px 16px rgba(255,107,0,0.35)",marginTop:"6px",marginBottom:"12px",
+            background: loading ? "#FDBA74" : "#FF6B00",
+            cursor: loading ? "not-allowed" : "pointer",
+            fontFamily: F,
+            marginTop: "6px",
+            marginBottom: "12px",
             opacity: loading ? 0.85 : 1,
           }}
         >
@@ -503,11 +515,34 @@ function ConfirmRegisterModal({ email, onClose, onConfirmed }: { email: string; 
         <BrandLogo size={28} textSize="0.9rem" className="mb-4"/>
         <h3 style={{fontWeight:900,fontSize:"1.25rem",marginBottom:"8px",fontFamily:F}}>Xác nhận email</h3>
         <p style={{fontSize:"0.9rem",color:"#6B7280",marginBottom:"14px",fontFamily:F}}>Nhập mã xác nhận đã gửi tới <strong>{email}</strong>.</p>
-        <Field label="Mã xác nhận" placeholder="123456" icon={Check} value={code} onChange={setCode} error={error}/>
+        <div className="space-y-4 mb-5">
+          <Field label="Mã xác nhận" placeholder="123456" icon={Check} value={code} onChange={setCode} error={error} className=""/>
+        </div>
         {notice && <p style={{fontSize:"0.8rem",color:"#059669",marginBottom:"8px",fontFamily:F}}>{notice}</p>}
         <div style={{display:"flex",gap:"10px",marginTop:"6px"}}>
-          <button onClick={handleConfirm} disabled={loading} style={{flex:1,padding:"12px",borderRadius:"10px",background:loading?"#FDBA74":OG,color:"#fff",border:"none",fontWeight:700,cursor:loading?"not-allowed":"pointer",fontFamily:F}}> {loading?"Đang xác nhận...":"Xác nhận"}</button>
-          <button onClick={handleResend} disabled={loading} style={{padding:"12px",borderRadius:"10px",background:"#F3F4F6",border:"none",cursor:loading?"not-allowed":"pointer",fontFamily:F}}>Gửi lại</button>
+          <button 
+            onClick={handleConfirm} 
+            disabled={loading} 
+            className="flex-1 min-h-[44px] py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold transition-all"
+            style={{
+              background: loading ? "#FDBA74" : "#FF6B00",
+              cursor: loading ? "not-allowed" : "pointer",
+              fontFamily: F,
+            }}
+          > 
+            {loading ? "Đang xác nhận..." : "Xác nhận"}
+          </button>
+          <button 
+            onClick={handleResend} 
+            disabled={loading} 
+            className="min-h-[44px] px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all"
+            style={{
+              cursor: loading ? "not-allowed" : "pointer",
+              fontFamily: F,
+            }}
+          >
+            Gửi lại
+          </button>
         </div>
         <div style={{textAlign:"center",marginTop:"12px"}}>
           <button onClick={onClose} style={{background:"none",border:"none",color:"#6B7280",cursor:"pointer",fontFamily:F}}>Đóng</button>
@@ -562,6 +597,42 @@ export default function Auth() {
       }, 100);
     } catch (error) {
       console.error("Login session initialization failed:", error);
+    }
+  };
+
+  const handleAutoLogin = async () => {
+    setShowSuccess(false);
+    setIsSubmitting(true);
+    setAuthError("");
+
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!normalizedEmail || !password) {
+        setTab("signin");
+        setAuthError("Vui lòng nhập mật khẩu để đăng nhập.");
+        return;
+      }
+
+      const result = await login(normalizedEmail, password);
+
+      if (result.status === "authenticated") {
+        if (isAdminRole(result.tokens.role)) {
+          setAuthError("Tài khoản quản trị không thể đăng nhập ở cổng Learner. Vui lòng dùng cổng Admin.");
+          setTab("signin");
+          return;
+        }
+
+        await onLoginSuccess(result.tokens);
+      } else if (result.status === "new-password-required") {
+        setChallengeSession(result.session);
+        setChallengeRole(result.role);
+        setShowNewPassword(true);
+      }
+    } catch (e) {
+      setAuthError(e instanceof Error ? e.message : "Tự động đăng nhập thất bại. Vui lòng đăng nhập thủ công.");
+      setTab("signin");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -621,19 +692,16 @@ export default function Auth() {
   };
 
   return (
-    <div style={{
-      minHeight:"100vh", display:"flex",
-      fontFamily:F, background:"#FFFFFF",
-    }}>
+    <div 
+      className="min-h-screen flex w-full bg-white font-sans"
+      style={{ fontFamily: F }}
+    >
       {/* Navigates immediately to app; loader displayed by dashboard layout when needed */}
       {/* ── Left dark panel ── */}
       <LeftPanel/>
 
       {/* ── Right white panel ── */}
-      <div style={{
-        flex:1, display:"flex", flexDirection:"column",
-        background:"#FFFFFF", overflowY:"auto",
-      }}>
+      <div className="w-full md:flex-1 flex flex-col bg-white overflow-y-auto">
         {/* Top bar with back link */}
         <div style={{
           display:"flex", alignItems:"center", justifyContent:"flex-start",
@@ -653,11 +721,8 @@ export default function Auth() {
         </div>
 
         {/* Form content */}
-        <div style={{
-          flex:1, display:"flex", alignItems:"center", justifyContent:"center",
-          padding:"0px 32px 40px",
-        }}>
-          <div style={{width:"100%",maxWidth:"400px"}}>
+        <div className="w-full max-w-md mx-auto px-4 sm:px-6 py-8 flex flex-col justify-center min-h-screen">
+          <div className="w-full">
 
             <AnimatePresence mode="wait">
               <motion.div
@@ -681,22 +746,22 @@ export default function Auth() {
                     : "Đăng nhập để tiếp tục hành trình học tập"}
                 </p>
 
-                {/* Google button */}
-                <motion.button
-                  whileHover={{ backgroundColor: "#F9FAFB", scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  style={{
-                    width: "100%", padding: "12px 14px", borderRadius: "12px",
-                    border: "1px solid #E5E7EB", background: "#FFFFFF",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
-                    cursor: "pointer", fontSize: "0.875rem", fontWeight: 600,
-                    color: "#374151", fontFamily: F,
-                    transition: "all 0.2s ease", marginBottom: "20px",
-                  }}
-                >
-                  <GoogleIcon/>
-                  Tiếp tục với Google
-                </motion.button>
+                {/* Social buttons wrapper */}
+                <div className="w-full mb-5">
+                  <motion.button
+                    disabled
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    className="w-full min-h-[44px] py-3 flex items-center justify-center gap-3 border border-slate-200 rounded-xl opacity-70 cursor-not-allowed pointer-events-none bg-white font-medium text-slate-700 relative"
+                    style={{ fontFamily: F }}
+                  >
+                    <GoogleIcon/>
+                    Google
+                    <span className="bg-orange-50 text-orange-600 border border-orange-200 text-[10px] px-2 py-0.5 rounded-full font-medium absolute right-4">
+                      Đang phát triển
+                    </span>
+                  </motion.button>
+                </div>
 
                 {/* Divider */}
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px", marginTop: "20px" }}>
@@ -708,55 +773,57 @@ export default function Auth() {
                 </div>
 
                 {/* Fields */}
-                {isSignup && (
-                  <Field label="Họ và tên" placeholder="Nguyễn Văn A"
-                    icon={User} value={name} onChange={setName}/>
-                )}
-                <Field label="Địa chỉ email" type="email" placeholder="student@university.edu"
-                  icon={Mail} value={email} onChange={setEmail}/>
-                
-                <div style={{ marginBottom: "20px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", alignItems: "baseline" }}>
-                    <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#374151", fontFamily: F }}>Mật khẩu</label>
-                    {!isSignup && (
-                      <button onClick={() => setShowReset(true)}
-                        style={{ fontSize: "0.82rem", color: OG, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontWeight: 700, padding: 0, transition: "opacity 0.2s" }}
-                        onMouseEnter={e => { (e.target as HTMLButtonElement).style.opacity = "0.8"; }}
-                        onMouseLeave={e => { (e.target as HTMLButtonElement).style.opacity = "1"; }}
+                <div className="space-y-4 mb-5">
+                  {isSignup && (
+                    <Field label="Họ và tên" placeholder="Nguyễn Văn A"
+                      icon={User} value={name} onChange={setName} className=""/>
+                  )}
+                  <Field label="Địa chỉ email" type="email" placeholder="student@university.edu"
+                    icon={Mail} value={email} onChange={setEmail} className=""/>
+                  
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", alignItems: "baseline" }}>
+                      <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#374151", fontFamily: F }}>Mật khẩu</label>
+                      {!isSignup && (
+                        <button 
+                          onClick={() => setShowReset(true)}
+                          className="text-[#FF6B00] hover:text-orange-600 transition-colors font-bold bg-none border-none cursor-pointer text-[0.82rem]"
+                          style={{ fontFamily: F, padding: 0 }}
+                        >
+                          Quên mật khẩu?
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                      <Lock size={16} color="#9CA3AF" style={{ position: "absolute", left: "14px", pointerEvents: "none", zIndex: 10 }} />
+                      <input
+                        type={showPw ? "text" : "password"} value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full py-3 pl-11 pr-11 text-base bg-white"
+                        style={{
+                          border: "1px solid #E5E7EB", borderRadius: "12px",
+                          fontFamily: F, color: "#111827",
+                          outline: "none", boxSizing: "border-box",
+                          transition: "all 0.2s ease",
+                        }}
+                        onFocus={e => {
+                          e.target.style.borderColor = "#FF6B00";
+                          e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 0, 0.08)";
+                        }}
+                        onBlur={e => {
+                          e.target.style.borderColor = "#E5E7EB";
+                          e.target.style.boxShadow = "none";
+                        }}
+                      />
+                      <button onClick={() => setShowPw(v => !v)}
+                        style={{ position: "absolute", right: "14px", background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: 0, display: "flex", alignItems: "center", transition: "color 0.2s", zIndex: 10 }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#6B7280"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF"; }}
                       >
-                        Quên mật khẩu?
+                        {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
-                    )}
-                  </div>
-                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                    <Lock size={16} color="#9CA3AF" style={{ position: "absolute", left: "14px", pointerEvents: "none", zIndex: 10 }} />
-                    <input
-                      type={showPw ? "text" : "password"} value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      style={{
-                        width: "100%", padding: "12px 44px 12px 44px",
-                        border: "1px solid #E5E7EB", borderRadius: "12px",
-                        fontSize: "0.875rem", fontFamily: F, color: "#111827",
-                        background: "#FFFFFF", outline: "none", boxSizing: "border-box",
-                        transition: "all 0.2s ease",
-                      }}
-                      onFocus={e => {
-                        e.target.style.borderColor = "#FF6B00";
-                        e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 0, 0.08)";
-                      }}
-                      onBlur={e => {
-                        e.target.style.borderColor = "#E5E7EB";
-                        e.target.style.boxShadow = "none";
-                      }}
-                    />
-                    <button onClick={() => setShowPw(v => !v)}
-                      style={{ position: "absolute", right: "14px", background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: 0, display: "flex", alignItems: "center", transition: "color 0.2s", zIndex: 10 }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#6B7280"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF"; }}
-                    >
-                      {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+                    </div>
                   </div>
                 </div>
 
@@ -776,19 +843,16 @@ export default function Auth() {
 
                 {/* CTA */}
                 <motion.button
-                  whileHover={{ scale: 1.01, backgroundColor: "#E05E00", boxShadow: "0 10px 25px rgba(255, 107, 0, 0.2)" }}
+                  whileHover={{ scale: 1.01, boxShadow: "0 10px 25px rgba(255, 107, 0, 0.2)" }}
                   whileTap={{ scale: 0.99 }}
                   onClick={handleSubmit}
                   disabled={isSubmitting}
+                  className="w-full min-h-[44px] py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-all"
                   style={{
-                    width: "100%", padding: "13px 16px", borderRadius: "12px",
                     background: isSubmitting ? "#FDBA74" : "#FF6B00",
-                    color: "#FFFFFF", border: "none", cursor: isSubmitting ? "not-allowed" : "pointer",
-                    fontFamily: F, fontWeight: 700, fontSize: "0.95rem",
+                    fontFamily: F,
                     display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-                    boxShadow: "0 6px 20px rgba(255, 107, 0, 0.12)",
                     marginBottom: "16px", opacity: isSubmitting ? 0.9 : 1,
-                    transition: "all 0.2s ease",
                   }}
                 >
                   {isSubmitting ? (
@@ -812,16 +876,22 @@ export default function Auth() {
                 <p style={{ textAlign: "center", fontSize: "0.82rem", color: "#6B7280", fontFamily: F, marginBottom: "24px" }}>
                   {isSignup ? (
                     <>Đã có tài khoản?{" "}
-                      <button onClick={() => { setTab("signin"); setAuthError(""); }} style={{ color: OG, fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: "0.82rem", transition: "opacity 0.2s" }} onMouseEnter={e => { (e.target as HTMLButtonElement).style.opacity = "0.8"; }} onMouseLeave={e => { (e.target as HTMLButtonElement).style.opacity = "1"; }}
+                      <button 
+                        onClick={() => { setTab("signin"); setAuthError(""); }} 
+                        className="text-[#FF6B00] hover:text-orange-600 transition-colors font-bold bg-none border-none cursor-pointer text-[0.82rem]"
+                        style={{ fontFamily: F }}
                       >
                         Đăng nhập
                       </button>
                     </>
                   ) : (
                     <>Chưa có tài khoản?{" "}
-                      <button onClick={() => { setTab("signup"); setAuthError(""); }} style={{ color: OG, fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontFamily: F, fontSize: "0.82rem", transition: "opacity 0.2s" }} onMouseEnter={e => { (e.target as HTMLButtonElement).style.opacity = "0.8"; }} onMouseLeave={e => { (e.target as HTMLButtonElement).style.opacity = "1"; }}
+                      <button 
+                        onClick={() => { setTab("signup"); setAuthError(""); }} 
+                        className="text-[#FF6B00] hover:text-orange-600 transition-colors font-bold bg-none border-none cursor-pointer text-[0.82rem]"
+                        style={{ fontFamily: F }}
                       >
-                        Đăng ký miễn phí
+                        Đăng ký ngay
                       </button>
                     </>
                   )}
@@ -901,8 +971,15 @@ export default function Auth() {
       {/* Registration success modal */}
       <RegistrationSuccessModal
         open={showSuccess}
-        onStartSetup={() => { setShowSuccess(false); navigate("/onboarding"); }}
-        onSkip={() => { setShowSuccess(false); navigate("/app"); }}
+        onStartSetup={handleAutoLogin}
+        onSkip={() => {
+          setShowSuccess(false);
+          setName("");
+          setEmail("");
+          setPassword("");
+          setAuthError("");
+          navigate("/");
+        }}
       />
     </div>
   );

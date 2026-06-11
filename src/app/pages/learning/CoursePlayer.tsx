@@ -32,6 +32,8 @@ import { usePomodoro } from "../../contexts/PomodoroContext";
 import { toast } from "sonner";
 import { useSubscription } from "../../../hooks/useSubscription";
 import { PricingModal } from "../../components/modals/PricingModal";
+import calendarService from "../../../api/calendarService";
+import QuizContainer from "../../components/tools/QuizContainer";
 
 type StudySessionRouteState = {
   taskId?: string;
@@ -158,6 +160,8 @@ export default function CoursePlayer() {
   const [hasQuizCreated, setHasQuizCreated] = useState(false); // NÂNG CẤP CHÍ MẠCH: Ghim giữ trạng thái nhận diện bộ đề
   const [loadingQuizMeta, setLoadingQuizMeta] = useState(false);
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [quizStatus, setQuizStatus] = useState<"idle" | "passed" | "failed">("idle");
 
   const [isSubActionLoading, setIsSubActionLoading] = useState(false);
   const [sideTab, setSideTab] = useState<"pomodoro" | "quiz">("pomodoro");
@@ -290,6 +294,41 @@ export default function CoursePlayer() {
     };
   }, [roadmapStep?.stepId]);
 
+  const handleQuizCompletion = async (result: { isPassed: boolean; score: number }) => {
+    setShowQuiz(false);
+    if (result.isPassed) {
+      setQuizStatus("passed");
+      toast.success("Chúc mừng! Bạn đã PASS bài quiz.");
+      showToast("success", "Chúc mừng! Bạn đã PASS bài quiz.");
+      if (taskId) {
+        try {
+          await calendarService.completeCalendarTask(taskId);
+        } catch (err) {
+          console.error("Failed to mark task as complete on backend", err);
+        }
+      }
+    } else {
+      setQuizStatus("failed");
+      toast.error("Rất tiếc! Bạn NOT PASS bài quiz, hãy thử lại.");
+      showToast("warning", "Rất tiếc! Bạn NOT PASS bài quiz, hãy thử lại.");
+    }
+
+    await fetchUpdatedDetail();
+
+    const stepId = roadmapStep?.stepId;
+    if (stepId) {
+      try {
+        const quiz = await quizService.getCurrent(stepId);
+        if (quiz) {
+          const attempt = await quizService.getLatestAttempt(quiz.quizId);
+          if (attempt) setLatestAttempt(attempt);
+        }
+      } catch (e) {
+        console.error("Failed to fetch latest attempt", e);
+      }
+    }
+  };
+
   const handleGenerateAndOpenQuiz = async () => {
     if (!isPremiumMember) {
       showPremiumQuizToast();
@@ -302,7 +341,8 @@ export default function CoursePlayer() {
     try {
       const quiz = await quizService.generate(stepId);
       setHasQuizCreated(true); // Đổi state lạc quan để khóa UI
-      navigate(`/app/learning/quiz/${quiz.quizId}`, { state: { stepId } });
+      setShowQuiz(true);
+      setQuizStatus("idle");
     } catch (err: any) {
       showToast("warning", err?.message || "Không thể tạo đề kiểm tra AI.");
     } finally {
@@ -318,12 +358,17 @@ export default function CoursePlayer() {
       const quiz = await quizService.generate(stepId);
       setLatestAttempt(null);
       setHasQuizCreated(true);
-      navigate(`/app/learning/quiz/${quiz.quizId}`, { state: { stepId } });
+      setShowQuiz(true);
+      setQuizStatus("idle");
     } catch (err: any) {
       showToast("warning", err?.message || "Không thể đổi bộ câu hỏi.");
     } finally {
       setIsGeneratingQuiz(false);
     }
+  };
+
+  const handleNextStep = () => {
+    navigate("/app/calendar");
   };
 
   const handleStartSession = async () => {
@@ -543,8 +588,8 @@ export default function CoursePlayer() {
       </header>
 
       <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
-          <section className="space-y-6 lg:col-span-2">
+        <div className="flex flex-col lg:flex-row gap-6 lg:items-start">
+          <section className="space-y-6 flex-1 min-w-0 lg:max-w-[calc(100%-320px)]">
             {error && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
                 <div className="flex items-start gap-2">
@@ -569,8 +614,81 @@ export default function CoursePlayer() {
                   <div className="h-64 rounded-2xl bg-slate-100" />
                 </div>
               </div>
+            ) : showQuiz ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setShowQuiz(false)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition"
+                  >
+                    <ArrowLeft size={14} /> Quay lại buổi học
+                  </button>
+                </div>
+                <QuizContainer
+                  stepId={roadmapStep?.stepId ?? undefined}
+                  quizId={roadmapStep?.stepId ?? undefined}
+                  currentPlan={planId}
+                  onComplete={handleQuizCompletion}
+                />
+              </div>
             ) : (
               <>
+                {quizStatus !== "idle" && (
+                  <div
+                    className={`rounded-2xl border p-4.5 mb-6 flex items-start gap-3.5 relative overflow-hidden transition-all duration-300 ${
+                      quizStatus === "passed"
+                        ? "border-orange-200 bg-orange-50 text-orange-900 shadow-sm animate-in slide-in-from-top-4 duration-300"
+                        : "border-amber-200 bg-amber-50 text-amber-900 shadow-sm animate-in slide-in-from-top-4 duration-300"
+                    }`}
+                  >
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white ${
+                        quizStatus === "passed"
+                          ? "bg-orange-500"
+                          : "bg-amber-500"
+                      }`}
+                    >
+                      {quizStatus === "passed" ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-black uppercase tracking-wider">
+                        {quizStatus === "passed" ? "Kết quả: ĐÃ VƯỢT QUA (PASSED)" : "Kết quả: CHƯA ĐẠT (NOT PASSED)"}
+                      </h4>
+                      <p className="mt-1 text-xs leading-5 text-slate-500 font-semibold">
+                        {quizStatus === "passed"
+                          ? "Chúc mừng! Bạn đã hoàn thành xuất sắc bài kiểm tra AI với tỷ lệ trên 80% câu trả lời chính xác."
+                          : "Rất tiếc! Bạn chưa đạt ngưỡng 80% câu trả lời chính xác. Hãy ôn tập lại tài nguyên bài học và thử lại."}
+                      </p>
+                      <div className="mt-3">
+                        {quizStatus === "passed" ? (
+                          <button
+                            type="button"
+                            onClick={handleNextStep}
+                            className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-medium rounded-lg text-sm px-4 py-2 transition-all shadow-sm inline-flex items-center gap-1.5"
+                          >
+                            Bài tiếp theo
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleRegenerateQuiz}
+                            className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-medium rounded-lg text-sm px-4 py-2 transition-all shadow-sm inline-flex items-center gap-1.5"
+                          >
+                            Làm lại Quiz
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setQuizStatus("idle")}
+                      className="text-slate-400 hover:text-slate-600 transition"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
                 <div className="space-y-8 rounded-[24px] border border-slate-100 bg-white p-6 md:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
                   <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-[0.15em]">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1.5 text-orange-600 border border-orange-100/60 shadow-sm shadow-orange-50/50">
@@ -743,7 +861,7 @@ export default function CoursePlayer() {
             )}
           </section>
 
-          <aside className="lg:sticky lg:top-24 self-start">
+          <aside className="lg:sticky lg:top-24 self-start w-full lg:w-[300px] shrink-0">
             <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
               {/* Tab switcher */}
               <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
@@ -969,7 +1087,10 @@ export default function CoursePlayer() {
 
                       <button
                         type="button"
-                        onClick={handleGenerateAndOpenQuiz}
+                        onClick={() => {
+                          setShowQuiz(true);
+                          setQuizStatus("idle");
+                        }}
                         disabled={isGeneratingQuiz}
                         className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-3 text-xs font-extrabold text-white shadow-md shadow-indigo-500/20 transition hover:from-indigo-600 hover:to-violet-600 active:scale-[0.98] cursor-pointer"
                       >

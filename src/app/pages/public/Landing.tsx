@@ -593,7 +593,7 @@ function Features() {
             initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
             className="bento-wide"
           >
-            <BentoCard hoverBorderColor="rgba(255,107,0,0.25)" style={{ display: "flex", flexDirection: "row", gap: "0px", flexWrap: "wrap", alignItems: "stretch", height: "100%", padding: "0px", overflow: "hidden" }}>
+            <BentoCard hoverBorderColor="rgba(255,107,0,0.25)" className="flex flex-col md:flex-row w-full h-full" style={{ gap: "0px", alignItems: "stretch", padding: "0px", overflow: "hidden" }}>
               <div style={{ flex: 1.1, minWidth: "260px", padding: "40px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
                   <div style={{
@@ -616,7 +616,7 @@ function Features() {
               </div>
 
               {/* High-Fidelity UI Widget */}
-              <div style={{ flex: 0.9, minWidth: "260px", background: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)", borderLeft: `1px solid ${BDR}`, display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: "24px 0 0 24px", overflow: "hidden", position: "relative" }}>
+              <div className="border-t md:border-t-0 md:border-l border-slate-200" style={{ flex: 0.9, minWidth: "260px", background: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: "24px 0 0 24px", overflow: "hidden", position: "relative" }}>
                 <div style={{
                   width: "108%",
                   background: CARD,
@@ -769,7 +769,7 @@ function Features() {
             initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
             className="bento-wide"
           >
-            <BentoCard hoverBorderColor="rgba(5,150,105,0.25)" style={{ display: "flex", flexDirection: "row", gap: "0px", flexWrap: "wrap", alignItems: "stretch", height: "100%", padding: "0px", overflow: "hidden" }}>
+            <BentoCard hoverBorderColor="rgba(5,150,105,0.25)" className="flex flex-col md:flex-row w-full h-full" style={{ gap: "0px", alignItems: "stretch", padding: "0px", overflow: "hidden" }}>
               <div style={{ flex: 1.1, minWidth: "260px", padding: "40px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
                   <div style={{
@@ -792,7 +792,7 @@ function Features() {
               </div>
 
               {/* Diff Editor UI Widget */}
-              <div style={{ flex: 0.9, minWidth: "260px", background: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)", borderLeft: `1px solid ${BDR}`, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", overflow: "hidden" }}>
+              <div className="border-t md:border-t-0 md:border-l border-slate-200" style={{ flex: 0.9, minWidth: "260px", background: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", overflow: "hidden" }}>
                 <div style={{
                   width: "100%",
                   background: CARD,
@@ -896,7 +896,7 @@ function Features() {
             initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
             className="bento-wide"
           >
-            <BentoCard hoverBorderColor="rgba(236,72,153,0.25)" style={{ display: "flex", flexDirection: "row", gap: "0px", flexWrap: "wrap", alignItems: "stretch", height: "100%", padding: "0px", overflow: "hidden" }}>
+            <BentoCard hoverBorderColor="rgba(236,72,153,0.25)" className="flex flex-col md:flex-row w-full h-full" style={{ gap: "0px", alignItems: "stretch", padding: "0px", overflow: "hidden" }}>
               <div style={{ flex: 1.1, minWidth: "260px", padding: "40px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
                   <div style={{
@@ -922,7 +922,7 @@ function Features() {
               </div>
 
               {/* Multiplayer Leaderboard UI Widget with Floating Cursors */}
-              <div style={{ flex: 0.9, minWidth: "260px", background: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)", borderLeft: `1px solid ${BDR}`, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", overflow: "hidden", position: "relative" }}>
+              <div className="border-t md:border-t-0 md:border-l border-slate-200" style={{ flex: 0.9, minWidth: "260px", background: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", overflow: "hidden", position: "relative" }}>
                 
                 {/* Simulated multiplayer pointer cursors */}
                 <div style={{ position: "absolute", left: "15%", top: "60%", zIndex: 10, display: "flex", flexDirection: "column", gap: "2px", pointerEvents: "none", transform: "translateZ(30px)" }}>

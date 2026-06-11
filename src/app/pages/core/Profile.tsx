@@ -368,7 +368,7 @@ function AccountTab({ profile, onSave, saving, onAvatarUploaded }: AccountTabPro
       {/* Personal Information */}
       <div style={{ marginBottom:"28px" }}>
         <SectionHeading title="Thông tin cá nhân"/>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3, minmax(0, 1fr))", gap:"10px", marginBottom:"14px" }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 mb-3.5">
           <div style={{ padding:"10px 12px", borderRadius:"10px", border:`1px solid ${BDR}`, background:"#F9FAFB" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"8px", marginBottom:"3px" }}>
               <p style={{ fontSize:"0.72rem", color:T3, fontFamily:F }}>Mã người dùng</p>
@@ -426,7 +426,7 @@ function AccountTab({ profile, onSave, saving, onAvatarUploaded }: AccountTabPro
         <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:"14px", marginBottom:"14px" }}>
           <Input label="Họ và tên" value={fullName} onChange={setFullName} placeholder="Họ và tên"/>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px" }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           <Input label="Địa chỉ Email" value={email} onChange={setEmail}
             type="email" placeholder="student@gmail.com" disabled
             hint="Email được quản lý bởi hệ thống máy chủ."/>
@@ -811,7 +811,7 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
   function getButtonConfig(planId: PlanId) {
     const idx = planValue[planId];
     if (idx === currentPlanIndex) return { label:"Gói hiện tại", disabled:true, bg:"#F3F4F6", border:"#D1D5DB", color:"#9CA3AF", shadow:"none", icon:null };
-    if (idx < currentPlanIndex)   return { label:"Hạ cấp", disabled:false, bg:"transparent", border:OG, color:OG, shadow:"none", icon:<ArrowDown size={13}/> };
+    if (idx < currentPlanIndex)   return { label:"Không khả dụng", disabled:true, bg:"#F3F4F6", border:"#D1D5DB", color:"#9CA3AF", shadow:"none", icon:null };
     return { label:`Nâng cấp ${planLabel[planId]}`, disabled:false, bg:OG, border:OG, color:"#fff", shadow:"0 4px 14px rgba(255,107,0,0.28)", icon:<ArrowUp size={13}/> };
   }
 
@@ -875,12 +875,15 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
       )}
 
       {/* ─── Plan Cards Grid ─── */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"12px" }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {PLANS.map(plan => {
           const btn = getButtonConfig(plan.id);
           const isCreating = creatingPayment;
+          const idx = planValue[plan.id];
+          const isDowngrade = idx < currentPlanIndex;
           return (
             <motion.div key={plan.id}
+              className={isDowngrade ? "opacity-40 grayscale pointer-events-none select-none" : ""}
               initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
               transition={{ duration:0.3, delay:planValue[plan.id]*0.06 }}
               whileHover={!btn.disabled ? { y:-2 } : {}}
@@ -1281,7 +1284,7 @@ export default function Profile() {
       </div>
 
       {/* ── Two-column: sub-nav + form ── */}
-      <div style={{ display:"grid", gridTemplateColumns:"200px 1fr", gap:"16px", alignItems:"start" }}>
+      <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4 items-start">
 
         {/* Left sub-nav */}
         <div style={{

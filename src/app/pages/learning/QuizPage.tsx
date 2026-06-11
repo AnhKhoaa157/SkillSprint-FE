@@ -27,6 +27,7 @@ export default function QuizPage() {
         <QuizContainer
           stepId={stepId}
           currentPlan={planId}
+          onComplete={() => {}}
           onCompleteSession={handleComplete}
         />
       </div>
