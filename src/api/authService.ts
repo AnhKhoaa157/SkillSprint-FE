@@ -1,4 +1,4 @@
-import { API_BASE } from "./config";
+import { API_BASE, COGNITO_CLIENT_ID, COGNITO_DOMAIN, COGNITO_REDIRECT_URI } from "./config";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -45,6 +45,18 @@ type AuthPayload = AuthTokens & {
 };
 
 type EmptyPayload = Record<string, never>;
+
+type CognitoTokenResponse = {
+  access_token: string;
+  id_token: string;
+  refresh_token?: string;
+  expires_in: number;
+  token_type: string;
+};
+
+type OAuthSessionPayload = {
+  sessionId?: string | null;
+};
 
 export type LoginResult =
   | { status: "authenticated"; tokens: AuthSession }
@@ -202,12 +214,50 @@ function buildAuthSession(data: AuthPayload): AuthSession {
   };
 }
 
+function assertCognitoConfig(): void {
+  if (!COGNITO_DOMAIN || !COGNITO_CLIENT_ID) {
+    throw new Error("Missing Cognito Hosted UI configuration.");
+  }
+}
+
+function buildAuthSessionFromOAuthTokens(tokens: CognitoTokenResponse, sessionId: string): AuthSession {
+  return {
+    accessToken: tokens.access_token,
+    idToken: tokens.id_token,
+    refreshToken: tokens.refresh_token ?? "",
+    expiresIn: tokens.expires_in,
+    tokenType: tokens.token_type || "Bearer",
+    role: extractRole({
+      accessToken: tokens.access_token,
+      idToken: tokens.id_token,
+    }),
+    sessionId,
+  };
+}
+
 export function isAdminRole(role: unknown): boolean {
   return normalizeRole(role) === "ADMIN";
 }
 
 export function getPostLoginPath(role: unknown): string {
   return isAdminRole(role) ? "/admin" : "/app";
+}
+
+export function buildCognitoAuthorizeUrl(): string {
+  assertCognitoConfig();
+
+  const params = new URLSearchParams({
+    client_id: COGNITO_CLIENT_ID,
+    response_type: "code",
+    scope: "email openid profile",
+    redirect_uri: COGNITO_REDIRECT_URI,
+  });
+
+  return `${COGNITO_DOMAIN}/oauth2/authorize?${params.toString()}`;
+}
+
+export function redirectToCognitoGoogleSignIn(): void {
+  window.location.assign(buildCognitoAuthorizeUrl());
 }
 
 export function getStoredAuthSession(): AuthSession | null {
@@ -470,6 +520,79 @@ export async function completeNewPassword(email: string, newPassword: string, se
   }
 
   return tokens;
+}
+
+async function exchangeCognitoAuthorizationCode(code: string): Promise<CognitoTokenResponse> {
+  assertCognitoConfig();
+
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    client_id: COGNITO_CLIENT_ID,
+    code,
+    redirect_uri: COGNITO_REDIRECT_URI,
+  });
+
+  const response = await fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | (Partial<CognitoTokenResponse> & { error?: string; error_description?: string })
+    | null;
+
+  if (!response.ok) {
+    throw new Error(payload?.error_description || payload?.error || "Cannot exchange Cognito authorization code.");
+  }
+
+  if (!payload?.access_token || !payload.id_token || !payload.expires_in || !payload.token_type) {
+    throw new Error("Invalid Cognito token response.");
+  }
+
+  return {
+    access_token: payload.access_token,
+    id_token: payload.id_token,
+    refresh_token: payload.refresh_token,
+    expires_in: payload.expires_in,
+    token_type: payload.token_type,
+  };
+}
+
+async function createOAuthApplicationSession(accessToken: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/api/auth/oauth/session`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const payload = (await response.json().catch(() => null)) as ApiResponse<OAuthSessionPayload> | null;
+
+  if (!response.ok) {
+    throw new Error(payload?.message || `OAuth session initialization failed: ${response.status}`);
+  }
+
+  const sessionId = payload?.data?.sessionId;
+  if (!sessionId) {
+    throw new Error("Backend OAuth session response is missing sessionId.");
+  }
+
+  return sessionId;
+}
+
+export async function completeCognitoOAuthLogin(code: string): Promise<AuthSession> {
+  const cognitoTokens = await exchangeCognitoAuthorizationCode(code);
+  const sessionId = await createOAuthApplicationSession(cognitoTokens.access_token);
+  const session = buildAuthSessionFromOAuthTokens(cognitoTokens, sessionId);
+
+  if (!isValidAuthSession(session)) {
+    throw new Error("Invalid or expired OAuth authentication session.");
+  }
+
+  return session;
 }
 
 export function storeAuthTokens(tokens: AuthSession): void {

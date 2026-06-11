@@ -195,16 +195,18 @@ export function PublicNavbar() {
           <div style={{ flex: 1, display: "flex", justifyContent: "flex-start", alignItems: "center" }}>
             <Link
               to="/"
+              className="flex items-center"
               style={{
-                display: "flex",
-                alignItems: "center",
                 textDecoration: "none",
                 transition: "opacity 0.2s ease",
               }}
               onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
               onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
             >
-              <BrandLogo size={26} textSize="1.1rem" align="left" />
+              {/* h-12 bounding box lets the scale(2.2) zoom expand naturally without being clipped */}
+              <div className="h-12 flex items-center overflow-visible">
+                <BrandLogo size={48} align="left" />
+              </div>
             </Link>
           </div>
 

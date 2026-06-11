@@ -580,8 +580,9 @@ function Features() {
           <motion.div
             initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
             className="bento-wide"
+            style={{ display: "flex", flexDirection: "column" }}
           >
-            <BentoCard hoverBorderColor="rgba(255,107,0,0.25)" className="flex flex-col md:flex-row w-full h-full" style={{ gap: "0px", alignItems: "stretch", padding: "0px", overflow: "hidden" }}>
+            <BentoCard hoverBorderColor="rgba(255,107,0,0.25)" className="flex flex-col md:flex-row w-full flex-1" style={{ gap: "0px", alignItems: "stretch", padding: "0px", overflow: "hidden" }}>
               <div style={{ flex: 1.1, minWidth: "260px", padding: "40px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
                   <div style={{
@@ -593,20 +594,24 @@ function Features() {
                     <Brain size={22} color={OG}/>
                   </div>
                   <h3 className="text-xl font-extrabold text-slate-800 mb-3" style={{ fontFamily:F, letterSpacing: "-0.01em" }}>AI Phân Tích Skill Gap</h3>
-                  <p style={{ fontFamily:F, fontSize:"0.875rem", color:T2, lineHeight:1.7, margin: 0 }}>
+                  <p style={{ fontFamily:F, fontSize:"0.875rem", color:"#4B5563", lineHeight:1.7, margin: 0 }}>
                     Chỉ cần nhập mục tiêu nghề nghiệp, AI của SkillSprint tự động bóc tách các kỹ năng cốt lõi và định vị chính xác khoảng trống kiến thức của bạn.
                   </p>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "24px" }}>
-                  <span style={{ fontSize: "10px", fontWeight: 800, color: OG, letterSpacing: "0.05em" }}>PHÂN TÍCH TỰ ĐỘNG</span>
-                  <Sparkles size={11} color={OG} />
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "28px" }}>
+                  <span style={{ fontSize: "10.5px", fontWeight: 800, color: OG, letterSpacing: "0.06em", background: OGL, border: `1px solid ${OGLT}`, padding: "4px 10px", borderRadius: "6px" }}>PHÂN TÍCH TỰ ĐỘNG</span>
+                  <Sparkles size={12} color={OG} />
                 </div>
               </div>
 
               {/* High-Fidelity UI Widget */}
-              <div className="border-t md:border-t-0 md:border-l border-slate-200" style={{ flex: 0.9, minWidth: "260px", background: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: "24px 0 0 24px", overflow: "hidden", position: "relative" }}>
+              <div className="border-t md:border-t-0 md:border-l border-slate-200" style={{ flex: 0.9, minWidth: "260px", minHeight: "220px", background: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)", position: "relative", overflow: "hidden" }}>
                 <div style={{
-                  width: "108%",
+                  position: "absolute",
+                  top: "24px",
+                  left: "24px",
+                  right: 0,
+                  bottom: 0,
                   background: CARD,
                   borderRadius: "12px 0 0 0",
                   borderTop: "1px solid #E2E8F0",
@@ -616,7 +621,7 @@ function Features() {
                   display: "flex",
                   flexDirection: "column",
                   gap: "12px",
-                  transform: "translateY(2px)"
+                  overflow: "hidden",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${BDR}`, paddingBottom: "10px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
@@ -657,9 +662,10 @@ function Features() {
           {/* Card 2 - Adaptivity Timeline (Normal) */}
           <motion.div
             initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
+            style={{ display: "flex", flexDirection: "column" }}
           >
-            <BentoCard hoverBorderColor="rgba(124,58,237,0.25)" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", padding: "0px", overflow: "hidden" }}>
-              <div style={{ padding: "32px 32px 20px" }}>
+            <BentoCard hoverBorderColor="rgba(124,58,237,0.25)" style={{ display: "flex", flexDirection: "column", flex: 1, padding: "0px", overflow: "hidden" }}>
+              <div style={{ padding: "36px 36px 24px" }}>
                 <div style={{
                   width:"46px", height:"46px", borderRadius:"12px",
                   display:"flex", alignItems:"center", justifyContent:"center",
@@ -669,13 +675,13 @@ function Features() {
                   <Map size={22} color="#7C3AED"/>
                 </div>
                 <h3 className="text-xl font-extrabold text-slate-800 mb-3" style={{ fontFamily:F, letterSpacing: "-0.01em" }}>Lộ Trình Thích Ứng</h3>
-                <p style={{ fontFamily:F, fontSize:"0.875rem", color:T2, lineHeight:1.65, margin: 0 }}>
+                <p style={{ fontFamily:F, fontSize:"0.875rem", color:"#4B5563", lineHeight:1.65, margin: 0 }}>
                   AI tự động điều chỉnh tốc độ học và các bài ôn tập theo tiến độ làm bài quiz thực tế của bạn trước thềm deadline.
                 </p>
               </div>
 
               {/* Adaptivity Timeline Mockup */}
-              <div style={{ background: "linear-gradient(135deg, #FDFDFD 0%, #F8FAFC 100%)", borderTop: `1px solid ${BDR}`, padding: "20px 24px", display: "flex", flexDirection: "column", gap: "10px", position: "relative" }}>
+              <div style={{ flex: 1, background: "linear-gradient(135deg, #FDFDFD 0%, #F8FAFC 100%)", borderTop: `1px solid ${BDR}`, padding: "20px 24px", display: "flex", flexDirection: "column", gap: "10px", position: "relative" }}>
                 <div style={{ position: "absolute", left: "34px", top: "28px", bottom: "28px", width: "2px", background: "#E2E8F0", zIndex: 0 }}/>
                 {[
                   { title: "Cơ bản React JS", time: "Hoàn thành", color: "#10B981", active: false, badge: "Done" },

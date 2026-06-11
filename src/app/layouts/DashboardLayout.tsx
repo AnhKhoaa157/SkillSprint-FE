@@ -385,7 +385,7 @@ export default function DashboardLayout() {
           borderBottom:"1px solid rgba(255,107,0,0.08)",
         }}>
           <div style={{display:"flex",alignItems:"center",gap:"24px"}}>
-            <BrandLogo size={20} align="left" />
+            <BrandLogo size={65} align="left" />
             <span style={{
                fontSize:"9px",padding:"1px 6px",borderRadius:"4px",
                display:"inline-block",background:"rgba(255,107,0,0.1)",

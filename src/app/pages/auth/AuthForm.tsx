@@ -112,6 +112,7 @@ export interface AuthFormProps {
   authError?: string;
   isSubmitting: boolean;
   onSubmit: () => void;
+  onContinueWithGoogle: () => void;
   onForgotPassword: () => void;
   onSwitchMode: (mode: "signin" | "signup") => void;
 }
@@ -119,7 +120,7 @@ export interface AuthFormProps {
 export function AuthForm({
   mode, name, email, password,
   onNameChange, onEmailChange, onPasswordChange,
-  authError, isSubmitting, onSubmit, onForgotPassword, onSwitchMode,
+  authError, isSubmitting, onSubmit, onContinueWithGoogle, onForgotPassword, onSwitchMode,
 }: AuthFormProps) {
   const isSignup = mode === "signup";
   const [showPassword, setShowPassword] = useState(false);
@@ -175,18 +176,15 @@ export function AuthForm({
             : "Đăng nhập để tiếp tục hành trình học tập"}
         </p>
 
-        {/* Google sign-in (in development) */}
+        {/* Google sign-in through AWS Cognito Hosted UI */}
         <button
           type="button"
-          disabled
-          aria-disabled
-          className="relative flex min-h-[46px] w-full cursor-not-allowed items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors"
+          disabled={isSubmitting}
+          onClick={onContinueWithGoogle}
+          className="relative flex min-h-[46px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
         >
           <GoogleIcon />
           <span>{isSignup ? "Sign up with Google" : "Sign in with Google"}</span>
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-amber-200/50 bg-amber-50/60 px-2 py-0.5 text-[10px] font-bold tracking-wide text-amber-700 backdrop-blur-sm">
-            Đang phát triển
-          </span>
         </button>
 
         {/* Divider */}
