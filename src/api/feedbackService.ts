@@ -198,12 +198,24 @@ export async function getAdminFeedbacks(
   page = 0,
   size = 15,
   status?: string,
+  type?: string,
+  search?: string,
 ): Promise<FeedbackPageResponse<FeedbackAdminResponse>> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   if (status) params.set("status", status);
+  if (type) params.set("type", type);
+  if (search?.trim()) params.set("search", search.trim());
   const result = await requestJson<unknown>(`/api/admin/feedback?${params.toString()}`);
   if (!result.data) throw new Error(result.message || "Could not load feedback list");
   return normalizePage(result.data, normalizeAdminFeedback);
+}
+
+export async function deleteFeedback(feedbackId: string): Promise<void> {
+  const id = feedbackId.trim();
+  if (!id) throw new Error("Invalid feedback ID");
+  await requestJson<null>(`/api/admin/feedback/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }
 
 export async function getFeedbackDetail(feedbackId: string): Promise<FeedbackAdminResponse> {
@@ -234,4 +246,5 @@ export default {
   getAdminFeedbacks,
   getFeedbackDetail,
   updateFeedbackStatus,
+  deleteFeedback,
 };
