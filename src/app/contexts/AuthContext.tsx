@@ -10,6 +10,7 @@ import {
   getStoredAuthSession,
   storeAuthTokens,
   clearAuthTokens,
+  isValidAuthSession,
   type AuthSession,
 } from "../../api/authService";
 
@@ -39,36 +40,20 @@ function hydrateSessionStorage(session: AuthSession): void {
  * the app can rely on either store.
  */
 function ensureSessionHydration(): AuthSession | null {
-  try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
+  const session = getStoredAuthSession();
 
-    const parsed = JSON.parse(raw) as Partial<AuthSession>;
-    // Relaxed validation — only accessToken is strictly required.
-    // refreshToken may be null for some token-response shapes.
-    if (!parsed.accessToken) return null;
-
-    // Build a complete session object
-    const session: AuthSession = {
-      accessToken: parsed.accessToken,
-      idToken: parsed.idToken ?? "",
-      refreshToken: parsed.refreshToken ?? "",
-      expiresIn: parsed.expiresIn ?? 0,
-      tokenType: parsed.tokenType ?? "Bearer",
-      sessionId: parsed.sessionId ?? undefined,
-      role: parsed.role ?? null,
-    };
-
-    // Write to sessionStorage if not already hydrated in this session
-    const alreadyHydrated = sessionStorage.getItem(SESSION_HYDRATED_KEY);
-    if (!alreadyHydrated) {
-      hydrateSessionStorage(session);
-    }
-
-    return session;
-  } catch {
+  if (!isValidAuthSession(session)) {
+    clearAuthTokens();
     return null;
   }
+
+  // Write to sessionStorage if not already hydrated in this browser session.
+  const alreadyHydrated = sessionStorage.getItem(SESSION_HYDRATED_KEY);
+  if (!alreadyHydrated) {
+    hydrateSessionStorage(session);
+  }
+
+  return session;
 }
 
 /* ─── Context ─── */
@@ -92,7 +77,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
 
   const hydrate = useCallback((): AuthSession | null => {
     const s = ensureSessionHydration();
-    if (s) setSession(s);
+    setSession(s);
     return s;
   }, []);
 
@@ -121,7 +106,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
 
   const value: AuthContextValue = {
     session,
-    isAuthenticated: Boolean(session?.accessToken),
+    isAuthenticated: isValidAuthSession(session),
     hydrate,
     persist,
     logout,

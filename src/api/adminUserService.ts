@@ -1,6 +1,5 @@
 import { getAuthHeaders } from "./apiClient";
-
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
+import { API_BASE } from "./config";
 
 type ApiResponse<T> = {
   success: boolean;

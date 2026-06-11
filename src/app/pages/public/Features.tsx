@@ -333,7 +333,7 @@ export default function FeaturesLanding() {
                   </p>
                   
                   <div style={{ display: "flex", justifyContent: "center", gap: "20px" }}>
-                    <Link to="/auth?mode=register" style={{ textDecoration: "none" }}>
+                    <Link to="/login?mode=register" style={{ textDecoration: "none" }}>
                       <motion.button style={{
                         display: "inline-flex", alignItems: "center", gap: "10px",
                         padding: "20px 48px", borderRadius: "99px", background: OG, color: "#FFFFFF",

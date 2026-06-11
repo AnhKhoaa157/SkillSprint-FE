@@ -1164,7 +1164,7 @@ export default function Profile() {
         if (error?.status === 401) {
           toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
           clearAuthTokens();
-          navigate("/auth");
+          navigate("/login");
           return;
         }
 
@@ -1192,7 +1192,7 @@ export default function Profile() {
       if (error?.status === 401) {
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
         clearAuthTokens();
-        navigate("/auth");
+        navigate("/login");
         return;
       }
 
@@ -1207,7 +1207,7 @@ export default function Profile() {
 
   const handleSignOut = () => {
     clearAuthTokens();
-    navigate("/auth");
+    navigate("/login");
   };
 
   return (
