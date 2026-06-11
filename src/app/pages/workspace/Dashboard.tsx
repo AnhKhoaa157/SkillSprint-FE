@@ -5,6 +5,7 @@ import {
   Plus, Check, Play, Pause, RotateCcw, ArrowRight,
   Map, BarChart2, Calendar, CheckSquare, Sparkles,
 } from "lucide-react";
+import EmptyState from "../../components/ui/EmptyState";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -235,6 +236,18 @@ export default function Dashboard() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {tasks.length === 0 && !addingTask && (
+            <EmptyState
+              variant="plain"
+              icon={CheckSquare}
+              title="Chưa có tác vụ nào cho hôm nay — lên kế hoạch ngay!"
+              description="Thêm các tác vụ ưu tiên để theo dõi tiến độ học tập trong ngày của bạn."
+              actionLabel="Thêm tác vụ đầu tiên"
+              actionIcon={Plus}
+              onAction={() => setAddingTask(true)}
+            />
+          )}
 
           <div className="space-y-2.5">
             {tasks.map(task => {

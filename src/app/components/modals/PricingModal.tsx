@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { X, Check, ShieldCheck, ChevronRight, Zap, Star, Loader2, AlertCircle, Copy, RefreshCw, ArrowUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
 import { getMe } from "../../../api/meService";
-import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse } from "../../../api/skillSprintModels";
+import type { SepayPaymentCreateResponse } from "../../../api/skillSprintModels";
 
 const F = "'Plus Jakarta Sans','Inter',sans-serif";
 const OG = "#FF6B00";
@@ -79,13 +80,13 @@ interface ButtonConfig {
   action: ButtonAction;
 }
 
-function getButtonConfig(cardPlan: PlanId, currentPlan: PlanId): ButtonConfig {
-  const planIdToKey = (p: PlanId) => {
-    if (p === "FREE") return "starter" as const;
-    if (p === "SKILL_BUILDER") return "skill_builder" as const;
-    return "career_premium" as const;
-  };
+function planIdToKey(p: PlanId): keyof typeof planRanks {
+  if (p === "FREE") return "starter";
+  if (p === "SKILL_BUILDER") return "skill_builder";
+  return "career_premium";
+}
 
+function getButtonConfig(cardPlan: PlanId, currentPlan: PlanId): ButtonConfig {
   const cardRank = planRanks[planIdToKey(cardPlan)];
   const currentRank = planRanks[planIdToKey(currentPlan)];
 
@@ -152,6 +153,13 @@ function planIdToPaymentType(plan: PlanId): "builder" | "premium" | null {
 const POLL_INTERVAL_MS = 5000;
 const MAX_POLL_ATTEMPTS = 120;
 
+const PAID_STATUSES = new Set(["SUCCESS", "COMPLETED", "PAID"]);
+const FAILED_STATUSES = new Set(["FAILED", "EXPIRED", "CANCELED"]);
+
+function isPaidStatus(status?: string | null): boolean {
+  return !!status && PAID_STATUSES.has(status.toUpperCase());
+}
+
 interface PricingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -178,7 +186,6 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
   const currentUserPlan = currentPlan === "FREE" ? "starter" : currentPlan === "SKILL_BUILDER" ? "skill_builder" : "career_premium";
 
   const [paymentData, setPaymentData] = useState<SepayPaymentCreateResponse | null>(null);
-  const [paymentDetail, setPaymentDetail] = useState<SepayPaymentDetailResponse | null>(null);
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [pollingActive, setPollingActive] = useState(false);
@@ -187,17 +194,12 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
   const [copied, setCopied] = useState(false);
   const [qrLoaded, setQrLoaded] = useState(false);
   const [errorStep, setErrorStep] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
+  const [verifying, setVerifying] = useState(false);
   const [userFullName, setUserFullName] = useState<string>("");
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollAttemptRef = useRef(0);
   const paymentIdRef = useRef<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast({ show: true, message: msg });
-    setTimeout(() => setToast({ show: false, message: "" }), 3500);
-  };
 
   useEffect(() => {
     return () => {
@@ -210,7 +212,6 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
       setStep("pricing");
       setSelectedPlan(initialPlan);
       setPaymentData(null);
-      setPaymentDetail(null);
       setCreatingPayment(false);
       setCreateError(null);
       setPollingActive(false);
@@ -219,7 +220,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
       setCopied(false);
       setQrLoaded(false);
       setErrorStep(null);
-      setToast({ show: false, message: "" });
+      setVerifying(false);
       pollAttemptRef.current = 0;
       paymentIdRef.current = null;
       if (pollingRef.current) {
@@ -266,18 +267,17 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
 
     try {
       const detail = await getPaymentDetail(pid);
-      setPaymentDetail(detail);
 
-      if (detail?.status === "SUCCESS" || detail?.status === "COMPLETED" || detail?.status === "PAID" || detail?.status?.toUpperCase() === "PAID") {
+      if (isPaidStatus(detail?.status)) {
         stopPolling();
         setStep("success");
         onSuccess?.(selectedPlan);
         return;
       }
 
-      if (detail.status === "FAILED" || detail.status === "EXPIRED" || detail.status === "CANCELED") {
+      if (detail.status && FAILED_STATUSES.has(detail.status.toUpperCase())) {
         stopPolling();
-        setPollError(`Payment ${detail.status.toLowerCase()}. Please try again.`);
+        setPollError("Giao dịch không thành công. Vui lòng thử lại.");
         setErrorStep("payment_failed");
         setStep("error");
         return;
@@ -292,7 +292,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
         setErrorStep("timeout");
         setStep("error");
       }
-    } catch (err: unknown) {
+    } catch {
       setPollStatusText(`Đang kết nối lại... (${pollAttemptRef.current})`);
     }
   }, [stopPolling, onSuccess, selectedPlan]);
@@ -339,24 +339,26 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
   };
 
   const handleManualVerify = async () => {
+    if (verifying) return;
+    setVerifying(true);
     setPollStatusText("Đang xác thực thủ công...");
     try {
       const pid = paymentIdRef.current;
       if (!pid) return;
 
       const detail = await getPaymentDetail(pid);
-      setPaymentDetail(detail);
 
-      if (detail?.status === "SUCCESS" || detail?.status === "COMPLETED" || detail?.status === "PAID" || detail?.status?.toUpperCase() === "PAID") {
+      if (isPaidStatus(detail?.status)) {
         stopPolling();
         setStep("success");
         onSuccess?.(selectedPlan);
       } else {
-        showToast("Hệ thống chưa nhận được khoản tiền, ông đợi vài giây hoặc check lại nội dung nha!");
+        toast.info("Hệ thống chưa nhận được khoản tiền. Vui lòng đợi vài giây hoặc kiểm tra lại nội dung chuyển khoản.");
       }
-    } catch (error) {
-      showToast("Lỗi kết nối máy chủ ngân hàng.");
+    } catch {
+      toast.error("Lỗi kết nối máy chủ ngân hàng. Vui lòng thử lại sau.");
     } finally {
+      setVerifying(false);
       setPollStatusText(`Đang tự động quét... (${pollAttemptRef.current})`);
     }
   };
@@ -367,7 +369,6 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     setPollError(null);
     setErrorStep(null);
     setPaymentData(null);
-    setPaymentDetail(null);
     stopPolling();
   };
 
@@ -375,18 +376,11 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
-      showToast("Đã sao chép nội dung chuyển khoản! 📋");
+      toast.success("Đã sao chép nội dung chuyển khoản!");
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      showToast("Lỗi sao chép.");
+      toast.error("Không thể sao chép. Vui lòng copy thủ công.");
     }
-  };
-
-  const handleCardAction = (plan: PlanId) => {
-    const config = getButtonConfig(plan, currentPlan);
-    if (config.action === "current") return;
-    if (config.action === "downgrade") { onClose(); return; }
-    if (config.action === "upgrade") handleUpgrade(plan);
   };
 
   const renderCardButton = (plan: PlanId) => {
@@ -405,7 +399,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
           <motion.button
             whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
             onClick={() => handleUpgrade(plan)} disabled={isLoading}
-            className="w-full py-3 bg-[#FF6B00] hover:bg-[#FF5500] text-white font-bold text-sm rounded-xl mt-6 shadow-md shadow-orange-500/10 flex items-center justify-center gap-2 min-h-[44px]"
+            className="w-full py-3 bg-[#FF6B00] hover:bg-[#FF5500] text-white font-bold text-sm rounded-xl mt-6 shadow-md shadow-orange-500/10 flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isLoading ? <Loader2 size={14} className="animate-spin" /> : <ArrowUp size={14} />}
             {isLoading ? "Đang xử lý..." : config.text}
@@ -428,7 +422,6 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     stopPolling();
     setStep("pricing");
     setPaymentData(null);
-    setPaymentDetail(null);
     setCreateError(null);
     setPollError(null);
     onClose();
@@ -492,13 +485,6 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                 {planCards.map((planId, idx) => {
                   const plan = PLANS[planId];
                   const isPremium = planId === "PREMIUM";
-                  const isCurrent = planId === currentPlan;
-                  
-                  const planIdToKey = (p: PlanId) => {
-                    if (p === "FREE") return "starter" as const;
-                    if (p === "SKILL_BUILDER") return "skill_builder" as const;
-                    return "career_premium" as const;
-                  };
                   const isDowngrade = planRanks[planIdToKey(planId)] < planRanks[planIdToKey(currentPlan)];
 
                   return (
@@ -590,7 +576,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
 
                   <div className="mb-8">
                     <p className="text-3xl font-black text-[#FF6B00] tracking-tight">{formatVnd(paymentData.amount)}</p>
-                    <p className="text-xs text-slate-400 font-medium mt-1">Gia gia hạn tự động hàng tháng an sau an toàn</p>
+                    <p className="text-xs text-slate-400 font-medium mt-1">Gia hạn tự động hàng tháng, an toàn và bảo mật</p>
                   </div>
 
                   {/* Khối MEMO chuyển khoản */}
@@ -679,12 +665,14 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
 
                 {/* Nút kiểm tra thủ công */}
                 <div className="w-full max-w-sm mt-5">
-                  <motion.button 
-                    whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} 
+                  <motion.button
+                    whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
                     onClick={handleManualVerify}
-                    className="w-full py-3.5 bg-[#FF6B00] hover:bg-[#FF5500] text-white font-black text-sm rounded-xl border-none shadow-[0_6px_20px_rgba(255,107,0,0.2)] flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                    disabled={verifying}
+                    className="w-full py-3.5 bg-[#FF6B00] hover:bg-[#FF5500] text-white font-black text-sm rounded-xl border-none shadow-[0_6px_20px_rgba(255,107,0,0.2)] flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <RefreshCw size={14} /> Tôi đã chuyển khoản thành công 🦾
+                    {verifying ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    {verifying ? "Đang xác thực giao dịch..." : "Tôi đã chuyển khoản thành công"}
                   </motion.button>
                   <p className="text-[10px] text-slate-400 text-center mt-2.5 font-medium">Cổng SePay quét khớp lệnh hóa đơn tự động mỗi 5 giây.</p>
                 </div>
@@ -712,12 +700,12 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
               
               {/* TIÊU ĐỀ ĐỘNG: Đọc trực tiếp trường learnerName từ cổng API SePay */}
               <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">
-                Chào mừng {userFullName || "Bảo VC"} tới Gói Premium! 🎉
+                Chào mừng {userFullName || "Bạn"} tới Gói Premium! 🎉
               </h3>
 
               {/* NỘI DUNG MÔ TẢ ĐỘNG: Đồng bộ template trắng cam rực rỡ */}
               <p className="text-sm text-slate-500 max-w-sm font-medium leading-relaxed mb-6">
-                Hệ thống đã kích hoạt toàn bộ đặc quyền <span className="text-[#FF6B00] font-bold">Gia sư AI 24/7</span> và bộ công cụ tăng tốc học tập. Sẵn sàng bứt phá điểm số cùng SkillSprint chưa <span className="text-[#FF6B00] font-bold">{userFullName || "Bảo VC"}</span>? 🚀
+                Hệ thống đã kích hoạt toàn bộ đặc quyền <span className="text-[#FF6B00] font-bold">Gia sư AI 24/7</span> và bộ công cụ tăng tốc học tập. Sẵn sàng bứt phá điểm số cùng SkillSprint chưa <span className="text-[#FF6B00] font-bold">{userFullName || "Bạn"}</span>? 🚀
               </p>
 
               {/* Khung biên lai mini đồng bộ sắc cam */}
@@ -766,7 +754,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                 {errorStep === "create_failed" ? "Không thể khởi tạo QR" : "Chưa nhận được khoản chuyển"}
               </h3>
               <p className="text-xs text-slate-400 max-w-xs font-medium leading-relaxed mb-8">
-                {createError || pollError || "Hệ thống gặp gián đoạn tạm thời khi liên kết ngân hàng. Ông thử ấn nút nạp lại nhé."}</p>
+                {createError || pollError || "Hệ thống gặp gián đoạn tạm thời khi liên kết ngân hàng. Vui lòng thử lại."}</p>
               <div className="flex gap-3 w-full max-w-xs">
                 <button onClick={resetAndClose} className="flex-1 py-3 border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-xs rounded-xl bg-white cursor-pointer transition-colors">Đóng</button>
                 <button onClick={handleRetry} className="flex-1 py-3 bg-[#FF6B00] hover:bg-[#FF5500] text-white border-none font-bold text-xs rounded-xl shadow-md shadow-orange-500/20 cursor-pointer flex items-center justify-center gap-1.5 transition-colors">
@@ -775,21 +763,6 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
               </div>
             </div>
           )}
-
-          {/* ════ TOAST THÔNG BÁO POPUP ════ */}
-          <AnimatePresence>
-            {toast.show && (
-              <motion.div
-                initial={{ opacity: 0, y: 15, scale: 0.95, x: 30 }}
-                animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
-                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
-                className="fixed bottom-6 right-6 z-[100] flex items-center gap-2.5 px-4 py-3 bg-white border border-slate-200 shadow-xl rounded-xl"
-              >
-                <AlertCircle size={15} className="text-[#FF6B00]" />
-                <span className="text-xs text-slate-800 font-bold whitespace-nowrap">{toast.message}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
         </motion.div>
       </motion.div>
