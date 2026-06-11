@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Send, MapPin, Mail, MessageSquare, Clock, Users, ArrowRight } from "lucide-react";
+import { Send, MapPin, Mail, MessageSquare, Clock, Users, ArrowRight, Facebook } from "lucide-react";
 import { Footer as PublicFooter } from "../components/Footer";
 import { PublicNavbar } from "../components/PublicNavbar";
 import CursorSpotlight from "../components/CursorSpotlight";
@@ -76,8 +76,37 @@ export default function Contact() {
                         border:"1px solid rgba(255,255,255,0.2)", cursor:"pointer", transition:"background 0.2s"
                       }}>
                       <MessageSquare size={18} />
-                      Tham gia Discord
+                      Cập Nhật Sau!!!
                     </motion.button>
+
+                    {/* Secondary Social Channels */}
+                    <div className="mt-6 pt-6 border-t border-slate-700/60 flex items-center gap-4">
+                      <span className="text-xs text-slate-400 font-semibold" style={{ fontFamily: F }}>Theo dõi thêm:</span>
+                      <a
+                        href="https://www.facebook.com/profile.php?id=61590323403077"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Facebook SkillSprint"
+                        className="text-slate-400 hover:text-[#FF6B00] hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-1.5 text-xs font-semibold no-underline"
+                        style={{ fontFamily: F }}
+                      >
+                        <Facebook size={16} />
+                        <span>Facebook</span>
+                      </a>
+                      <a
+                        href="https://www.tiktok.com/@skillsprint26"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="TikTok SkillSprint"
+                        className="text-slate-400 hover:text-[#FF6B00] hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-1.5 text-xs font-semibold no-underline"
+                        style={{ fontFamily: F }}
+                      >
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                          <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .79.11V9.5a6.27 6.27 0 0 0-3.1-1.74 6.36 6.36 0 0 0-6 5.56 6.34 6.34 0 0 0 6.1 7.18A6.3 6.3 0 0 0 15.82 16c0-.05.02-.1.02-.15V8.82a8.17 8.17 0 0 0 4.85 1.58V7a4.83 4.83 0 0 1-1.1-.31z" />
+                        </svg>
+                        <span>TikTok</span>
+                      </a>
+                    </div>
                   </div>
                   </motion.div>
                 </CursorSpotlight>
@@ -115,7 +144,7 @@ export default function Contact() {
                       </div>
                       <div>
                         <div style={{ fontFamily:F, fontSize:"0.85rem", color:T2, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.5px" }}>Email hỗ trợ</div>
-                        <div style={{ fontFamily:F, fontWeight:700, fontSize:"1.05rem", color:T1 }}>support@skillsprint.edu.vn</div>
+                        <div style={{ fontFamily:F, fontWeight:700, fontSize:"1.05rem", color:T1 }}>skillsprint2026@gmail.com</div>
                       </div>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:"16px" }}>
@@ -124,7 +153,7 @@ export default function Contact() {
                       </div>
                       <div>
                         <div style={{ fontFamily:F, fontSize:"0.85rem", color:T2, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.5px" }}>Trụ sở chính</div>
-                        <div style={{ fontFamily:F, fontWeight:600, fontSize:"1rem", color:T1 }}>Khu Công nghệ cao, Thủ Đức</div>
+                        <div style={{ fontFamily:F, fontWeight:600, fontSize:"1rem", color:T1 }}>Cập Nhật Sau!!!!</div>
                       </div>
                     </div>
                     </motion.div>
@@ -148,28 +177,27 @@ export default function Contact() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="flex flex-col gap-2">
                         <label style={{ fontFamily:F, fontWeight:700, fontSize:"0.9rem", color:T1 }}>Họ và tên</label>
-                        <input type="text" placeholder="Nguyễn Văn A" className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white outline-none transition-all duration-200" style={{ fontFamily:F, fontSize:"1rem", color:T1 }} />
+                        <input type="text" placeholder="Nguyễn Văn A" className="px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm placeholder:text-slate-400 focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/10 outline-none transition-all duration-200" style={{ fontFamily:F, fontSize:"1rem", color:T1 }} />
                       </div>
                       <div className="flex flex-col gap-2">
                         <label style={{ fontFamily:F, fontWeight:700, fontSize:"0.9rem", color:T1 }}>Email liên hệ</label>
-                        <input type="email" placeholder="sv@university.edu.vn" className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white outline-none transition-all duration-200" style={{ fontFamily:F, fontSize:"1rem", color:T1 }} />
+                        <input type="email" placeholder="skillsprint2026@gmail.com" className="px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm placeholder:text-slate-400 focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/10 outline-none transition-all duration-200" style={{ fontFamily:F, fontSize:"1rem", color:T1 }} />
                       </div>
                     </div>
 
                     <div className="flex flex-col gap-2">
                       <label style={{ fontFamily:F, fontWeight:700, fontSize:"0.9rem", color:T1 }}>Chủ đề (Vấn đề bạn gặp phải)</label>
-                      <select className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white outline-none transition-all duration-200 appearance-none" style={{ fontFamily:F, fontSize:"1rem", color:T1 }}>
+                      <select className="px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm placeholder:text-slate-400 focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/10 outline-none transition-all duration-200 appearance-none" style={{ fontFamily:F, fontSize:"1rem", color:T1 }}>
                         <option>Hỗ trợ thanh toán / Nâng cấp gói</option>
                         <option>Báo lỗi lộ trình học AI</option>
                         <option>Tư vấn chọn gói học tập</option>
-                        <option>Hợp tác làm Đại sứ sinh viên (Ambassador)</option>
                         <option>Khác</option>
                       </select>
                     </div>
 
                     <div className="flex flex-col gap-2">
                       <label style={{ fontFamily:F, fontWeight:700, fontSize:"0.9rem", color:T1 }}>Nội dung chi tiết</label>
-                      <textarea rows={5} placeholder="Ví dụ: Mình vừa thanh toán qua Momo nhưng tài khoản chưa được nâng cấp lên Premium..." className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white outline-none transition-all duration-200 resize-none" style={{ fontFamily:F, fontSize:"1rem", color:T1 }} />
+                      <textarea rows={5} placeholder="Ví dụ: Mình vừa thanh toán qua Momo nhưng tài khoản chưa được nâng cấp lên Premium..." className="px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm placeholder:text-slate-400 focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/10 outline-none transition-all duration-200 resize-none" style={{ fontFamily:F, fontSize:"1rem", color:T1 }} />
                     </div>
 
                     <motion.button whileHover={{ scale:1.02, boxShadow:"0 12px 30px rgba(255,107,0,0.35)" }} whileTap={{ scale:0.98 }}

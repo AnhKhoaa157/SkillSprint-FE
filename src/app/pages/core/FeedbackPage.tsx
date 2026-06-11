@@ -16,10 +16,10 @@ import {
 } from "../../../api/feedbackService";
 
 const FEEDBACK_TYPES: Array<{ value: FeedbackType; label: string; description: string; icon: React.ReactNode }> = [
-  { value: FeedbackType.BUG, label: "Bug", description: "Something is broken", icon: <Bug size={16} /> },
-  { value: FeedbackType.IMPROVEMENT, label: "Improvement", description: "A product improvement", icon: <MessageSquare size={16} /> },
-  { value: FeedbackType.QUESTION, label: "Question", description: "Something you need answered", icon: <AlertCircle size={16} /> },
-  { value: FeedbackType.OTHER, label: "Other", description: "Anything else", icon: <AlertCircle size={16} /> },
+  { value: FeedbackType.BUG,         label: "Lỗi kỹ thuật", description: "Hệ thống gặp sự cố, tính năng không hoạt động",    icon: <Bug size={16} /> },
+  { value: FeedbackType.IMPROVEMENT, label: "Cải tiến",     description: "Đề xuất cải tiến trải nghiệm sản phẩm",           icon: <MessageSquare size={16} /> },
+  { value: FeedbackType.QUESTION,    label: "Câu hỏi",      description: "Thắc mắc cần đội ngũ giải đáp",                  icon: <AlertCircle size={16} /> },
+  { value: FeedbackType.OTHER,       label: "Khác",          description: "Các ý kiến đóng góp khác",                       icon: <AlertCircle size={16} /> },
 ];
 
 // Hàm kiểm tra xem chuỗi có phải là link ảnh trực tiếp hay không
@@ -81,10 +81,10 @@ export default function FeedbackPage() {
         imageUrl: imageUrlPayload,
       });
 
-      toast.success("Feedback submitted successfully");
+      toast.success("Phản hồi đã được gửi thành công!");
       setIsSuccess(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not submit feedback");
+      toast.error(error instanceof Error ? error.message : "Không thể gửi phản hồi. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -96,10 +96,10 @@ export default function FeedbackPage() {
         
         {/* HEADER CĂN GIỮA */}
         <header className="text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">Learner feedback</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Share feedback with SkillSprint</h1>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">Phản hồi từ người học</p>
+          <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Chia sẻ ý kiến của bạn với SkillSprint</h1>
           <p className="mt-2 text-sm text-slate-500">
-            Send product issues, suggestions, or ideas directly to our team.
+            Gửi các vấn đề, góp ý hoặc ý tưởng phát triển sản phẩm trực tiếp đến đội ngũ của chúng tôi.
           </p>
         </header>
 
@@ -109,9 +109,9 @@ export default function FeedbackPage() {
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-500 mb-4">
               <CheckCircle2 size={36} />
             </div>
-            <h2 className="text-xl font-black text-slate-900">Thank You!</h2>
+            <h2 className="text-xl font-black text-slate-900">Cảm ơn bạn!</h2>
             <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto leading-6">
-              Your feedback has been successfully submitted. Our product team will review your report shortly to improve SkillSprint.
+              Phản hồi của bạn đã được gửi thành công. Đội ngũ sản phẩm sẽ xem xét và cải tiến SkillSprint dựa trên ý kiến của bạn.
             </p>
             <div className="mt-8 border-t border-slate-100 pt-6">
               <button
@@ -120,7 +120,7 @@ export default function FeedbackPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
               >
                 <PlusCircle size={16} />
-                Submit another feedback
+                Gửi phản hồi khác
               </button>
             </div>
           </div>
@@ -132,15 +132,15 @@ export default function FeedbackPage() {
                 <Send size={20} />
               </div>
               <div>
-                <h2 className="text-lg font-black text-slate-900">New feedback</h2>
-                <p className="text-xs text-slate-500">Please provide detailed information below.</p>
+                <h2 className="text-lg font-black text-slate-900">Phản hồi mới</h2>
+                <p className="text-xs text-slate-500">Vui lòng cung cấp thông tin chi tiết ở bên dưới.</p>
               </div>
             </div>
 
             <div className="space-y-6">
               {/* LOẠI FEEDBACK */}
               <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Feedback Type</label>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Loại phản hồi</label>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {FEEDBACK_TYPES.map((item) => (
                     <button
@@ -165,27 +165,27 @@ export default function FeedbackPage() {
 
               {/* TIÊU ĐỀ */}
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-slate-700">Title</label>
+                <label className="mb-1.5 block text-sm font-bold text-slate-700">Tiêu đề</label>
                 <input
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   maxLength={255}
                   required
-                  placeholder="Short summary of your feedback"
+                  placeholder="Tóm tắt ngắn gọn ý kiến phản hồi của bạn"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white focus:ring-4 focus:ring-orange-100"
                 />
               </div>
 
               {/* CHI TIẾT */}
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-slate-700">Details</label>
+                <label className="mb-1.5 block text-sm font-bold text-slate-700">Chi tiết nội dung</label>
                 <textarea
                   value={content}
                   onChange={(event) => setContent(event.target.value)}
                   maxLength={5000}
                   required
                   rows={6}
-                  placeholder="Describe what happened, what you expected, or what you would like improved."
+                  placeholder="Mô tả chi tiết những gì đã xảy ra, kết quả bạn mong đợi hoặc những điểm bạn muốn hệ thống cải tiến kỹ năng..."
                   className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white focus:ring-4 focus:ring-orange-100"
                 />
                 <p className="mt-1 text-right text-xs text-slate-400">{content.length}/5000</p>
@@ -193,13 +193,13 @@ export default function FeedbackPage() {
 
               {/* Ô INPUT GỘP THÔNG MINH BIẾN THIÊN */}
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-slate-700">Related Link / Screenshot URL (Optional)</label>
+                <label className="mb-1.5 block text-sm font-bold text-slate-700">Liên kết liên quan / URL Ảnh chụp màn hình (Không bắt buộc)</label>
                 <div className="relative">
                   <LinkIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input
                     value={combinedUrl}
                     onChange={(event) => setCombinedUrl(event.target.value)}
-                    placeholder="Paste website link or image link (ending in .png, .jpg...)"
+                    placeholder="Dán liên kết website hoặc link ảnh minh hoạ (đuôi tệp dạng .png, .jpg...)"
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white focus:ring-4 focus:ring-orange-100"
                   />
                 </div>
@@ -207,8 +207,8 @@ export default function FeedbackPage() {
                 {/* Chỉ hiển thị vùng preview này nếu hệ thống nhận diện được chuỗi nhập vào là LINK ẢNH */}
                 {imagePreviewSrc && (
                   <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm animate-in fade-in duration-200">
-                    <div className="bg-slate-50 px-4 py-1.5 text-[11px] font-bold text-slate-400 border-b border-slate-100">
-                      Screenshot Preview
+                    <div className="bg-slate-50 px-4 py-1.5 text-[11px] font-bold text-slate-400 border-b border-slate-100 uppercase tracking-wide">
+                      Xem trước ảnh đính kèm
                     </div>
                     <img src={imagePreviewSrc} alt="Feedback attachment preview" className="max-h-60 w-full object-contain bg-slate-50/30 p-2" />
                   </div>
@@ -222,7 +222,7 @@ export default function FeedbackPage() {
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? <LoaderCircle size={16} className="animate-spin" /> : <Send size={16} />}
-                {submitting ? "Submitting..." : "Submit feedback"}
+                {submitting ? "Đang gửi..." : "Gửi phản hồi"}
               </button>
             </div>
           </form>
