@@ -5,7 +5,9 @@ import {
   ArrowLeft,
   BookOpen,
   Brain,
+  BrainCircuit,
   CheckCircle2,
+  Clock,
   Clock3,
   ExternalLink,
   FileText,
@@ -27,6 +29,9 @@ import type { StudySessionDetailResponse } from "../../../api/studySessionServic
 import quizService from "../../../api/quizService";
 import type { QuizAttemptResponse } from "../../../api/quizService";
 import { usePomodoro } from "../../contexts/PomodoroContext";
+import { toast } from "sonner";
+import { useSubscription } from "../../../hooks/useSubscription";
+import { PricingModal } from "../../components/modals/PricingModal";
 
 type StudySessionRouteState = {
   taskId?: string;
@@ -147,6 +152,7 @@ export default function CoursePlayer() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewFocusScore, setReviewFocusScore] = useState(5);
+  const [pricingOpen, setPricingOpen] = useState(false);
 
   const [latestAttempt, setLatestAttempt] = useState<QuizAttemptResponse | null>(null);
   const [hasQuizCreated, setHasQuizCreated] = useState(false); // NÂNG CẤP CHÍ MẠCH: Ghim giữ trạng thái nhận diện bộ đề
@@ -155,6 +161,21 @@ export default function CoursePlayer() {
 
   const [isSubActionLoading, setIsSubActionLoading] = useState(false);
   const [sideTab, setSideTab] = useState<"pomodoro" | "quiz">("pomodoro");
+  const { planId, refresh: refreshSubscription } = useSubscription();
+  const isPremiumMember = planId === "PREMIUM";
+
+  const openPricingModal = useCallback(() => {
+    setPricingOpen(true);
+  }, []);
+
+  const showPremiumQuizToast = useCallback(() => {
+    toast.warning("Vui lòng nâng cấp Premium để sử dụng tính năng này", {
+      action: {
+        label: "Nâng cấp ngay",
+        onClick: () => openPricingModal(),
+      },
+    });
+  }, [openPricingModal]);
 
   const task = detail?.task ?? null;
   const roadmapStep = detail?.roadmapStep ?? null;
@@ -270,6 +291,11 @@ export default function CoursePlayer() {
   }, [roadmapStep?.stepId]);
 
   const handleGenerateAndOpenQuiz = async () => {
+    if (!isPremiumMember) {
+      showPremiumQuizToast();
+      return;
+    }
+
     const stepId = roadmapStep?.stepId;
     if (!stepId || isGeneratingQuiz) return;
     setIsGeneratingQuiz(true);
@@ -720,18 +746,29 @@ export default function CoursePlayer() {
           <aside className="lg:sticky lg:top-24 self-start">
             <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.03)]">
               {/* Tab switcher */}
-              <div className="flex rounded-xl overflow-hidden border border-slate-100 mb-4">
+              <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
                 <button
+                  type="button"
                   onClick={() => setSideTab("pomodoro")}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-all ${sideTab === "pomodoro" ? "bg-orange-500 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
+                    sideTab === "pomodoro"
+                      ? "bg-white text-slate-800 shadow-sm"
+                      : "bg-slate-100 text-slate-500 hover:bg-slate-200/70"
+                  }`}
                 >
-                  <Timer size={12} /> Pomodoro
+                  <Clock size={12} className="shrink-0 stroke-[2.4]" /> Pomodoro
                 </button>
                 <button
+                  type="button"
                   onClick={() => setSideTab("quiz")}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-all ${sideTab === "quiz" ? "bg-indigo-500 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
+                    sideTab === "quiz"
+                      ? "text-white shadow-sm"
+                      : "bg-slate-100 text-slate-500 hover:bg-slate-200/70"
+                  }`}
+                  style={sideTab === "quiz" ? { background: "linear-gradient(135deg, #FF6B00, #EA580C)" } : undefined}
                 >
-                  <Brain size={12} /> AI Quiz
+                  <BrainCircuit size={12} className="shrink-0 stroke-[2.4]" /> AI Quiz
                 </button>
               </div>
 
@@ -884,7 +921,11 @@ export default function CoursePlayer() {
                         type="button"
                         onClick={handleGenerateAndOpenQuiz}
                         disabled={isGeneratingQuiz}
-                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-3 text-xs font-extrabold text-white shadow-md shadow-indigo-500/20 transition hover:from-indigo-600 hover:to-violet-600 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                        style={{
+                          background: "linear-gradient(135deg, #FF6B00, #EA580C)",
+                          boxShadow: "0 10px 24px rgba(255, 107, 0, 0.22)",
+                        }}
                       >
                         {isGeneratingQuiz ? (
                           <><LoaderCircle size={13} className="animate-spin" /> Đang thiết kế đề...</>
@@ -1091,6 +1132,16 @@ export default function CoursePlayer() {
           </div>
         </div>
       )}
+
+      <PricingModal
+        isOpen={pricingOpen}
+        onClose={() => setPricingOpen(false)}
+        onSuccess={() => {
+          void refreshSubscription();
+        }}
+        initialPlan="premium"
+        currentPlan={planId}
+      />
 
       {isNavigationBlocked && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md transition-all">

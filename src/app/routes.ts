@@ -2,7 +2,6 @@ import React from "react";
 import { createBrowserRouter, Navigate } from "react-router";
 import RootLayout from "./layouts/RootLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
-import Dashboard from "./pages/workspace/Dashboard";
 import Roadmap from "./pages/workspace/Roadmap";
 import Profile from "./pages/core/Profile";
 import Landing from "./pages/public/Landing";
