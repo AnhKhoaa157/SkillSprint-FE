@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAuthHeaders } from '../../api/apiClient';
-
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
+import { API_BASE } from '../../api/config';
 
 export type RoadmapResponse = {
   id: string;

@@ -280,7 +280,7 @@ export function PublicNavbar() {
             <div className="nav-desktop" style={{ alignItems: "center", gap: "8px" }}>
               {/* Login */}
               <Link
-                to="/auth?mode=login"
+                to="/login?mode=login"
                 style={{
                   padding: "8px 16px",
                   borderRadius: "99px",
@@ -307,7 +307,7 @@ export function PublicNavbar() {
 
               {/* High-end CTA Button */}
               <Link
-                to="/auth?mode=register"
+                to="/login?mode=register"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -417,7 +417,7 @@ export function PublicNavbar() {
 
             {/* Mobile Auth Links */}
             <Link
-              to="/auth?mode=login"
+              to="/login?mode=login"
               style={{
                 display: "block",
                 padding: "12px 16px",
@@ -434,7 +434,7 @@ export function PublicNavbar() {
             </Link>
 
             <Link
-              to="/auth?mode=register"
+              to="/login?mode=register"
               style={{
                 display: "flex",
                 alignItems: "center",

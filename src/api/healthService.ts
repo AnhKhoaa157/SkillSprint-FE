@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || '';
+import { API_BASE } from "./config";
 
 export async function probeHealth(): Promise<{ status: string; service?: string; timestamp?: string }> {
   const res = await fetch(`${API_BASE}/health`, { cache: 'no-store' });

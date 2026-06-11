@@ -12,8 +12,7 @@ import AiTutorChat from "./AiTutorChat";
 import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/materialService.ts";
 import roadmapService from "../../../api/roadmapService";
 import workspaceService from "../../../api/workspaceService";
-
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
+import { API_BASE } from "../../../api/config";
 
 const PROCESSING_JOB_ACTIVE_STATES = new Set(["PENDING", "RUNNING", "REVIEW_REQUIRED", "EXTRACTING", "CLEANING", "CHUNKING", "ANALYZING"]);
 const PROCESSING_JOB_TERMINAL_STATES = new Set(["COMPLETED", "FAILED"]);

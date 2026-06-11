@@ -1,7 +1,6 @@
 import axios, { type AxiosInstance, type AxiosResponse } from "axios";
 import { getAuthToken, getSessionId } from "./apiClient";
-
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
+import { API_BASE } from "./config";
 
 export type ApiResponse<T> = {
   success: boolean;
