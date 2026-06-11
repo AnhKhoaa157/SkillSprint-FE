@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Client, type IMessage } from "@stomp/stompjs";
 import { toast } from "sonner";
 import { getAuthToken } from "../../api/apiClient";
+import { API_BASE } from "../../api/config";
 import { getNotifications, markNotificationRead } from "../../api/notificationsService";
 import type { NotificationResponse } from "../../api/skillSprintModels";
 
-const RAW_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "http://localhost:8080";
-const WS_BASE = RAW_BASE.replace(/^https/, "wss").replace(/^http/, "ws");
+const WS_BASE = API_BASE.replace(/^https/, "wss").replace(/^http/, "ws");
 
 function decodeJwtUserId(token: string): string | null {
   try {

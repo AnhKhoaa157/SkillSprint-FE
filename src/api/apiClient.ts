@@ -1,6 +1,5 @@
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
-
-const AUTH_STORAGE_KEY = "skillSprint.auth.tokens";
+import { getStoredAuthSession, isValidAuthSession } from "./authService";
+import { API_BASE } from "./config";
 
 export type ApiResponse<T> = {
   success: boolean;
@@ -9,78 +8,26 @@ export type ApiResponse<T> = {
   data: T | null;
 };
 
-function readStoredTokens(): Record<string, unknown> | null {
-  try {
-    let raw = sessionStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) {
-      raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    }
-    if (!raw) return null;
-
-    return JSON.parse(raw) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
 export function getAuthToken(): string | null {
-  try {
-    const parsed = readStoredTokens();
-    if (!parsed) return null;
-
-    const token = parsed?.accessToken;
-    return typeof token === "string" && token.length > 0 ? token : null;
-  } catch {
-    return null;
-  }
+  const session = getStoredAuthSession();
+  return isValidAuthSession(session) ? session.accessToken : null;
 }
 
 export function getSessionId(): string | null {
-  try {
-    const parsed = readStoredTokens();
-    if (!parsed) return null;
-
-    const sessionId = parsed?.sessionId;
-    return typeof sessionId === "string" && sessionId.length > 0 ? sessionId : null;
-  } catch {
-    return null;
-  }
+  const session = getStoredAuthSession();
+  return isValidAuthSession(session) ? session.sessionId : null;
 }
 
 export function getAuthHeaders(): Record<string, string> {
-  try {
-    let raw = sessionStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) {
-      raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    }
-    if (!raw) return {};
-
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      return {};
-    }
-
-    const accessToken = parsed?.accessToken;
-    const sessionId = parsed?.sessionId;
-
-    if (typeof accessToken !== "string" || accessToken.length === 0) {
-      return {};
-    }
-
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${accessToken}`,
-    };
-
-    if (typeof sessionId === "string" && sessionId.length > 0) {
-      headers["X-Session-Id"] = sessionId;
-    }
-
-    return headers;
-  } catch (err) {
+  const session = getStoredAuthSession();
+  if (!isValidAuthSession(session)) {
     return {};
   }
+
+  return {
+    Authorization: `Bearer ${session.accessToken}`,
+    "X-Session-Id": session.sessionId,
+  };
 }
 
 /**

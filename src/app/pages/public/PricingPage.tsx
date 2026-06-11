@@ -40,7 +40,7 @@ export default function PricingPage() {
   const handleAuthGateNavigate = (mode: "login" | "register") => {
     if (pendingAuthPlan) sessionStorage.setItem("pendingPlan", pendingAuthPlan);
     setAuthGateOpen(false);
-    navigate(`/auth?mode=${mode}`);
+    navigate(`/login?mode=${mode}`);
   };
 
   return (

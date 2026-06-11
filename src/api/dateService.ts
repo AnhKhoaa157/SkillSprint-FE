@@ -13,7 +13,7 @@
 export const getCurrentDateFromServer = async (): Promise<Date> => {
   try {
     // 🔧 PRODUCTION: Uncomment dòng dưới để dùng backend
-    // const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+    // import { API_BASE } from "./config";
     // const response = await fetch(`${API_BASE}/api/current-date`);
     // const data = await response.json();
     // return new Date(data.date);

@@ -326,10 +326,10 @@ function Navbar() {
           </div>
           {/* CTAs */}
           <div className="hidden md:flex" style={{ gap:"10px", alignItems:"center" }}>
-            <Link to="/auth" style={{ color:T2, fontSize:"0.875rem", fontFamily:F, fontWeight:500, textDecoration:"none", padding:"6px 12px" }}>
+            <Link to="/login" style={{ color:T2, fontSize:"0.875rem", fontFamily:F, fontWeight:500, textDecoration:"none", padding:"6px 12px" }}>
               Đăng nhập
             </Link>
-            <Link to="/auth">
+            <Link to="/login">
               <motion.button style={{
                 padding:"8px 20px", borderRadius:"10px", background:OG, color:"#fff",
                 fontFamily:F, fontWeight:700, fontSize:"0.875rem", border:"none", cursor:"pointer",
@@ -362,7 +362,7 @@ function Navbar() {
                   <span style={{ color:T1, fontFamily:F, fontWeight:500 }}>{item.label}</span>
                 </Link>
               ))}
-              <Link to="/auth" style={{ display:"block", marginTop:"12px", textDecoration:"none" }}>
+              <Link to="/login" style={{ display:"block", marginTop:"12px", textDecoration:"none" }}>
                 <button style={{ width:"100%", padding:"10px", borderRadius:"10px", background:OG, color:"#fff", fontFamily:F, fontWeight:700, border:"none", cursor:"pointer" }}>
                   Bắt đầu dùng thử
                 </button>
@@ -433,7 +433,7 @@ function Hero() {
         <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
           transition={{ duration:0.6, delay:0.32 }}
           style={{ display:"flex", gap:"12px", justifyContent:"center", flexWrap:"wrap", marginBottom:"60px" }}>
-          <Link to="/auth" style={{ textDecoration:"none" }}>
+          <Link to="/login" style={{ textDecoration:"none" }}>
             <motion.button style={{
               display:"flex", alignItems:"center", gap:"8px",
               padding:"14px 32px", borderRadius:"14px", background:OG, color:"#fff",
@@ -1478,7 +1478,7 @@ function FinalCTA() {
               </div>
 
               {/* Shimmering CTA Button at highest depth */}
-              <Link to="/auth" style={{ textDecoration: "none", transform: "translateZ(90px)", display: "inline-block" }}>
+              <Link to="/login" style={{ textDecoration: "none", transform: "translateZ(90px)", display: "inline-block" }}>
                 <motion.button
                   style={{
                     display: "inline-flex", alignItems: "center", gap: "10px",

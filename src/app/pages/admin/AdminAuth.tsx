@@ -247,7 +247,7 @@ export default function AdminAuth() {
 
       {/* Back to student login */}
       <button
-        onClick={() => navigate("/auth")}
+        onClick={() => navigate("/login")}
         className="absolute z-10 top-6 left-6 inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
         style={{ color: "#475569", border: "1px solid #CBD5E1", background: "#FFFFFF" }}
       >

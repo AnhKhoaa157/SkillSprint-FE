@@ -1,4 +1,4 @@
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8080";
+import { API_BASE } from "./config";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -51,6 +51,15 @@ export type LoginResult =
   | { status: "new-password-required"; challengeName: string; session: string; role: AuthRole | null };
 
 const AUTH_STORAGE_KEY = "skillSprint.auth.tokens";
+const SESSION_HYDRATED_KEY = "skillSprint.auth.hydrated";
+const AUTH_CLEANUP_KEYS = [
+  AUTH_STORAGE_KEY,
+  SESSION_HYDRATED_KEY,
+  "accessToken",
+  "idToken",
+  "refreshToken",
+  "sessionId",
+] as const;
 
 function decodeBase64Url(input: string): string {
   const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
@@ -71,6 +80,26 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+function hasText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+export function isAccessTokenValid(accessToken: unknown): accessToken is string {
+  if (!hasText(accessToken)) {
+    return false;
+  }
+
+  const payload = decodeJwtPayload(accessToken);
+  const expiresAtSeconds = payload?.exp;
+
+  // Require a standard JWT exp claim so malformed or opaque tokens are rejected.
+  return typeof expiresAtSeconds === "number" && expiresAtSeconds * 1000 > Date.now();
+}
+
+export function isValidAuthSession(session: AuthSession | null | undefined): session is AuthSession {
+  return Boolean(session && isAccessTokenValid(session.accessToken) && hasText(session.sessionId));
 }
 
 function normalizeRole(value: unknown): AuthRole | null {
@@ -182,7 +211,7 @@ export function getPostLoginPath(role: unknown): string {
 }
 
 export function getStoredAuthSession(): AuthSession | null {
-  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+  const raw = sessionStorage.getItem(AUTH_STORAGE_KEY) ?? localStorage.getItem(AUTH_STORAGE_KEY);
 
   if (!raw) {
     return null;
@@ -191,16 +220,9 @@ export function getStoredAuthSession(): AuthSession | null {
   try {
     const parsed = JSON.parse(raw) as Partial<AuthSession>;
 
-    // Relaxed validation — only accessToken is required.
-    // The BE SingleSessionFilter uses the sessionId for Redis validation,
-    // not refreshToken, so we should not reject tokens just because
-    // refreshToken is missing (some token-response shapes omit it).
-    if (!parsed.accessToken) {
-      return null;
-    }
-
-    return {
-      accessToken: parsed.accessToken,
+    // Strict validation: protected routes require both a live JWT and Redis sessionId.
+    const session: AuthSession = {
+      accessToken: parsed.accessToken ?? "",
       idToken: parsed.idToken ?? "",
       refreshToken: parsed.refreshToken ?? "",
       expiresIn: parsed.expiresIn ?? 0,
@@ -208,6 +230,12 @@ export function getStoredAuthSession(): AuthSession | null {
       role: extractRole(parsed as Partial<AuthPayload> & Record<string, unknown>),
       sessionId: parsed.sessionId ?? null,
     };
+
+    if (!isValidAuthSession(session)) {
+      return null;
+    }
+
+    return session;
   } catch {
     return null;
   }
@@ -344,13 +372,18 @@ export async function login(email: string, password: string): Promise<LoginResul
     };
   }
 
-  if (!data.accessToken || !data.idToken || !data.refreshToken) {
+  if (!data.accessToken || !data.idToken || !data.refreshToken || !data.sessionId) {
     throw new Error("Thiếu token xác thực từ máy chủ.");
+  }
+
+  const tokens = buildAuthSession(data);
+  if (!isValidAuthSession(tokens)) {
+    throw new Error("Invalid or expired authentication session.");
   }
 
   return {
     status: "authenticated",
-    tokens: buildAuthSession(data),
+    tokens,
   };
 }
 
@@ -427,23 +460,30 @@ export async function completeNewPassword(email: string, newPassword: string, se
 
   const data = response.data;
 
-  if (!data || !data.accessToken || !data.idToken || !data.refreshToken) {
+  if (!data || !data.accessToken || !data.idToken || !data.refreshToken || !data.sessionId) {
     throw new Error(response.message || "Không thể hoàn tất đổi mật khẩu.");
   }
 
-  return buildAuthSession(data);
+  const tokens = buildAuthSession(data);
+  if (!isValidAuthSession(tokens)) {
+    throw new Error(response.message || "Invalid or expired authentication session.");
+  }
+
+  return tokens;
 }
 
 export function storeAuthTokens(tokens: AuthSession): void {
+  if (!isValidAuthSession(tokens)) {
+    throw new Error("Cannot store an invalid authentication session.");
+  }
+
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(tokens));
 }
 
 export function clearAuthTokens(): void {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
-  try {
-    sessionStorage.removeItem(AUTH_STORAGE_KEY);
-    sessionStorage.removeItem("skillSprint.auth.hydrated");
-  } catch {
-    // non-critical
+  // Remove the canonical session blob plus legacy individual token keys.
+  for (const key of AUTH_CLEANUP_KEYS) {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
   }
 }
