@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { X, Check, ShieldCheck, ChevronRight, Zap, Star, Loader2, AlertCircle, Copy, RefreshCw, ArrowUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
+import { getMe } from "../../../api/meService";
 import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse } from "../../../api/skillSprintModels";
 
 const F = "'Plus Jakarta Sans','Inter',sans-serif";
@@ -187,6 +188,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
   const [qrLoaded, setQrLoaded] = useState(false);
   const [errorStep, setErrorStep] = useState<string | null>(null);
   const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
+  const [userFullName, setUserFullName] = useState<string>("");
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollAttemptRef = useRef(0);
@@ -226,6 +228,13 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
       }
     }
   }, [isOpen, initialPlan]);
+
+  useEffect(() => {
+    if (step !== "success") return;
+    getMe()
+      .then((profile) => setUserFullName(profile.fullName))
+      .catch(() => {});
+  }, [step]);
 
   useEffect(() => {
     if (step !== "success") return;
@@ -703,12 +712,12 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
               
               {/* TIÊU ĐỀ ĐỘNG: Đọc trực tiếp trường learnerName từ cổng API SePay */}
               <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">
-                Chào mừng {paymentDetail?.learnerName || "Bảo VC"} tới Gói Premium! 🎉
+                Chào mừng {userFullName || "Bảo VC"} tới Gói Premium! 🎉
               </h3>
-              
+
               {/* NỘI DUNG MÔ TẢ ĐỘNG: Đồng bộ template trắng cam rực rỡ */}
               <p className="text-sm text-slate-500 max-w-sm font-medium leading-relaxed mb-6">
-                Hệ thống đã kích hoạt toàn bộ đặc quyền <span className="text-[#FF6B00] font-bold">Gia sư AI 24/7</span> và bộ công cụ tăng tốc học tập. Sẵn sàng bứt phá điểm số cùng SkillSprint chưa <span className="text-[#FF6B00] font-bold">{paymentDetail?.learnerName || "Bảo VC"}</span>? 🚀
+                Hệ thống đã kích hoạt toàn bộ đặc quyền <span className="text-[#FF6B00] font-bold">Gia sư AI 24/7</span> và bộ công cụ tăng tốc học tập. Sẵn sàng bứt phá điểm số cùng SkillSprint chưa <span className="text-[#FF6B00] font-bold">{userFullName || "Bảo VC"}</span>? 🚀
               </p>
 
               {/* Khung biên lai mini đồng bộ sắc cam */}
