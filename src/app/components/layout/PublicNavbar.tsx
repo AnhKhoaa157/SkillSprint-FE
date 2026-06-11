@@ -350,15 +350,15 @@ export function PublicNavbar() {
                 width: "36px",
                 height: "36px",
                 borderRadius: "10px",
-                border: "1px solid rgba(229, 231, 235, 0.8)",
-                background: "rgba(255, 255, 255, 0.6)",
-                color: "#374151",
+                border: "1px solid rgba(255, 107, 0, 0.3)",
+                background: "rgba(255, 107, 0, 0.05)",
+                color: "#FF6B00",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
               }}
               onClick={() => setIsMenuOpen(v => !v)}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.9)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.6)"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255, 107, 0, 0.1)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255, 107, 0, 0.05)"; }}
               aria-label="Toggle menu"
             >
               {isMenuOpen ? <X size={18} /> : <Menu size={18} />}

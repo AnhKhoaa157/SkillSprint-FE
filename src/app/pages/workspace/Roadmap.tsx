@@ -10,14 +10,12 @@ import {
   CircleHelp,
   CalendarDays,
   Clock3,
-  ExternalLink,
   FileText,
   Layers3,
   LoaderCircle,
   PlayCircle,
   Sparkles,
   X,
-  CheckCircle2,
   Lock,
   Check,
   BookOpen,
@@ -144,16 +142,6 @@ function formatTaskDate(taskDate: string | null | undefined): string {
   }).format(parsed);
 }
 
-function getProgressPercent(roadmapData: RoadmapResponse | null): number {
-  if (!roadmapData) return 0;
-  const status = (toText(roadmapData.status) || "").toUpperCase();
-  if (status === "DONE") return 100;
-  if (status === "GENERATING") return 60;
-  const steps = roadmapData.steps || [];
-  if (steps.length === 0) return 15;
-  return Math.min(95, 20 + steps.length * 16);
-}
-
 function getTotalResources(roadmapData: RoadmapResponse | null): number {
   if (!roadmapData) return 0;
   const stepResources = (roadmapData.steps || []).reduce((count, step) => count + (step.resources?.length || 0), 0);
@@ -241,6 +229,16 @@ export default function Roadmap() {
   const [detailTab, setDetailTab] = useState<"overview" | "resources" | "tutor">("overview");
   const [isPremium, setIsPremium] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     getCurrentSubscription()
@@ -253,7 +251,6 @@ export default function Roadmap() {
   }, [selectedStep]);
 
   const steps = roadmapData?.steps || [];
-  const resources = roadmapData?.resources || [];
   const totalResources = useMemo(() => getTotalResources(roadmapData), [roadmapData]);
   const progressPercent = useMemo(() => {
     if (!roadmapData) return 0;
@@ -271,7 +268,6 @@ export default function Roadmap() {
   const roadmapTitle = toText(roadmapData?.title) || "Roadmap học tập";
   const roadmapDescription = toText(roadmapData?.description) || "Lộ trình học tập theo workspace đã xác nhận.";
 
-  // 🎯 1. AUTO-TRIGGER GENERATE NẾU GẶP 404
   useEffect(() => {
     let mounted = true;
 
@@ -289,7 +285,6 @@ export default function Roadmap() {
         try {
           currentRoadmap = await roadmapService.getRoadmap(workspaceId);
         } catch (err: any) {
-          // Lỗi 404 (chưa tạo roadmap) -> TỰ ĐỘNG TRIGGER LỆNH TẠO BẰNG AI LUÔN, KHÔNG BẮT BẤM NÚT NỮA
           if (err?.status === 404 || String(err?.message || "").includes("404") || String(err || "").includes("404")) {
             if (mounted) setGenerating(true);
             try {
@@ -297,7 +292,6 @@ export default function Roadmap() {
             } catch (genErr) {
               console.warn("Auto-generate trigger failed", genErr);
             }
-            // Fetch lại để lấy status GENERATING/PENDING
             currentRoadmap = await roadmapService.getRoadmap(workspaceId).catch(() => null);
           } else {
             throw err;
@@ -322,7 +316,6 @@ export default function Roadmap() {
     return () => { mounted = false; };
   }, [workspaceId]);
 
-  // 🎯 2. AUTO-POLLING LẮNG NGHE KẾT QUẢ TỪ AI
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const isGeneratingState = generating || roadmapData?.status === "GENERATING" || roadmapData?.status === "PENDING";
@@ -341,7 +334,7 @@ export default function Roadmap() {
         } catch (e) {
           console.warn("Polling roadmap failed", e);
         }
-      }, 3000); // Polling mỗi 3 giây
+      }, 3000);
     }
     
     return () => clearInterval(interval);
@@ -382,7 +375,7 @@ export default function Roadmap() {
     }
   };
 
-  const renderStepDetail = () => {
+  const renderStepDetail = (isMobileView = false) => {
     if (!selectedStep) return null;
 
     const step = selectedStep;
@@ -398,8 +391,11 @@ export default function Roadmap() {
     const stepCompletionPercent = Math.min(100, 20 + idx * 15);
 
     return (
-      <div className="h-full flex flex-col bg-white border-l border-slate-100 shadow-[0_-8px_24px_rgba(15,23,42,0.03)] z-20 relative">
-        <div className="px-6 pt-5 bg-white shrink-0">
+      <div className={isMobileView 
+        ? "flex flex-col bg-white w-full" 
+        : "h-full flex flex-col bg-white border-l border-slate-100 shadow-[0_-8px_24px_rgba(15,23,42,0.03)] z-20 relative"
+      }>
+        <div className={`px-6 pt-5 bg-white shrink-0 ${isMobileView ? "px-0" : ""}`}>
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3.5">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF7E21] border border-orange-100/60 shadow-sm mt-0.5">
@@ -414,13 +410,15 @@ export default function Roadmap() {
                 </h2>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setSelectedStep(null)}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-700 hover:border-slate-350 hover:bg-slate-50 transition shadow-sm cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            {!isMobileView && (
+              <button
+                type="button"
+                onClick={() => setSelectedStep(null)}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-700 hover:border-slate-350 hover:bg-slate-50 transition shadow-sm cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <div className="flex mt-4 rounded-xl bg-slate-50 border border-slate-100 p-1 gap-1">
@@ -468,7 +466,7 @@ export default function Roadmap() {
 
         <div className={`flex-1 bg-white ${
           detailTab === "tutor" ? "overflow-hidden flex flex-col min-h-0 px-4 pt-3 pb-4" : "overflow-y-auto custom-scrollbar px-6 pt-5 pb-6"
-        }`}>
+        } ${isMobileView ? "px-0" : ""}`}>
           {detailTab === "tutor" ? (
             <AiTutorChat
               key={getStepKey(step) ?? ""}
@@ -600,7 +598,7 @@ export default function Roadmap() {
           )}
         </div>
 
-        <div className="border-t border-slate-100 p-4 bg-white shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.015)]">
+        <div className={`border-t border-slate-100 p-4 bg-white shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.015)] ${isMobileView ? "px-0 pb-0" : ""}`}>
           <button
             disabled={!canStart || isStarting}
             onClick={handleStartLearning}
@@ -617,7 +615,6 @@ export default function Roadmap() {
 
   const isGeneratingState = generating || roadmapData?.status === "GENERATING" || roadmapData?.status === "PENDING";
 
-  /* ---- Loading skeleton (Only on very first mount) ---- */
   if (loading && !isGeneratingState) {
     return (
       <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] bg-[#FDFBF7] px-6 py-8 border border-amber-100 flex items-center justify-center">
@@ -626,7 +623,6 @@ export default function Roadmap() {
     );
   }
 
-  /* ---- Generating / Pending AI Screen ---- */
   if (isGeneratingState) {
     return (
       <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] bg-[#FDFBF7] px-6 py-8 border border-amber-100 flex items-center justify-center shadow-inner">
@@ -645,7 +641,6 @@ export default function Roadmap() {
     );
   }
 
-  /* ---- Error state ---- */
   if (!roadmapData || error) {
     return (
       <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] bg-[radial-gradient(circle_at_top_left,_rgba(255,107,0,0.10),_transparent_30%),linear-gradient(180deg,_#F8FAFC_0%,_#F1F5F9_100%)] px-6 py-8 text-slate-900 lg:px-10">
@@ -668,11 +663,8 @@ export default function Roadmap() {
     );
   }
 
-  /* ====================================================================
-     MAIN RENDER: Gamified Curved Path
-     ==================================================================== */
   return (
-    <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] px-6 py-8 text-slate-900 lg:px-10 border border-[#EEDCC5]/70 shadow-[0_16px_40px_rgba(212,163,115,0.06)] relative overflow-hidden"
+    <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] px-4 sm:px-6 py-8 text-slate-900 lg:px-10 border border-[#EEDCC5]/70 shadow-[0_16px_40px_rgba(212,163,115,0.06)] relative overflow-hidden"
       style={{
         backgroundColor: "#FDFBF7",
         backgroundImage: `radial-gradient(#E8D8C8 1px, transparent 1px), linear-gradient(rgba(212, 163, 115, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(212, 163, 115, 0.04) 1px, transparent 1px)`,
@@ -680,11 +672,9 @@ export default function Roadmap() {
         backgroundPosition: "center",
       }}
     >
-      {/* Antique Map Borders */}
       <div className="absolute inset-1.5 border border-[#EEDCC5]/40 pointer-events-none rounded-[1.8rem] z-0" />
       <div className="absolute inset-3 border border-dashed border-[#EEDCC5]/30 pointer-events-none rounded-[1.6rem] z-0" />
 
-      {/* Starting Compass Rose Landmark on the map */}
       <div className="absolute top-[220px] left-[8%] opacity-20 pointer-events-none transform -translate-y-1/2 select-none">
         <svg className="w-24 h-24 text-[#D4A373]" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.5">
           <circle cx="50" cy="50" r="42" strokeDasharray="3,3" />
@@ -700,30 +690,30 @@ export default function Roadmap() {
         </svg>
       </div>
 
-      <div className={`h-[calc(100vh-120px)] flex items-start overflow-hidden px-4 transition-all duration-700 ease-in-out ${selectedStep ? 'justify-start gap-0 lg:gap-8' : 'justify-center'}`}>
-        {/* LEFT COLUMN: ROADMAP PATH */}
-        <div className={`h-full overflow-y-auto custom-scrollbar px-2 transition-all duration-700 ease-in-out flex-shrink-0 relative z-10 ${selectedStep ? "w-full lg:w-[55%]" : "w-full max-w-3xl"}`}>
+      <div className={`h-[calc(100vh-120px)] flex flex-col md:flex-row items-start overflow-hidden px-1 sm:px-4 transition-all duration-700 ease-in-out ${selectedStep && !isMobile ? 'justify-start gap-0 lg:gap-8' : 'justify-center'}`}>
+        {/* LEFT COLUMN: ROADMAP PATH WITH SCROLL CONTEXT */}
+        <div className={`h-full overflow-y-auto custom-scrollbar px-1 sm:px-2 transition-all duration-700 ease-in-out flex-shrink-0 relative z-10 ${selectedStep && !isMobile ? "w-full lg:w-[55%]" : "w-full max-w-3xl"}`}>
           
-          <section className="mb-6 rounded-2xl border border-amber-200 bg-[#FFFDF9]/95 p-5 shadow-[0_12px_32px_rgba(212,163,115,0.12)] backdrop-blur relative overflow-hidden">
+          <section className="mb-6 rounded-2xl border border-amber-200 bg-[#FFFDF9]/95 p-4 sm:p-5 shadow-[0_12px_32px_rgba(212,163,115,0.12)] backdrop-blur relative overflow-hidden">
             <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-100/40 to-transparent pointer-events-none rounded-bl-full border-l border-b border-orange-100/20" />
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between relative z-10">
               <div className="max-w-2xl">
                 <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF7E21] border border-orange-200/50 uppercase tracking-wider shadow-sm shadow-orange-500/5">
                   <Sparkles className="h-3.5 w-3.5 text-[#FF7E21]" /> Bản đồ hành trình AI
                 </div>
-                <h1 className="mt-3.5 text-xl font-extrabold tracking-tight text-slate-800 sm:text-2xl leading-snug">{roadmapTitle}</h1>
-                <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{roadmapDescription} Mã bản đồ: <span className="font-extrabold text-orange-850 bg-orange-50 px-2 py-0.5 rounded border border-orange-100/50">{formatRoadmapId(roadmapData?.id || workspaceId)}</span></p>
+                <h1 className="mt-3.5 text-lg sm:text-2xl font-extrabold tracking-tight text-slate-800 leading-snug">{roadmapTitle}</h1>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{roadmapDescription} Mã: <span className="font-extrabold text-orange-850 bg-orange-50 px-2 py-0.5 rounded border border-orange-100/50">{formatRoadmapId(roadmapData?.id || workspaceId)}</span></p>
               </div>
-              <div className="grid gap-2 grid-cols-3 shrink-0">
-                <div className="rounded-xl border border-amber-200/60 bg-[#FDFBF7] px-3 py-2 text-center min-w-[85px] shadow-sm">
+              <div className="grid grid-cols-3 gap-2 text-[11px] sm:text-xs shrink-0 w-full lg:w-auto">
+                <div className="rounded-xl border border-amber-200/60 bg-[#FDFBF7] px-2 sm:px-3 py-2 text-center min-w-0 shadow-sm">
                   <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Trạng thái</div>
-                  <div className="mt-1 text-xs font-extrabold text-slate-700">{(roadmapData.status || "ACTIVE").toUpperCase()}</div>
+                  <div className="mt-1 text-xs font-extrabold text-slate-700 truncate">{(roadmapData.status || "ACTIVE").toUpperCase()}</div>
                 </div>
-                <div className="rounded-xl border border-amber-200/60 bg-[#FDFBF7] px-3 py-2 text-center min-w-[85px] shadow-sm">
+                <div className="rounded-xl border border-amber-200/60 bg-[#FDFBF7] px-2 sm:px-3 py-2 text-center min-w-0 shadow-sm">
                   <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Cột mốc</div>
                   <div className="mt-1 text-xs font-extrabold text-slate-700">{steps.length}</div>
                 </div>
-                <div className="rounded-xl border border-amber-200/60 bg-[#FDFBF7] px-3 py-2 text-center min-w-[85px] shadow-sm">
+                <div className="rounded-xl border border-amber-200/60 bg-[#FDFBF7] px-2 sm:px-3 py-2 text-center min-w-0 shadow-sm">
                   <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Tài nguyên</div>
                   <div className="mt-1 text-xs font-extrabold text-slate-700">{totalResources}</div>
                 </div>
@@ -740,86 +730,89 @@ export default function Roadmap() {
             </div>
           </section>
 
-          <div className="relative py-12 flex flex-col items-center gap-14 select-none">
-            {steps.map((step, index) => {
-              const isLast = index === steps.length - 1;
-              const isActive = selectedStep?.id === step.id;
-              const stepId = getStepKey(step) || `step-${index}`;
-              const title = toText(step.title) || `Cột mốc ${index + 1}`;
-              const matchedTask = tasks.find((task) => task.roadmapStepId === stepId);
-              const isCompleted = matchedTask?.status?.toUpperCase() === "COMPLETED" || matchedTask?.status?.toUpperCase() === "DONE";
-              const isFreemiumLocked = !isPremium && index >= 2;
-              const X_curr = xOffsets[index % 10];
-              const X_next = xOffsets[(index + 1) % 10];
+          {/* INDEPENDENT INDIVIDUAL SCROLLBOX FOR THE GRAPH INTERFACES */}
+          <div className="w-full overflow-x-auto custom-scrollbar touch-pan-x select-none border border-amber-100/40 bg-[#FFFDF9]/40 rounded-3xl p-2 sm:p-4 shadow-inner">
+            <div className="min-w-[650px] md:min-w-0 w-full h-full relative py-12 flex flex-col items-center select-none">
+              {steps.map((step, index) => {
+                const isLast = index === steps.length - 1;
+                const isActive = selectedStep?.id === step.id;
+                const stepId = getStepKey(step) || `step-${index}`;
+                const title = toText(step.title) || `Cột mốc ${index + 1}`;
+                const matchedTask = tasks.find((task) => task.roadmapStepId === stepId);
+                const isCompleted = matchedTask?.status?.toUpperCase() === "COMPLETED" || matchedTask?.status?.toUpperCase() === "DONE";
+                const isFreemiumLocked = !isPremium && index >= 2;
+                const X_curr = xOffsets[index % 10];
+                const X_next = xOffsets[(index + 1) % 10];
 
-              return (
-                <div key={stepId} className="relative w-full h-28 flex items-center justify-center">
-                  {renderMapDecoration(index, X_curr)}
-                  <div className="absolute top-1/2 left-0 w-full h-[calc(100%+3.5rem)] z-0 pointer-events-none">
-                    <svg className="w-full h-full text-[#D4A373]/50" preserveAspectRatio="none" viewBox="0 0 100 100">
-                      <path d={isLast ? `M ${X_curr} 0 C ${X_curr} 50, 50 50, 50 100` : `M ${X_curr} 0 C ${X_curr} 50, ${X_next} 50, ${X_next} 100`} stroke="currentColor" strokeWidth="3.5" strokeDasharray="6,6" strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />
+                return (
+                  <div key={stepId} className="relative w-full h-28 flex items-center justify-center">
+                    {renderMapDecoration(index, X_curr)}
+                    <div className="absolute top-1/2 left-0 w-full h-[calc(100%+3.5rem)] z-0 pointer-events-none">
+                      <svg className="w-full h-full text-[#D4A373]/50" preserveAspectRatio="none" viewBox="0 0 100 100">
+                        <path d={isLast ? `M ${X_curr} 0 C ${X_curr} 50, 50 50, 50 100` : `M ${X_curr} 0 C ${X_curr} 50, ${X_next} 50, ${X_next} 100`} stroke="currentColor" strokeWidth="3.5" strokeDasharray="6,6" strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />
+                      </svg>
+                    </div>
+
+                    <div className="absolute -translate-x-1/2 -translate-y-1/2 z-10 top-1/2 flex flex-col items-center" style={{ left: `${X_curr}%` }}>
+                      {isFreemiumLocked ? (
+                        <button type="button" onClick={() => setShowUpgradeModal(true)} className="flex flex-col items-center focus:outline-none group cursor-pointer">
+                          <div className="relative flex h-14 w-14 items-center justify-center rounded-full border-2 border-slate-200 bg-slate-100 text-slate-400 overflow-hidden">
+                            <div className="absolute inset-0 backdrop-blur-[2px] bg-white/40" />
+                            <Lock className="h-5 w-5 text-slate-400 relative z-10" />
+                          </div>
+                          <div className="mt-2 bg-slate-50/95 px-3 py-1 rounded-xl border border-slate-200 relative z-10 w-28 sm:w-36 text-center overflow-hidden">
+                            <div className="absolute inset-0 backdrop-blur-[1px]" />
+                            <h3 className="text-[10px] font-bold tracking-tight text-slate-400 truncate leading-snug relative z-10 blur-[2px]" title={title}>{title}</h3>
+                            <span className="block text-[9px] font-semibold text-orange-500 relative z-10 mt-0.5">🔒 Mở khoá Pro</span>
+                          </div>
+                        </button>
+                      ) : (
+                        <button type="button" onClick={() => setSelectedStep(step)} className="flex flex-col items-center transition-all duration-300 hover:scale-105 focus:outline-none cursor-pointer">
+                          <div className={`flex h-14 w-14 items-center justify-center rounded-full border-2 transition-all duration-300 ${isActive ? 'border-[#FF7E21] bg-[#FF7E21] text-white shadow-lg shadow-orange-500/20 ring-4 ring-orange-100' : isCompleted ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm ring-4 ring-emerald-50' : matchedTask ? 'border-[#D4A373] bg-white text-slate-700 shadow-sm hover:border-[#FF7E21] hover:text-[#FF7E21]' : 'border-slate-200 bg-slate-100 text-slate-400'}`}>
+                            {isCompleted ? <Check className="h-5 w-5 stroke-[2.5]" /> : !matchedTask ? <Lock className="h-4 w-4" /> : <span className="text-sm font-extrabold">{index + 1}</span>}
+                          </div>
+                          <div className={`mt-2 bg-[#FFFDF9]/95 px-3 py-1 rounded-xl shadow-[0_2px_6px_rgba(15,23,42,0.03)] border relative z-10 w-28 sm:w-36 text-center transition-colors duration-350 ${isActive ? 'border-[#FF7E21] bg-orange-50/10' : 'border-amber-200 hover:border-[#FF7E21]'}`}>
+                            <h3 className="text-[10px] font-bold tracking-tight text-slate-800 truncate leading-snug" title={title}>{title}</h3>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="relative flex flex-col items-center w-full mt-6">
+                <div className="relative z-10 flex flex-col items-center group">
+                  <div className="absolute -inset-2 bg-gradient-to-r from-amber-400 to-[#FF7E21] rounded-full blur opacity-20 group-hover:opacity-40 transition duration-300 pointer-events-none" />
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-500 bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-lg transition-transform duration-300 hover:rotate-6">
+                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 10h20M2 14h20 M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
+                      <path d="M10 6v4M14 6v4 M12 14v4" />
                     </svg>
                   </div>
-
-                  <div className="absolute -translate-x-1/2 -translate-y-1/2 z-10 top-1/2 flex flex-col items-center" style={{ left: `${X_curr}%` }}>
-                    {isFreemiumLocked ? (
-                      <button type="button" onClick={() => setShowUpgradeModal(true)} className="flex flex-col items-center focus:outline-none group cursor-pointer">
-                        <div className="relative flex h-14 w-14 items-center justify-center rounded-full border-2 border-slate-200 bg-slate-100 text-slate-400 overflow-hidden">
-                          <div className="absolute inset-0 backdrop-blur-[2px] bg-white/40" />
-                          <Lock className="h-5 w-5 text-slate-400 relative z-10" />
-                        </div>
-                        <div className="mt-2 bg-slate-50/95 px-3 py-1 rounded-xl border border-slate-200 relative z-10 w-28 sm:w-36 text-center overflow-hidden">
-                          <div className="absolute inset-0 backdrop-blur-[1px]" />
-                          <h3 className="text-[10px] font-bold tracking-tight text-slate-400 truncate leading-snug relative z-10 blur-[2px]" title={title}>{title}</h3>
-                          <span className="block text-[9px] font-semibold text-orange-500 relative z-10 mt-0.5">🔒 Mở khoá Pro</span>
-                        </div>
-                      </button>
-                    ) : (
-                      <button type="button" onClick={() => setSelectedStep(step)} className="flex flex-col items-center transition-all duration-300 hover:scale-105 focus:outline-none cursor-pointer">
-                        <div className={`flex h-14 w-14 items-center justify-center rounded-full border-2 transition-all duration-300 ${isActive ? 'border-[#FF7E21] bg-[#FF7E21] text-white shadow-lg shadow-orange-500/20 ring-4 ring-orange-100' : isCompleted ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm ring-4 ring-emerald-50' : matchedTask ? 'border-[#D4A373] bg-white text-slate-700 shadow-sm hover:border-[#FF7E21] hover:text-[#FF7E21]' : 'border-slate-200 bg-slate-100 text-slate-400'}`}>
-                          {isCompleted ? <Check className="h-5 w-5 stroke-[2.5]" /> : !matchedTask ? <Lock className="h-4 w-4" /> : <span className="text-sm font-extrabold">{index + 1}</span>}
-                        </div>
-                        <div className={`mt-2 bg-[#FFFDF9]/95 px-3 py-1 rounded-xl shadow-[0_2px_6px_rgba(15,23,42,0.03)] border relative z-10 w-28 sm:w-36 text-center transition-colors duration-350 ${isActive ? 'border-[#FF7E21] bg-orange-50/10' : 'border-amber-200 hover:border-[#FF7E21]'}`}>
-                          <h3 className="text-[10px] font-bold tracking-tight text-slate-800 truncate leading-snug" title={title}>{title}</h3>
-                        </div>
-                      </button>
-                    )}
+                  <div className="mt-2.5 bg-[#FFFDF9] px-4 py-1.5 rounded-xl border border-amber-300/80 w-32 sm:w-40 text-center shadow-md">
+                    <h3 className="text-[10px] font-extrabold tracking-wider text-amber-850 uppercase">Kho báu lộ trình</h3>
+                    <span className="text-[8px] font-semibold text-slate-400 block mt-0.5">Hoàn thành</span>
                   </div>
-                </div>
-              );
-            })}
-
-            <div className="relative flex flex-col items-center w-full mt-6">
-              <div className="relative z-10 flex flex-col items-center group">
-                <div className="absolute -inset-2 bg-gradient-to-r from-amber-400 to-[#FF7E21] rounded-full blur opacity-20 group-hover:opacity-40 transition duration-300 pointer-events-none" />
-                <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-500 bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-lg transition-transform duration-300 hover:rotate-6">
-                  <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2 10h20M2 14h20 M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
-                    <path d="M10 6v4M14 6v4 M12 14v4" />
-                  </svg>
-                </div>
-                <div className="mt-2.5 bg-[#FFFDF9] px-4 py-1.5 rounded-xl border border-amber-300/80 w-32 sm:w-40 text-center shadow-md">
-                  <h3 className="text-[10px] font-extrabold tracking-wider text-amber-850 uppercase">Kho báu lộ trình</h3>
-                  <span className="text-[8px] font-semibold text-slate-400 block mt-0.5">Hoàn thành</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-between gap-3 pt-6 border-t border-amber-100">
-            <button type="button" onClick={handleBackToDetail} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer">
-              <ArrowLeft size={16} /> Quay lại Workspace
+          <div className="mt-6 flex items-center justify-between gap-3 pt-6 border-t border-amber-100 pb-16 md:pb-6">
+            <button type="button" onClick={handleBackToDetail} className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer">
+              <ArrowLeft size={15} /> <span className="hidden sm:inline">Quay lại</span> Workspace
             </button>
-            <button type="button" onClick={handleGenerate} className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-200 cursor-pointer border border-slate-200 shadow-sm">
+            <button type="button" onClick={handleGenerate} className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 transition hover:bg-slate-200 cursor-pointer border border-slate-200 shadow-sm">
               Làm mới lộ trình
             </button>
           </div>
         </div>
 
         {/* RIGHT COLUMN: LOCKED DETAIL PANEL */}
-        {selectedStep && (
-          <div className="w-full lg:w-[45%] shrink-0 h-full overflow-y-auto custom-scrollbar border-l border-slate-100 bg-white transition-all duration-500 ease-in-out">
-            {renderStepDetail()}
+        {selectedStep && !isMobile && (
+          <div className="hidden md:block w-full lg:w-[45%] shrink-0 h-full overflow-hidden border-l border-slate-100 bg-white transition-all duration-500 ease-in-out">
+            {renderStepDetail(false)}
           </div>
         )}
       </div>
@@ -840,6 +833,34 @@ export default function Roadmap() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Mobile Step Detail Sheet Modal */}
+      {selectedStep && isMobile && (
+        <>
+          <div 
+            className="fixed inset-0 z-[140] bg-slate-900/40 backdrop-blur-sm"
+            onClick={() => setSelectedStep(null)}
+          />
+          <div 
+            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[150] shadow-2xl transition-transform max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-300"
+          >
+            <div className="sticky top-0 bg-[#FFFDF9] z-20 border-b border-slate-100 p-4 flex justify-between items-center">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-800">Chi tiết cột mốc</span>
+              <button
+                type="button"
+                onClick={() => setSelectedStep(null)}
+                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            
+            <div className="p-5 sm:p-6 bg-white">
+              {renderStepDetail(true)}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

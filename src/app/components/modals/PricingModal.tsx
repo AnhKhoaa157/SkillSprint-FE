@@ -68,38 +68,41 @@ const PLANS: Record<PlanId, PlanConfig> = {
   },
 };
 
-/* ─── Button config helper (INDEX-BASED COMPARISON) ─── */
-const planOrder: PlanId[] = ["FREE", "SKILL_BUILDER", "PREMIUM"];
+/* ─── Button config helper (RANK-BASED COMPARISON) ─── */
+const planRanks = { starter: 0, skill_builder: 1, career_premium: 2 };
 
 type ButtonAction = "current" | "downgrade" | "upgrade";
 
 interface ButtonConfig {
   text: string;
   disabled: boolean;
-  variant: "ghost" | "outline" | "primary" | "primary-outline";
+  variant: "ghost" | "outline" | "primary" | "primary-outline" | "disabled-gray";
   action: ButtonAction;
 }
 
 function getButtonConfig(cardPlan: PlanId, currentPlan: PlanId): ButtonConfig {
-  const cardIndex = planOrder.indexOf(cardPlan);
-  const currentIndex = planOrder.indexOf(currentPlan);
+  const planIdToKey = (p: PlanId) => {
+    if (p === "FREE") return "starter" as const;
+    if (p === "SKILL_BUILDER") return "skill_builder" as const;
+    return "career_premium" as const;
+  };
 
-  // Same plan → current
-  if (cardIndex === currentIndex) {
+  const cardRank = planRanks[planIdToKey(cardPlan)];
+  const currentRank = planRanks[planIdToKey(currentPlan)];
+
+  if (cardRank === currentRank) {
     return { text: "Gói hiện tại", disabled: true, variant: "ghost", action: "current" };
   }
-  // Lower tier → downgrade
-  if (cardIndex < currentIndex) {
+  if (cardRank < currentRank) {
     return {
-      text: `Hạ cấp xuống ${PLANS[cardPlan].name}`,
-      disabled: false,
-      variant: "primary-outline",
+      text: "Không khả dụng",
+      disabled: true,
+      variant: "disabled-gray",
       action: "downgrade",
     };
   }
-  // Higher tier → upgrade
   return {
-    text: `Nâng cấp ${PLANS[cardPlan].name}`,
+    text: cardPlan === "SKILL_BUILDER" ? "Nâng cấp Skill Builder" : "Nâng cấp Career Premium",
     disabled: false,
     variant: "primary",
     action: "upgrade",
@@ -148,7 +151,7 @@ interface PricingModalProps {
   onClose: () => void;
   onSuccess?: (plan: "builder" | "premium") => void;
   initialPlan?: "builder" | "premium";
-  currentPlan: string; // Đổi thành string để nhận linh hoạt data từ Backend/Context
+  currentPlan: "starter" | "skill_builder" | "career_premium";
 }
 
 /* ─── Component ─── */
@@ -168,7 +171,8 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
   };
 
   const currentPlan = getNormalizedPlan(rawCurrentPlan);
-  console.log("[PricingModal] Received currentPlan prop:", rawCurrentPlan, "→ Normalized:", currentPlan);
+  const currentUserPlan = currentPlan === "FREE" ? "starter" : currentPlan === "SKILL_BUILDER" ? "skill_builder" : "career_premium";
+  console.log("[PricingModal] Received currentPlan prop:", rawCurrentPlan, "→ Normalized:", currentPlan, "→ currentUserPlan:", currentUserPlan);
 
   /* Sepay payment state */
   const [paymentData, setPaymentData] = useState<SepayPaymentCreateResponse | null>(null);
@@ -324,6 +328,15 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     }
   };
 
+  const handleUpgrade = (planId: string) => {
+    const upper = planId.toUpperCase();
+    if (upper === "SKILL_BUILDER" || upper === "BUILDER") {
+      handleCreatePayment("builder");
+    } else if (upper === "PREMIUM" || upper === "CAREER_PREMIUM") {
+      handleCreatePayment("premium");
+    }
+  };
+
   const handleManualVerify = async () => {
     setPollStatusText("Đang kiểm tra thủ công...");
     try {
@@ -389,10 +402,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     }
 
     if (config.action === "upgrade") {
-      const paymentType = planIdToPaymentType(plan);
-      if (paymentType) {
-        handleCreatePayment(paymentType);
-      }
+      handleUpgrade(plan);
     }
   };
 
@@ -410,7 +420,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
               background: "transparent", border: "1px solid rgba(255,255,255,0.15)",
               color: "rgba(255,255,255,0.35)", fontFamily: F, fontWeight: 600,
               fontSize: "0.875rem", cursor: "not-allowed", marginTop: "24px",
-              opacity: 0.5,
+              opacity: 0.5, minHeight: "44px",
             }}>
             {config.text}
           </button>
@@ -420,7 +430,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
         return (
           <motion.button
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-            onClick={() => handleCardAction(plan)}
+            onClick={() => handleUpgrade(plan)}
             disabled={isLoading}
             style={{
               width: "100%", padding: "11px", borderRadius: "10px",
@@ -430,6 +440,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
               marginTop: "24px", opacity: isLoading ? 0.6 : 1,
               boxShadow: `0 4px 16px ${OG}61`,
               display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+              minHeight: "44px",
             }}>
             {isLoading ? <Loader2 size={14} className="animate-spin" /> : <ArrowUp size={14} />}
             {isLoading ? "Đang xử lý..." : config.text}
@@ -450,10 +461,26 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
               fontSize: "0.875rem", cursor: isLoading ? "not-allowed" : "pointer",
               marginTop: "24px", opacity: isLoading ? 0.6 : 1,
               display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+              minHeight: "44px",
             }}>
             {isLoading ? <Loader2 size={14} className="animate-spin" /> : config.action === "downgrade" ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
             {isLoading ? "Đang xử lý..." : config.text}
           </motion.button>
+        );
+
+      case "disabled-gray":
+        return (
+          <button
+            disabled
+            style={{
+              width: "100%", padding: "11px", borderRadius: "10px",
+              background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)",
+              color: "rgba(255,255,255,0.25)", fontFamily: F, fontWeight: 600,
+              fontSize: "0.875rem", cursor: "not-allowed", marginTop: "24px",
+              minHeight: "44px",
+            }}>
+            {config.text}
+          </button>
         );
 
       default:
@@ -568,10 +595,10 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                     GÓI HIỆN TẠI
                   </p>
                   <p style={{ fontSize: "1.05rem", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.3 }}>
-                    {PLANS[currentPlan]?.name || "Starter"}
+                    {currentUserPlan === "starter" ? "Starter" : currentUserPlan === "skill_builder" ? "Skill Builder" : "Career Premium"}
                   </p>
                   <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.5)", marginTop: "1px" }}>
-                    {currentPlan === "FREE" ? "Miễn phí" : `${formatVnd(PLANS[currentPlan]?.price || 0)} / tháng`}
+                    {currentUserPlan === "starter" ? "Miễn phí" : currentUserPlan === "skill_builder" ? "89k/tháng" : "199k/tháng"}
                   </p>
                 </div>
                 <div style={{
@@ -591,8 +618,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
               </div>
 
               {/* Cards grid */}
-              <div style={{
-                display: "grid", gridTemplateColumns: "repeat(3,1fr)",
+              <div className="grid grid-cols-1 md:grid-cols-3" style={{
                 borderTop: "1px solid rgba(255,255,255,0.07)",
               }}>
                 {planCards.map((planId, idx) => {
@@ -601,19 +627,34 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                   const isSkillBuilder = planId === "SKILL_BUILDER";
                   const isCurrent = planId === currentPlan;
 
+                  const planIdToKey = (p: PlanId) => {
+                    if (p === "FREE") return "starter" as const;
+                    if (p === "SKILL_BUILDER") return "skill_builder" as const;
+                    return "career_premium" as const;
+                  };
+
+                  const cardRank = planRanks[planIdToKey(planId)];
+                  const currentRank = planRanks[planIdToKey(currentPlan)];
+                  const isDowngrade = cardRank < currentRank;
+
                   return (
-                    <div key={planId} style={{
-                      padding: "28px 24px 24px",
-                      borderRight: idx < planCards.length - 1 ? "1px solid rgba(255,255,255,0.07)" : "none",
-                      display: "flex", flexDirection: "column",
-                      background: isPremium
-                        ? "rgba(255,107,0,0.06)"
-                        : isSkillBuilder
-                          ? "rgba(255,107,0,0.03)"
-                          : "transparent",
-                      border: isPremium ? `1.5px solid ${OG}` : "none",
-                      position: "relative", overflow: "hidden",
-                    }}>
+                    <div key={planId}
+                      className={[
+                        isDowngrade ? "opacity-40 grayscale pointer-events-none select-none" : "",
+                        idx < planCards.length - 1 ? "border-b md:border-b-0 md:border-r border-[rgba(255,255,255,0.07)]" : ""
+                      ].join(" ")}
+                      style={{
+                        padding: "28px 24px 24px",
+                        display: "flex", flexDirection: "column",
+                        background: isPremium
+                          ? "rgba(255,107,0,0.06)"
+                          : isSkillBuilder
+                            ? "rgba(255,107,0,0.03)"
+                            : "transparent",
+                        border: isPremium ? `1.5px solid ${OG}` : "none",
+                        position: "relative", overflow: "hidden",
+                      }}
+                    >
                       {isPremium && (
                         <div style={{
                           position: "absolute", top: "16px", right: "-28px",

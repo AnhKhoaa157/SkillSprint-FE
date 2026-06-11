@@ -27,8 +27,10 @@ type QuizPhase = "start" | "active" | "result";
 type Difficulty = "EASY" | "MEDIUM" | "HARD";
 
 interface QuizContainerProps {
-  stepId: string;
+  stepId?: string;
+  quizId?: string;
   currentPlan: string | null | undefined;
+  onComplete: (result: { isPassed: boolean; score: number }) => void;
   onCompleteSession?: (result: QuizAttemptResponse) => void;
 }
 
@@ -75,7 +77,9 @@ function normaliseQuiz(raw: QuizResponse | null): QuizResponse | null {
 
 export default function QuizContainer({
   stepId,
+  quizId,
   currentPlan,
+  onComplete,
   onCompleteSession,
 }: QuizContainerProps) {
   const [quiz, setQuiz] = useState<QuizResponse | null>(null);
@@ -116,6 +120,12 @@ export default function QuizContainer({
       return;
     }
 
+    const targetId = stepId || quizId;
+    if (!targetId) {
+      setIsLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setIsLoading(true);
     setError(null);
@@ -126,7 +136,7 @@ export default function QuizContainer({
     setResult(null);
 
     quizService
-      .getCurrent(stepId)
+      .getCurrent(targetId)
       .then((data) => {
         if (cancelled) return;
         setQuiz(normaliseQuiz(data));
@@ -145,15 +155,17 @@ export default function QuizContainer({
     return () => {
       cancelled = true;
     };
-  }, [stepId, currentPlan]);
+  }, [stepId, quizId, currentPlan]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
   async function handleGenerate() {
+    const targetId = stepId || quizId;
+    if (!targetId) return;
     setIsGenerating(true);
     setError(null);
     try {
-      const data = await quizService.generate(stepId);
+      const data = await quizService.generate(targetId);
       setQuiz(normaliseQuiz(data));
       setPhase("start");
       setCurrentIndex(0);
@@ -205,6 +217,15 @@ export default function QuizContainer({
     setResult(null);
     setPhase("start");
   }
+
+  const handleFinishQuiz = () => {
+    if (!result) return;
+    const correctCount = result.correctAnswers ?? 0;
+    const totalCount = result.totalQuestions ?? 1;
+    const isPassed = totalCount > 0 ? (correctCount / totalCount >= 0.8) : false;
+    onComplete({ isPassed, score: correctCount });
+    onCompleteSession?.(result);
+  };
 
   // ── Premium locked overlay ───────────────────────────────────────────────────
 
@@ -761,7 +782,7 @@ export default function QuizContainer({
             </button>
             <button
               type="button"
-              onClick={() => onCompleteSession?.(result)}
+              onClick={handleFinishQuiz}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-extrabold text-white shadow-md shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98]"
             >
               <CheckCircle2 size={14} /> Hoàn thành

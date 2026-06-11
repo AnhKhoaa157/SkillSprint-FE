@@ -6,11 +6,10 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
 import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
-import { ArrowLeft, ArrowRight, BookOpenCheck, Bot, FileUp, Sparkles, ClipboardList, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Zap, LoaderCircle, Copy, SlidersHorizontal, Check, Calendar, Compass } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Zap, LoaderCircle, SlidersHorizontal, Check, Calendar } from "lucide-react";
 import { getStoredAuthSession } from "../../../api/authService";
 import AiTutorChat from "./AiTutorChat";
 import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/materialService.ts";
-import roadmapService from "../../../api/roadmapService";
 import workspaceService from "../../../api/workspaceService";
 import { API_BASE } from "../../../api/config";
 
@@ -63,39 +62,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function extractBackendErrorMessage(value: unknown): string | null {
-  if (typeof value === 'string') return value.trim() || null;
-  if (!isRecord(value)) return null;
-  const directMessage = value.message ?? value.error ?? value.detail ?? value.title;
-  if (typeof directMessage === 'string' && directMessage.trim()) return directMessage.trim();
-  for (const source of [value.data, value.response, value.payload, value.errorResponse]) {
-    const message = extractBackendErrorMessage(source);
-    if (message) return message;
-  }
-  return null;
-}
-
-function formatDuration(ms: number | null): string {
-  if (ms === null || !Number.isFinite(ms) || ms < 0) return '0s';
-  const totalSeconds = Math.round(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return minutes <= 0 ? `${seconds}s` : seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
-}
-
-function getStructureTimeline(value: unknown): number | null {
-  if (!isRecord(value)) return null;
-  const candidate = isRecord(value.data) ? value.data : isRecord(value.learningStructure) ? value.learningStructure : value;
-  if (!isRecord(candidate)) return null;
-  const source = (isRecord(candidate.learningStructure) ? candidate.learningStructure : candidate) as any;
-  const startRaw = source.startedAt ?? source.generatedAt ?? source.createdAt;
-  const endRaw = source.completedAt ?? source.finishedAt ?? source.updatedAt;
-  if (!startRaw || !endRaw) return null;
-  const start = new Date(startRaw).getTime();
-  const end = new Date(endRaw).getTime();
-  return !Number.isFinite(start) || !Number.isFinite(end) || end < start ? null : end - start;
-}
-
 function isProcessingState(status: string | null | undefined): boolean {
   return !!status && PROCESSING_JOB_ACTIVE_STATES.has(String(status).toUpperCase());
 }
@@ -122,13 +88,11 @@ export default function WorkspaceDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // 🎯 Nhận diện flag chuyển hướng trực tiếp từ màn tạo Workspace mới
   const shouldOpenOnboarding = !!(location.state as { openOnboarding?: boolean } | null)?.openOnboarding;
   
   const authSession = getStoredAuthSession();
   const token = authSession?.accessToken ?? null;
   const [activeTab, setActiveTab] = useState<WorkspaceDetailTab>("files");
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const onboarding = useOnboardingProfile(id);
   const [files, setFiles] = useState<UploadFile[]>([]);
@@ -139,24 +103,18 @@ export default function WorkspaceDetail() {
   const processingIntervals = useRef<Record<string, number>>({});
   const structurePollingRef = useRef<number | null>(null);
   const structurePollingAttemptsRef = useRef(0);
-  const analysisStartedAtRef = useRef<number | null>(null);
 
   const structureData = (results?.data ? results.data : results) as LearningStructureResponse | null;
   const visibleChapters = Array.isArray(structureData?.chapters) ? structureData.chapters : [];
   const rawStatus = structureData?.status || "DRAFT";
   const normalizedStatus = String(rawStatus).toUpperCase();
 
-  const docsCount = files.length;
   const doneDocsCount = files.filter(f => f.status === "done").length;
-  const processingDocsCount = files.filter(f => f.status === "processing").length;
   const pendingJobsCount = files.filter(f => f.jobStatus === 'PENDING').length;
   const processingJobsCount = files.filter(f => f.jobStatus === 'PROCESSING').length;
   const completedJobsCount = files.filter(f => f.jobStatus === 'COMPLETED' || f.jobStatus === 'DONE').length;
   const failedJobsCount = files.filter(f => f.jobStatus === 'FAILED').length;
-  const processingProgressValues = files.filter(f => f.jobStatus === 'PROCESSING' && Number.isFinite(f.progress)).map(f => f.progress);
-  const processingProgress = processingProgressValues.length ? Math.round(processingProgressValues.reduce((sum, value) => sum + value, 0) / processingProgressValues.length) : null;
   const [workspaceName, setWorkspaceName] = useState<string>("Không gian làm việc");
-  const workspaceCode = toWorkspaceCode(id);
   const workspaceId = id ?? '';
   const uploadRequests = useRef<Record<string, XMLHttpRequest>>({});
 
@@ -201,7 +159,6 @@ export default function WorkspaceDetail() {
     setGenerateLoading(false);
     setIsGeneratingStructure(false);
 
-    // 🔥 Nếu phát hiện có tín hiệu redirect từ trang khởi tạo Workspace, ép hiển thị modal ngay
     if (shouldOpenOnboarding) {
       setIsOnboardingOpen(true);
     }
@@ -216,7 +173,6 @@ export default function WorkspaceDetail() {
 
       try {
         const p = await onboarding.fetchOnboardingProfile();
-        // Kiểm tra an toàn: Nếu chưa có cấu hình profile từ trước VÀ không phải luồng ép mở, tự kích hoạt modal
         if (!p && !shouldOpenOnboarding) {
           setIsOnboardingOpen(true);
         }
@@ -339,8 +295,7 @@ export default function WorkspaceDetail() {
   const [isGeneratingStructure, setIsGeneratingStructure] = useState(false);
   const [structureGenerationRequested, setStructureGenerationRequested] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const [roadmapGenerating, setRoadmapGenerating] = useState(false);
-  const [roadmapError, setRoadmapError] = useState<string | null>(null);
+  const [roadmapError] = useState<string | null>(null);
   const [workspaceTutorOpen, setWorkspaceTutorOpen] = useState(false);
   
   const generating = isGeneratingStructure || generateLoading;
@@ -373,7 +328,6 @@ export default function WorkspaceDetail() {
   async function triggerStructureGeneration(isRegenerate: boolean) {
     if (!id) return;
     try {
-      analysisStartedAtRef.current = Date.now();
       setStructureGenerationRequested(true);
       setIsGeneratingStructure(true);
       setGenerateLoading(true);
@@ -465,34 +419,33 @@ export default function WorkspaceDetail() {
   };
 
   const onDrop = (e: React.DragEvent<HTMLLabelElement>) => { e.preventDefault(); setDragActive(false); addFiles(e.dataTransfer.files); };
-  const formatDate = (iso: string) => new Date(iso).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" });
 
   return (
-    <div className="relative min-h-screen bg-[#F9FAFB] p-6 font-inter text-slate-900 overflow-hidden sm:p-8">
+    <div className="relative min-h-screen bg-[#F9FAFB] p-4 sm:p-6 lg:p-8 font-inter text-slate-900 overflow-hidden">
       <div className="absolute left-[-10%] top-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-[#FF6B00]/5 to-transparent blur-[120px] pointer-events-none" />
       <div className="absolute right-[-10%] bottom-[-10%] -z-10 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-[#F59E0B]/5 to-transparent blur-[150px] pointer-events-none" />
 
-      <div className="max-w-[1400px] mx-auto">
+      <div className="max-w-[1400px] mx-auto pb-24 lg:pb-0">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 mb-8">
+        <div className="flex items-center justify-between gap-4 mb-6 sm:mb-8">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#FF6B00] mb-2">
               <BookOpenCheck className="w-3.5 h-3.5" />
               <span>AI Learning Workspace</span>
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 truncate">{workspaceName}</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 truncate">{workspaceName}</h1>
           </div>
-          <button type="button" onClick={() => navigate('/app/workspaces')} className="shrink-0 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition shadow-sm">
-            <ArrowLeft className="w-4 h-4" /> Trở về
+          <button type="button" onClick={() => navigate('/app/workspaces')} className="shrink-0 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition shadow-sm">
+            <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Trở về</span>
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="mb-8 flex items-center gap-1.5 rounded-2xl border border-slate-200/70 bg-white p-1.5 shadow-sm overflow-x-auto">
+        <div className="w-full overflow-x-auto whitespace-nowrap flex flex-row gap-2 pb-2 custom-scrollbar touch-pan-x select-none mb-6 sm:mb-8 rounded-2xl border border-slate-200/70 bg-white p-1.5 shadow-sm">
           {workspaceTabs.map(tab => {
             const selected = activeTab === tab.id;
             return (
-              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold whitespace-nowrap transition duration-200 ${selected ? "bg-[#FF6B00] text-white shadow-md shadow-[#FF6B00]/20" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}>
+              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`px-4 py-2 text-sm shrink-0 flex items-center gap-2 rounded-xl font-bold whitespace-nowrap transition duration-200 ${selected ? "bg-[#FF6B00] text-white shadow-md shadow-[#FF6B00]/20" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}>
                 <tab.icon className="h-4 w-4 shrink-0" />
                 <span>{tab.label}</span>
               </button>
@@ -503,8 +456,9 @@ export default function WorkspaceDetail() {
         {roadmapError && <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">{roadmapError}</div>}
 
         {/* FILES TAB */}
-        <div className={`${activeTab === "files" ? "grid grid-cols-12 gap-6 mb-6" : "hidden"}`}>
-          <div className="col-span-12 lg:col-span-7 space-y-5">
+        <div className={`${activeTab === "files" ? "flex flex-col lg:flex-row gap-6 mb-6" : "hidden"}`}>
+          {/* Main Drag-Drop & Files List Area */}
+          <div className="w-full lg:flex-1 space-y-5">
             <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 border border-orange-100"><UploadCloud className="h-4 w-4 text-[#FF6B00]" /></div>
@@ -513,15 +467,15 @@ export default function WorkspaceDetail() {
                   <div className="text-xs text-slate-400">PDF, DOCX, TXT — tối đa 50MB</div>
                 </div>
               </div>
-              <div className="p-6">
-                <label onDragEnter={() => setDragActive(true)} onDragOver={(e) => { e.preventDefault(); setDragActive(true); }} onDragLeave={() => setDragActive(false)} onDrop={onDrop} className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-10 cursor-pointer transition-all duration-200 ${dragActive ? 'border-[#FF6B00]/50 bg-[#FFF7ED]/50' : 'border-slate-200 hover:border-[#FF6B00]/30 hover:bg-slate-50/80'}`}>
+              <div className="p-4 sm:p-6 lg:p-8">
+                <label onDragEnter={() => setDragActive(true)} onDragOver={(e) => { e.preventDefault(); setDragActive(true); }} onDragLeave={() => setDragActive(false)} onDrop={onDrop} className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-8 sm:py-10 cursor-pointer transition-all duration-200 ${dragActive ? 'border-[#FF6B00]/50 bg-[#FFF7ED]/50' : 'border-slate-200 hover:border-[#FF6B00]/30 hover:bg-slate-50/80'}`}>
                   <input ref={fileRef} type="file" multiple className="hidden" onChange={onFiles} />
-                  <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${dragActive ? 'bg-[#FF6B00] text-white shadow-lg' : 'bg-slate-100 text-slate-400'}`}><MoveDown className="h-6 w-6" /></div>
-                  <div className="text-center">
-                    <div className="text-sm font-semibold text-slate-700">Kéo &amp; thả tài liệu vào đây</div>
-                    <div className="text-xs text-slate-400 mt-1">hoặc nhấn để chọn file từ máy tính</div>
+                  <div className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl ${dragActive ? 'bg-[#FF6B00] text-white shadow-lg' : 'bg-slate-100 text-slate-400'}`}><MoveDown className="h-5 w-5 sm:h-6 sm:w-6" /></div>
+                  <div className="text-center px-4">
+                    <div className="text-xs sm:text-sm font-semibold text-slate-700">Kéo &amp; thả tài liệu vào đây</div>
+                    <div className="text-[11px] sm:text-xs text-slate-400 mt-1">hoặc nhấn để chọn file từ máy tính</div>
                   </div>
-                  <button type="button" onClick={() => fileRef.current?.click()} className="mt-1 inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] transition">
+                  <button type="button" onClick={() => fileRef.current?.click()} className="mt-1 inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-4 sm:px-5 py-2 sm:py-2.5 min-h-[44px] text-xs font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] transition">
                     <FileUp className="h-4 w-4" /> Chọn file
                   </button>
                 </label>
@@ -542,17 +496,17 @@ export default function WorkspaceDetail() {
               </div>
 
               {files.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-50 text-slate-300"><FileText className="h-7 w-7" /></div>
+                <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
+                  <div className="mb-3 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-slate-50 text-slate-300"><FileText className="h-6 w-6 sm:h-7 sm:w-7" /></div>
                   <div className="text-sm font-semibold text-slate-500">Chưa có tài liệu nào</div>
                 </div>
               ) : (
                 <div className="divide-y divide-slate-50">
                   {files.map(f => (
-                    <div key={f.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 border border-orange-100/50"><FileText className="h-4 w-4 text-[#FF6B00]" /></div>
+                    <div key={f.id} className="group flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 hover:bg-slate-50/60 transition">
+                      <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 border border-orange-100/50"><FileText className="h-4 w-4 text-[#FF6B00]" /></div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-slate-800 truncate">{f.name}</div>
+                        <div className="text-xs sm:text-sm font-semibold text-slate-800 truncate">{f.name}</div>
                         {(f.jobStatus === 'PROCESSING' || f.status === 'processing') && Number.isFinite(f.progress) && f.progress > 0 && f.progress < 100 && (
                           <div className="mt-1.5">
                             <div className="h-1 w-full overflow-hidden rounded-full bg-slate-100">
@@ -562,7 +516,7 @@ export default function WorkspaceDetail() {
                         )}
                       </div>
                       <div className="shrink-0">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${f.jobStatus === 'COMPLETED' || f.status === 'done' ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-[#FF6B00]'}`}>
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-[11px] font-semibold ${f.jobStatus === 'COMPLETED' || f.status === 'done' ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-[#FF6B00]'}`}>
                           {f.jobStatus === 'COMPLETED' || f.status === 'done' ? 'Hoàn thành' : 'Đang xử lý'}
                         </span>
                       </div>
@@ -574,8 +528,8 @@ export default function WorkspaceDetail() {
             </div>
           </div>
 
-          {/* AI Engine Pipeline Column */}
-          <div className="col-span-12 lg:col-span-5 space-y-5">
+          {/* AI Side Panels Column (Pipeline & Configuration) */}
+          <div className="w-full lg:w-[380px] flex flex-col gap-5 flex-shrink-0">
             <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 border border-orange-100"><BrainCircuit className="h-4 w-4 text-orange-500" /></div>
@@ -584,7 +538,7 @@ export default function WorkspaceDetail() {
                   <div className="text-xs text-slate-400">Quy trình phân tích tài liệu</div>
                 </div>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <ol className="space-y-0">
                   {[
                     { step: 1 as const, title: 'Tải lên tài liệu', desc: getStepStatus(1) === 'active' ? 'Đang tải file...' : `${files.length} tài liệu đã thêm`, Icon: UploadCloud },
@@ -622,7 +576,7 @@ export default function WorkspaceDetail() {
                   <div className="text-sm font-bold text-slate-800">Cấu hình lộ trình học</div>
                 </div>
               </div>
-              <div className="p-5 space-y-4">
+              <div className="p-4 sm:p-5 space-y-4">
                 {onboarding.profile ? (
                   <>
                     <div className="rounded-xl bg-slate-50/60 p-3.5 border border-slate-100">
@@ -737,12 +691,14 @@ export default function WorkspaceDetail() {
       </div>
 
       {/* ==================== WORKSPACE AI TUTOR FLOATING BUTTON ==================== */}
-      <button type="button" onClick={() => setWorkspaceTutorOpen(true)} className="fixed bottom-6 right-6 z-40 flex h-13 w-13 items-center justify-center rounded-full bg-[#FF6B00] text-white shadow-xl hover:bg-[#E05E00] transition"><Bot className="h-6 w-6" /></button>
+      {/* 🔥 FIX: Đẩy tọa độ bottom lên cao (bottom-24) trên mobile để không bị đè bởi thanh Bottom Nav */}
+      <button type="button" onClick={() => setWorkspaceTutorOpen(true)} className="fixed bottom-24 right-6 md:bottom-6 md:right-6 z-40 flex h-13 w-13 items-center justify-center rounded-full bg-[#FF6B00] text-white shadow-xl hover:bg-[#E05E00] transition-all"><Bot className="h-6 w-6" /></button>
 
+      {/* AI Tutor Side Overlay Drawer */}
       {workspaceTutorOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-end sm:p-6">
           <div className="absolute inset-0 bg-black/25 backdrop-blur-sm" onClick={() => setWorkspaceTutorOpen(false)} />
-          <div className="relative w-full sm:w-[420px] h-[78vh] sm:h-[580px] rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl flex flex-col overflow-hidden border border-slate-200/60">
+          <div className="relative w-full sm:w-[420px] h-[82vh] sm:h-[580px] rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl flex flex-col overflow-hidden border border-slate-200/60">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
               <span className="text-sm font-extrabold text-slate-800">AI Tutor</span>
               <button type="button" onClick={() => setWorkspaceTutorOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-4 w-4" /></button>
@@ -752,7 +708,7 @@ export default function WorkspaceDetail() {
         </div>
       )}
 
-      {/* ==================== 🎯 FIX MOUNT ONBOARDING PROFILE MODAL ==================== */}
+      {/* Onboarding Profile Modal Trigger */}
       <OnboardingModal
         open={isOnboardingOpen}
         onClose={() => setIsOnboardingOpen(false)}

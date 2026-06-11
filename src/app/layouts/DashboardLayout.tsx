@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Map, Mic,
   Menu, X, Zap, Bell, ChevronRight, Crown, Gift, Sparkles,
   AlertTriangle, CalendarClock, BookOpenCheck, CheckCircle2,
-  LoaderCircle,
+  LoaderCircle, User, Calendar, CheckSquare,
 } from "lucide-react";
 import { useNotificationSocket } from "../hooks/useNotificationSocket";
 import { APP_NAV_SECTIONS } from "../config/nav";
@@ -14,6 +14,7 @@ import { BrandLogo } from "../components/layout/BrandLogo";
 import meService from "../../api/meService";
 import workspaceService from "../../api/workspaceService";
 import { getStoredUserProfile } from "../../api/authService";
+import { useSubscription } from "../../hooks/useSubscription";
 
 /* ─── Sidebar Design Tokens ─── */
 const F      = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -232,6 +233,8 @@ export default function DashboardLayout() {
   const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(true);
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [roadmapWorkspaces, setRoadmapWorkspaces] = useState<RoadmapSidebarItem[]>([]);
+  const { planId, planMeta, refresh: refreshSubscription } = useSubscription();
+  const mappedPlanId = planId === "FREE" ? "starter" : planId === "SKILL_BUILDER" ? "skill_builder" : "career_premium";
   const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarLetter: string; avatarUrl?: string }>(() => {
     const stored = getStoredUserProfile();
     const fullName = stored?.fullName || "Learner";
@@ -359,15 +362,15 @@ export default function DashboardLayout() {
         {sideOpen && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
             onClick={()=>setSideOpen(false)}
-            className="lg:hidden"
+            className="md:hidden"
             style={{position:"fixed",inset:0,zIndex:40,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)"}}/>
         )}
       </AnimatePresence>
-
+ 
       <aside
         className={`fixed top-0 left-0 z-50 h-full flex flex-col
-          lg:relative lg:translate-x-0 transition-transform duration-300
-          ${sideOpen?"translate-x-0":"-translate-x-full"}`}
+          md:relative md:translate-x-0 transition-transform duration-300
+          ${sideOpen?"translate-x-0":"-translate-x-full"} hidden md:flex`}
         style={{
           width:"228px", flexShrink:0,
           background:"linear-gradient(180deg, #FFFDFB 0%, #FAF7F2 100%)",
@@ -384,13 +387,13 @@ export default function DashboardLayout() {
           <div style={{display:"flex",alignItems:"center",gap:"24px"}}>
             <BrandLogo size={20} align="left" />
             <span style={{
-              fontSize:"9px",padding:"1px 6px",borderRadius:"4px",
-              display:"inline-block",background:"rgba(255,107,0,0.1)",
-              color:OG,fontWeight:700,letterSpacing:"0.06em",
-              flexShrink:0
-            }}>FREE</span>
+               fontSize:"9px",padding:"1px 6px",borderRadius:"4px",
+               display:"inline-block",background:"rgba(255,107,0,0.1)",
+               color:OG,fontWeight:700,letterSpacing:"0.06em",
+               flexShrink:0
+             }}>{planMeta?.badge || "FREE"}</span>
           </div>
-          <button className="lg:hidden" onClick={()=>setSideOpen(false)}
+          <button className="md:hidden" onClick={()=>setSideOpen(false)}
             style={{background:"none",border:"none",cursor:"pointer",color:STXT}}>
             <X size={16}/>
           </button>
@@ -532,11 +535,17 @@ export default function DashboardLayout() {
             onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.background="rgba(255,107,0,0.08)";}}
           >
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2px"}}>
-              <span style={{fontSize:"8.5px",fontWeight:700,color:OG,letterSpacing:"0.08em",textTransform:"uppercase"}}>GÓI MIỄN PHÍ</span>
+              <span style={{fontSize:"8.5px",fontWeight:700,color:OG,letterSpacing:"0.08em",textTransform:"uppercase"}}>
+                GÓI {planMeta?.label?.toUpperCase() || "STARTER"}
+              </span>
               <Crown size={12} color="#F59E0B"/>
             </div>
-            <p style={{fontWeight:700,fontSize:"0.8rem",color:"#0F172A",marginBottom:"1px"}}>Nâng cấp lên Pro</p>
-            <p style={{color:"#64748B",fontSize:"0.7rem"}}>Mở khóa tính năng AI và nhiều hơn</p>
+            <p style={{fontWeight:700,fontSize:"0.8rem",color:"#0F172A",marginBottom:"1px"}}>
+              {planMeta?.upgradeLabel || "Nâng cấp lên Pro"}
+            </p>
+            <p style={{color:"#64748B",fontSize:"0.7rem"}}>
+              {planMeta?.upgradeSubtext || "Mở khóa tính năng AI và nhiều hơn"}
+            </p>
           </div>
 
 
@@ -569,7 +578,7 @@ export default function DashboardLayout() {
           boxShadow:"0 1px 4px rgba(0,0,0,0.04)",
         }}>
           <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-            <button className="lg:hidden" onClick={()=>setSideOpen(true)}
+            <button className="md:hidden" onClick={()=>setSideOpen(true)}
               style={{color:T2,background:"none",border:"none",cursor:"pointer",padding:"4px"}}>
               <Menu size={18}/>
             </button>
@@ -726,11 +735,74 @@ export default function DashboardLayout() {
         </header>
 
         {/* Page content */}
-        <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"28px 28px 36px"}}>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-7 pb-24 md:pb-9">
           <div style={{width:"100%"}}>
             <Outlet/>
           </div>
         </div>
+
+        {/* Mobile Sticky Bottom Navigation */}
+        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200/85 md:hidden flex items-center justify-around px-2 h-16 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom,0px)]">
+          <NavLink
+            to="/app/calendar"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center flex-1 py-1 text-slate-500 transition-all ${
+                isActive ? "text-[#FF6B00] font-bold" : "hover:text-slate-800"
+              }`
+            }
+          >
+            <Calendar size={20} className="shrink-0" />
+            <span className="text-[10px] mt-1 font-semibold">Lịch học</span>
+          </NavLink>
+
+          <NavLink
+            to="/app/workspaces"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center flex-1 py-1 text-slate-500 transition-all ${
+                isActive ? "text-[#FF6B00] font-bold" : "hover:text-slate-800"
+              }`
+            }
+          >
+            <Map size={20} className="shrink-0" />
+            <span className="text-[10px] mt-1 font-semibold">Workspace</span>
+          </NavLink>
+
+          <NavLink
+            to={roadmapWorkspaces.length > 0 ? `/app/workspaces/${roadmapWorkspaces[0].id}/roadmap` : "/app/workspaces"}
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center flex-1 py-1 text-slate-500 transition-all ${
+                isActive ? "text-[#FF6B00] font-bold" : "hover:text-slate-800"
+              }`
+            }
+          >
+            <Sparkles size={20} className="shrink-0" />
+            <span className="text-[10px] mt-1 font-semibold">Roadmap</span>
+          </NavLink>
+
+          <NavLink
+            to="/app/matrix"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center flex-1 py-1 text-slate-500 transition-all ${
+                isActive ? "text-[#FF6B00] font-bold" : "hover:text-slate-800"
+              }`
+            }
+          >
+            <CheckSquare size={20} className="shrink-0" />
+            <span className="text-[10px] mt-1 font-semibold">Ma trận</span>
+          </NavLink>
+
+          <NavLink
+            to="/app/profile"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center flex-1 py-1 text-slate-500 transition-all ${
+                isActive ? "text-[#FF6B00] font-bold" : "hover:text-slate-800"
+              }`
+            }
+          >
+            <User size={20} className="shrink-0" />
+            <span className="text-[10px] mt-1 font-semibold">Cá nhân</span>
+          </NavLink>
+        </nav>
 
         {/* Loader requested from Auth during immediate navigation */}
         <AnimatePresence>
@@ -750,8 +822,10 @@ export default function DashboardLayout() {
       <PricingModal
         isOpen={pricingOpen}
         onClose={()=>setPricingOpen(false)}
-        onSuccess={() => {}}
-        currentPlan="FREE"
+        onSuccess={() => {
+          void refreshSubscription();
+        }}
+        currentPlan={mappedPlanId}
       />
     </div>
   );

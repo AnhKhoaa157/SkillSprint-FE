@@ -136,6 +136,7 @@ export default function TaskMatrix() {
   const [draft,        setDraft]        = useState<Record<QuadrantKey, string>>({ DO_NOW: "", SCHEDULE: "", DELAY_OR_DELEGATE: "", ELIMINATE: "" });
   const [boardLoading, setBoardLoading] = useState(false);
   const [refreshKey,   setRefreshKey]   = useState(0);
+  const [activeMobileQuadrant, setActiveMobileQuadrant] = useState<QuadrantKey>("DO_NOW");
 
   useEffect(() => {
     let mounted = true;
@@ -277,26 +278,50 @@ export default function TaskMatrix() {
 
       {/* ── 2×2 Matrix grid ── */}
       {!isLoading && selectedWorkspace && (
-        <div className="bg-white rounded-3xl border border-slate-200/60 shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-2">
-          {QUADRANTS.map((q, idx) => {
-            const styles = QUADRANT_STYLES[q.key];
-            const tasks = board[q.key] ?? [];
-            const doneCount = tasks.filter((t) => t.done).length;
+        <div className="space-y-3">
+          {/* Mobile Tab Switcher */}
+          <div className="flex md:hidden bg-slate-100 p-1 rounded-xl gap-1 mb-2">
+            {QUADRANTS.map((q) => {
+              const isActive = activeMobileQuadrant === q.key;
+              return (
+                <button
+                  key={q.key}
+                  type="button"
+                  onClick={() => setActiveMobileQuadrant(q.key)}
+                  className={`flex-1 text-[11px] font-bold py-2 px-1 text-center rounded-lg transition-all cursor-pointer ${
+                    isActive 
+                      ? "bg-white text-orange-600 shadow-xs border border-orange-100/50" 
+                      : "text-slate-500 hover:text-slate-750"
+                  }`}
+                >
+                  {q.title}
+                </button>
+              );
+            })}
+          </div>
 
-            // Determine modern grid border alignment classes
-            const borderClass = idx === 0 
-              ? "md:border-r md:border-b border-b border-slate-100/80" 
-              : idx === 1 
-                ? "md:border-b border-b border-slate-100/80" 
-                : idx === 2 
-                  ? "md:border-r border-b md:border-b-0 border-slate-100/80" 
-                  : "";
+          <div className="bg-white rounded-3xl border border-slate-200/60 shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-2">
+            {QUADRANTS.map((q, idx) => {
+              const styles = QUADRANT_STYLES[q.key];
+              const tasks = board[q.key] ?? [];
+              const doneCount = tasks.filter((t) => t.done).length;
 
-            return (
-              <div
-                key={q.key}
-                className={`flex flex-col p-6 min-h-[300px] bg-gradient-to-br transition-all duration-300 ${styles.bgGlow} ${borderClass}`}
-              >
+              // Determine modern grid border alignment classes
+              const borderClass = idx === 0 
+                ? "md:border-r md:border-b border-b border-slate-100/80" 
+                : idx === 1 
+                  ? "md:border-b border-b border-slate-100/80" 
+                  : idx === 2 
+                    ? "md:border-r border-b md:border-b-0 border-slate-100/80" 
+                    : "";
+
+              return (
+                <div
+                  key={q.key}
+                  className={`flex-col p-6 min-h-[300px] bg-gradient-to-br transition-all duration-300 ${styles.bgGlow} ${borderClass} ${
+                    activeMobileQuadrant === q.key ? "flex" : "hidden md:flex"
+                  }`}
+                >
                 {/* Quadrant Header */}
                 <div className="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-slate-50">
                   <div className="min-w-0">
@@ -391,6 +416,7 @@ export default function TaskMatrix() {
               </div>
             );
           })}
+        </div>
         </div>
       )}
     </motion.div>

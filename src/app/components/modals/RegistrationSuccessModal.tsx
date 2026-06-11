@@ -174,7 +174,7 @@ export function RegistrationSuccessModal({ open, onStartSetup, onSkip }: Props) 
                 margin: "0 0 10px",
               }}
             >
-              Account Created!
+              Đăng ký tài khoản thành công!
             </motion.h2>
 
             {/* ── Subtitle ── */}
@@ -191,8 +191,7 @@ export function RegistrationSuccessModal({ open, onStartSetup, onSkip }: Props) 
                 maxWidth: "300px",
               }}
             >
-              Let's personalize your learning roadmap
-              before you start.
+              Tài khoản của bạn đã được khởi tạo. Bạn có muốn đăng nhập để khám phá SkillSprint ngay không?
             </motion.p>
 
             {/* ── Primary CTA button ── */}
@@ -228,7 +227,7 @@ export function RegistrationSuccessModal({ open, onStartSetup, onSkip }: Props) 
                 transition: "box-shadow 0.2s ease",
               }}
             >
-              Start Setup
+              Đăng nhập ngay
               <ArrowRight size={18} strokeWidth={2.5} />
             </motion.button>
 
@@ -256,7 +255,7 @@ export function RegistrationSuccessModal({ open, onStartSetup, onSkip }: Props) 
                 ((e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF")
               }
             >
-              I'll set it up later
+              Để sau
             </motion.button>
 
           </motion.div>
