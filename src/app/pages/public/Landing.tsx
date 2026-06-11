@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 import {
   ArrowRight, Zap, Map, FileText, FolderKanban, Star,
   CheckCircle, ChevronRight, Sparkles, Brain,
-  TrendingUp, Shield, Users, Play, Github,
+  TrendingUp, Shield, Users, Github,
   Twitter, Linkedin, Menu, X, Target, Clock,
 } from "lucide-react";
 import { BrandLogo } from "../components/BrandLogo";
@@ -12,6 +12,7 @@ import { PublicNavbar } from "../components/PublicNavbar";
 import { Footer as PublicFooter } from "../components/Footer";
 import LandingHero3DViewer from "../components/landing/LandingHero3DViewer";
 import LandingSection3DViewer from "../components/landing/LandingSection3DViewer";
+import { DemoModal } from "../components/landing/DemoModal";
 
 /* ─── Design Tokens ─── */
 const F    = "'Plus Jakarta Sans', Inter, sans-serif";
@@ -447,18 +448,7 @@ function Hero() {
               <ArrowRight size={16}/>
             </motion.button>
           </Link>
-          <motion.button style={{
-            display:"flex", alignItems:"center", gap:"8px",
-            padding:"14px 28px", borderRadius:"14px",
-            background:CARD, color:T1,
-            fontFamily:F, fontWeight:600, fontSize:"1rem",
-            border:`1.5px solid ${BDR}`, cursor:"pointer",
-            boxShadow:SH,
-          }}
-          whileHover={{ scale:1.03, boxShadow:SHM }} whileTap={{ scale:0.97 }}>
-            <Play size={14} fill={T2} color={T2}/>
-            Xem Demo
-          </motion.button>
+          <DemoModal />
         </motion.div>
 
         {/* Social proof */}
