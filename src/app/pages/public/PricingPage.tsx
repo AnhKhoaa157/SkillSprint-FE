@@ -1,56 +1,179 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion"; // Đồng bộ dùng framer-motion thống nhất
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router";
 import { Link } from "react-router";
-import { Check, X, Sparkles, Zap, HelpCircle, Plus, LogIn, UserPlus } from "lucide-react";
+import { Check, X, Sparkles, HelpCircle, Plus, LogIn, UserPlus } from "lucide-react";
 import { Footer as PublicFooter } from "../components/Footer";
 import { PublicNavbar } from "../components/PublicNavbar";
 import CursorSpotlight from "../components/CursorSpotlight";
 import { useAuth } from "../../contexts/AuthContext";
+import { listSubscriptionPlans, STATIC_FALLBACK_PLANS, formatPlanPrice, isFeatureEnabled, type PublicPlanResponse } from "../../../api/adminSubscriptionPlansService";
+
+// ─── Skeleton card shown while loading ───────────────────────────────────────
+function PlanCardSkeleton({ featured = false }: { featured?: boolean }) {
+  return (
+    <div
+      className={`animate-pulse bg-white rounded-3xl p-8 md:p-10 flex flex-col gap-4 h-full ${
+        featured ? "border-2 border-orange-200 shadow-[0_20px_50px_rgba(255,107,0,0.08)]" : "border border-slate-200 shadow-sm"
+      }`}
+    >
+      <div className="h-7 bg-slate-100 rounded-lg w-36" />
+      <div className="h-4 bg-slate-100 rounded w-3/4" />
+      <div className="mt-4 h-14 bg-slate-100 rounded-xl" />
+      <div className="h-12 bg-slate-100 rounded-xl" />
+      <div className="border-t border-slate-100 pt-4 mt-2 flex flex-col gap-3">
+        {[75, 90, 65, 80, 70].map((w, i) => (
+          <div key={i} className="h-4 bg-slate-100 rounded" style={{ width: `${w}%` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [authGateOpen, setAuthGateOpen] = useState(false);
-  const [pendingAuthPlan, setPendingAuthPlan] = useState<"SKILL_BUILDER" | "PREMIUM" | null>(null);
+  const [pendingAuthPlan, setPendingAuthPlan] = useState<{ id: string; name: string } | null>(null);
+
+  const [plans, setPlans] = useState<PublicPlanResponse[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
 
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
-  // Danh sách tính năng bê nguyên xi từ ảnh và thiết kế mới sang
-  const builderFeatures = [
-    { text: "Lộ trình học AI cơ bản", included: true },
-    { text: "Quản lý lịch học thông minh", included: true },
-    { text: "Phân tích tiến độ học tập", included: true },
-    { text: "Mở khóa lộ trình AI cá nhân hóa.", included: false },
-    { text: "Phát hiện lỗ hổng kỹ năng", included: false },
-    { text: "Gợi ý tài nguyên học bằng AI", included: false },
-  ];
+  // Public page: the plans endpoint requires auth, so guests (401) — or any
+  // transient failure — gracefully fall back to STATIC_FALLBACK_PLANS instead of
+  // showing an empty page. The skeleton still shows on first mount until either
+  // real data or the fallback replaces it.
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingPlans(true);
+    listSubscriptionPlans()
+      .then(data => { if (!cancelled) setPlans(data.length > 0 ? data : STATIC_FALLBACK_PLANS); })
+      .catch(() => { if (!cancelled) setPlans(STATIC_FALLBACK_PLANS); })
+      .finally(() => { if (!cancelled) setLoadingPlans(false); });
+    return () => { cancelled = true; };
+  }, []);
 
-  const premiumFeatures = [
-    { text: "Mở khóa lộ trình AI cá nhân hóa.", isBold: false },
-    { text: "Phát hiện lỗ hổng kỹ năng", isBold: false },
-    { text: "Gợi ý tài nguyên học bằng AI", isBold: false },
-    { text: "Gia sư AI 24/7 cá nhân hóa", isBold: true, hasZap: true },
-    { text: "AI tự động tìm tài nguyên", isBold: false },
-    { text: "Quiz nhỏ và thống kê tiến độ", isBold: false },
-    { text: "Ưu tiên xử lý AI không giới hạn", isBold: false },
-  ];
-
-  const handlePlanCTA = (plan: "SKILL_BUILDER" | "PREMIUM") => {
+  const handlePlanCTA = (plan: PublicPlanResponse) => {
     if (isAuthenticated) {
-      navigate(`/app?pricing=${plan}&period=${isAnnual ? "annual" : "monthly"}`);
+      navigate(`/app?pricing=${plan.planId}&period=${isAnnual ? "annual" : "monthly"}`);
       return;
     }
-    setPendingAuthPlan(plan);
+    setPendingAuthPlan({ id: plan.planId, name: plan.planName });
     setAuthGateOpen(true);
   };
 
   const handleAuthGateNavigate = (mode: "login" | "register") => {
-    if (pendingAuthPlan) sessionStorage.setItem("pendingPlan", pendingAuthPlan);
+    if (pendingAuthPlan) sessionStorage.setItem("pendingPlan", pendingAuthPlan.id);
     setAuthGateOpen(false);
     navigate(`/login?mode=${mode}`);
   };
+
+  // Annual billing applies a 25% discount to the monthly price.
+  function getEffectivePrice(plan: PublicPlanResponse) {
+    return isAnnual ? Math.round(plan.monthlyPrice * 0.75) : plan.monthlyPrice;
+  }
+
+  // ─── Dynamic plan cards (plans is never empty post-load: real data or fallback) ─
+  // One unified renderer; the highest-priced paid plan (last) is the featured one.
+  // Each card is flex-col h-full with a flex-1 upper section so every CTA button
+  // lands on the same horizontal baseline regardless of feature-list length.
+  const gridColsClass =
+    plans.length >= 3 ? "md:grid-cols-3 max-w-5xl" : plans.length === 2 ? "md:grid-cols-2 max-w-4xl" : "max-w-sm";
+
+  const planCards = (
+    <div className={`mx-auto grid grid-cols-1 ${gridColsClass} gap-6 items-stretch justify-center`}>
+      {plans.map((plan, idx) => {
+        const isFree = plan.monthlyPrice <= 0;
+        const isFeatured = !isFree && idx === plans.length - 1 && plans.length > 1;
+        const price = getEffectivePrice(plan);
+
+        return (
+          <div key={plan.planId} className="relative h-full flex">
+            {isFeatured && (
+              <div className="absolute inset-[-8px] bg-[radial-gradient(circle,_rgba(255,107,0,0.1)_0%,transparent_70%)] filter blur-2xl rounded-[40px] pointer-events-none z-0" />
+            )}
+            <CursorSpotlight
+              className="relative z-10 h-full w-full flex"
+              color={isFeatured ? "rgba(255,107,0,0.12)" : "rgba(14,165,233,0.08)"}
+              size={isFeatured ? 240 : 220}
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: idx * 0.08 }}
+                className={`relative w-full bg-white rounded-3xl p-8 md:p-10 flex flex-col h-full justify-between ${
+                  isFeatured
+                    ? "border-2 border-[#FF6B00] shadow-[0_20px_50px_rgba(255,107,0,0.12)]"
+                    : "border border-slate-200 shadow-[0_10px_35px_rgba(0,0,0,0.06)]"
+                }`}
+              >
+                {isFeatured && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#FF6B00] to-[#FF7E21] text-white px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase shadow-md shadow-orange-500/10 border border-white/20 whitespace-nowrap z-10">
+                    🔥 ĐƯỢC KHUYÊN DÙNG
+                  </div>
+                )}
+
+                {/* Upper section — grows to fill, pushing the CTA button to the bottom */}
+                <div className="flex-1 flex flex-col">
+                  <h3 className={`text-2xl font-extrabold text-slate-900 tracking-tight ${isFeatured ? "mt-2" : ""}`}>
+                    {plan.planName}
+                  </h3>
+                  <p className="text-slate-500 text-sm mt-2 leading-relaxed min-h-[40px]">
+                    {plan.description ?? "Lựa chọn phù hợp với nhu cầu học tập của bạn."}
+                  </p>
+
+                  {/* Price block — "Miễn phí" for free, else "89.000 đ/tháng" */}
+                  <div className="mt-8 mb-8 flex items-baseline gap-1.5 text-slate-900">
+                    <span className={`font-black text-5xl tracking-tight leading-none ${isFeatured ? "text-[#FF6B00]" : ""}`}>
+                      {formatPlanPrice(price, plan.currency)}
+                    </span>
+                    {!isFree && <span className="text-sm font-medium text-slate-400">/tháng</span>}
+                  </div>
+
+                  {/* Features — dynamic from plan.features (featureName + enabled) */}
+                  <div className="border-t border-slate-100 pt-6 flex-1">
+                    <div className={`text-xs font-black tracking-wider uppercase mb-4 ${isFeatured ? "text-[#FF6B00]" : "text-slate-400"}`}>
+                      Bao gồm:
+                    </div>
+                    <ul className="space-y-4">
+                      {plan.features.map(f => {
+                        const enabled = isFeatureEnabled(f);
+                        return (
+                          <li key={f.featureKey} className={`flex items-start gap-3 text-sm font-medium ${enabled ? "text-slate-700" : "text-slate-300 line-through"}`}>
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${enabled ? (isFeatured ? "bg-orange-50/50 text-[#FF6B00]" : "bg-blue-50 text-blue-500") : "bg-slate-50 text-slate-300"}`}>
+                              {enabled ? <Check size={13} className="stroke-[3]" /> : <X size={12} />}
+                            </div>
+                            <span className="leading-relaxed">{f.featureName}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* CTA — pinned to the bottom, aligned across all cards */}
+                <motion.button
+                  whileHover={isFeatured ? { scale: 1.015, boxShadow: "0 10px 25px rgba(255,107,0,0.3)" } : { scale: 1.015 }}
+                  whileTap={{ scale: 0.985 }}
+                  onClick={() => handlePlanCTA(plan)}
+                  className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer mt-8 ${
+                    isFeatured
+                      ? "bg-[#FF6B00] hover:bg-[#E05E00] text-white shadow-[0_4px_15px_rgba(255,107,0,0.2)]"
+                      : "bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700"
+                  }`}
+                >
+                  {isFree ? "Bắt đầu miễn phí" : isFeatured ? `Nâng cấp lên ${plan.planName}` : "Bắt đầu ngay"}
+                </motion.button>
+              </motion.div>
+            </CursorSpotlight>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className="bg-[#FAFAFA] min-h-screen relative overflow-x-hidden selection:bg-orange-500/10 selection:text-[#FF6B00]" style={{ fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}>
@@ -123,131 +246,15 @@ export default function PricingPage() {
 
           {/* PRICING CARDS SECTION */}
           <section className="px-4 mb-24">
-            <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8 items-stretch justify-center">
-
-              {/* CARD 1: BUILDER PACK (LIGHT) */}
-              <CursorSpotlight color="rgba(14,165,233,0.08)" size={220}>
-                <motion.div
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                  className="bg-white rounded-3xl border border-slate-200 p-8 md:p-10 flex flex-col justify-between shadow-[0_10px_35px_rgba(0,0,0,0.06)] h-full"
-                >
-                  <div>
-                    <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">Gói Builder</h3>
-                    <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-                      Dành cho người mới bắt đầu làm quen với phương pháp học mới.
-                    </p>
-
-                    <div className="mt-8 mb-8 flex items-baseline gap-0.5 text-slate-900">
-                      <span className="font-black text-5xl tracking-tight leading-none">
-                        {isAnnual ? "69" : "89"}
-                      </span>
-                      <span className="font-extrabold text-xl">.000</span>
-                      <span className="text-sm font-medium text-slate-400 ml-1.5">đ/tháng</span>
-                    </div>
-
-                    <motion.button
-                      whileHover={{ scale: 1.015 }}
-                      whileTap={{ scale: 0.985 }}
-                      onClick={() => handlePlanCTA("SKILL_BUILDER")}
-                      className="w-full py-3.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-sm transition-colors cursor-pointer mb-8"
-                    >
-                      Bắt đầu ngay
-                    </motion.button>
-
-                    <div className="border-t border-slate-100 pt-6">
-                      <div className="text-xs font-black text-slate-400 tracking-wider uppercase mb-4">Bao gồm:</div>
-                      <ul className="space-y-4">
-                        {builderFeatures.map((feature, i) => (
-                          <li
-                            key={i}
-                            className={`flex items-start gap-3 text-sm transition-all duration-150 ${
-                              feature.included ? "text-slate-700 font-medium" : "text-slate-300 line-through opacity-50"
-                            }`}
-                          >
-                            {feature.included ? (
-                              <div className="w-5 h-5 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0 mt-0.5">
-                                <Check size={13} className="stroke-[3]" />
-                              </div>
-                            ) : (
-                              <div className="w-5 h-5 rounded-full text-slate-300/60 flex items-center justify-center shrink-0 mt-0.5">
-                                <X size={13} className="stroke-[2.5]" />
-                              </div>
-                            )}
-                            <span className="leading-relaxed">{feature.text}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </motion.div>
-              </CursorSpotlight>
-
-              {/* CARD 2: PREMIUM PACK (FEATURED LIGHT GRADIENT) */}
-              <div className="relative h-full flex">
-                {/* Aura Glow Backdrop overlay */}
-                <div className="absolute inset-[-8px] bg-[radial-gradient(circle,_rgba(255,107,0,0.1)_0%,transparent_70%)] filter blur-2xl rounded-[40px] pointer-events-none z-0" />
-
-                <CursorSpotlight color="rgba(255,107,0,0.12)" size={240}>
-                  <motion.div
-                    initial={{ opacity: 0, x: 16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                    className="relative z-10 bg-white rounded-3xl border-2 border-[#FF6B00] p-8 md:p-10 flex flex-col justify-between shadow-[0_20px_50px_rgba(255,107,0,0.12)] h-full"
-                  >
-                    {/* Absolute Header Badge */}
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#FF6B00] to-[#FF7E21] text-white px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase shadow-md shadow-orange-500/10 border border-white/20 whitespace-nowrap">
-                      🔥 ĐƯỢC KHUYÊN DÙNG
-                    </div>
-
-                    <div>
-                      <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight mt-2">Gói Premium</h3>
-                      <p className="text-slate-500 text-sm mt-2 leading-relaxed">Toàn quyền truy cập mọi tính năng siêu việt nhất.</p>
-
-                      <div className="mt-8 mb-8 flex items-baseline gap-0.5 text-slate-900">
-                        <span className="font-black text-5xl tracking-tight leading-none text-[#FF6B00]">
-                          {isAnnual ? "149" : "199"}
-                        </span>
-                        <span className="font-extrabold text-xl text-[#FF6B00]">.000</span>
-                        <span className="text-sm font-medium text-slate-400 ml-1.5">đ/tháng</span>
-                      </div>
-
-                      <motion.button
-                        whileHover={{ scale: 1.015, boxShadow: "0 10px 25px rgba(255,107,0,0.3)" }}
-                        whileTap={{ scale: 0.985 }}
-                        onClick={() => handlePlanCTA("PREMIUM")}
-                        className="w-full py-3.5 px-4 rounded-xl bg-[#FF6B00] hover:bg-[#E05E00] text-white font-bold text-sm transition-all shadow-[0_4px_15px_rgba(255,107,0,0.2)] cursor-pointer mb-8"
-                      >
-                        Nâng cấp lên Premium
-                      </motion.button>
-
-                      <div className="border-t border-slate-100 pt-6">
-                        <div className="text-xs font-black text-[#FF6B00] tracking-wider uppercase mb-4">Bao gồm toàn bộ gói Skill Builder, cộng thêm:</div>
-
-                        <ul className="space-y-4">
-                          {premiumFeatures.map((feature, i) => (
-                            <li key={i} className={`flex items-start gap-3 text-sm leading-relaxed ${feature.isBold ? "text-slate-900 font-extrabold" : "text-slate-700 font-medium"}`}>
-                              {feature.hasZap ? (
-                                <div className="w-5 h-5 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center shrink-0 mt-0.5 shadow-sm border border-orange-100">
-                                  <Zap size={12} className="fill-[#FF6B00] stroke-[#FF6B00]" />
-                                </div>
-                              ) : (
-                                <div className="w-5 h-5 rounded-full bg-orange-50/50 text-[#FF6B00] flex items-center justify-center shrink-0 mt-0.5">
-                                  <Check size={13} className="stroke-[3]" />
-                                </div>
-                              )}
-                              <span>{feature.text}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </motion.div>
-                </CursorSpotlight>
+            {loadingPlans ? (
+              <div className="mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch justify-center">
+                <PlanCardSkeleton />
+                <PlanCardSkeleton />
+                <PlanCardSkeleton featured />
               </div>
-
-            </div>
+            ) : (
+              planCards
+            )}
           </section>
 
           {/* HIGH-END ACCORDION FAQ SECTION */}
@@ -389,7 +396,7 @@ export default function PricingPage() {
               <p className="text-slate-500 text-xs leading-relaxed mb-6 px-2">
                 Tạo tài khoản miễn phí hoặc đăng nhập để mở khoá gói{" "}
                 <span className="font-black text-[#FF6B00]">
-                  {pendingAuthPlan === "PREMIUM" ? "Career Premium" : "Skill Builder"}
+                  {pendingAuthPlan?.name ?? "Premium"}
                 </span>{" "}
                 và bắt đầu hành trình học tập bứt phá.
               </p>

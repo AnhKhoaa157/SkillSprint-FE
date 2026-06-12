@@ -62,9 +62,12 @@ export type QuotaStatusResponse = {
 
 /* ─── Sepay Payment Types ─── */
 
-/** Request body for POST /api/payments/sepay/create */
+/** Request body for POST /api/payments/sepay/create.
+ *  The BE accepts EITHER planId (UUID, preferred — resolves any payable plan) OR
+ *  planType (legacy enum). Provide one of them. */
 export type CreateSepayPaymentRequest = {
-  planType: ServicePlanType;
+  planId?: string;
+  planType?: ServicePlanType;
 };
 
 /** Bank account details returned inside the payment creation response */
