@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
 import { getMe } from "../../../api/meService";
-import type { SepayPaymentCreateResponse } from "../../../api/skillSprintModels";
+import type { SepayPaymentCreateResponse, CreateSepayPaymentRequest } from "../../../api/skillSprintModels";
+import { listSubscriptionPlans, STATIC_FALLBACK_PLANS, formatPlanPrice, isFeatureEnabled, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/adminSubscriptionPlansService";
 
 const F = "'Plus Jakarta Sans','Inter',sans-serif";
 const OG = "#FF6B00";
@@ -13,123 +14,47 @@ const OG = "#FF6B00";
 /* ─── Plan type ─── */
 export type PlanId = "FREE" | "SKILL_BUILDER" | "PREMIUM";
 
-interface PlanConfig {
+/**
+ * Normalized view-model for a pricing card. The SINGLE SOURCE OF TRUTH is the BE
+ * `listSubscriptionPlans()` response. The shared STATIC_FALLBACK_PLANS (from the
+ * service) is used only while the request is in flight or if the API returns
+ * nothing — purely to avoid layout flicker. Once real data arrives it REPLACES
+ * the fallback (never appended).
+ */
+interface DisplayPlan {
+  planId: string;              // BE UUID, or a synthetic "__*" key for fallback plans
   name: string;
-  price: number;
-  priceDisplay: string;
-  tier: number;
+  monthlyPrice: number;
+  priceDisplay: string;        // "Miễn phí" for free, else e.g. "89.000 đ"
   description: string;
-  features: PlanFeature[];
+  features: PublicPlanFeature[]; // featureName + enabled
+  isFree: boolean;
+  synthetic: boolean;          // true for fallback plans → pay via planType, not planId
 }
 
-interface PlanFeature {
-  text: string;
-  highlight?: boolean;
-  dim?: boolean;
-  extra?: boolean;
-}
-
-const PLANS: Record<PlanId, PlanConfig> = {
-  FREE: {
-    name: "Starter",
-    price: 0,
-    priceDisplay: "0đ",
-    tier: 0,
-    description: "Công cụ cơ bản để tổ chức việc học.",
-    features: [
-      { text: "Quản lý công việc học tập" },
-      { text: "Lộ trình mẫu" },
-      { text: "Lộ trình AI cá nhân hóa", dim: true },
-    ],
-  },
-  SKILL_BUILDER: {
-    name: "Skill Builder",
-    price: 89000,
-    priceDisplay: "89k",
-    tier: 1,
-    description: "Mở khóa lộ trình AI cá nhân hóa.",
-    features: [
-      { text: "Lộ trình AI cá nhân hóa", highlight: true },
-      { text: "Phát hiện lỗ hổng kỹ năng", highlight: true },
-      { text: "Gợi ý tài nguyên học bằng AI", highlight: true },
-    ],
-  },
-  PREMIUM: {
-    name: "Gói Premium",
-    price: 199000,
-    priceDisplay: "199k",
-    tier: 2,
-    description: "Bộ công cụ tăng tốc học tập với Gia sư AI và Quiz nhỏ theo chương.",
-    features: [
-      { text: "Bao gồm toàn bộ gói Skill Builder, cộng thêm:", extra: true },
-      { text: "Gia sư AI 24/7 cá nhân hóa", highlight: true, extra: true },
-      { text: "AI tự động tìm tài nguyên", highlight: true },
-      { text: "Quiz nhỏ và thống kê tiến độ", highlight: true },
-      { text: "Ưu tiên xử lý AI không giới hạn", highlight: true },
-    ],
-  },
-};
-
-const planRanks = { starter: 0, skill_builder: 1, career_premium: 2 };
-type ButtonAction = "current" | "downgrade" | "upgrade";
-
-interface ButtonConfig {
-  text: string;
-  disabled: boolean;
-  variant: "ghost" | "outline" | "primary" | "primary-outline" | "disabled-gray";
-  action: ButtonAction;
-}
-
-function planIdToKey(p: PlanId): keyof typeof planRanks {
-  if (p === "FREE") return "starter";
-  if (p === "SKILL_BUILDER") return "skill_builder";
-  return "career_premium";
-}
-
-function getButtonConfig(cardPlan: PlanId, currentPlan: PlanId): ButtonConfig {
-  const cardRank = planRanks[planIdToKey(cardPlan)];
-  const currentRank = planRanks[planIdToKey(currentPlan)];
-
-  if (cardRank === currentRank) {
-    return { text: "Gói hiện tại", disabled: true, variant: "ghost", action: "current" };
-  }
-  if (cardRank < currentRank) {
-    return {
-      text: "Không khả dụng",
-      disabled: true,
-      variant: "disabled-gray",
-      action: "downgrade",
-    };
-  }
+function toDisplayPlan(p: PublicPlanResponse): DisplayPlan {
+  const isFree = p.monthlyPrice <= 0;
   return {
-    text: cardPlan === "SKILL_BUILDER" ? "Nâng cấp Skill Builder" : "Nâng cấp Gói Premium",
-    disabled: false,
-    variant: "primary",
-    action: "upgrade",
+    planId: p.planId,
+    synthetic: p.planId.startsWith("__"), // shared fallback plans use "__"-prefixed ids
+    isFree,
+    name: p.planName,
+    monthlyPrice: p.monthlyPrice,
+    priceDisplay: formatPlanPrice(p.monthlyPrice, p.currency),
+    description: p.description ?? "",
+    features: p.features,
   };
 }
 
-function FeatureIncluded({ text, accent = false }: { text: string; accent?: boolean }) {
+function FeatureIncluded({ text, accent = false, enabled = true }: { text: string; accent?: boolean; enabled?: boolean }) {
   return (
     <li className="flex items-start gap-2">
-      <Check
-        size={13}
-        color={accent ? OG : "#94A3B8"}
-        strokeWidth={2.5}
-        style={{ flexShrink: 0, marginTop: "2px" }}
-      />
-      <span style={{ fontSize: "0.84rem", color: accent ? "#334155" : "#475569", lineHeight: 1.5 }}>
-        {text}
-      </span>
-    </li>
-  );
-}
-
-function FeatureDim({ text }: { text: string }) {
-  return (
-    <li className="flex items-start gap-2 opacity-40">
-      <X size={13} color="#94A3B8" style={{ flexShrink: 0, marginTop: "2px" }} />
-      <span style={{ fontSize: "0.84rem", color: "#94A3B8", lineHeight: 1.5, textDecoration: "line-through" }}>
+      {enabled ? (
+        <Check size={13} color={accent ? OG : "#94A3B8"} strokeWidth={2.5} style={{ flexShrink: 0, marginTop: "2px" }} />
+      ) : (
+        <X size={13} color="#CBD5E1" style={{ flexShrink: 0, marginTop: "2px" }} />
+      )}
+      <span style={{ fontSize: "0.84rem", color: enabled ? (accent ? "#334155" : "#475569") : "#CBD5E1", lineHeight: 1.5, textDecoration: enabled ? undefined : "line-through" }}>
         {text}
       </span>
     </li>
@@ -138,16 +63,6 @@ function FeatureDim({ text }: { text: string }) {
 
 function formatVnd(amount: number): string {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
-}
-
-function mapPlanType(selectedPlan: "builder" | "premium"): string {
-  return selectedPlan === "premium" ? "PREMIUM" : "SKILL_BUILDER";
-}
-
-function planIdToPaymentType(plan: PlanId): "builder" | "premium" | null {
-  if (plan === "SKILL_BUILDER") return "builder";
-  if (plan === "PREMIUM") return "premium";
-  return null;
 }
 
 const POLL_INTERVAL_MS = 5000;
@@ -166,14 +81,24 @@ interface PricingModalProps {
   onSuccess?: (plan: "builder" | "premium") => void;
   initialPlan?: "builder" | "premium";
   currentPlan: "starter" | "skill_builder" | "career_premium";
+  /** UUID of the user's active plan — used to highlight the current plan by planId */
+  currentPlanId?: string;
   packageName?: string;
 }
 
-export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premium", currentPlan: rawCurrentPlan, packageName }: PricingModalProps) {
+export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premium", currentPlan: rawCurrentPlan, currentPlanId, packageName }: PricingModalProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState<"pricing" | "checkout" | "success" | "error">("pricing");
+  // `selectedPlan` is kept only for the onSuccess callback contract ("builder"|"premium").
   const [selectedPlan, setSelectedPlan] = useState<"builder" | "premium">("premium");
+  // The actually-selected plan, derived from the dynamic list.
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [selectedPlanName, setSelectedPlanName] = useState<string>("");
   const [successCountdown, setSuccessCountdown] = useState(3);
+
+  // Dynamic plan data from BE — the single source of truth.
+  const [availablePlans, setAvailablePlans] = useState<PublicPlanResponse[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
 
   const getNormalizedPlan = (planStr: string): PlanId => {
     if (!planStr) return "FREE";
@@ -183,10 +108,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     return "FREE";
   };
 
-  const currentPlan = getNormalizedPlan(rawCurrentPlan);
-  const currentUserPlan = currentPlan === "FREE" ? "starter" : currentPlan === "SKILL_BUILDER" ? "skill_builder" : "career_premium";
-  const selectedPlanId: PlanId = selectedPlan === "premium" ? "PREMIUM" : "SKILL_BUILDER";
-  const successPackageName = packageName?.trim() || PLANS[selectedPlanId]?.name || "Gói dịch vụ";
+  const successPackageName = packageName?.trim() || selectedPlanName || "Gói dịch vụ";
 
   const [paymentData, setPaymentData] = useState<SepayPaymentCreateResponse | null>(null);
   const [creatingPayment, setCreatingPayment] = useState(false);
@@ -214,6 +136,8 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     if (isOpen) {
       setStep("pricing");
       setSelectedPlan(initialPlan);
+      setSelectedPlanId(null);
+      setSelectedPlanName("");
       setPaymentData(null);
       setCreatingPayment(false);
       setCreateError(null);
@@ -230,6 +154,13 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
         clearInterval(pollingRef.current);
         pollingRef.current = null;
       }
+
+      // Fetch dynamic plan data
+      setLoadingPlans(true);
+      listSubscriptionPlans()
+        .then(data => setAvailablePlans(data))
+        .catch(() => setAvailablePlans([]))
+        .finally(() => setLoadingPlans(false));
     }
   }, [isOpen, initialPlan]);
 
@@ -309,16 +240,47 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     pollingRef.current = setInterval(doPollingCheck, POLL_INTERVAL_MS);
   }, [doPollingCheck]);
 
-  const handleCreatePayment = async (plan: "builder" | "premium") => {
-    if (creatingPayment) return;
-    setSelectedPlan(plan);
+  // ── Single source of truth: BE plans, sorted by price; static only as fallback ──
+  const displayPlans: DisplayPlan[] = (availablePlans.length > 0 ? availablePlans : STATIC_FALLBACK_PLANS)
+    .map(toDisplayPlan)
+    .sort((a, b) => a.monthlyPrice - b.monthlyPrice);
+
+  const paidPlans = displayPlans.filter(p => !p.isFree);
+  const currentNorm = getNormalizedPlan(rawCurrentPlan); // FREE | SKILL_BUILDER | PREMIUM
+  const hasCurrentId = !!currentPlanId && displayPlans.some(p => p.planId === currentPlanId);
+
+  // Resolve the user's current plan to a price so cards can be ranked upgrade/downgrade.
+  const currentPrice = (() => {
+    if (hasCurrentId) return displayPlans.find(p => p.planId === currentPlanId)?.monthlyPrice ?? 0;
+    if (currentNorm === "SKILL_BUILDER") return paidPlans[0]?.monthlyPrice ?? 0;
+    if (currentNorm === "PREMIUM") return paidPlans[paidPlans.length - 1]?.monthlyPrice ?? 0;
+    return 0; // FREE
+  })();
+
+  const currentPlanName = (() => {
+    if (hasCurrentId) return displayPlans.find(p => p.planId === currentPlanId)?.name ?? "Starter";
+    if (currentNorm === "SKILL_BUILDER") return paidPlans[0]?.name ?? "Skill Builder";
+    if (currentNorm === "PREMIUM") return paidPlans[paidPlans.length - 1]?.name ?? "Gói Premium";
+    return displayPlans.find(p => p.isFree)?.name ?? "Starter";
+  })();
+
+  const handleUpgradePlan = async (plan: DisplayPlan) => {
+    if (creatingPayment || plan.isFree) return;
+    setSelectedPlanId(plan.planId);
+    setSelectedPlanName(plan.name);
+    // Keep onSuccess contract: top-priced paid plan → "premium", otherwise "builder".
+    const isTopTier = paidPlans.length > 0 && plan.monthlyPrice >= paidPlans[paidPlans.length - 1].monthlyPrice;
+    setSelectedPlan(isTopTier ? "premium" : "builder");
     setCreatingPayment(true);
     setCreateError(null);
     setErrorStep(null);
 
     try {
-      const planType = mapPlanType(plan);
-      const result = await createSepayPayment({ planType });
+      // Prefer the BE UUID; synthetic fallback plans pay via the legacy planType enum.
+      const payload: CreateSepayPaymentRequest = plan.synthetic
+        ? { planType: isTopTier ? "PREMIUM" : "SKILL_BUILDER" }
+        : { planId: plan.planId };
+      const result = await createSepayPayment(payload);
       setPaymentData(result);
       setStep("checkout");
       startPolling(result.paymentId);
@@ -329,15 +291,6 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
       setStep("error");
     } finally {
       setCreatingPayment(false);
-    }
-  };
-
-  const handleUpgrade = (planId: string) => {
-    const upper = planId.toUpperCase();
-    if (upper === "SKILL_BUILDER" || upper === "BUILDER") {
-      handleCreatePayment("builder");
-    } else if (upper === "PREMIUM" || upper === "CAREER_PREMIUM") {
-      handleCreatePayment("premium");
     }
   };
 
@@ -386,39 +339,6 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     }
   };
 
-  const renderCardButton = (plan: PlanId) => {
-    const config = getButtonConfig(plan, currentPlan);
-    const isLoading = creatingPayment && planIdToPaymentType(plan) === selectedPlan;
-
-    switch (config.variant) {
-      case "ghost":
-        return (
-          <button disabled className="w-full py-3 rounded-xl text-sm font-bold bg-orange-50/80 text-[#FF6B00] border border-orange-200/50 mt-6 cursor-default">
-            {config.text}
-          </button>
-        );
-      case "primary":
-        return (
-          <motion.button
-            whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-            onClick={() => handleUpgrade(plan)} disabled={isLoading}
-            className="w-full py-3 bg-[#FF6B00] hover:bg-[#FF5500] text-white font-bold text-sm rounded-xl mt-6 shadow-md shadow-orange-500/10 flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {isLoading ? <Loader2 size={14} className="animate-spin" /> : <ArrowUp size={14} />}
-            {isLoading ? "Đang xử lý..." : config.text}
-          </motion.button>
-        );
-      case "disabled-gray":
-        return (
-          <button disabled className="w-full py-3 bg-slate-100/80 text-slate-400 border border-slate-200/60 rounded-xl font-bold text-sm mt-6 cursor-not-allowed">
-            {config.text}
-          </button>
-        );
-      default:
-        return null;
-    }
-  };
-
   if (!isOpen) return null;
 
   const resetAndClose = () => {
@@ -430,7 +350,8 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     onClose();
   };
 
-  const planCards: PlanId[] = ["FREE", "SKILL_BUILDER", "PREMIUM"];
+  const gridColsClass =
+    displayPlans.length >= 3 ? "md:grid-cols-3" : displayPlans.length === 2 ? "md:grid-cols-2" : "md:grid-cols-1";
 
   return (
     <AnimatePresence>
@@ -473,9 +394,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
               <div className="flex items-center justify-between px-6 py-4 mx-6 mb-5 bg-amber-50/50 border border-amber-200/60 rounded-2xl">
                 <div>
                   <p className="text-[10px] text-amber-800 font-bold tracking-wider uppercase mb-0.5">GÓI HIỆN TẠI CỦA BẠN</p>
-                  <p className="text-base font-black text-slate-800">
-                    {currentUserPlan === "starter" ? "Starter" : currentUserPlan === "skill_builder" ? "Skill Builder" : "Gói Premium"}
-                  </p>
+                  <p className="text-base font-black text-slate-800">{currentPlanName}</p>
                 </div>
                 <div className="inline-flex items-center gap-1.5 bg-amber-600 px-3 py-1.5 rounded-full text-white text-xs font-bold shadow-sm">
                   <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
@@ -483,68 +402,94 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                 </div>
               </div>
 
-              {/* Grid 3 Columns Bảng giá */}
-              <div className="grid grid-cols-1 md:grid-cols-3 border-t border-slate-100">
-                {planCards.map((planId, idx) => {
-                  const plan = PLANS[planId];
-                  const isPremium = planId === "PREMIUM";
-                  const isDowngrade = planRanks[planIdToKey(planId)] < planRanks[planIdToKey(currentPlan)];
+              {/* Grid Bảng giá — rendered from the single source of truth (displayPlans) */}
+              {loadingPlans && availablePlans.length === 0 ? (
+                <div className={`grid grid-cols-1 ${gridColsClass} border-t border-slate-100`}>
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className={`p-7 flex flex-col gap-3 animate-pulse ${i < 2 ? "border-b md:border-b-0 md:border-r border-slate-100" : ""}`}>
+                      <div className="h-5 w-24 bg-slate-100 rounded" />
+                      <div className="h-9 w-20 bg-slate-100 rounded" />
+                      <div className="h-4 w-full bg-slate-100 rounded" />
+                      <div className="mt-2 flex flex-col gap-2.5">
+                        {[80, 70, 90].map((w, k) => <div key={k} className="h-3.5 bg-slate-100 rounded" style={{ width: `${w}%` }} />)}
+                      </div>
+                      <div className="h-11 bg-slate-100 rounded-xl mt-6" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+              <div className={`grid grid-cols-1 ${gridColsClass} border-t border-slate-100`}>
+                {displayPlans.map((plan, idx) => {
+                  const isFeatured  = !plan.isFree && idx === displayPlans.length - 1;
+                  const isCurrent   = hasCurrentId ? plan.planId === currentPlanId : plan.monthlyPrice === currentPrice;
+                  const isUpgrade   = !isCurrent && !plan.isFree && plan.monthlyPrice > currentPrice;
+                  const isDowngrade = !isCurrent && plan.monthlyPrice < currentPrice;
+                  const isBusy      = creatingPayment && selectedPlanId === plan.planId;
 
                   return (
-                    <div key={planId}
-                      className={`p-7 flex flex-col relative overflow-hidden ${
-                        !isPremium && isDowngrade ? "bg-slate-50/70 opacity-75" : !isPremium ? "bg-slate-50/30" : "bg-white"
-                      } ${idx < planCards.length - 1 ? "border-b md:border-b-0 md:border-r border-slate-100" : ""}`}
+                    <div key={plan.planId}
+                      className={`p-7 flex flex-col h-full justify-between relative overflow-hidden ${
+                        !isFeatured && isDowngrade ? "bg-slate-50/70 opacity-75" : !isFeatured ? "bg-slate-50/30" : "bg-white"
+                      } ${idx < displayPlans.length - 1 ? "border-b md:border-b-0 md:border-r border-slate-100" : ""}`}
                       style={{
-                        border: isPremium ? `2px solid ${OG}` : undefined,
-                        boxShadow: isPremium ? "0 15px 45px rgba(255,107,0,0.06)" : undefined,
-                        borderRadius: isPremium ? "20px" : undefined,
-                        zIndex: isPremium ? 10 : 1,
+                        border: isFeatured ? `2px solid ${OG}` : undefined,
+                        boxShadow: isFeatured ? "0 15px 45px rgba(255,107,0,0.06)" : undefined,
+                        borderRadius: isFeatured ? "20px" : undefined,
+                        zIndex: isFeatured ? 10 : 1,
                       }}
                     >
-                      {isPremium && (
+                      {isFeatured && (
                         <div className="absolute top-4 -right-8 bg-[#FF6B00] text-white text-[9px] font-black tracking-wider uppercase py-1 px-8 rotate-45 shadow-sm">
                           ĐỀ XUẤT
                         </div>
                       )}
 
-                      <div className="flex items-center gap-1.5 mb-3">
-                        <p className="text-base font-black text-slate-800">{plan.name}</p>
-                        {isPremium && <Star size={12} className="fill-amber-400 stroke-amber-400" />}
+                      {/* Upper section — grows so the action button is pinned to the bottom */}
+                      <div className="flex-1 flex flex-col">
+                        <div className="flex items-center gap-1.5 mb-3">
+                          <p className="text-base font-black text-slate-800">{plan.name}</p>
+                          {isFeatured && <Star size={12} className="fill-amber-400 stroke-amber-400" />}
+                        </div>
+
+                        <div className="mb-3 flex items-baseline">
+                          <span className={`text-4xl font-black tracking-tight ${isFeatured ? "text-[#FF6B00]" : "text-slate-800"}`}>
+                            {plan.priceDisplay}
+                          </span>
+                          {!plan.isFree && <span className="text-xs text-slate-400 ml-1 font-medium">/tháng</span>}
+                        </div>
+
+                        <p className="text-xs text-slate-500 font-medium leading-relaxed mb-5 min-h-[32px]">{plan.description}</p>
+
+                        <ul className="space-y-3 list-none p-0 m-0">
+                          {plan.features.map((feat, fi) => (
+                            <FeatureIncluded key={feat.featureKey ?? fi} text={feat.featureName} accent={!plan.isFree} enabled={isFeatureEnabled(feat)} />
+                          ))}
+                        </ul>
                       </div>
 
-                      <div className="mb-3 flex items-baseline">
-                        <span className={`text-4xl font-black tracking-tight ${isPremium ? "text-[#FF6B00]" : "text-slate-800"}`}>
-                          {plan.priceDisplay}
-                        </span>
-                        <span className="text-xs text-slate-400 ml-1 font-medium">/tháng</span>
-                      </div>
-
-                      <p className="text-xs text-slate-500 font-medium leading-relaxed mb-5 min-h-[32px]">{plan.description}</p>
-
-                      <ul className="space-y-3 mb-6 flex-grow list-none p-0 m-0">
-                        {plan.features.map((feat, fi) => {
-                          if (feat.extra && feat.text.startsWith("Bao gồm")) {
-                            return <FeatureIncluded key={fi} text={feat.text} accent />;
-                          }
-                          if (feat.extra && feat.text.startsWith("Gia sư AI")) {
-                            return (
-                              <li key={fi} className="flex items-center gap-1.5 py-0.5">
-                                <Zap size={14} className="fill-[#FF6B00] stroke-[#FF6B00] flex-shrink-0" />
-                                <span className="text-sm text-slate-900 font-black tracking-tight">{feat.text}</span>
-                              </li>
-                            );
-                          }
-                          if (feat.dim) return <FeatureDim key={fi} text={feat.text} />;
-                          return <FeatureIncluded key={fi} text={feat.text} accent={feat.highlight} />;
-                        })}
-                      </ul>
-
-                      {renderCardButton(planId)}
+                      {isCurrent ? (
+                        <button disabled className="w-full py-3 rounded-xl text-sm font-bold bg-orange-50/80 text-[#FF6B00] border border-orange-200/50 mt-6 cursor-default">
+                          Gói hiện tại
+                        </button>
+                      ) : isUpgrade ? (
+                        <motion.button
+                          whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                          onClick={() => handleUpgradePlan(plan)} disabled={isBusy}
+                          className="w-full py-3 bg-[#FF6B00] hover:bg-[#FF5500] text-white font-bold text-sm rounded-xl mt-6 shadow-md shadow-orange-500/10 flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {isBusy ? <Loader2 size={14} className="animate-spin" /> : <ArrowUp size={14} />}
+                          {isBusy ? "Đang xử lý..." : `Nâng cấp ${plan.name}`}
+                        </motion.button>
+                      ) : (
+                        <button disabled className="w-full py-3 bg-slate-100/80 text-slate-400 border border-slate-200/60 rounded-xl font-bold text-sm mt-6 cursor-not-allowed">
+                          {plan.isFree ? "Miễn phí" : "Không khả dụng"}
+                        </button>
+                      )}
                     </div>
                   );
                 })}
               </div>
+              )}
 
               {/* Lower Trust Metadata Bar */}
               <div className="flex items-center justify-center gap-6 px-6 py-3.5 bg-slate-50 border-t border-slate-100 rounded-b-3xl">
@@ -574,7 +519,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
 
                   <p className="text-[10px] text-slate-400 font-black tracking-wider uppercase mb-1">ĐƠN HÀNG NÂNG CẤP</p>
                   <h3 className="text-xl font-black text-slate-900 tracking-tight mb-4">
-                    {selectedPlan === "premium" ? "Gói Premium" : "Gói Skill Builder"}
+                    {selectedPlanName || (selectedPlan === "premium" ? "Gói Premium" : "Gói Skill Builder")}
                   </h3>
 
                   <div className="mb-8">
@@ -720,7 +665,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                   </div>
                   <div className="flex justify-between font-medium text-slate-500 pt-2.5">
                     <span>Gói tài khoản:</span>
-                    <span className="text-slate-800 font-bold">{selectedPlan === "premium" ? "Gói Premium" : "Skill Builder"}</span>
+                    <span className="text-slate-800 font-bold">{selectedPlanName || (selectedPlan === "premium" ? "Gói Premium" : "Skill Builder")}</span>
                   </div>
                   <div className="flex justify-between font-medium text-slate-500 pt-2.5">
                     <span>Tổng số tiền:</span>

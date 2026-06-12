@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { clearAuthTokens, getStoredUserProfile, type StoredUserProfile } from "../../../api/authService";
 import meService, { type MeResponse } from "../../../api/meService";
 import { getCurrentSubscription, getQuotaStatus, cancelSubscription } from "../../../api/subscriptionsService";
+import { listSubscriptionPlans, formatPlanPrice, isFeatureEnabled, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/adminSubscriptionPlansService";
 import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
 import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse, CurrentSubscriptionResponse, QuotaStatusResponse, ServicePlanType } from "../../../api/skillSprintModels";
 
@@ -554,19 +555,22 @@ function PlaceholderTab({ label }:{ label:string }) {
 /* ════════════════════════════════════════════════
    SUBSCRIPTION TAB
 ════════════════════════════════════════════════ */
-function PlanFeature({ text, color="#374151" }: { text: string; color?: string }) {
+function PlanFeature({ text, color="#374151", enabled=true }: { text: string; color?: string; enabled?: boolean }) {
   return (
-    <li style={{ display:"flex", alignItems:"center", gap:"7px", fontSize:"0.82rem", color }}>
-      <Check size={13} color={color === "#374151" ? "#6B7280" : color} strokeWidth={2.5} style={{ flexShrink:0 }}/>
+    <li style={{ display:"flex", alignItems:"center", gap:"7px", fontSize:"0.82rem", color: enabled ? color : "#CBD5E1", textDecoration: enabled ? undefined : "line-through" }}>
+      {enabled
+        ? <Check size={13} color={color === "#374151" ? "#6B7280" : color} strokeWidth={2.5} style={{ flexShrink:0 }}/>
+        : <X size={13} color="#CBD5E1" style={{ flexShrink:0 }}/>}
       {text}
     </li>
   );
 }
 
-function QuotaProgressBar({ label, used, total, icon: IconComponent }: { label: string; used: number; total: number; icon: React.ElementType }) {
-  const percentage = total > 0 ? Math.min((used / total) * 100, 100) : 0;
-  const isNearLimit = percentage >= 80;
-  const isAtLimit   = percentage >= 100;
+function QuotaProgressBar({ label, used, total, icon: IconComponent }: { label: string; used: number; total: number | null; icon: React.ElementType }) {
+  const isUnlimited = total === null;
+  const percentage  = !isUnlimited && total > 0 ? Math.min((used / total) * 100, 100) : 0;
+  const isNearLimit = !isUnlimited && percentage >= 80;
+  const isAtLimit   = !isUnlimited && percentage >= 100;
   const fillColor   = isAtLimit ? "#EF4444" : isNearLimit ? "#F59E0B" : OG;
 
   return (
@@ -576,16 +580,24 @@ function QuotaProgressBar({ label, used, total, icon: IconComponent }: { label: 
           <IconComponent size={14} color={T2} />
           <span style={{ fontFamily:F, fontWeight:600, fontSize:"0.80rem", color:T1 }}>{label}</span>
         </div>
-        <span style={{ fontFamily:F, fontWeight:700, fontSize:"0.75rem", color:fillColor }}>{used}/{total}</span>
+        <span style={{ fontFamily:F, fontWeight:700, fontSize:"0.75rem", color: isUnlimited ? "#059669" : fillColor }}>
+          {used}{isUnlimited ? " / ∞" : `/${total}`}
+        </span>
       </div>
-      <div style={{ width:"100%", height:"8px", borderRadius:"99px", background:"#E5E7EB", overflow:"hidden" }}>
-        <motion.div
-          initial={{ width:0 }}
-          animate={{ width:`${percentage}%` }}
-          transition={{ duration:0.8, ease:[0.22,1,0.36,1] }}
-          style={{ height:"100%", borderRadius:"99px", background:`linear-gradient(90deg,${fillColor},${fillColor}DD)` }}
-        />
-      </div>
+      {isUnlimited ? (
+        <div style={{ width:"100%", height:"8px", borderRadius:"99px", background:"linear-gradient(90deg,#D1FAE5,#A7F3D0)", overflow:"hidden" }}>
+          <div style={{ width:"100%", height:"100%", borderRadius:"99px", background:"linear-gradient(90deg,#059669,#10B981)" }} />
+        </div>
+      ) : (
+        <div style={{ width:"100%", height:"8px", borderRadius:"99px", background:"#E5E7EB", overflow:"hidden" }}>
+          <motion.div
+            initial={{ width:0 }}
+            animate={{ width:`${percentage}%` }}
+            transition={{ duration:0.8, ease:[0.22,1,0.36,1] }}
+            style={{ height:"100%", borderRadius:"99px", background:`linear-gradient(90deg,${fillColor},${fillColor}DD)` }}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -599,9 +611,10 @@ function formatVnd(amount: number) {
 
 function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: () => void }) {
   /* ── Server data ── */
-  const [subData,   setSubData]   = useState<CurrentSubscriptionResponse | null>(null);
-  const [quotaData, setQuotaData] = useState<QuotaStatusResponse | null>(null);
-  const [loading,   setLoading]   = useState(true);
+  const [subData,        setSubData]        = useState<CurrentSubscriptionResponse | null>(null);
+  const [quotaData,      setQuotaData]      = useState<QuotaStatusResponse | null>(null);
+  const [availablePlans, setAvailablePlans] = useState<PublicPlanResponse[]>([]);
+  const [loading,        setLoading]        = useState(true);
 
   /* ── Checkout (upgrade) flow ── */
   const [checkoutOpen,    setCheckoutOpen]    = useState(false);
@@ -624,16 +637,18 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
   const pollAttemptRef = useRef(0);
   const paymentIdRef   = useRef<string | null>(null);
 
-  /* ── Load subscription & quota ── */
+  /* ── Load subscription, quota, and available plans ── */
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [sub, quota] = await Promise.all([
+      const [sub, quota, plans] = await Promise.all([
         getCurrentSubscription(),
         getQuotaStatus(),
+        listSubscriptionPlans().catch(() => [] as PublicPlanResponse[]),
       ]);
       setSubData(sub);
       setQuotaData(quota);
+      setAvailablePlans(plans);
     } catch {
       // non-critical
     } finally {
@@ -647,14 +662,49 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
   /* ── Plan registry ── */
   type PlanId = "starter"|"skill_builder"|"career_premium";
   const planValue: Record<PlanId,number> = { starter:0, skill_builder:1, career_premium:2 };
-  const planLabel: Record<PlanId,string> = { starter:"Starter", skill_builder:"Skill Builder", career_premium:"Career Premium" };
   const planApiType: Record<PlanId,string> = { starter:"FREE", skill_builder:"SKILL_BUILDER", career_premium:"PREMIUM" };
-  const planDisplayPrice: Record<PlanId,string> = { starter:"Miễn phí", skill_builder:"89.000", career_premium:"199.000" };
-  const planPriceSub: Record<PlanId,string|null> = { starter:null, skill_builder:"VND / tháng", career_premium:"VND / tháng" };
-  const planFeatureList: Record<PlanId,string[]> = {
-    starter:        ["Tối đa 3 lộ trình","Công cụ Pomodoro cơ bản","Tham gia cộng đồng"],
-    skill_builder:  ["Không giới hạn lộ trình","Phân tích học tập chuyên sâu","Hỗ trợ ưu tiên"],
-    career_premium: ["Toàn bộ quyền lợi Skill Builder","Xuất CV & Minh chứng","Gia sư AI 24/7","Ghép cặp Mentor"],
+
+  // ── Single source of truth: identify plans by price, NOT raw index ──
+  // The BE list may or may not include the FREE plan, so we explicitly split
+  // free vs paid (sorted ascending) instead of assuming positions [0]/[1].
+  const freePlan  = availablePlans.find(p => p.monthlyPrice <= 0) ?? null;
+  const paidPlans = availablePlans.filter(p => p.monthlyPrice > 0).sort((a, b) => a.monthlyPrice - b.monthlyPrice);
+  const planByKey: Record<PlanId, PublicPlanResponse | null> = {
+    starter:        freePlan,
+    skill_builder:  paidPlans[0] ?? null,
+    career_premium: paidPlans[1] ?? null,
+  };
+
+  // Dynamic plan names from BE; fall back to static label if not loaded yet
+  const planLabel: Record<PlanId,string> = {
+    starter:        planByKey.starter?.planName        ?? "Starter",
+    skill_builder:  planByKey.skill_builder?.planName  ?? "Skill Builder",
+    career_premium: planByKey.career_premium?.planName ?? "Career Premium",
+  };
+
+  // Dynamic price labels from BE via the shared localization utility ("89.000 đ" /
+  // "Miễn phí"); fall back to static if plans not loaded yet.
+  const planDisplayPrice: Record<PlanId,string> = {
+    starter:        "Miễn phí",
+    skill_builder:  planByKey.skill_builder  ? formatPlanPrice(planByKey.skill_builder.monthlyPrice, planByKey.skill_builder.currency)   : "89.000 đ",
+    career_premium: planByKey.career_premium ? formatPlanPrice(planByKey.career_premium.monthlyPrice, planByKey.career_premium.currency) : "199.000 đ",
+  };
+  const planPriceSub: Record<PlanId,string|null> = {
+    starter:        null,
+    skill_builder:  "/ tháng",
+    career_premium: "/ tháng",
+  };
+
+  // Dynamic feature lists from BE (featureName + enabled); fall back to static if not loaded
+  const staticStarterFeatures: PublicPlanFeature[] = [
+    { featureKey: "fallback_roadmaps", featureName: "Tối đa 3 lộ trình" },
+    { featureKey: "fallback_pomodoro", featureName: "Công cụ Pomodoro cơ bản" },
+    { featureKey: "fallback_community", featureName: "Tham gia cộng đồng" },
+  ];
+  const planFeatureList: Record<PlanId,PublicPlanFeature[]> = {
+    starter:        planByKey.starter?.features ?? staticStarterFeatures,
+    skill_builder:  planByKey.skill_builder?.features ?? [],
+    career_premium: planByKey.career_premium?.features ?? [],
   };
 
   const rawPlan = subData?.plan?.planType;
@@ -823,7 +873,7 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
 
   const bannerIcon  = currentPlanId==="career_premium" ? <Crown size={16} color={OG}/> : currentPlanId==="skill_builder" ? <Zap size={16} color={OG}/> : <Zap size={16} color="#9CA3AF"/>;
   const bannerTitle = `${planLabel[currentPlanId]} Plan`;
-  const bannerPrice = currentPlanId==="starter" ? "0 VND / tháng · Miễn phí" : `${planDisplayPrice[currentPlanId]} VND / tháng`;
+  const bannerPrice = currentPlanId==="starter" ? "Miễn phí · 0đ / tháng" : `${planDisplayPrice[currentPlanId]} / tháng`;
 
   if (loading) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:"40px 0" }}>
@@ -866,16 +916,18 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
         <div style={{ padding:"16px 18px", borderRadius:"12px", border:`1px solid ${BDR}`, background:"#FAFBFC", marginBottom:"20px" }}>
           <SectionHeading title="Mức sử dụng & Giới hạn"/>
           <div style={{ display:"grid", gap:"4px" }}>
-            {quotaData.usedWorkspaces  !== undefined && <QuotaProgressBar label="Lộ trình đang học"       used={quotaData.usedWorkspaces ??0} total={quotaData.maxWorkspaces ??3}  icon={Layers}   />}
-            {quotaData.usedStorageMb   !== undefined && <QuotaProgressBar label="Dung lượng lưu trữ (MB)" used={quotaData.usedStorageMb  ??0} total={quotaData.maxWorkspaceMb??100} icon={HardDrive} />}
-            {quotaData.usedAiGenerate  !== undefined && <QuotaProgressBar label="Lượt hỏi AI (tháng này)" used={quotaData.usedAiGenerate  ??0} total={quotaData.aiGenerateLimit??50} icon={Zap}      />}
-            {quotaData.usedUploads     !== undefined && <QuotaProgressBar label="Tệp đã tải lên"           used={quotaData.usedUploads     ??0} total={quotaData.maxUploads    ??20} icon={Upload}   />}
+            {quotaData.usedWorkspaces  !== undefined && <QuotaProgressBar label="Lộ trình đang học"       used={quotaData.usedWorkspaces ??0} total={quotaData.maxWorkspaces  ?? null} icon={Layers}   />}
+            {quotaData.usedStorageMb   !== undefined && <QuotaProgressBar label="Dung lượng lưu trữ (MB)" used={quotaData.usedStorageMb  ??0} total={quotaData.maxWorkspaceMb ?? null} icon={HardDrive} />}
+            {quotaData.usedAiGenerate  !== undefined && <QuotaProgressBar label="Lượt hỏi AI (tháng này)" used={quotaData.usedAiGenerate  ??0} total={quotaData.aiGenerateLimit ?? null} icon={Zap}      />}
+            {quotaData.usedUploads     !== undefined && <QuotaProgressBar label="Tệp đã tải lên"           used={quotaData.usedUploads     ??0} total={quotaData.maxUploads    ?? null} icon={Upload}   />}
           </div>
         </div>
       )}
 
       {/* ─── Plan Cards Grid ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      {/* items-stretch forces equal card heights; each card is flex-col with a
+          flex-1 top section so the action buttons all align on the same line. */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
         {PLANS.map(plan => {
           const btn = getButtonConfig(plan.id);
           const isCreating = creatingPayment;
@@ -883,33 +935,41 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
           const isDowngrade = idx < currentPlanIndex;
           return (
             <motion.div key={plan.id}
-              className={isDowngrade ? "opacity-40 grayscale pointer-events-none select-none" : ""}
+              className={`flex flex-col h-full justify-between p-6 ${isDowngrade ? "opacity-40 grayscale pointer-events-none select-none" : ""}`}
               initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
               transition={{ duration:0.3, delay:planValue[plan.id]*0.06 }}
               whileHover={!btn.disabled ? { y:-2 } : {}}
-              style={{ background:plan.bg, borderRadius:"14px", border:plan.border, padding:"20px 18px", display:"flex", flexDirection:"column", boxShadow:plan.id===currentPlanId?"0 0 0 2px rgba(255,107,0,0.15)":"0 1px 4px rgba(0,0,0,0.04)", position:"relative", overflow:"hidden" }}
+              style={{ background:plan.bg, borderRadius:"14px", border:plan.border, boxShadow:plan.id===currentPlanId?"0 0 0 2px rgba(255,107,0,0.15)":"0 1px 4px rgba(0,0,0,0.04)", position:"relative", overflow:"hidden" }}
             >
-              {plan.badge && (
-                <div style={{ display:"flex", alignItems:"center", gap:"5px", marginBottom:"8px" }}>
-                  <span style={{ fontSize:"0.62rem", fontWeight:800, color:OG, letterSpacing:"0.1em", textTransform:"uppercase" }}>{plan.badge}</span>
-                  <Crown size={11} color="#FBBF24" fill="#FBBF24"/>
+              {/* Top section (badge, name, price, features) — grows to fill height */}
+              <div className="flex-1">
+                {plan.badge && (
+                  <div style={{ display:"flex", alignItems:"center", gap:"5px", marginBottom:"8px" }}>
+                    <span style={{ fontSize:"0.62rem", fontWeight:800, color:OG, letterSpacing:"0.1em", textTransform:"uppercase" }}>{plan.badge}</span>
+                    <Crown size={11} color="#FBBF24" fill="#FBBF24"/>
+                  </div>
+                )}
+                <p style={{ fontSize:"1rem", fontWeight:700, color:plan.id===currentPlanId?OG:plan.accent, fontFamily:F, marginBottom:"6px", marginTop:plan.badge?"0":"18px" }}>
+                  {planLabel[plan.id]}
+                </p>
+                <div style={{ display:"flex", alignItems:"baseline", gap:"2px", marginBottom:"14px" }}>
+                  <span style={{ fontSize:"1.8rem", fontWeight:900, letterSpacing:"-0.04em", color:plan.id==="starter"?T1:plan.accent }}>{planDisplayPrice[plan.id]}</span>
+                  {planPriceSub[plan.id] && <span style={{ fontSize:"0.75rem", color:T3, marginLeft:"1px" }}>{planPriceSub[plan.id]}</span>}
                 </div>
-              )}
-              <p style={{ fontSize:"1rem", fontWeight:700, color:plan.id===currentPlanId?OG:plan.accent, fontFamily:F, marginBottom:"6px", marginTop:plan.badge?"0":"18px" }}>
-                {planLabel[plan.id]}
-              </p>
-              <div style={{ display:"flex", alignItems:"baseline", gap:"2px", marginBottom:"14px" }}>
-                <span style={{ fontSize:"1.8rem", fontWeight:900, letterSpacing:"-0.04em", color:plan.id==="starter"?T1:plan.accent }}>{planDisplayPrice[plan.id]}</span>
-                {planPriceSub[plan.id] && <span style={{ fontSize:"0.75rem", color:T3, marginLeft:"1px" }}>{planPriceSub[plan.id]}</span>}
+                <ul style={{ listStyle:"none", margin:0, padding:0, display:"flex", flexDirection:"column", gap:"8px" }}>
+                  {planFeatureList[plan.id].map((f, fi) => (
+                    <PlanFeature key={f.featureKey ?? fi} text={f.featureName} enabled={isFeatureEnabled(f)} color={plan.id===currentPlanId?T1:T2}/>
+                  ))}
+                </ul>
               </div>
-              <ul style={{ listStyle:"none", margin:"0 0 auto", padding:0, display:"flex", flexDirection:"column", gap:"8px", marginBottom:"18px" }}>
-                {planFeatureList[plan.id].map(f => <PlanFeature key={f} text={f} color={plan.id===currentPlanId?T1:T2}/>)}
-              </ul>
+
+              {/* Action button — pinned to bottom, aligned across all cards */}
               <motion.button
                 whileHover={!btn.disabled ? { scale:1.02 } : {}}
                 whileTap={!btn.disabled ? { scale:0.97 } : {}}
                 disabled={btn.disabled || isCreating}
                 onClick={() => handlePlanAction(plan.id)}
+                className="mt-5"
                 style={{ width:"100%", padding:"11px 0", borderRadius:"10px", background:btn.bg, border:`1.5px solid ${btn.border}`, color:btn.color, fontFamily:F, fontWeight:700, fontSize:"0.875rem", cursor:btn.disabled||isCreating?"not-allowed":"pointer", opacity:btn.disabled?0.65:1, boxShadow:btn.shadow, transition:"all 0.15s", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px" }}
               >
                 {isCreating && !btn.disabled && planValue[plan.id]>currentPlanIndex
