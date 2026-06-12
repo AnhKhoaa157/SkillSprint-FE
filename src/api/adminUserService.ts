@@ -8,17 +8,46 @@ type ApiResponse<T> = {
   data: T | null;
 };
 
+export type SubscriptionAdminResponse = {
+  subscriptionId: string | null;
+  planName: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: string | null;
+};
+
+// Full response shape returned by the admin user endpoints
+export interface AdminUserResponse {
+  userId: string;
+  email: string;
+  emailVerified: boolean;
+  fullName: string;
+  avatarUrl: string | null;
+  timeZone: string;
+  status: string;
+  roles: string[];
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  currentSubscription: SubscriptionAdminResponse | null;
+}
+
 export type AdminUserSummary = {
   id: string;
   email: string;
   fullName?: string;
   role?: string;
-  status?: string;
+  status?: "ACTIVE" | "DISABLE";
+  currentSubscription?: SubscriptionAdminResponse | null;
 };
 
 export type AdminUserDetail = AdminUserSummary & {
   createdAt?: string;
   updatedAt?: string;
+  emailVerified?: boolean;
+  avatarUrl?: string | null;
+  timeZone?: string;
+  lastLoginAt?: string | null;
 };
 
 async function authFetch<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
@@ -26,18 +55,12 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<ApiRespon
     "Content-Type": "application/json",
     ...getAuthHeaders(),
   };
-  // Debug logging (development): do not remove — helps trace missing API data
+  
   try {
-    const safeHeaders = { ...headers } as Record<string,string>;
-    if (safeHeaders.Authorization) safeHeaders.Authorization = "REDACTED";
-    console.log("[adminUserService] request:", `${API_BASE}${path}`, safeHeaders, init?.method || "GET");
-
     const res = await fetch(`${API_BASE}${path}`, { headers, ...init });
     const text = await res.text().catch(() => null);
     let payload: any = null;
     try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }
-
-    console.log("[adminUserService] response:", res.status, payload);
 
     if (!res.ok) {
       if (res.status === 401) {
@@ -61,37 +84,31 @@ export async function getAdminUsers(search?: string, page = 0, size = 10) {
   q.set("size", String(size));
   const resp = await authFetch<any>(`/api/admin/users?${q.toString()}`);
   if (!resp.data) throw new Error(resp.message || "Empty response");
-  // Backend returns PageResponse shape: {items, totalItems, page, size, totalPages}
-  // Backend items have: {userId, email, emailVerified, fullName, status, roles, ...}
-  // Normalize to expected shape: {content, totalElements} + map userId → id for consistency
-  const normalized = {
+
+  return {
     content: (resp.data.items || resp.data.content || []).map((item: any) => ({
       ...item,
-      id: item.userId || item.id, // Ensure id field is set
-      role: item.roles?.length ? item.roles[0] : undefined, // First role for display
+      id: item.userId || item.id,
+      role: item.roles?.length ? item.roles[0] : undefined,
+      currentSubscription: item.currentSubscription ?? null,
     })),
     totalElements: resp.data.totalItems ?? resp.data.totalElements ?? 0,
   };
-  console.log("[adminUserService] normalized response:", normalized);
-  console.log("[adminUserService] first user item:", normalized.content?.[0]);
-  return normalized;
 }
 
 export async function getAdminUser(userId: string) {
-  console.log("[adminUserService] getAdminUser called with userId:", userId);
   const resp = await authFetch<any>(`/api/admin/users/${encodeURIComponent(userId)}`);
   if (!resp.data) throw new Error(resp.message || "Empty response");
-  // Normalize backend response to match expected shape
-  const normalized = {
+
+  return {
     ...resp.data,
-    id: resp.data.userId || resp.data.id, // Ensure id field is set
-    role: resp.data.roles?.length ? resp.data.roles[0] : undefined, // First role for display
+    id: resp.data.userId || resp.data.id,
+    role: resp.data.roles?.length ? resp.data.roles[0] : undefined,
+    currentSubscription: resp.data.currentSubscription ?? null,
   };
-  console.log("[adminUserService] normalized detail:", normalized);
-  return normalized;
 }
 
-export async function updateUserStatus(userId: string, body: { status: string }) {
+export async function updateUserStatus(userId: string, body: { status: "ACTIVE" | "DISABLE" }) {
   const resp = await authFetch<any>(`/api/admin/users/${encodeURIComponent(userId)}/status`, {
     method: "PATCH",
     body: JSON.stringify(body),
@@ -106,9 +123,7 @@ export async function updateUserStatus(userId: string, body: { status: string })
 }
 
 export async function updateUserRole(userId: string, body: { role?: string; roles?: string[] }) {
-  // Backend expects single role, convert from array if needed
   const role = body.role || body.roles?.[0] || "LEARNER";
-  console.log("[adminUserService] updateUserRole - sending role:", role);
   const resp = await authFetch<any>(`/api/admin/users/${encodeURIComponent(userId)}/roles`, {
     method: "PATCH",
     body: JSON.stringify({ role }),
