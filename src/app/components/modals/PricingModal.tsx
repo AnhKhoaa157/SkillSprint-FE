@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { X, Check, ShieldCheck, ChevronRight, Zap, Star, Loader2, AlertCircle, Copy, RefreshCw, ArrowUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -166,9 +166,10 @@ interface PricingModalProps {
   onSuccess?: (plan: "builder" | "premium") => void;
   initialPlan?: "builder" | "premium";
   currentPlan: "starter" | "skill_builder" | "career_premium";
+  packageName?: string;
 }
 
-export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premium", currentPlan: rawCurrentPlan }: PricingModalProps) {
+export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premium", currentPlan: rawCurrentPlan, packageName }: PricingModalProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState<"pricing" | "checkout" | "success" | "error">("pricing");
   const [selectedPlan, setSelectedPlan] = useState<"builder" | "premium">("premium");
@@ -184,6 +185,8 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
 
   const currentPlan = getNormalizedPlan(rawCurrentPlan);
   const currentUserPlan = currentPlan === "FREE" ? "starter" : currentPlan === "SKILL_BUILDER" ? "skill_builder" : "career_premium";
+  const selectedPlanId: PlanId = selectedPlan === "premium" ? "PREMIUM" : "SKILL_BUILDER";
+  const successPackageName = packageName?.trim() || PLANS[selectedPlanId]?.name || "Gói dịch vụ";
 
   const [paymentData, setPaymentData] = useState<SepayPaymentCreateResponse | null>(null);
   const [creatingPayment, setCreatingPayment] = useState(false);
@@ -700,7 +703,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
               
               {/* TIÊU ĐỀ ĐỘNG: Đọc trực tiếp trường learnerName từ cổng API SePay */}
               <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">
-                Chào mừng {userFullName || "Bạn"} tới Gói Premium! 🎉
+                Chào mừng {userFullName || "Bạn"} tới {successPackageName}! 🎉
               </h3>
 
               {/* NỘI DUNG MÔ TẢ ĐỘNG: Đồng bộ template trắng cam rực rỡ */}

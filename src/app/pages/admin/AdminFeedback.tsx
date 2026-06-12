@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import {
   MessageSquare, Search, RefreshCw, LoaderCircle,
@@ -148,6 +148,7 @@ function ConfirmModal({ action, onConfirm, onCancel, loading }: ConfirmModalProp
 export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProps) {
   const [feedbacks, setFeedbacks]       = useState<FeedbackAdminResponse[]>([]);
   const [loading, setLoading]           = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [page, setPage]                 = useState(0);
   const [totalPages, setTotalPages]     = useState(0);
   const [totalItems, setTotalItems]     = useState(0);
@@ -165,15 +166,19 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
 
   const accent = isDashboard ? "#FF6B00" : "#7C3AED";
   const hasFilters = searchInput || typeFilter || statusFilter;
+  const isFetching = loading || isRefreshing;
+  const showInitialSkeleton = loading && feedbacks.length === 0;
 
   /* ── Data Fetching ── */
-  const load = async (
+  const load = useCallback(async (
     p: number,
     status = statusFilter,
     type   = typeFilter,
     search = searchInput,
+    options?: { silent?: boolean },
   ) => {
-    setLoading(true);
+    const setBusy = options?.silent ? setIsRefreshing : setLoading;
+    setBusy(true);
     try {
       const res = await getAdminFeedbacks(p, 15, status || undefined, type || undefined, search || undefined);
       setFeedbacks(res.content ?? res.items ?? []);
@@ -183,11 +188,23 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
     } catch (err) {
       toast.error((err as Error).message || "Không tải được danh sách feedback");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  };
+  }, [searchInput, statusFilter, typeFilter]);
 
-  useEffect(() => { load(0); }, []);
+  useEffect(() => {
+    load(0);
+    // Initial fetch only; filter/search handlers call load explicitly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      load(page, statusFilter, typeFilter, searchInput, { silent: true });
+    }, 10000);
+
+    return () => window.clearInterval(intervalId);
+  }, [load, page, searchInput, statusFilter, typeFilter]);
 
   const clearFilters = () => {
     setSearchInput("");
@@ -303,11 +320,11 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
               </div>
             </div>
             <button
-              onClick={() => load(page)}
-              disabled={loading}
+              onClick={() => load(page, statusFilter, typeFilter, searchInput, { silent: feedbacks.length > 0 })}
+              disabled={isFetching}
               className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition flex items-center gap-1.5 text-sm font-semibold cursor-pointer disabled:opacity-50 self-start sm:self-auto"
             >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
               Làm mới
             </button>
           </div>
@@ -340,6 +357,18 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
                   }}
                 />
               </div>
+
+              {/* Manual reload */}
+              <button
+                type="button"
+                title="Refresh list"
+                aria-label="Refresh list"
+                onClick={() => load(page, statusFilter, typeFilter, searchInput, { silent: feedbacks.length > 0 })}
+                disabled={isFetching}
+                className="h-9 w-9 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              >
+                <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
+              </button>
 
               {/* Type filter */}
               <select
@@ -407,7 +436,7 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
             </div>
 
             {/* Loading skeletons */}
-            {loading && Array.from({ length: 6 }).map((_, i) => (
+            {showInitialSkeleton && Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
                 className="grid px-5 py-3.5 animate-pulse border-b border-slate-50"
@@ -420,7 +449,7 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
             ))}
 
             {/* Empty state */}
-            {!loading && feedbacks.length === 0 && (
+            {!isFetching && feedbacks.length === 0 && (
               <div className="py-16 text-center">
                 <MessageSquare size={32} style={{ color: "#E5E7EB", margin: "0 auto 8px" }} />
                 <p style={{ color: "#9CA3AF", fontSize: "0.85rem" }}>
@@ -430,7 +459,7 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
             )}
 
             {/* Rows */}
-            {!loading && feedbacks.map(fb => {
+            {!showInitialSkeleton && feedbacks.map(fb => {
               const typeInfo   = FEEDBACK_TYPE_LABEL[fb.type] ?? FEEDBACK_TYPE_LABEL.OTHER;
               const curStatus  = sanitizeFeedbackStatus(fb.status);
               const statusInfo = FEEDBACK_STATUS_LABEL[curStatus] ?? FEEDBACK_STATUS_LABEL.OPEN;
@@ -521,14 +550,14 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => load(Math.max(0, page - 1))}
-                  disabled={page === 0 || loading}
+                  disabled={page === 0 || isFetching}
                   className="px-3 py-1.5 rounded-lg text-xs border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer"
                 >
                   ← Trước
                 </button>
                 <button
                   onClick={() => load(page + 1)}
-                  disabled={page + 1 >= totalPages || loading}
+                  disabled={page + 1 >= totalPages || isFetching}
                   className="px-3 py-1.5 rounded-lg text-xs border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer"
                 >
                   Tiếp →
@@ -713,3 +742,4 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
     </>
   );
 }
+
