@@ -707,10 +707,22 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
     career_premium: planByKey.career_premium?.features ?? [],
   };
 
+  // Dynamic benefit bullets from BE (jsonb string[]); same per-plan source as
+  // planFeatureList, read with `?? []` exactly like PricingModal's toDisplayPlan.
+  const planBenefitsList: Record<PlanId,string[]> = {
+    starter:        planByKey.starter?.benefits ?? [],
+    skill_builder:  planByKey.skill_builder?.benefits ?? [],
+    career_premium: planByKey.career_premium?.benefits ?? [],
+  };
+
   const rawPlan = subData?.plan?.planType;
   const currentPlanId: PlanId = rawPlan === "PREMIUM" ? "career_premium"
     : rawPlan === "SKILL_BUILDER" ? "skill_builder" : "starter";
   const currentPlanIndex = planValue[currentPlanId];
+
+  // Benefits (jsonb string[]) of the user's active plan, sourced from the public
+  // plan list (the simplified subData.plan shape doesn't carry benefits).
+  const currentBenefits = planByKey[currentPlanId]?.benefits ?? [];
 
   /* ── Polling ── */
   const stopPolling = useCallback(() => {
@@ -911,6 +923,21 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
         </div>
       </div>
 
+      {/* ─── Quyền lợi của bạn (current plan benefits) ─── */}
+      {currentBenefits.length > 0 && (
+        <div style={{ padding:"16px 18px", borderRadius:"12px", border:`1px solid ${BDR}`, background:"#FAFBFC", marginBottom:"20px" }}>
+          <SectionHeading title="Quyền lợi của bạn"/>
+          <ul style={{ listStyle:"none", margin:0, padding:0, display:"flex", flexDirection:"column", gap:"10px" }}>
+            {currentBenefits.map((b, i) => (
+              <li key={i} style={{ display:"flex", alignItems:"flex-start", gap:"8px", fontSize:"0.84rem", color:T1, fontFamily:F, lineHeight:1.5 }}>
+                <BadgeCheck size={15} color={OG} style={{ flexShrink:0, marginTop:"1px" }}/>
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* ─── Usage & Limits ─── */}
       {quotaData && (
         <div style={{ padding:"16px 18px", borderRadius:"12px", border:`1px solid ${BDR}`, background:"#FAFBFC", marginBottom:"20px" }}>
@@ -933,6 +960,7 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
           const isCreating = creatingPayment;
           const idx = planValue[plan.id];
           const isDowngrade = idx < currentPlanIndex;
+          const benefits = planBenefitsList[plan.id];
           return (
             <motion.div key={plan.id}
               className={`flex flex-col h-full justify-between p-6 ${isDowngrade ? "opacity-40 grayscale pointer-events-none select-none" : ""}`}
@@ -956,6 +984,18 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
                   <span style={{ fontSize:"1.8rem", fontWeight:900, letterSpacing:"-0.04em", color:plan.id==="starter"?T1:plan.accent }}>{planDisplayPrice[plan.id]}</span>
                   {planPriceSub[plan.id] && <span style={{ fontSize:"0.75rem", color:T3, marginLeft:"1px" }}>{planPriceSub[plan.id]}</span>}
                 </div>
+                {/* Benefits — premium bullets from the plan's jsonb string[], above
+                    the feature list and separated by a divider (matches PricingModal). */}
+                {benefits && benefits.length > 0 && (
+                  <ul style={{ listStyle:"none", margin:"0 0 12px", padding:"0 0 12px", borderBottom:`1px solid ${BDR}`, display:"flex", flexDirection:"column", gap:"8px" }}>
+                    {benefits.map((b, bi) => (
+                      <li key={bi} className="flex items-start gap-2" style={{ fontSize:"0.82rem", color:T1, lineHeight:1.5 }}>
+                        <Check size={16} color={OG} strokeWidth={2.5} className="flex-shrink-0" style={{ marginTop:"2px" }}/>
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <ul style={{ listStyle:"none", margin:0, padding:0, display:"flex", flexDirection:"column", gap:"8px" }}>
                   {planFeatureList[plan.id].map((f, fi) => (
                     <PlanFeature key={f.featureKey ?? fi} text={f.featureName} enabled={isFeatureEnabled(f)} color={plan.id===currentPlanId?T1:T2}/>

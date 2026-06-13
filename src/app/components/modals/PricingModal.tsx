@@ -28,6 +28,7 @@ interface DisplayPlan {
   priceDisplay: string;        // "Miễn phí" for free, else e.g. "89.000 đ"
   description: string;
   features: PublicPlanFeature[]; // featureName + enabled
+  benefits: string[];          // marketing bullet strings (jsonb string[] on the plan)
   isFree: boolean;
   synthetic: boolean;          // true for fallback plans → pay via planType, not planId
 }
@@ -43,6 +44,7 @@ function toDisplayPlan(p: PublicPlanResponse): DisplayPlan {
     priceDisplay: formatPlanPrice(p.monthlyPrice, p.currency),
     description: p.description ?? "",
     features: p.features,
+    benefits: p.benefits ?? [],
   };
 }
 
@@ -459,6 +461,22 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                         </div>
 
                         <p className="text-xs text-slate-500 font-medium leading-relaxed mb-5 min-h-[32px]">{plan.description}</p>
+
+                        {/* Benefits — marketing bullets (jsonb string[]), above the
+                            feature list and separated by a divider. */}
+                        {plan.benefits.length > 0 && (
+                          <ul
+                            className="list-none space-y-2"
+                            style={{ margin: "0 0 16px", padding: "0 0 16px", borderBottom: "1px solid #F1F5F9" }}
+                          >
+                            {plan.benefits.map((b, bi) => (
+                              <li key={bi} className="flex items-start gap-2">
+                                <Check size={16} color={OG} strokeWidth={2.5} className="flex-shrink-0 mt-0.5" />
+                                <span style={{ fontSize: "0.84rem", color: "#334155", lineHeight: 1.5 }}>{b}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
 
                         <ul className="space-y-3 list-none p-0 m-0">
                           {plan.features.map((feat, fi) => (

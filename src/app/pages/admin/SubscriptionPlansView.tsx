@@ -2,20 +2,30 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   BadgeCheck,
+  Check,
   ChevronDown,
   ChevronUp,
   ClipboardList,
+  Crown,
+  Database,
   Eye,
   EyeOff,
+  HardDrive,
   Layers,
+  Loader2,
   Pencil,
   Plus,
   RefreshCw,
   Settings2,
   Shield,
+  ShieldAlert,
+  Sparkles,
   ToggleLeft,
   ToggleRight,
+  Trash2,
+  Upload,
   X,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -78,6 +88,92 @@ function Badge({ className, children }: { className?: string; children: React.Re
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap border ${className || ""}`}>
       {children}
+    </span>
+  );
+}
+
+// ─── Animated Plan-Type Badge ─────────────────────────────────────────────────
+// Keyframes + hover rules are injected once (PlanBadgeStyles) near the view root.
+// Premium: metallic shimmer (moving gradient) + soft glow pulse.
+// Skill Builder: blue gradient with hover scale/glow. Free: clean slate.
+
+const PLAN_BADGE_CSS = `
+@keyframes planBadgeShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes planBadgeGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(249,115,22,0.35); }
+  50%      { box-shadow: 0 0 16px rgba(249,115,22,0.6); }
+}
+.plan-badge { transition: transform .3s ease, filter .3s ease, box-shadow .3s ease, background .3s ease; }
+.plan-badge-premium:hover { transform: scale(1.06); filter: brightness(1.08) saturate(1.05); }
+.plan-badge-builder:hover { transform: scale(1.05); filter: brightness(1.05); box-shadow: 0 4px 14px rgba(79,70,229,0.45); }
+.plan-badge-free:hover    { transform: scale(1.03); background: #e2e8f0; }
+/* React subtly when hovering the whole row */
+.group:hover .plan-badge-premium { transform: scale(1.04); filter: brightness(1.1); }
+.group:hover .plan-badge-builder { transform: scale(1.04); box-shadow: 0 4px 14px rgba(79,70,229,0.4); }
+.group:hover .plan-badge-free    { background: #e2e8f0; }
+@media (prefers-reduced-motion: reduce) {
+  .plan-badge-premium { animation: none !important; }
+}
+`;
+
+function PlanBadgeStyles() {
+  return <style>{PLAN_BADGE_CSS}</style>;
+}
+
+function PlanTypeBadge({ type }: { type: ServicePlanType }) {
+  const label = (PLAN_TYPE_META[type] ?? PLAN_TYPE_META.FREE).label;
+  const base: React.CSSProperties = {
+    display: "inline-flex", alignItems: "center", gap: 4,
+    padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
+    whiteSpace: "nowrap", lineHeight: 1.3, cursor: "default", userSelect: "none",
+  };
+
+  if (type === "PREMIUM") {
+    return (
+      <span
+        className="plan-badge plan-badge-premium"
+        style={{
+          ...base,
+          color: "#fff",
+          // golden highlight band sweeps over an amber→orange→gold base
+          backgroundImage:
+            "linear-gradient(110deg,#f59e0b 0%,#f97316 25%,#fbbf24 42%,#fde68a 50%,#fbbf24 58%,#f97316 75%,#f59e0b 100%)",
+          backgroundSize: "200% 100%",
+          animation: "planBadgeShimmer 2.8s linear infinite, planBadgeGlow 2.4s ease-in-out infinite",
+          textShadow: "0 1px 2px rgba(124,45,18,0.4)",
+        }}
+      >
+        <Crown size={11} fill="currentColor" /> {label}
+      </span>
+    );
+  }
+
+  if (type === "SKILL_BUILDER") {
+    return (
+      <span
+        className="plan-badge plan-badge-builder"
+        style={{
+          ...base,
+          color: "#fff",
+          backgroundImage: "linear-gradient(to right,#3b82f6,#4f46e5)",
+          boxShadow: "0 2px 8px rgba(59,130,246,0.28)",
+        }}
+      >
+        <Zap size={11} fill="currentColor" /> {label}
+      </span>
+    );
+  }
+
+  // FREE — clean slate with a smooth hover reaction
+  return (
+    <span
+      className="plan-badge plan-badge-free"
+      style={{ ...base, color: "#475569", background: "#f1f5f9", border: "1px solid #e2e8f0" }}
+    >
+      {label}
     </span>
   );
 }
@@ -170,27 +266,26 @@ function Modal({ open, onClose, title, width = 560, children }: {
 
 function Field({ label, required, children, hint }: { label: string; required?: boolean; children: React.ReactNode; hint?: string }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>
-        {label}{required && <span style={{ color: ACCENT, marginLeft: 2 }}>*</span>}
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-semibold text-slate-700">
+        {label}{required && <span className="text-orange-500 ml-0.5">*</span>}
       </label>
       {children}
-      {hint && <span style={{ fontSize: 11, color: "#9CA3AF" }}>{hint}</span>}
+      {hint && <span className="text-xs text-slate-400">{hint}</span>}
     </div>
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "9px 12px", border: "1px solid #E2E8F0",
-  borderRadius: 8, fontSize: 14, color: "#0F172A", outline: "none",
-  background: "#FAFAFA", boxSizing: "border-box",
-};
+// Shared SaaS-style input: rounded-xl with a smooth orange focus ring.
+const inputCls =
+  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 disabled:bg-slate-50";
 
 // ─── Create / Edit Plan Modal ─────────────────────────────────────────────────
 
 type PlanFormData = {
   planName: string;
   description: string;
+  benefits: string[];
   monthlyPrice: string;
   currency: string;
   maxWorkspaces: string;
@@ -204,7 +299,7 @@ type PlanFormData = {
 };
 
 const DEFAULT_FORM: PlanFormData = {
-  planName: "", description: "", monthlyPrice: "0", currency: "VND",
+  planName: "", description: "", benefits: [], monthlyPrice: "0", currency: "VND",
   maxWorkspaces: "", maxUploads: "", aiGenerateLimit: "",
   maxFileMb: "", maxWorkspaceMb: "",
   active: true, publicVisible: true, sortOrder: "0",
@@ -214,6 +309,7 @@ function planToForm(p: ServicePlanResponse): PlanFormData {
   return {
     planName: p.planName,
     description: p.description ?? "",
+    benefits: p.benefits ?? [],
     monthlyPrice: String(p.monthlyPrice),
     currency: p.currency ?? "VND",
     maxWorkspaces: p.quotas?.maxWorkspaces != null ? String(p.quotas.maxWorkspaces) : "",
@@ -242,6 +338,13 @@ function PlanFormModal({
     setForm(editPlan ? planToForm(editPlan) : DEFAULT_FORM);
   }, [editPlan, open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   const set = (k: keyof PlanFormData, v: string | boolean) =>
     setForm((f) => ({ ...f, [k]: v }));
 
@@ -269,6 +372,7 @@ function PlanFormModal({
         saved = await updateSubscriptionPlan(editPlan.planId, {
           planName: form.planName,
           description: form.description || undefined,
+          benefits: form.benefits.map((b) => b.trim()).filter(Boolean),
           monthlyPrice: price,
           currency: form.currency,
           ...quotas,
@@ -280,6 +384,7 @@ function PlanFormModal({
         saved = await createSubscriptionPlan({
           planName: form.planName,
           description: form.description || undefined,
+          benefits: form.benefits.map((b) => b.trim()).filter(Boolean),
           monthlyPrice: price,
           currency: form.currency,
           ...quotas,
@@ -299,90 +404,190 @@ function PlanFormModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={editPlan ? "Chỉnh sửa gói dịch vụ" : "Tạo gói dịch vụ mới"} width={620}>
-      <form onSubmit={handleSubmit}>
-        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Basic Info */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Tên gói" required>
-              <input style={inputStyle} value={form.planName} onChange={(e) => set("planName", e.target.value)} placeholder="Vd: Premium Plan" />
-            </Field>
-            <Field label="Thứ tự hiển thị" hint="Số nhỏ hơn hiển thị trước">
-              <input style={inputStyle} type="number" value={form.sortOrder} onChange={(e) => set("sortOrder", e.target.value)} min={0} />
-            </Field>
-          </div>
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 16 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+          >
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
 
-          <Field label="Mô tả">
-            <textarea
-              style={{ ...inputStyle, resize: "vertical", minHeight: 72, fontFamily: "inherit" }}
-              value={form.description}
-              onChange={(e) => set("description", e.target.value)}
-              placeholder="Mô tả ngắn về gói..."
-            />
-          </Field>
+              {/* ── Sticky Header ── */}
+              <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-slate-100 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
+                    <Layers size={18} className="text-orange-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 leading-tight">
+                      {editPlan ? "Chỉnh sửa gói dịch vụ" : "Tạo gói dịch vụ mới"}
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {editPlan ? "Cập nhật thông tin, giá và quyền lợi của gói" : "Thiết lập thông tin, giá và quyền lợi cho gói mới"}
+                    </p>
+                  </div>
+                </div>
+                <button type="button" onClick={onClose}
+                  className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition">
+                  <X size={18} />
+                </button>
+              </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Giá hàng tháng" required hint="Nhập 0 cho gói miễn phí">
-              <input style={inputStyle} type="number" value={form.monthlyPrice} onChange={(e) => set("monthlyPrice", e.target.value)} min={0} />
-            </Field>
-            <Field label="Đơn vị tiền tệ">
-              <select style={inputStyle} value={form.currency} onChange={(e) => set("currency", e.target.value)}>
-                <option value="VND">VND</option>
-                <option value="USD">USD</option>
-              </select>
-            </Field>
-          </div>
+              {/* ── Scrollable Body ── */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 flex flex-col gap-6">
 
-          {/* Quotas */}
-          <div style={{ padding: "14px 16px", background: "#F8FAFC", borderRadius: 10, border: "1px solid #E2E8F0" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
-              Giới hạn sử dụng (để trống = không giới hạn)
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <Field label="Số Workspace tối đa">
-                <input style={inputStyle} type="number" value={form.maxWorkspaces} onChange={(e) => set("maxWorkspaces", e.target.value)} min={0} placeholder="∞" />
-              </Field>
-              <Field label="Số file upload tối đa">
-                <input style={inputStyle} type="number" value={form.maxUploads} onChange={(e) => set("maxUploads", e.target.value)} min={0} placeholder="∞" />
-              </Field>
-              <Field label="Lượt tạo AI">
-                <input style={inputStyle} type="number" value={form.maxUploads} onChange={(e) => set("aiGenerateLimit", e.target.value)} min={0} placeholder="∞" />
-              </Field>
-              <Field label="Kích thước file tối đa (MB)">
-                <input style={inputStyle} type="number" value={form.maxFileMb} onChange={(e) => set("maxFileMb", e.target.value)} min={0} placeholder="∞" />
-              </Field>
-              <Field label="Dung lượng workspace tối đa (MB)">
-                <input style={inputStyle} type="number" value={form.maxWorkspaceMb} onChange={(e) => set("maxWorkspaceMb", e.target.value)} min={0} placeholder="∞" />
-              </Field>
-            </div>
-          </div>
+                {/* Basic info + Pricing */}
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="col-span-2">
+                      <Field label="Tên gói" required>
+                        <input className={inputCls} value={form.planName} onChange={(e) => set("planName", e.target.value)} placeholder="Vd: Premium Plan" />
+                      </Field>
+                    </div>
+                    <Field label="Thứ tự" hint="Số nhỏ hiển thị trước">
+                      <input className={inputCls} type="number" value={form.sortOrder} onChange={(e) => set("sortOrder", e.target.value)} min={0} />
+                    </Field>
+                  </div>
 
-          {/* Status */}
-          <div style={{ display: "flex", gap: 24 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "#374151" }}>
-              <input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} style={{ accentColor: ACCENT, width: 16, height: 16 }} />
-              Kích hoạt gói
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "#374151" }}>
-              <input type="checkbox" checked={form.publicVisible} onChange={(e) => set("publicVisible", e.target.checked)} style={{ accentColor: ACCENT, width: 16, height: 16 }} />
-              Hiển thị công khai
-            </label>
-          </div>
-        </div>
+                  <Field label="Mô tả">
+                    <textarea
+                      className={`${inputCls} min-h-[76px] resize-y`}
+                      value={form.description}
+                      onChange={(e) => set("description", e.target.value)}
+                      placeholder="Mô tả ngắn về gói..."
+                    />
+                  </Field>
 
-        {/* Footer */}
-        <div style={{ padding: "14px 24px 20px", borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button type="button" onClick={onClose} disabled={saving}
-            style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", cursor: "pointer", fontSize: 14, color: "#374151", fontWeight: 600 }}>
-            Hủy
-          </button>
-          <button type="submit" disabled={saving}
-            style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: ACCENT, color: "#fff", cursor: saving ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, opacity: saving ? 0.7 : 1 }}>
-            {saving ? "Đang lưu..." : editPlan ? "Cập nhật" : "Tạo gói"}
-          </button>
-        </div>
-      </form>
-    </Modal>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Giá hàng tháng" required hint="Nhập 0 cho gói miễn phí">
+                      <input className={inputCls} type="number" value={form.monthlyPrice} onChange={(e) => set("monthlyPrice", e.target.value)} min={0} />
+                    </Field>
+                    <Field label="Đơn vị tiền tệ">
+                      <select className={inputCls} value={form.currency} onChange={(e) => set("currency", e.target.value)}>
+                        <option value="VND">VND</option>
+                        <option value="USD">USD</option>
+                      </select>
+                    </Field>
+                  </div>
+                </div>
+
+                {/* Benefits */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <label className="text-sm font-semibold text-slate-700">Quyền lợi gói</label>
+                      <p className="text-xs text-slate-400 mt-0.5">Hiển thị cho người dùng trên trang giá</p>
+                    </div>
+                    <button type="button"
+                      onClick={() => setForm((f) => ({ ...f, benefits: [...f.benefits, ""] }))}
+                      className="inline-flex items-center gap-1.5 shrink-0 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-600 hover:bg-orange-100 active:scale-[0.98] transition">
+                      <Plus size={14} /> Thêm quyền lợi
+                    </button>
+                  </div>
+
+                  {form.benefits.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-6 text-center text-sm text-slate-400">
+                      Chưa có quyền lợi nào.
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {form.benefits.map((b, i) => (
+                        <div key={i} className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 pl-3 pr-1.5 py-1.5 focus-within:border-orange-300 focus-within:bg-white transition">
+                          <span className="w-5 shrink-0 text-xs font-bold text-slate-300 text-center">{i + 1}</span>
+                          <input
+                            className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm text-slate-900 placeholder:text-slate-400 py-1"
+                            value={b}
+                            placeholder="Nhập quyền lợi..."
+                            onChange={(e) => setForm((f) => { const next = [...f.benefits]; next[i] = e.target.value; return { ...f, benefits: next }; })}
+                          />
+                          <button type="button" title="Xóa quyền lợi"
+                            onClick={() => setForm((f) => ({ ...f, benefits: f.benefits.filter((_, j) => j !== i) }))}
+                            className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition">
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Usage limits — clean card */}
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="flex items-center gap-2.5 mb-3.5">
+                    <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
+                      <ShieldAlert size={15} className="text-slate-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-700 leading-tight">Giới hạn sử dụng</h4>
+                      <p className="text-[11px] text-slate-400">Để trống = không giới hạn</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Số Workspace tối đa">
+                      <input className={inputCls} type="number" min={0} value={form.maxWorkspaces} onChange={(e) => set("maxWorkspaces", e.target.value)} placeholder="∞ Không giới hạn" />
+                    </Field>
+                    <Field label="Số file upload tối đa">
+                      <input className={inputCls} type="number" min={0} value={form.maxUploads} onChange={(e) => set("maxUploads", e.target.value)} placeholder="∞ Không giới hạn" />
+                    </Field>
+                    <Field label="Lượt tạo AI">
+                      <input className={inputCls} type="number" min={0} value={form.aiGenerateLimit} onChange={(e) => set("aiGenerateLimit", e.target.value)} placeholder="∞ Không giới hạn" />
+                    </Field>
+                    <Field label="Kích thước file (MB)">
+                      <input className={inputCls} type="number" min={0} value={form.maxFileMb} onChange={(e) => set("maxFileMb", e.target.value)} placeholder="∞ Không giới hạn" />
+                    </Field>
+                    <Field label="Dung lượng workspace (MB)">
+                      <input className={inputCls} type="number" min={0} value={form.maxWorkspaceMb} onChange={(e) => set("maxWorkspaceMb", e.target.value)} placeholder="∞ Không giới hạn" />
+                    </Field>
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 py-3 cursor-pointer hover:bg-slate-50 transition">
+                    <input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} className="w-4 h-4 accent-orange-500" />
+                    <div>
+                      <div className="text-sm font-semibold text-slate-700">Kích hoạt gói</div>
+                      <div className="text-[11px] text-slate-400">Cho phép người dùng đăng ký</div>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 py-3 cursor-pointer hover:bg-slate-50 transition">
+                    <input type="checkbox" checked={form.publicVisible} onChange={(e) => set("publicVisible", e.target.checked)} className="w-4 h-4 accent-orange-500" />
+                    <div>
+                      <div className="text-sm font-semibold text-slate-700">Hiển thị công khai</div>
+                      <div className="text-[11px] text-slate-400">Xuất hiện trên trang giá</div>
+                    </div>
+                  </label>
+                </div>
+
+              </div>
+
+              {/* ── Sticky Footer ── */}
+              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-white shrink-0">
+                <button type="button" onClick={onClose} disabled={saving}
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition disabled:opacity-50">
+                  Hủy bỏ
+                </button>
+                <button type="submit" disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-amber-500 shadow-lg shadow-orange-500/25 hover:brightness-105 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed">
+                  {saving && <Loader2 size={15} className="animate-spin" />}
+                  {saving ? "Đang lưu..." : editPlan ? "Cập nhật" : "Tạo gói dịch vụ"}
+                </button>
+              </div>
+
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -587,95 +792,124 @@ function FeaturesModal({
 
 // ─── Plan Detail Modal ────────────────────────────────────────────────────────
 
+// Premium banner gradient per plan type (Free: slate, Skill Builder: blue, Premium: orange)
+const PLAN_BANNER: Record<ServicePlanType, { gradient: string; label: string }> = {
+  FREE:          { gradient: "linear-gradient(135deg,#64748B,#475569)", label: "Free" },
+  SKILL_BUILDER: { gradient: "linear-gradient(135deg,#3B82F6,#2563EB)", label: "Skill Builder" },
+  PREMIUM:       { gradient: "linear-gradient(135deg,#FF8A3D,#FF6B00)", label: "Premium" },
+};
+
 function PlanDetailModal({ open, onClose, plan }: { open: boolean; onClose: () => void; plan: ServicePlanResponse | null }) {
   if (!plan) return null;
-  const meta = PLAN_TYPE_META[plan.planType ?? "FREE"] ?? PLAN_TYPE_META.FREE;
+
+  const banner = PLAN_BANNER[plan.planType ?? "FREE"] ?? PLAN_BANNER.FREE;
+  const benefits = plan.benefits ?? [];
+  const enabledCount = plan.features.filter((f) => f.enabled).length;
+  const q = plan.quotas;
+  const quotaItems = q
+    ? [
+        { label: "Workspaces", value: quota(q.maxWorkspaces), Icon: Layers },
+        { label: "File upload", value: quota(q.maxUploads), Icon: Upload },
+        { label: "Lượt AI", value: quota(q.aiGenerateLimit), Icon: Sparkles },
+        { label: "Kích thước file", value: quota(q.maxFileMb, " MB"), Icon: HardDrive },
+        { label: "Dung lượng WS", value: quota(q.maxWorkspaceMb, " MB"), Icon: Database },
+      ]
+    : [];
+
+  const pill: React.CSSProperties = {
+    display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px",
+    borderRadius: 999, fontSize: 11, fontWeight: 700, background: "rgba(255,255,255,0.22)", color: "#fff",
+  };
+  const sectionLabel: React.CSSProperties = {
+    fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10,
+  };
 
   return (
-    <Modal open={open} onClose={onClose} title="Chi tiết gói dịch vụ" width={540}>
-      <div style={{ padding: "20px 24px" }}>
-        {/* Plan header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 22, color: "#0F172A" }}>{plan.planName}</div>
-            {plan.description && <div style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>{plan.description}</div>}
-          </div>
-          <Badge className={meta.className}>{meta.label}</Badge>
-        </div>
+    <Modal open={open} onClose={onClose} title="Chi tiết gói dịch vụ" width={880}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5" style={{ padding: "20px 24px" }}>
 
-        {/* Price */}
-        <div style={{ padding: "14px 16px", background: "rgba(255,107,0,0.05)", borderRadius: 10, border: "1px solid rgba(255,107,0,0.15)", marginBottom: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 28, fontWeight: 800, color: ACCENT }}>{formatPlanPrice(plan.monthlyPrice, plan.currency)}</div>
-        </div>
-
-        {/* Status */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-          <div style={{ padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E2E8F0" }}>
-            <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Trạng thái</div>
-            <div style={{ marginTop: 6 }}>
-              {plan.active
-                ? <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/60"><BadgeCheck size={12} /> Hoạt động</Badge>
-                : <Badge className="bg-slate-100 text-slate-400 border-slate-200">Vô hiệu</Badge>}
-            </div>
-          </div>
-          <div style={{ padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E2E8F0" }}>
-            <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Hiển thị</div>
-            <div style={{ marginTop: 6 }}>
-              {plan.publicVisible
-                ? <Badge className="bg-blue-50 text-blue-700 border-blue-200/60"><Eye size={12} /> Công khai</Badge>
-                : <Badge className="bg-slate-100 text-slate-400 border-slate-200"><EyeOff size={12} /> Ẩn</Badge>}
-            </div>
-          </div>
-        </div>
-
-        {/* Quotas */}
-        {plan.quotas && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Giới hạn sử dụng</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {[
-                { label: "Workspaces", value: quota(plan.quotas.maxWorkspaces) },
-                { label: "File upload", value: quota(plan.quotas.maxUploads) },
-                { label: "Lượt AI", value: quota(plan.quotas.aiGenerateLimit) },
-                { label: "Kích thước file", value: quota(plan.quotas.maxFileMb, " MB") },
-                { label: "Dung lượng WS", value: quota(plan.quotas.maxWorkspaceMb, " MB") },
-              ].map(({ label, value }) => (
-                <div key={label} style={{ padding: "8px 12px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E2E8F0" }}>
-                  <div style={{ fontSize: 11, color: "#9CA3AF" }}>{label}</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#0F172A", marginTop: 2 }}>{value}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Features */}
+        {/* ── Left: General info & Quotas ── */}
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
-            Tính năng ({plan.features.filter((f) => f.enabled).length}/{plan.features.length})
+          {/* Premium banner header */}
+          <div style={{ borderRadius: 14, padding: "18px 20px", background: banner.gradient, color: "#fff", marginBottom: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.12)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.9 }}>{banner.label}</span>
+              <span style={pill}>{plan.active ? <><BadgeCheck size={12} /> Hoạt động</> : "Vô hiệu"}</span>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, marginTop: 10, lineHeight: 1.2 }}>{plan.planName}</div>
+            {plan.description && <div style={{ fontSize: 13, opacity: 0.92, marginTop: 6, lineHeight: 1.5 }}>{plan.description}</div>}
+            <div style={{ fontSize: 30, fontWeight: 900, marginTop: 14, letterSpacing: "-0.02em" }}>
+              {formatPlanPrice(plan.monthlyPrice, plan.currency)}
+              {plan.monthlyPrice > 0 && <span style={{ fontSize: 13, fontWeight: 600, opacity: 0.85 }}> /tháng</span>}
+            </div>
           </div>
+
+          {/* Meta badges */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+            {plan.publicVisible
+              ? <Badge className="bg-blue-50 text-blue-700 border-blue-200/60"><Eye size={12} /> Công khai</Badge>
+              : <Badge className="bg-slate-100 text-slate-400 border-slate-200"><EyeOff size={12} /> Ẩn</Badge>}
+            <Badge className="bg-slate-100 text-slate-500 border-slate-200">Thứ tự #{plan.sortOrder ?? "—"}</Badge>
+          </div>
+
+          {/* Quotas */}
+          {quotaItems.length > 0 && (
+            <>
+              <div style={sectionLabel}>Giới hạn sử dụng</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {quotaItems.map(({ label, value, Icon }) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#F8FAFC", borderRadius: 10, border: "1px solid #E2E8F0" }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: "#fff", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Icon size={15} className="text-slate-500" />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 11, color: "#9CA3AF" }}>{label}</div>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: "#0F172A" }}>{value}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Right: Benefits & Features ── */}
+        <div>
+          {/* Quyền lợi gói — orange checks, matching PricingModal */}
+          <div style={sectionLabel}>Quyền lợi gói</div>
+          {benefits.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#9CA3AF", fontStyle: "italic", marginBottom: 18 }}>Chưa có quyền lợi nào</div>
+          ) : (
+            <ul style={{ listStyle: "none", margin: "0 0 18px", padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+              {benefits.map((b, i) => (
+                <li key={i} className="flex items-start gap-2" style={{ fontSize: 13, color: "#334155", lineHeight: 1.5 }}>
+                  <Check size={16} color={ACCENT} strokeWidth={2.5} className="flex-shrink-0" style={{ marginTop: 2 }} />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div style={{ borderTop: "1px solid #E2E8F0", marginBottom: 16 }} />
+
+          {/* Tính năng chi tiết — green checks */}
+          <div style={sectionLabel}>Tính năng chi tiết ({enabledCount}/{plan.features.length})</div>
           {plan.features.length === 0 ? (
             <div style={{ fontSize: 13, color: "#9CA3AF", fontStyle: "italic" }}>Chưa có tính năng nào</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
               {plan.features.map((f) => (
-                <div key={f.featureKey} style={{
-                  display: "flex", alignItems: "center", gap: 10, padding: "8px 12px",
-                  background: f.enabled ? "rgba(34,197,94,0.05)" : "#F8FAFC",
-                  borderRadius: 8, border: `1px solid ${f.enabled ? "rgba(34,197,94,0.2)" : "#E2E8F0"}`,
-                }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: f.enabled ? "#22C55E" : "#D1D5DB", flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontWeight: 600, fontSize: 13, color: f.enabled ? "#0F172A" : "#9CA3AF" }}>{f.featureName}</span>
-                  </div>
-                  <span style={{ fontSize: 11, color: f.enabled ? "#15803D" : "#9CA3AF", fontWeight: 600 }}>
-                    {f.enabled ? "Bật" : "Tắt"}
-                  </span>
-                </div>
+                <li key={f.featureKey} className="flex items-start gap-2" style={{ fontSize: 13, lineHeight: 1.5 }}>
+                  {f.enabled
+                    ? <Check size={16} strokeWidth={2.5} className="text-emerald-600 flex-shrink-0" style={{ marginTop: 2 }} />
+                    : <X size={16} className="text-slate-300 flex-shrink-0" style={{ marginTop: 2 }} />}
+                  <span style={{ color: f.enabled ? "#0F172A" : "#9CA3AF", textDecoration: f.enabled ? undefined : "line-through" }}>{f.featureName}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
+
       </div>
     </Modal>
   );
@@ -840,6 +1074,7 @@ export function SubscriptionPlansView() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-5">
+      <PlanBadgeStyles />
 
       {/* ── Header ── */}
       <div className="rounded-2xl p-5 bg-gradient-to-br from-white to-slate-50 border border-slate-200">
@@ -871,16 +1106,21 @@ export function SubscriptionPlansView() {
       </div>
 
       {/* ── Stats row ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         {[
-          { label: "Tổng số gói", value: plans.length, colorClass: "text-slate-900" },
-          { label: "Đang hoạt động", value: plans.filter((p) => p.active).length, colorClass: "text-emerald-700" },
-          { label: "Đang ẩn", value: plans.filter((p) => !p.active).length, colorClass: "text-slate-400" },
-          { label: "Công khai", value: plans.filter((p) => p.publicVisible).length, colorClass: "text-blue-600" },
-        ].map(({ label, value, colorClass }) => (
-          <div key={label} className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-            <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">{label}</div>
-            <div className={`text-2xl font-extrabold mt-1 ${colorClass}`}>{value}</div>
+          { label: "Tổng số gói",    value: plans.length,                                Icon: Layers,     iconBg: "bg-slate-100",   iconColor: "text-slate-600",  valueClass: "text-slate-900" },
+          { label: "Đang hoạt động", value: plans.filter((p) => p.active).length,        Icon: BadgeCheck, iconBg: "bg-emerald-50",  iconColor: "text-emerald-600", valueClass: "text-emerald-700" },
+          { label: "Đang ẩn",        value: plans.filter((p) => !p.active).length,       Icon: EyeOff,     iconBg: "bg-slate-100",   iconColor: "text-slate-500",  valueClass: "text-slate-500" },
+          { label: "Công khai",      value: plans.filter((p) => p.publicVisible).length, Icon: Eye,        iconBg: "bg-blue-50",     iconColor: "text-blue-600",   valueClass: "text-blue-600" },
+        ].map(({ label, value, Icon, iconBg, iconColor, valueClass }) => (
+          <div key={label} className="flex items-center gap-3.5 p-5 bg-white rounded-2xl border border-slate-200/70 shadow-[0_2px_10px_rgba(15,23,42,0.04)] hover:shadow-[0_6px_20px_rgba(15,23,42,0.08)] transition-shadow">
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+              <Icon size={20} className={iconColor} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">{label}</div>
+              <div className={`text-2xl font-extrabold leading-tight ${valueClass}`}>{value}</div>
+            </div>
           </div>
         ))}
       </div>
@@ -916,16 +1156,17 @@ export function SubscriptionPlansView() {
             </div>
           ) : (
             <div className="w-full overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-sm">
-              <table className="w-full min-w-[900px] border-collapse text-left text-sm text-slate-600">
+              <table className="w-full min-w-[1040px] border-collapse text-left text-sm text-slate-600">
                 <thead className="bg-slate-50/75 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200/80">
                   <tr>
-                    <th className="py-3 px-4 w-[24%]">Tên gói</th>
-                    <th className="py-3 px-4 w-[12%]">Loại</th>
-                    <th className="py-3 px-4 w-[14%]">Giá</th>
-                    <th className="py-3 px-4 w-[14%]">Trạng thái</th>
-                    <th className="py-3 px-4 w-[12%]">Hiển thị</th>
-                    <th className="py-3 px-4 w-[12%]">Tính năng</th>
-                    <th className="py-3 px-4 w-[12%] text-right">Hành động</th>
+                    <th className="py-3.5 px-4 w-[22%]">Tên gói</th>
+                    <th className="py-3.5 px-4 w-[10%]">Loại</th>
+                    <th className="py-3.5 px-4 w-[12%]">Giá</th>
+                    <th className="py-3.5 px-4 w-[12%]">Trạng thái</th>
+                    <th className="py-3.5 px-4 w-[11%]">Hiển thị</th>
+                    <th className="py-3.5 px-4 w-[11%]">Tính năng</th>
+                    <th className="py-3.5 px-4 w-[10%]">Quyền lợi</th>
+                    <th className="py-3.5 px-4 w-[12%] text-right">Hành động</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -933,35 +1174,37 @@ export function SubscriptionPlansView() {
                     .slice()
                     .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99))
                     .map((plan) => {
-                      const meta = PLAN_TYPE_META[plan.planType ?? "FREE"] ?? PLAN_TYPE_META.FREE;
                       const enabledFeatures = plan.features.filter((f) => f.enabled).length;
+                      const benefitsCount = (plan.benefits ?? []).length;
                       return (
                         <motion.tr
                           key={plan.planId}
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="hover:bg-slate-50/40 transition-colors group"
+                          className="hover:bg-slate-50/50 transition-colors group"
                         >
                           {/* Tên gói */}
-                          <td className="py-3.5 px-4 align-middle">
-                            <div>
-                              <div className="font-bold text-slate-900 text-sm">{plan.planName}</div>
-                              {plan.description && (
-                                <div className="text-xs text-slate-400 mt-1 max-w-[220px] truncate" title={plan.description}>
-                                  {plan.description}
-                                </div>
-                              )}
-                              <div className="text-[10px] text-slate-300 mt-0.5">Thứ tự: {plan.sortOrder ?? "—"}</div>
+                          <td className="py-4 px-4 align-middle">
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold text-slate-900 text-[15px] truncate">{plan.planName}</span>
+                              <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-bold leading-none">
+                                #{plan.sortOrder ?? "—"}
+                              </span>
                             </div>
+                            {plan.description && (
+                              <div className="text-xs text-slate-400 mt-1 max-w-[240px] truncate" title={plan.description}>
+                                {plan.description}
+                              </div>
+                            )}
                           </td>
 
                           {/* Loại */}
-                          <td className="py-3.5 px-4 align-middle">
-                            <Badge className={meta.className}>{meta.label}</Badge>
+                          <td className="py-4 px-4 align-middle">
+                            <PlanTypeBadge type={plan.planType ?? "FREE"} />
                           </td>
 
                           {/* Giá */}
-                          <td className="py-3.5 px-4 align-middle">
+                          <td className="py-4 px-4 align-middle">
                             {plan.monthlyPrice <= 0 ? (
                               <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/60 font-semibold">Miễn phí</Badge>
                             ) : (
@@ -972,7 +1215,7 @@ export function SubscriptionPlansView() {
                           </td>
 
                           {/* Trạng thái */}
-                          <td className="py-3.5 px-4 align-middle">
+                          <td className="py-4 px-4 align-middle">
                             <div className="flex items-center gap-1.5">
                               {plan.active ? (
                                 <>
@@ -989,7 +1232,7 @@ export function SubscriptionPlansView() {
                           </td>
 
                           {/* Hiển thị */}
-                          <td className="py-3.5 px-4 align-middle">
+                          <td className="py-4 px-4 align-middle">
                             {plan.publicVisible ? (
                               <Badge className="bg-blue-50 text-blue-600 border-blue-200/60 font-semibold flex items-center gap-1">
                                 <Eye size={12} /> Công khai
@@ -1002,43 +1245,54 @@ export function SubscriptionPlansView() {
                           </td>
 
                           {/* Tính năng */}
-                          <td className="py-3.5 px-4 align-middle">
+                          <td className="py-4 px-4 align-middle">
                             <div className="text-sm text-slate-700 font-semibold">
                               {enabledFeatures}/{plan.features.length}
                               <span className="text-slate-400 font-normal text-xs"> tính năng</span>
                             </div>
                           </td>
 
+                          {/* Quyền lợi */}
+                          <td className="py-4 px-4 align-middle">
+                            {benefitsCount > 0 ? (
+                              <Badge className="bg-orange-50 text-[#FF6B00] border-orange-200/60 font-semibold">
+                                {benefitsCount} quyền lợi
+                              </Badge>
+                            ) : (
+                              <span className="text-slate-300 text-xs">—</span>
+                            )}
+                          </td>
+
                           {/* Hành động */}
-                          <td className="py-3.5 px-4 align-middle text-right">
-                            <div className="inline-flex items-center gap-0.5 bg-slate-50 p-1 rounded-xl border border-slate-100 group-hover:bg-white group-hover:shadow-sm transition-all">
+                          <td className="py-4 px-4 align-middle text-right">
+                            <div className="inline-flex items-center gap-1.5">
                               <ActionBtn
-                                icon={<Shield size={13} />}
+                                icon={<Shield size={14} />}
                                 title="Chi tiết"
                                 onClick={() => openDetail(plan)}
-                                className="text-slate-500 hover:text-slate-700 hover:border-slate-400"
+                                className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                               />
                               <ActionBtn
-                                icon={<Pencil size={13} />}
+                                icon={<Pencil size={14} />}
                                 title="Chỉnh sửa"
                                 onClick={() => openEdit(plan)}
-                                className="text-blue-600 hover:text-blue-700 hover:border-blue-500"
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                               />
                               <ActionBtn
-                                icon={<ToggleRight size={13} />}
+                                icon={<ToggleRight size={14} />}
                                 title="Trạng thái"
                                 onClick={() => openStatus(plan)}
                                 className={
                                   plan.active
-                                    ? "text-emerald-600 hover:text-emerald-700 hover:border-emerald-500"
-                                    : "text-slate-400 hover:text-slate-500 hover:border-slate-400"
+                                    ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                    : "text-slate-400 hover:text-slate-500 hover:bg-slate-100"
                                 }
                               />
                               <ActionBtn
-                                icon={<Settings2 size={13} />}
+                                icon={<Settings2 size={14} />}
                                 title="Tính năng"
                                 onClick={() => openFeatures(plan)}
-                                className="text-[#FF6B00] hover:text-[#e05e00] hover:border-[#FF6B00]"
+                                className="text-[#FF6B00] hover:text-[#e05e00] hover:bg-orange-50"
                               />
                             </div>
                           </td>
@@ -1140,7 +1394,7 @@ function ActionBtn({
     <button
       title={title}
       onClick={onClick}
-      className={`flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200/80 bg-white hover:bg-slate-50 cursor-pointer transition-all duration-150 ${className || ""}`}
+      className={`flex items-center justify-center w-9 h-9 rounded-full border border-slate-200/70 bg-white shadow-sm hover:shadow cursor-pointer transition-all duration-150 ${className || ""}`}
     >
       {icon}
     </button>
