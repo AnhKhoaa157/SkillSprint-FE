@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, X, Layers } from "lucide-react";
+import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, X, Layers, ServerCog } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
 import AdminHealth from "./AdminHealth";
@@ -9,6 +9,7 @@ import AdminUsers from "./AdminUsers";
 import FinancialsView, { USER_GROWTH_DATA } from "./FinancialsView";
 import PaymentsView from "./PaymentsView";
 import { SubscriptionPlansView } from "./SubscriptionPlansView";
+import AdminSystemStatus from "../../../components/admin/AdminSystemStatus";
 import healthService from "../../../api/healthService";
 
 function toCsv(rows: Record<string, string | number>[]) {
@@ -36,7 +37,7 @@ function downloadCsv(filename: string, rows: Record<string, string | number>[]) 
 }
 
 export default function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions">("financials");
+  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions" | "system">("financials");
   const [, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<{ fullName?: string; roles?: string[]; avatarUrl?: string } | null>(null);
@@ -52,6 +53,7 @@ export default function AdminDashboard() {
     { id: "payments",      label: "Quản lý thanh toán",  icon: DollarSign  },
     { id: "subscriptions", label: "Gói dịch vụ",         icon: Layers      },
     { id: "feedback",      label: "Feedback người dùng", icon: MessageSquare },
+    { id: "system",        label: "Trạng thái hệ thống", icon: ServerCog   },
   ] as const;
 
   const handleLogout = () => {
@@ -77,6 +79,7 @@ export default function AdminDashboard() {
     payments:      { title: "Quản lý thanh toán",  sub: "Lịch sử giao dịch · Phân tích thanh toán" },
     subscriptions: { title: "Gói dịch vụ",         sub: "Quản lý subscription plans · Tính năng · Nhật ký" },
     feedback:      { title: "Feedback người dùng", sub: "Xem và quản lý phản hồi từ người dùng" },
+    system:        { title: "Trạng thái hệ thống", sub: "Chế độ bảo trì · Tình trạng vận hành" },
   };
   const current = headerLabels[activeNav];
 
@@ -118,6 +121,7 @@ export default function AdminDashboard() {
     { id: "goto-financials", label: "Đi tới Tài chính", keywords: "finance revenue mrr", action: () => setActiveNav("financials") },
     { id: "goto-payments", label: "Đi tới Quản lý thanh toán", keywords: "payments transactions giao dịch thanh toán", action: () => setActiveNav("payments") },
     { id: "goto-subscriptions", label: "Đi tới Gói dịch vụ", keywords: "subscriptions plans gói dịch vụ features tính năng", action: () => setActiveNav("subscriptions") },
+    { id: "goto-system", label: "Đi tới Trạng thái hệ thống", keywords: "system maintenance bảo trì trạng thái hệ thống vận hành", action: () => setActiveNav("system") },
     { id: "export", label: "Xuất dữ liệu màn hình hiện tại", keywords: "export csv download", action: handleExport },
     { id: "sync", label: "Đồng bộ dữ liệu admin", keywords: "sync refresh", action: handleSync },
   ];
@@ -359,6 +363,11 @@ export default function AdminDashboard() {
           {activeNav === "payments" && <PaymentsView />}
           {activeNav === "subscriptions" && <SubscriptionPlansView />}
           {activeNav === "feedback" && <AdminFeedback isDashboard={true} />}
+          {activeNav === "system" && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <AdminSystemStatus />
+            </motion.div>
+          )}
         </div>
       </main>
 
