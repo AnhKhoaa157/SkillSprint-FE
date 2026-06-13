@@ -46,26 +46,34 @@ import {
   type ServicePlanResponse,
   type ServicePlanType,
 } from "../../../api/adminSubscriptionPlansService";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
+import { PlanTypeBadge, PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
 
 const ACCENT = "#FF6B00";
+const MAX_PRICE_VND = 999999999;   
+const MAX_INT_JAVA = 2000000000;   
 
-// Validation limits — guard against backend 400s from integer overflow.
-const MAX_PRICE_VND = 999999999;   // monthly price ceiling (~1 billion VND)
-const MAX_INT_JAVA = 2000000000;   // quota ceiling, just under Java Integer.MAX_VALUE
-
-const PLAN_TYPE_META: Record<ServicePlanType, { label: string; className: string }> = {
-  FREE:          { label: "Free",          className: "bg-slate-100 text-slate-600 border-slate-200" },
-  SKILL_BUILDER: { label: "Skill Builder", className: "bg-blue-50 text-blue-600 border-blue-200/60" },
-  PREMIUM:       { label: "Premium",       className: "bg-orange-50 text-orange-600 border-orange-200/60" },
-};
-
-// Selectable plan types for the create/edit form. Each value is unique per plan (enforced by the backend).
 const PLAN_TYPE_OPTIONS: { value: ServicePlanType; label: string }[] = [
   { value: "FREE", label: "Free" },
   { value: "SKILL_BUILDER", label: "Skill Builder" },
   { value: "PREMIUM", label: "Premium" },
+  { value: "ADMIN_DEFAULT", label: "Admin" },
+];
+
+const BADGE_GRADIENT_PRESETS: { label: string; value: string }[] = [
+  { label: "Royal",   value: "from-pink-500 via-purple-500 to-indigo-600 text-white shadow-purple-500/30" },
+  { label: "Golden",  value: "from-amber-400 via-orange-500 to-amber-500 text-white shadow-orange-500/30" },
+  { label: "Ocean",   value: "from-sky-500 to-blue-600 text-white shadow-blue-500/30" },
+  { label: "Emerald", value: "from-emerald-500 to-teal-600 text-white shadow-emerald-500/30" },
+  { label: "Crimson", value: "from-rose-500 to-red-600 text-white shadow-red-500/30" },
+  { label: "Slate",   value: "from-slate-200 to-slate-300 text-slate-700 shadow-slate-300/30" },
+];
+
+const BADGE_ICON_OPTIONS = ["Crown", "Zap", "Flame", "Sparkles", "ShieldAlert", "Star", "Rocket", "Gem", "Award", "BadgeCheck"];
+
+const BADGE_ANIMATIONS: { value: string; label: string }[] = [
+  { value: "none", label: "Không" },
+  { value: "shimmer", label: "Shimmer" },
+  { value: "pulse", label: "Pulse" },
 ];
 
 const ACTION_TYPE_LABEL: Record<BusinessActionType, string> = {
@@ -82,8 +90,6 @@ const ACTION_TYPE_COLOR: Record<BusinessActionType, string> = {
   SERVICE_PLAN_FEATURES_UPDATED: "bg-purple-50 text-purple-700 border-purple-200/60",
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" });
 }
@@ -93,8 +99,6 @@ function quota(val: number | null | undefined, unit = "") {
   return `${val}${unit}`;
 }
 
-// ─── Tiny Badge ───────────────────────────────────────────────────────────────
-
 function Badge({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap border ${className || ""}`}>
@@ -102,94 +106,6 @@ function Badge({ className, children }: { className?: string; children: React.Re
     </span>
   );
 }
-
-// ─── Animated Plan-Type Badge ─────────────────────────────────────────────────
-// Keyframes + hover rules are injected once (PlanBadgeStyles) near the view root.
-// Premium: metallic shimmer (moving gradient) + soft glow pulse.
-// Skill Builder: blue gradient with hover scale/glow. Free: clean slate.
-
-const PLAN_BADGE_CSS = `
-@keyframes planBadgeShimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-@keyframes planBadgeGlow {
-  0%, 100% { box-shadow: 0 0 8px rgba(249,115,22,0.35); }
-  50%      { box-shadow: 0 0 16px rgba(249,115,22,0.6); }
-}
-.plan-badge { transition: transform .3s ease, filter .3s ease, box-shadow .3s ease, background .3s ease; }
-.plan-badge-premium:hover { transform: scale(1.06); filter: brightness(1.08) saturate(1.05); }
-.plan-badge-builder:hover { transform: scale(1.05); filter: brightness(1.05); box-shadow: 0 4px 14px rgba(79,70,229,0.45); }
-.plan-badge-free:hover    { transform: scale(1.03); background: #e2e8f0; }
-/* React subtly when hovering the whole row */
-.group:hover .plan-badge-premium { transform: scale(1.04); filter: brightness(1.1); }
-.group:hover .plan-badge-builder { transform: scale(1.04); box-shadow: 0 4px 14px rgba(79,70,229,0.4); }
-.group:hover .plan-badge-free    { background: #e2e8f0; }
-@media (prefers-reduced-motion: reduce) {
-  .plan-badge-premium { animation: none !important; }
-}
-`;
-
-function PlanBadgeStyles() {
-  return <style>{PLAN_BADGE_CSS}</style>;
-}
-
-function PlanTypeBadge({ type }: { type: ServicePlanType }) {
-  const label = (PLAN_TYPE_META[type] ?? PLAN_TYPE_META.FREE).label;
-  const base: React.CSSProperties = {
-    display: "inline-flex", alignItems: "center", gap: 4,
-    padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
-    whiteSpace: "nowrap", lineHeight: 1.3, cursor: "default", userSelect: "none",
-  };
-
-  if (type === "PREMIUM") {
-    return (
-      <span
-        className="plan-badge plan-badge-premium"
-        style={{
-          ...base,
-          color: "#fff",
-          // golden highlight band sweeps over an amber→orange→gold base
-          backgroundImage:
-            "linear-gradient(110deg,#f59e0b 0%,#f97316 25%,#fbbf24 42%,#fde68a 50%,#fbbf24 58%,#f97316 75%,#f59e0b 100%)",
-          backgroundSize: "200% 100%",
-          animation: "planBadgeShimmer 2.8s linear infinite, planBadgeGlow 2.4s ease-in-out infinite",
-          textShadow: "0 1px 2px rgba(124,45,18,0.4)",
-        }}
-      >
-        <Crown size={11} fill="currentColor" /> {label}
-      </span>
-    );
-  }
-
-  if (type === "SKILL_BUILDER") {
-    return (
-      <span
-        className="plan-badge plan-badge-builder"
-        style={{
-          ...base,
-          color: "#fff",
-          backgroundImage: "linear-gradient(to right,#3b82f6,#4f46e5)",
-          boxShadow: "0 2px 8px rgba(59,130,246,0.28)",
-        }}
-      >
-        <Zap size={11} fill="currentColor" /> {label}
-      </span>
-    );
-  }
-
-  // FREE — clean slate with a smooth hover reaction
-  return (
-    <span
-      className="plan-badge plan-badge-free"
-      style={{ ...base, color: "#475569", background: "#f1f5f9", border: "1px solid #e2e8f0" }}
-    >
-      {label}
-    </span>
-  );
-}
-
-// ─── Toggle Switch ────────────────────────────────────────────────────────────
 
 function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
@@ -207,8 +123,6 @@ function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onCha
     </button>
   );
 }
-
-// ─── Modal Shell ──────────────────────────────────────────────────────────────
 
 function Modal({ open, onClose, title, width = 560, children }: {
   open: boolean; onClose: () => void; title: string; width?: number; children: React.ReactNode;
@@ -245,9 +159,8 @@ function Modal({ open, onClose, title, width = 560, children }: {
               display: "flex", flexDirection: "column",
             }}
           >
-            {/* Modal header */}
             <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
+              display: "flex", alignItems: "center", justifyBetween: "space-between",
               padding: "20px 24px 16px", borderBottom: "1px solid #F1F5F9", flexShrink: 0,
             }}>
               <span style={{ fontWeight: 700, fontSize: 16, color: "#0F172A" }}>{title}</span>
@@ -262,7 +175,6 @@ function Modal({ open, onClose, title, width = 560, children }: {
                 <X size={16} />
               </button>
             </div>
-            {/* Modal body */}
             <div style={{ overflowY: "auto", flex: 1 }}>
               {children}
             </div>
@@ -272,8 +184,6 @@ function Modal({ open, onClose, title, width = 560, children }: {
     </AnimatePresence>
   );
 }
-
-// ─── Form Field ───────────────────────────────────────────────────────────────
 
 function Field({ label, required, children, hint }: { label: string; required?: boolean; children: React.ReactNode; hint?: string }) {
   return (
@@ -287,17 +197,17 @@ function Field({ label, required, children, hint }: { label: string; required?: 
   );
 }
 
-// Shared SaaS-style input: rounded-xl with a smooth orange focus ring.
 const inputCls =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 disabled:bg-slate-50";
-
-// ─── Create / Edit Plan Modal ─────────────────────────────────────────────────
 
 type PlanFormData = {
   planName: string;
   description: string;
   benefits: string[];
   planType: ServicePlanType;
+  badgeColor: string;
+  badgeIcon: string;
+  animationType: string;
   monthlyPrice: string;
   currency: string;
   maxWorkspaces: string;
@@ -311,7 +221,9 @@ type PlanFormData = {
 };
 
 const DEFAULT_FORM: PlanFormData = {
-  planName: "", description: "", benefits: [], planType: "FREE", monthlyPrice: "0", currency: "VND",
+  planName: "", description: "", benefits: [], planType: "FREE",
+  badgeColor: "", badgeIcon: "", animationType: "none",
+  monthlyPrice: "0", currency: "VND",
   maxWorkspaces: "", maxUploads: "", aiGenerateLimit: "",
   maxFileMb: "", maxWorkspaceMb: "",
   active: true, publicVisible: true, sortOrder: "0",
@@ -323,6 +235,9 @@ function planToForm(p: ServicePlanResponse): PlanFormData {
     description: p.description ?? "",
     benefits: p.benefits ?? [],
     planType: p.planType ?? "FREE",
+    badgeColor: p.badgeColor ?? "",
+    badgeIcon: p.badgeIcon ?? "",
+    animationType: p.animationType ?? "none",
     monthlyPrice: String(p.monthlyPrice),
     currency: p.currency ?? "VND",
     maxWorkspaces: p.quotas?.maxWorkspaces != null ? String(p.quotas.maxWorkspaces) : "",
@@ -364,7 +279,6 @@ function PlanFormModal({
   const parseOptInt = (s: string): number | undefined =>
     s.trim() === "" ? undefined : parseInt(s, 10);
 
-  // Inline overflow guards (recomputed each render) — keep in sync with the submit button + fields.
   const priceOverflow = Number(form.monthlyPrice) > MAX_PRICE_VND;
   const aiLimitOverflow = Number(form.aiGenerateLimit) > MAX_INT_JAVA;
   const isFormInvalid = priceOverflow || aiLimitOverflow;
@@ -392,6 +306,9 @@ function PlanFormModal({
           description: form.description || undefined,
           benefits: form.benefits.map((b) => b.trim()).filter(Boolean),
           planType: form.planType,
+          badgeColor: form.badgeColor || undefined,
+          badgeIcon: form.badgeIcon || undefined,
+          animationType: form.animationType || undefined,
           monthlyPrice: price,
           currency: form.currency,
           ...quotas,
@@ -405,6 +322,9 @@ function PlanFormModal({
           description: form.description || undefined,
           benefits: form.benefits.map((b) => b.trim()).filter(Boolean),
           planType: form.planType,
+          badgeColor: form.badgeColor || undefined,
+          badgeIcon: form.badgeIcon || undefined,
+          animationType: form.animationType || undefined,
           monthlyPrice: price,
           currency: form.currency,
           ...quotas,
@@ -441,7 +361,6 @@ function PlanFormModal({
           >
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
 
-              {/* ── Sticky Header ── */}
               <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-slate-100 shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
@@ -462,10 +381,8 @@ function PlanFormModal({
                 </button>
               </div>
 
-              {/* ── Scrollable Body ── */}
               <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 flex flex-col gap-6">
 
-                {/* Basic info + Pricing */}
                 <div className="flex flex-col gap-4">
                   <div className="grid grid-cols-3 gap-4">
                     <div className="col-span-2">
@@ -487,20 +404,22 @@ function PlanFormModal({
                     />
                   </Field>
 
-                  <Field label="Loại gói" required hint="Mỗi loại chỉ gán cho một gói (Free · Skill Builder · Premium)">
-                    <div className="grid grid-cols-3 gap-2">
+                  <Field label="Loại gói" required hint={editPlan ? "🔒 Không thể đổi loại của gói đã tồn tại" : "Mỗi loại chỉ gán cho một gói"}>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {PLAN_TYPE_OPTIONS.map((opt) => {
                         const selected = form.planType === opt.value;
+                        const locked = Boolean(editPlan);
                         return (
                           <button
                             key={opt.value}
                             type="button"
-                            onClick={() => set("planType", opt.value)}
+                            disabled={locked && !selected}
+                            onClick={() => { if (!locked) set("planType", opt.value); }}
                             className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
                               selected
                                 ? "border-orange-500 bg-orange-50 text-orange-600 ring-2 ring-orange-500/20"
                                 : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                            }`}
+                            } ${locked ? "cursor-not-allowed" : ""} ${locked && !selected ? "opacity-40" : ""}`}
                           >
                             {opt.label}
                           </button>
@@ -543,7 +462,6 @@ function PlanFormModal({
                   </div>
                 </div>
 
-                {/* Benefits */}
                 <div className="flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -583,7 +501,72 @@ function PlanFormModal({
                   )}
                 </div>
 
-                {/* Usage limits — clean card */}
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 flex flex-col gap-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
+                      <Sparkles size={15} className="text-[#FF6B00]" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-700 leading-tight">Thiết kế Giao diện Badge</h4>
+                      <p className="text-[11px] text-slate-400">Tùy chỉnh màu gradient, icon và hiệu ứng động</p>
+                    </div>
+                  </div>
+
+                  <Field label="Preset gradient">
+                    <div className="flex flex-wrap gap-2">
+                      {BADGE_GRADIENT_PRESETS.map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          title={preset.label}
+                          onClick={() => set("badgeColor", preset.value)}
+                          className={`h-8 w-12 rounded-lg bg-gradient-to-r ${preset.value} ring-2 transition active:scale-[0.95] ${
+                            form.badgeColor === preset.value ? "ring-orange-500" : "ring-transparent hover:ring-slate-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </Field>
+
+                  <Field label="Tailwind classes (nâng cao)">
+                    <input
+                      className={inputCls}
+                      value={form.badgeColor}
+                      onChange={(e) => set("badgeColor", e.target.value)}
+                      placeholder="from-... via-... to-... text-white shadow-.../30"
+                    />
+                  </Field>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Icon (Lucide)">
+                      <select className={inputCls} value={form.badgeIcon} onChange={(e) => set("badgeIcon", e.target.value)}>
+                        <option value="">— Mặc định theo loại —</option>
+                        {BADGE_ICON_OPTIONS.map((name) => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Hiệu ứng động">
+                      <div className="flex gap-2">
+                        {BADGE_ANIMATIONS.map((a) => (
+                          <button
+                            key={a.value}
+                            type="button"
+                            onClick={() => set("animationType", a.value)}
+                            className={`flex-1 rounded-xl border px-2 py-2.5 text-xs font-semibold transition active:scale-[0.98] ${
+                              (form.animationType || "none") === a.value
+                                ? "border-orange-500 bg-orange-50 text-orange-600 ring-2 ring-orange-500/20"
+                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                            }`}
+                          >
+                            {a.label}
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
+                  </div>
+                </div>
+
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                   <div className="flex items-center gap-2.5 mb-3.5">
                     <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
@@ -635,7 +618,6 @@ function PlanFormModal({
                   </div>
                 </div>
 
-                {/* Status */}
                 <div className="grid grid-cols-2 gap-3">
                   <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 py-3 cursor-pointer hover:bg-slate-50 transition">
                     <input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} className="w-4 h-4 accent-orange-500" />
@@ -648,14 +630,28 @@ function PlanFormModal({
                     <input type="checkbox" checked={form.publicVisible} onChange={(e) => set("publicVisible", e.target.checked)} className="w-4 h-4 accent-orange-500" />
                     <div>
                       <div className="text-sm font-semibold text-slate-700">Hiển thị công khai</div>
-                      <div className="text-[11px] text-slate-400">Xuất hiện trên trang giá</div>
+                      <div className="text-[11px] text-slate-400">Xuất hiện trên trang giá cả</div>
                     </div>
                   </label>
                 </div>
 
+                <div className="rounded-2xl border border-dashed border-orange-200 bg-orange-50/40 p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-700 leading-tight">Xem trước Badge</h4>
+                    <p className="text-[11px] text-slate-400">Cập nhật theo thời gian thực</p>
+                  </div>
+                  <PlanTypeBadge
+                    type={form.planType}
+                    label={PLAN_TYPE_OPTIONS.find((o) => o.value === form.planType)?.label}
+                    badgeColor={form.badgeColor}
+                    badgeIcon={form.badgeIcon}
+                    animationType={form.animationType}
+                    size="md"
+                  />
+                </div>
+
               </div>
 
-              {/* ── Sticky Footer ── */}
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-white shrink-0">
                 <button type="button" onClick={onClose} disabled={saving}
                   className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition disabled:opacity-50">
@@ -675,8 +671,6 @@ function PlanFormModal({
     </AnimatePresence>
   );
 }
-
-// ─── Status Modal ─────────────────────────────────────────────────────────────
 
 function StatusModal({
   open, onClose, plan, onSaved,
@@ -742,7 +736,7 @@ function StatusModal({
         </div>
       </div>
 
-      <div style={{ padding: "20px 24px", display: "flex", justifyContent: "flex-end", gap: 10 }}>
+      <div style={{ padding: "20px 24px", display: "flex", justifyBetween: "flex-end", gap: 10 }}>
         <button onClick={onClose} disabled={saving}
           style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", cursor: "pointer", fontSize: 14, color: "#374151", fontWeight: 600 }}>
           Hủy
@@ -755,8 +749,6 @@ function StatusModal({
     </Modal>
   );
 }
-
-// ─── Features Modal ───────────────────────────────────────────────────────────
 
 function FeaturesModal({
   open, onClose, plan, onSaved,
@@ -795,9 +787,6 @@ function FeaturesModal({
       const features: FeatureToggle[] = Object.entries(toggles).map(([featureKey, enabled]) => ({ featureKey, enabled }));
       const saved = await updatePlanFeatures(plan.planId, { features });
       toast.success("Đã cập nhật tính năng gói");
-      // Features is the ONLY place toggles are persisted. Merge the response
-      // onto the current plan so any field the features endpoint may omit
-      // (benefits, quotas, pricing…) is preserved and never becomes undefined.
       onSaved({ ...plan, ...saved });
       onClose();
     } catch (err) {
@@ -813,7 +802,7 @@ function FeaturesModal({
     <Modal open={open} onClose={onClose} title="Quản lý tính năng" width={520}>
       <div style={{ padding: "16px 24px 0" }}>
         {plan && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, marginBottom: 16, border: "1px solid #E2E8F0" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, marginBottom: 16, border: "1px solid #E2E8F0" }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: "#0F172A" }}>{plan.planName}</div>
             <Badge className="bg-orange-50 text-orange-600 border-orange-200/60">
               {enabledCount}/{catalog.length} tính năng
@@ -833,7 +822,7 @@ function FeaturesModal({
           <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 4 }}>
             {catalog.map((f) => (
               <div key={f.featureKey} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
+                display: "flex", alignItems: "center", justifyBetween: "space-between",
                 padding: "12px 16px", background: toggles[f.featureKey] ? "rgba(255,107,0,0.04)" : "#F8FAFC",
                 borderRadius: 10, border: `1px solid ${toggles[f.featureKey] ? "rgba(255,107,0,0.2)" : "#E2E8F0"}`,
                 transition: "all 0.15s",
@@ -864,7 +853,7 @@ function FeaturesModal({
         )}
       </div>
 
-      <div style={{ padding: "16px 24px 20px", display: "flex", justifyContent: "flex-end", gap: 10, borderTop: "1px solid #F1F5F9", marginTop: 16 }}>
+      <div style={{ padding: "16px 24px 20px", display: "flex", justifyBetween: "flex-end", gap: 10, borderTop: "1px solid #F1F5F9", marginTop: 16 }}>
         <button onClick={onClose} disabled={saving}
           style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", cursor: "pointer", fontSize: 14, color: "#374151", fontWeight: 600 }}>
           Hủy
@@ -878,13 +867,11 @@ function FeaturesModal({
   );
 }
 
-// ─── Plan Detail Modal ────────────────────────────────────────────────────────
-
-// Premium banner gradient per plan type (Free: slate, Skill Builder: blue, Premium: orange)
 const PLAN_BANNER: Record<ServicePlanType, { gradient: string; label: string }> = {
   FREE:          { gradient: "linear-gradient(135deg,#64748B,#475569)", label: "Free" },
   SKILL_BUILDER: { gradient: "linear-gradient(135deg,#3B82F6,#2563EB)", label: "Skill Builder" },
   PREMIUM:       { gradient: "linear-gradient(135deg,#FF8A3D,#FF6B00)", label: "Premium" },
+  ADMIN_DEFAULT: { gradient: "linear-gradient(135deg,#a855f7,#6366f1)", label: "Admin" },
 };
 
 function PlanDetailModal({ open, onClose, plan }: { open: boolean; onClose: () => void; plan: ServicePlanResponse | null }) {
@@ -916,11 +903,9 @@ function PlanDetailModal({ open, onClose, plan }: { open: boolean; onClose: () =
     <Modal open={open} onClose={onClose} title="Chi tiết gói dịch vụ" width={880}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5" style={{ padding: "20px 24px" }}>
 
-        {/* ── Left: General info & Quotas ── */}
         <div>
-          {/* Premium banner header */}
           <div style={{ borderRadius: 14, padding: "18px 20px", background: banner.gradient, color: "#fff", marginBottom: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.12)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", gap: 10 }}>
               <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.9 }}>{banner.label}</span>
               <span style={pill}>{plan.active ? <><BadgeCheck size={12} /> Hoạt động</> : "Vô hiệu"}</span>
             </div>
@@ -932,7 +917,6 @@ function PlanDetailModal({ open, onClose, plan }: { open: boolean; onClose: () =
             </div>
           </div>
 
-          {/* Meta badges */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
             {plan.publicVisible
               ? <Badge className="bg-blue-50 text-blue-700 border-blue-200/60"><Eye size={12} /> Công khai</Badge>
@@ -940,14 +924,13 @@ function PlanDetailModal({ open, onClose, plan }: { open: boolean; onClose: () =
             <Badge className="bg-slate-100 text-slate-500 border-slate-200">Thứ tự #{plan.sortOrder ?? "—"}</Badge>
           </div>
 
-          {/* Quotas */}
           {quotaItems.length > 0 && (
             <>
               <div style={sectionLabel}>Giới hạn sử dụng</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {quotaItems.map(({ label, value, Icon }) => (
                   <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#F8FAFC", borderRadius: 10, border: "1px solid #E2E8F0" }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: "#fff", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: "#fff", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyBetween: "center", flexShrink: 0 }}>
                       <Icon size={15} className="text-slate-500" />
                     </div>
                     <div style={{ minWidth: 0 }}>
@@ -961,9 +944,7 @@ function PlanDetailModal({ open, onClose, plan }: { open: boolean; onClose: () =
           )}
         </div>
 
-        {/* ── Right: Benefits & Features ── */}
         <div>
-          {/* Quyền lợi gói — orange checks, matching PricingModal */}
           <div style={sectionLabel}>Quyền lợi gói</div>
           {benefits.length === 0 ? (
             <div style={{ fontSize: 13, color: "#9CA3AF", fontStyle: "italic", marginBottom: 18 }}>Chưa có quyền lợi nào</div>
@@ -980,7 +961,6 @@ function PlanDetailModal({ open, onClose, plan }: { open: boolean; onClose: () =
 
           <div style={{ borderTop: "1px solid #E2E8F0", marginBottom: 16 }} />
 
-          {/* Tính năng chi tiết — green checks */}
           <div style={sectionLabel}>Tính năng chi tiết ({enabledCount}/{plan.features.length})</div>
           {plan.features.length === 0 ? (
             <div style={{ fontSize: 13, color: "#9CA3AF", fontStyle: "italic" }}>Chưa có tính năng nào</div>
@@ -1002,8 +982,6 @@ function PlanDetailModal({ open, onClose, plan }: { open: boolean; onClose: () =
     </Modal>
   );
 }
-
-// ─── Audit Log Row ────────────────────────────────────────────────────────────
 
 function AuditLogRow({ log, expanded, onToggle }: { log: AdminAuditLogResponse; expanded: boolean; onToggle: () => void }) {
   const actionMeta = ACTION_TYPE_COLOR[log.actionType] ?? "bg-slate-100 text-slate-600 border-slate-200";
@@ -1069,8 +1047,6 @@ function AuditLogRow({ log, expanded, onToggle }: { log: AdminAuditLogResponse; 
   );
 }
 
-// ─── Main View ────────────────────────────────────────────────────────────────
-
 export function SubscriptionPlansView() {
   const [tab, setTab] = useState<"plans" | "audit">("plans");
   const [plans, setPlans] = useState<ServicePlanResponse[]>([]);
@@ -1126,9 +1102,6 @@ export function SubscriptionPlansView() {
       const idx = prev.findIndex((p) => p.planId === saved.planId);
       if (idx >= 0) {
         const updated = [...prev];
-        // Merge over the existing entry rather than replacing it: status- and
-        // features-update callers may return a partial plan, so we keep the
-        // prior fields instead of dropping them (avoids undefined render errors).
         updated[idx] = { ...updated[idx], ...saved };
         return updated;
       }
@@ -1167,7 +1140,6 @@ export function SubscriptionPlansView() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-5">
       <PlanBadgeStyles />
 
-      {/* ── Header ── */}
       <div className="rounded-2xl p-5 bg-gradient-to-br from-white to-slate-50 border border-slate-200">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -1196,11 +1168,10 @@ export function SubscriptionPlansView() {
         </div>
       </div>
 
-      {/* ── Stats row ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         {[
-          { label: "Tổng số gói",    value: plans.length,                                Icon: Layers,     iconBg: "bg-slate-100",   iconColor: "text-slate-600",  valueClass: "text-slate-900" },
-          { label: "Đang hoạt động", value: plans.filter((p) => p.active).length,        Icon: BadgeCheck, iconBg: "bg-emerald-50",  iconColor: "text-emerald-600", valueClass: "text-emerald-700" },
+          { label: "Tổng số gói",    value: plans.length,                                 Icon: Layers,     iconBg: "bg-slate-100",   iconColor: "text-slate-600",  valueClass: "text-slate-900" },
+          { label: "Đang hoạt động", value: plans.filter((p) => p.active).length,         Icon: BadgeCheck, iconBg: "bg-emerald-50",  iconColor: "text-emerald-600", valueClass: "text-emerald-700" },
           { label: "Đang ẩn",        value: plans.filter((p) => !p.active).length,       Icon: EyeOff,     iconBg: "bg-slate-100",   iconColor: "text-slate-500",  valueClass: "text-slate-500" },
           { label: "Công khai",      value: plans.filter((p) => p.publicVisible).length, Icon: Eye,        iconBg: "bg-blue-50",     iconColor: "text-blue-600",   valueClass: "text-blue-600" },
         ].map(({ label, value, Icon, iconBg, iconColor, valueClass }) => (
@@ -1216,7 +1187,6 @@ export function SubscriptionPlansView() {
         ))}
       </div>
 
-      {/* ── Tabs ── */}
       <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setTab(id)}
@@ -1231,7 +1201,6 @@ export function SubscriptionPlansView() {
         ))}
       </div>
 
-      {/* ── Plans Tab ── */}
       {tab === "plans" && (
         <div className="flex flex-col gap-3">
           {loadingPlans ? (
@@ -1274,7 +1243,6 @@ export function SubscriptionPlansView() {
                           animate={{ opacity: 1, y: 0 }}
                           className="hover:bg-slate-50/50 transition-colors group"
                         >
-                          {/* Tên gói */}
                           <td className="py-4 px-4 align-middle">
                             <div className="flex items-center gap-2">
                               <span className="font-extrabold text-slate-900 text-[15px] truncate">{plan.planName}</span>
@@ -1289,12 +1257,15 @@ export function SubscriptionPlansView() {
                             )}
                           </td>
 
-                          {/* Loại */}
                           <td className="py-4 px-4 align-middle">
-                            <PlanTypeBadge type={plan.planType ?? "FREE"} />
+                            <PlanTypeBadge
+                              type={plan.planType ?? "FREE"}
+                              badgeColor={plan.badgeColor}
+                              badgeIcon={plan.badgeIcon}
+                              animationType={plan.animationType}
+                            />
                           </td>
 
-                          {/* Giá */}
                           <td className="py-4 px-4 align-middle">
                             {plan.monthlyPrice <= 0 ? (
                               <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/60 font-semibold">Miễn phí</Badge>
@@ -1305,7 +1276,6 @@ export function SubscriptionPlansView() {
                             )}
                           </td>
 
-                          {/* Trạng thái */}
                           <td className="py-4 px-4 align-middle">
                             <div className="flex items-center gap-1.5">
                               {plan.active ? (
@@ -1322,7 +1292,6 @@ export function SubscriptionPlansView() {
                             </div>
                           </td>
 
-                          {/* Hiển thị */}
                           <td className="py-4 px-4 align-middle">
                             {plan.publicVisible ? (
                               <Badge className="bg-blue-50 text-blue-600 border-blue-200/60 font-semibold flex items-center gap-1">
@@ -1335,7 +1304,6 @@ export function SubscriptionPlansView() {
                             )}
                           </td>
 
-                          {/* Tính năng */}
                           <td className="py-4 px-4 align-middle">
                             <div className="text-sm text-slate-700 font-semibold">
                               {enabledFeatures}/{plan.features.length}
@@ -1343,7 +1311,6 @@ export function SubscriptionPlansView() {
                             </div>
                           </td>
 
-                          {/* Quyền lợi */}
                           <td className="py-4 px-4 align-middle">
                             {benefitsCount > 0 ? (
                               <Badge className="bg-orange-50 text-[#FF6B00] border-orange-200/60 font-semibold">
@@ -1354,36 +1321,32 @@ export function SubscriptionPlansView() {
                             )}
                           </td>
 
-                          {/* Hành động */}
                           <td className="py-4 px-4 align-middle text-right">
-                            <div className="inline-flex items-center gap-1.5">
+                            <div className="inline-flex items-center gap-2">
+                              {/* Cụm 4 nút hành động mang linh hồn Micro-interactions của hệ thống SaaS cao cấp */}
                               <ActionBtn
                                 icon={<Shield size={14} />}
                                 title="Chi tiết"
                                 onClick={() => openDetail(plan)}
-                                className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                                type="detail"
                               />
                               <ActionBtn
                                 icon={<Pencil size={14} />}
                                 title="Chỉnh sửa"
                                 onClick={() => openEdit(plan)}
-                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                type="edit"
                               />
                               <ActionBtn
                                 icon={<ToggleRight size={14} />}
                                 title="Trạng thái"
                                 onClick={() => openStatus(plan)}
-                                className={
-                                  plan.active
-                                    ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                    : "text-slate-400 hover:text-slate-500 hover:bg-slate-100"
-                                }
+                                type={plan.active ? "status-active" : "status-inactive"}
                               />
                               <ActionBtn
                                 icon={<Settings2 size={14} />}
                                 title="Tính năng"
                                 onClick={() => openFeatures(plan)}
-                                className="text-[#FF6B00] hover:text-[#e05e00] hover:bg-orange-50"
+                                type="features"
                               />
                             </div>
                           </td>
@@ -1397,7 +1360,6 @@ export function SubscriptionPlansView() {
         </div>
       )}
 
-      {/* ── Audit Log Tab ── */}
       {tab === "audit" && (
         <div className="flex flex-col gap-3">
           <div className="flex justify-end">
@@ -1416,7 +1378,6 @@ export function SubscriptionPlansView() {
             </div>
           ) : (
             <>
-              {/* Audit header */}
               <div className="grid grid-cols-[1.6fr_1.2fr_1.6fr_1fr_auto] gap-3 px-4 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <span>Admin</span>
                 <span>Hành động</span>
@@ -1440,7 +1401,6 @@ export function SubscriptionPlansView() {
         </div>
       )}
 
-      {/* ── Modals ── */}
       <PlanFormModal
         open={showCreateModal || showEditModal}
         onClose={() => { setShowCreateModal(false); setShowEditModal(false); setEditPlan(null); }}
@@ -1468,27 +1428,86 @@ export function SubscriptionPlansView() {
   );
 }
 
-// ─── Tiny action button ───────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────
+   🟢 INLINE COMPONENT: HOẠT ẢNH NÚT HÀNH ĐỘNG NEON GLOW CAO CẤP
+───────────────────────────────────────────────────────── */
+type BtnType = "detail" | "edit" | "status-active" | "status-inactive" | "features";
+
+const BTN_THEMES: Record<BtnType, { text: string; bg: string; border: string }> = {
+  detail:          { text: "text-slate-600",    bg: "bg-slate-500/10",    border: "border-slate-200" },
+  edit:            { text: "text-blue-600",     bg: "bg-blue-500/10",     border: "border-blue-200" },
+  "status-active": { text: "text-emerald-600",  bg: "bg-emerald-500/10",  border: "border-emerald-200" },
+  "status-inactive":{ text: "text-slate-400",   bg: "bg-slate-400/10",    border: "border-slate-200" },
+  features:        { text: "text-[#FF6B00]",    bg: "bg-orange-500/10",   border: "border-orange-200" },
+};
 
 function ActionBtn({
   icon,
   title,
   onClick,
-  className,
+  type,
 }: {
   icon: React.ReactNode;
   title: string;
   onClick: () => void;
-  className?: string;
+  type: BtnType;
 }) {
+  const [hovered, setHovered] = useState(false);
+  const theme = BTN_THEMES[type];
+
   return (
-    <button
-      title={title}
-      onClick={onClick}
-      className={`flex items-center justify-center w-9 h-9 rounded-full border border-slate-200/70 bg-white shadow-sm hover:shadow cursor-pointer transition-all duration-150 ${className || ""}`}
+    <div 
+      className="relative inline-flex items-center justify-center"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {icon}
-    </button>
+      <motion.button
+        whileHover={{ scale: 1.08, y: -1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={onClick}
+        className={`relative flex items-center justify-center w-9 h-9 rounded-full border border-slate-200/80 bg-white shadow-sm transition-colors duration-300 cursor-pointer outline-none overflow-hidden ${theme.text}`}
+        style={{ touchAction: "manipulation" }}
+      >
+        {/* Lớp nền phát sáng Neon Glow phình nhẹ mượt mà khi hover */}
+        <AnimatePresence>
+          {hovered && (
+            <motion.div
+              layoutId={`glow-bg-${type}`}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1.1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className={`absolute inset-0 z-0 ${theme.bg}`}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Khóa cứng Icon nổi lên trên lớp nền và xoay nhẹ 15 độ tạo sinh khí */}
+        <motion.span 
+          animate={{ rotate: hovered ? 15 : 0 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15 }}
+          className="relative z-10 flex items-center justify-center"
+        >
+          {icon}
+        </motion.span>
+      </motion.button>
+
+      {/* Tooltip động */}
+      <AnimatePresence>
+        {hovered && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.92 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="absolute bottom-full mb-2 pointer-events-none z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[10px] font-bold text-white shadow-md shadow-slate-950/20"
+          >
+            {title}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-0.5 border-4 border-transparent border-t-slate-900" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 

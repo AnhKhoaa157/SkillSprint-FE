@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { X, Check, ShieldCheck, ChevronRight, Zap, Star, Loader2, AlertCircle, Copy, RefreshCw, ArrowUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -43,7 +43,10 @@ function toDisplayPlan(p: PublicPlanResponse): DisplayPlan {
     monthlyPrice: p.monthlyPrice,
     priceDisplay: formatPlanPrice(p.monthlyPrice, p.currency),
     description: p.description ?? "",
-    features: p.features,
+    // ðŸ›¡ï¸ Airtight safety net: BE may return eatures as null/undefined when the
+    // plan has no rows in plan_feature. Always coerce to [] so consumers can call
+    // .map(...) without crashing.
+    features: p.features ?? [],
     benefits: p.benefits ?? [],
   };
 }
@@ -479,7 +482,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                         )}
 
                         <ul className="space-y-3 list-none p-0 m-0">
-                          {plan.features.map((feat, fi) => (
+                          {(plan.features ?? []).map((feat, fi) => (
                             <FeatureIncluded key={feat.featureKey ?? fi} text={feat.featureName} accent={!plan.isFree} enabled={isFeatureEnabled(feat)} />
                           ))}
                         </ul>
