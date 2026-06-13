@@ -27,6 +27,7 @@ import {
   updatePlanFeatures,
   updateSubscriptionPlan,
   updateSubscriptionPlanStatus,
+  formatPlanPrice,
   type AdminAuditLogResponse,
   type BusinessActionType,
   type CreateServicePlanRequest,
@@ -40,10 +41,10 @@ import {
 
 const ACCENT = "#FF6B00";
 
-const PLAN_TYPE_META: Record<ServicePlanType, { label: string; color: string; bg: string; border: string }> = {
-  FREE:          { label: "Free",          color: "#6B7280", bg: "#F3F4F6",               border: "#E5E7EB" },
-  SKILL_BUILDER: { label: "Skill Builder", color: "#2563EB", bg: "rgba(37,99,235,0.08)",  border: "rgba(37,99,235,0.25)" },
-  PREMIUM:       { label: "Premium",       color: "#FF6B00", bg: "rgba(255,107,0,0.08)",  border: "rgba(255,107,0,0.25)" },
+const PLAN_TYPE_META: Record<ServicePlanType, { label: string; className: string }> = {
+  FREE:          { label: "Free",          className: "bg-slate-100 text-slate-600 border-slate-200" },
+  SKILL_BUILDER: { label: "Skill Builder", className: "bg-blue-50 text-blue-600 border-blue-200/60" },
+  PREMIUM:       { label: "Premium",       className: "bg-orange-50 text-orange-600 border-orange-200/60" },
 };
 
 const ACTION_TYPE_LABEL: Record<BusinessActionType, string> = {
@@ -53,28 +54,17 @@ const ACTION_TYPE_LABEL: Record<BusinessActionType, string> = {
   SERVICE_PLAN_FEATURES_UPDATED: "Cập nhật tính năng",
 };
 
-const ACTION_TYPE_COLOR: Record<BusinessActionType, { bg: string; text: string; border: string }> = {
-  SERVICE_PLAN_CREATED:          { bg: "rgba(34,197,94,0.08)",   text: "#15803D", border: "rgba(34,197,94,0.28)" },
-  SERVICE_PLAN_UPDATED:          { bg: "rgba(37,99,235,0.08)",   text: "#1D4ED8", border: "rgba(37,99,235,0.25)" },
-  SERVICE_PLAN_STATUS_UPDATED:   { bg: "rgba(245,158,11,0.10)",  text: "#B45309", border: "rgba(245,158,11,0.28)" },
-  SERVICE_PLAN_FEATURES_UPDATED: { bg: "rgba(168,85,247,0.08)",  text: "#7C3AED", border: "rgba(168,85,247,0.25)" },
+const ACTION_TYPE_COLOR: Record<BusinessActionType, string> = {
+  SERVICE_PLAN_CREATED:          "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+  SERVICE_PLAN_UPDATED:          "bg-blue-50 text-blue-700 border-blue-200/60",
+  SERVICE_PLAN_STATUS_UPDATED:   "bg-amber-50 text-amber-700 border-amber-200/60",
+  SERVICE_PLAN_FEATURES_UPDATED: "bg-purple-50 text-purple-700 border-purple-200/60",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" });
-}
-
-function formatPrice(price: number, currency = "VND") {
-  if (currency === "VND") {
-    return price === 0
-      ? "Miễn phí"
-      : price >= 1_000_000
-        ? `${(price / 1_000_000).toFixed(1)}M ₫/tháng`
-        : `${(price / 1_000).toFixed(0)}K ₫/tháng`;
-  }
-  return `${price} ${currency}/month`;
 }
 
 function quota(val: number | null | undefined, unit = "") {
@@ -84,14 +74,9 @@ function quota(val: number | null | undefined, unit = "") {
 
 // ─── Tiny Badge ───────────────────────────────────────────────────────────────
 
-function Badge({ bg, text, border, children }: { bg: string; text: string; border: string; children: React.ReactNode }) {
+function Badge({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: 4,
-      padding: "2px 10px", borderRadius: 20,
-      background: bg, color: text, border: `1px solid ${border}`,
-      fontSize: 12, fontWeight: 600, whiteSpace: "nowrap",
-    }}>
+    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap border ${className || ""}`}>
       {children}
     </span>
   );
@@ -102,17 +87,16 @@ function Badge({ bg, text, border, children }: { bg: string; text: string; borde
 function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button
+      type="button"
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
-      style={{
-        display: "inline-flex", alignItems: "center", gap: 6,
-        background: "none", border: "none", cursor: disabled ? "not-allowed" : "pointer",
-        padding: 0, opacity: disabled ? 0.5 : 1,
-      }}
+      className={`inline-flex items-center gap-1.5 bg-transparent border-0 p-0 ${
+        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+      }`}
     >
       {checked
-        ? <ToggleRight size={22} color={ACCENT} />
-        : <ToggleLeft size={22} color="#9CA3AF" />}
+        ? <ToggleRight size={22} className="text-[#FF6B00]" />
+        : <ToggleLeft size={22} className="text-slate-400" />}
     </button>
   );
 }
@@ -261,8 +245,6 @@ function PlanFormModal({
   const set = (k: keyof PlanFormData, v: string | boolean) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  // Returns undefined (key omitted from JSON) when empty — both BE endpoints treat absent/null the same way.
-  // CREATE: defaultValue(null, X) → applies hardcoded default; UPDATE: if (field != null) → skips field.
   const parseOptInt = (s: string): number | undefined =>
     s.trim() === "" ? undefined : parseInt(s, 10);
 
@@ -272,7 +254,6 @@ function PlanFormModal({
     const price = parseFloat(form.monthlyPrice);
     if (isNaN(price) || price < 0) { toast.error("Giá không hợp lệ"); return; }
 
-    // Shared quota block — built once, used in both branches.
     const quotas = {
       maxWorkspaces: parseOptInt(form.maxWorkspaces),
       maxUploads: parseOptInt(form.maxUploads),
@@ -365,7 +346,7 @@ function PlanFormModal({
                 <input style={inputStyle} type="number" value={form.maxUploads} onChange={(e) => set("maxUploads", e.target.value)} min={0} placeholder="∞" />
               </Field>
               <Field label="Lượt tạo AI">
-                <input style={inputStyle} type="number" value={form.aiGenerateLimit} onChange={(e) => set("aiGenerateLimit", e.target.value)} min={0} placeholder="∞" />
+                <input style={inputStyle} type="number" value={form.maxUploads} onChange={(e) => set("aiGenerateLimit", e.target.value)} min={0} placeholder="∞" />
               </Field>
               <Field label="Kích thước file tối đa (MB)">
                 <input style={inputStyle} type="number" value={form.maxFileMb} onChange={(e) => set("maxFileMb", e.target.value)} min={0} placeholder="∞" />
@@ -448,7 +429,7 @@ function StatusModal({
           <div style={{ padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, marginBottom: 20, border: "1px solid #E2E8F0" }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: "#0F172A" }}>{plan.planName}</div>
             <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
-              {formatPrice(plan.monthlyPrice, plan.currency)}
+              {formatPlanPrice(plan.monthlyPrice, plan.currency)}
             </div>
           </div>
         )}
@@ -541,7 +522,7 @@ function FeaturesModal({
         {plan && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, marginBottom: 16, border: "1px solid #E2E8F0" }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: "#0F172A" }}>{plan.planName}</div>
-            <Badge bg="rgba(255,107,0,0.08)" text={ACCENT} border="rgba(255,107,0,0.25)">
+            <Badge className="bg-orange-50 text-orange-600 border-orange-200/60">
               {enabledCount}/{catalog.length} tính năng
             </Badge>
           </div>
@@ -568,7 +549,7 @@ function FeaturesModal({
                   <div style={{ fontWeight: 600, fontSize: 13, color: "#0F172A", display: "flex", alignItems: "center", gap: 6 }}>
                     {f.featureName}
                     {!f.active && (
-                      <Badge bg="#F3F4F6" text="#9CA3AF" border="#E5E7EB">Tắt</Badge>
+                      <Badge className="bg-slate-100 text-slate-400 border-slate-200">Tắt</Badge>
                     )}
                   </div>
                   {f.description && (
@@ -619,12 +600,12 @@ function PlanDetailModal({ open, onClose, plan }: { open: boolean; onClose: () =
             <div style={{ fontWeight: 800, fontSize: 22, color: "#0F172A" }}>{plan.planName}</div>
             {plan.description && <div style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>{plan.description}</div>}
           </div>
-          <Badge bg={meta.bg} text={meta.color} border={meta.border}>{meta.label}</Badge>
+          <Badge className={meta.className}>{meta.label}</Badge>
         </div>
 
         {/* Price */}
         <div style={{ padding: "14px 16px", background: "rgba(255,107,0,0.05)", borderRadius: 10, border: "1px solid rgba(255,107,0,0.15)", marginBottom: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 28, fontWeight: 800, color: ACCENT }}>{formatPrice(plan.monthlyPrice, plan.currency)}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: ACCENT }}>{formatPlanPrice(plan.monthlyPrice, plan.currency)}</div>
         </div>
 
         {/* Status */}
@@ -633,16 +614,16 @@ function PlanDetailModal({ open, onClose, plan }: { open: boolean; onClose: () =
             <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Trạng thái</div>
             <div style={{ marginTop: 6 }}>
               {plan.active
-                ? <Badge bg="rgba(34,197,94,0.08)" text="#15803D" border="rgba(34,197,94,0.28)"><BadgeCheck size={12} /> Hoạt động</Badge>
-                : <Badge bg="#F3F4F6" text="#9CA3AF" border="#E5E7EB">Vô hiệu</Badge>}
+                ? <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/60"><BadgeCheck size={12} /> Hoạt động</Badge>
+                : <Badge className="bg-slate-100 text-slate-400 border-slate-200">Vô hiệu</Badge>}
             </div>
           </div>
           <div style={{ padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E2E8F0" }}>
             <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Hiển thị</div>
             <div style={{ marginTop: 6 }}>
               {plan.publicVisible
-                ? <Badge bg="rgba(37,99,235,0.08)" text="#1D4ED8" border="rgba(37,99,235,0.25)"><Eye size={12} /> Công khai</Badge>
-                : <Badge bg="#F3F4F6" text="#9CA3AF" border="#E5E7EB"><EyeOff size={12} /> Ẩn</Badge>}
+                ? <Badge className="bg-blue-50 text-blue-700 border-blue-200/60"><Eye size={12} /> Công khai</Badge>
+                : <Badge className="bg-slate-100 text-slate-400 border-slate-200"><EyeOff size={12} /> Ẩn</Badge>}
             </div>
           </div>
         </div>
@@ -703,56 +684,59 @@ function PlanDetailModal({ open, onClose, plan }: { open: boolean; onClose: () =
 // ─── Audit Log Row ────────────────────────────────────────────────────────────
 
 function AuditLogRow({ log, expanded, onToggle }: { log: AdminAuditLogResponse; expanded: boolean; onToggle: () => void }) {
-  const actionMeta = ACTION_TYPE_COLOR[log.actionType] ?? { bg: "#F3F4F6", text: "#6B7280", border: "#E5E7EB" };
+  const actionMeta = ACTION_TYPE_COLOR[log.actionType] ?? "bg-slate-100 text-slate-600 border-slate-200";
   const hasDetails = log.description || log.oldValue || log.newValue || log.metadata;
 
   return (
-    <div style={{ borderRadius: 10, border: "1px solid #E2E8F0", overflow: "hidden", background: "#fff" }}>
+    <div className="rounded-xl border border-slate-200/80 overflow-hidden bg-white shadow-sm">
       <div
         onClick={hasDetails ? onToggle : undefined}
-        style={{
-          display: "grid", gridTemplateColumns: "1.6fr 1.2fr 1.6fr 1fr auto",
-          gap: 12, alignItems: "center", padding: "12px 16px",
-          cursor: hasDetails ? "pointer" : "default",
-          background: expanded ? "#F8FAFC" : "#fff",
-        }}
+        className={`grid grid-cols-[1.6fr_1.2fr_1.6fr_1fr_auto] gap-3 items-center px-4 py-3 ${
+          hasDetails ? "cursor-pointer" : "cursor-default"
+        } ${expanded ? "bg-slate-50/75" : "bg-white"} hover:bg-slate-50/40 transition-colors`}
       >
-        <div style={{ fontSize: 12, color: "#0F172A" }}>
-          <div style={{ fontWeight: 600 }}>{log.adminEmail}</div>
-          <div style={{ color: "#9CA3AF", fontSize: 11 }}>{formatDate(log.createdAt)}</div>
+        <div className="text-xs text-slate-900">
+          <div className="font-bold">{log.adminEmail}</div>
+          <div className="text-slate-400 text-[10px] mt-0.5">{formatDate(log.createdAt)}</div>
         </div>
-        <Badge bg={actionMeta.bg} text={actionMeta.text} border={actionMeta.border}>
-          {ACTION_TYPE_LABEL[log.actionType] ?? log.actionType}
-        </Badge>
-        <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 600 }}>{log.title}</div>
-        <div style={{ fontSize: 11, fontFamily: "monospace", color: "#CBD5E1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div>
+          <Badge className={actionMeta}>
+            {ACTION_TYPE_LABEL[log.actionType] ?? log.actionType}
+          </Badge>
+        </div>
+        <div className="text-xs text-slate-900 font-bold truncate">{log.title}</div>
+        <div className="text-[11px] font-mono text-slate-400 truncate">
           {log.entityId.slice(0, 8)}…
         </div>
         {hasDetails && (
-          <div style={{ color: "#9CA3AF" }}>
+          <div className="text-slate-400">
             {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </div>
         )}
       </div>
 
       {expanded && hasDetails && (
-        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-          style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid #F1F5F9" }}>
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="px-4 pb-3.5 pt-2 flex flex-col gap-2 border-t border-slate-100 bg-slate-50/30"
+        >
           {log.description && (
-            <div style={{ fontSize: 13, color: "#374151", paddingTop: 10 }}>{log.description}</div>
+            <div className="text-xs text-slate-700 leading-relaxed">{log.description}</div>
           )}
           {(log.oldValue || log.newValue) && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
               {log.oldValue && (
-                <div style={{ padding: "8px 10px", background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#B91C1C", marginBottom: 4, textTransform: "uppercase" }}>Trước</div>
-                  <pre style={{ fontSize: 11, color: "#374151", margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{log.oldValue}</pre>
+                <div className="p-2.5 bg-red-50/50 border border-red-200/40 rounded-lg">
+                  <div className="text-[9px] font-bold text-red-700 mb-1.5 uppercase tracking-wider">Trước</div>
+                  <pre className="text-[11px] text-slate-600 font-mono whitespace-pre-wrap break-all leading-normal">{log.oldValue}</pre>
                 </div>
               )}
               {log.newValue && (
-                <div style={{ padding: "8px 10px", background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.15)", borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#15803D", marginBottom: 4, textTransform: "uppercase" }}>Sau</div>
-                  <pre style={{ fontSize: 11, color: "#374151", margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{log.newValue}</pre>
+                <div className="p-2.5 bg-emerald-50/50 border border-emerald-200/40 rounded-lg">
+                  <div className="text-[9px] font-bold text-emerald-700 mb-1.5 uppercase tracking-wider">Sau</div>
+                  <pre className="text-[11px] text-slate-600 font-mono whitespace-pre-wrap break-all leading-normal">{log.newValue}</pre>
                 </div>
               )}
             </div>
@@ -855,30 +839,30 @@ export function SubscriptionPlansView() {
   ];
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-5">
 
       {/* ── Header ── */}
-      <div style={{ borderRadius: 16, padding: "20px 24px", background: "linear-gradient(135deg,#FFFFFF 0%,#F8FAFC 100%)", border: "1px solid #E2E8F0" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+      <div className="rounded-2xl p-5 bg-gradient-to-br from-white to-slate-50 border border-slate-200">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,107,0,0.08)", border: "1px solid rgba(255,107,0,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Layers size={20} color={ACCENT} />
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                <Layers size={20} className="text-[#FF6B00]" />
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 18, color: "#0F172A" }}>Quản lý gói dịch vụ</div>
-                <div style={{ fontSize: 13, color: "#64748B" }}>Cấu hình các gói subscription · {plans.length} gói hiện có</div>
+                <h1 className="font-extrabold text-lg text-slate-900 leading-none">Quản lý gói dịch vụ</h1>
+                <p className="text-xs text-slate-500 mt-1">Cấu hình các gói subscription · {plans.length} gói hiện có</p>
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
+          <div className="flex gap-2.5">
             <button onClick={loadPlans} disabled={loadingPlans}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", cursor: "pointer", fontSize: 13, color: "#374151", fontWeight: 600 }}>
-              <RefreshCw size={14} style={{ animation: loadingPlans ? "spin 1s linear infinite" : "none" }} />
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer text-xs font-semibold text-slate-700 disabled:opacity-50">
+              <RefreshCw size={14} className={loadingPlans ? "animate-spin" : ""} />
               Làm mới
             </button>
             <button onClick={() => setShowCreateModal(true)}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 8, border: "none", background: ACCENT, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg border-0 bg-[#FF6B00] hover:bg-[#e05e00] transition-colors text-white cursor-pointer text-xs font-bold shadow-sm">
               <Plus size={16} />
               Tạo gói mới
             </button>
@@ -887,31 +871,29 @@ export function SubscriptionPlansView() {
       </div>
 
       {/* ── Stats row ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "Tổng số gói", value: plans.length, color: "#0F172A" },
-          { label: "Đang hoạt động", value: plans.filter((p) => p.active).length, color: "#15803D" },
-          { label: "Đang ẩn", value: plans.filter((p) => !p.active).length, color: "#9CA3AF" },
-          { label: "Công khai", value: plans.filter((p) => p.publicVisible).length, color: "#1D4ED8" },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ padding: "14px 18px", background: "#fff", borderRadius: 12, border: "1px solid #E2E8F0" }}>
-            <div style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color, marginTop: 4 }}>{value}</div>
+          { label: "Tổng số gói", value: plans.length, colorClass: "text-slate-900" },
+          { label: "Đang hoạt động", value: plans.filter((p) => p.active).length, colorClass: "text-emerald-700" },
+          { label: "Đang ẩn", value: plans.filter((p) => !p.active).length, colorClass: "text-slate-400" },
+          { label: "Công khai", value: plans.filter((p) => p.publicVisible).length, colorClass: "text-blue-600" },
+        ].map(({ label, value, colorClass }) => (
+          <div key={label} className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">{label}</div>
+            <div className={`text-2xl font-extrabold mt-1 ${colorClass}`}>{value}</div>
           </div>
         ))}
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{ display: "flex", gap: 4, padding: "4px", background: "#F1F5F9", borderRadius: 12, width: "fit-content" }}>
+      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setTab(id)}
-            style={{
-              display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 9,
-              border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, transition: "all 0.15s",
-              background: tab === id ? "#fff" : "transparent",
-              color: tab === id ? "#0F172A" : "#64748B",
-              boxShadow: tab === id ? "0 1px 4px rgba(15,23,42,0.08)" : "none",
-            }}>
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border-none cursor-pointer text-xs font-bold transition-all ${
+              tab === id 
+                ? "bg-white text-slate-900 shadow-sm" 
+                : "bg-transparent text-slate-500 hover:text-slate-700"
+            }`}>
             <Icon size={14} />
             {label}
           </button>
@@ -920,147 +902,194 @@ export function SubscriptionPlansView() {
 
       {/* ── Plans Tab ── */}
       {tab === "plans" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="flex flex-col gap-3">
           {loadingPlans ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#9CA3AF", fontSize: 14 }}>
+            <div className="text-center py-16 text-slate-400 text-sm">
               Đang tải danh sách gói...
             </div>
           ) : plans.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#9CA3AF", fontSize: 14, background: "#fff", borderRadius: 12, border: "1px solid #E2E8F0" }}>
+            <div className="text-center py-16 text-slate-400 text-sm bg-white rounded-xl border border-slate-200">
               Chưa có gói dịch vụ nào.&nbsp;
-              <button onClick={() => setShowCreateModal(true)} style={{ background: "none", border: "none", cursor: "pointer", color: ACCENT, fontWeight: 700, fontSize: 14 }}>
+              <button onClick={() => setShowCreateModal(true)} className="bg-transparent border-none cursor-pointer text-[#FF6B00] font-bold hover:underline">
                 Tạo gói đầu tiên
               </button>
             </div>
           ) : (
-            <>
-              {/* Table header */}
-              <div style={{
-                display: "grid", gridTemplateColumns: "2fr 1fr 1.2fr 1fr 1fr 1fr 1.4fr",
-                gap: 12, padding: "10px 18px",
-                fontSize: 11, fontWeight: 700, color: "#64748B",
-                textTransform: "uppercase", letterSpacing: "0.05em",
-              }}>
-                <span>Tên gói</span>
-                <span>Loại</span>
-                <span>Giá</span>
-                <span>Trạng thái</span>
-                <span>Hiển thị</span>
-                <span>Tính năng</span>
-                <span style={{ textAlign: "right" }}>Hành động</span>
-              </div>
+            <div className="w-full overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-sm">
+              <table className="w-full min-w-[900px] border-collapse text-left text-sm text-slate-600">
+                <thead className="bg-slate-50/75 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200/80">
+                  <tr>
+                    <th className="py-3 px-4 w-[24%]">Tên gói</th>
+                    <th className="py-3 px-4 w-[12%]">Loại</th>
+                    <th className="py-3 px-4 w-[14%]">Giá</th>
+                    <th className="py-3 px-4 w-[14%]">Trạng thái</th>
+                    <th className="py-3 px-4 w-[12%]">Hiển thị</th>
+                    <th className="py-3 px-4 w-[12%]">Tính năng</th>
+                    <th className="py-3 px-4 w-[12%] text-right">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {plans
+                    .slice()
+                    .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99))
+                    .map((plan) => {
+                      const meta = PLAN_TYPE_META[plan.planType ?? "FREE"] ?? PLAN_TYPE_META.FREE;
+                      const enabledFeatures = plan.features.filter((f) => f.enabled).length;
+                      return (
+                        <motion.tr
+                          key={plan.planId}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="hover:bg-slate-50/40 transition-colors group"
+                        >
+                          {/* Tên gói */}
+                          <td className="py-3.5 px-4 align-middle">
+                            <div>
+                              <div className="font-bold text-slate-900 text-sm">{plan.planName}</div>
+                              {plan.description && (
+                                <div className="text-xs text-slate-400 mt-1 max-w-[220px] truncate" title={plan.description}>
+                                  {plan.description}
+                                </div>
+                              )}
+                              <div className="text-[10px] text-slate-300 mt-0.5">Thứ tự: {plan.sortOrder ?? "—"}</div>
+                            </div>
+                          </td>
 
-              {plans
-                .slice()
-                .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99))
-                .map((plan) => {
-                  const meta = PLAN_TYPE_META[plan.planType ?? "FREE"] ?? PLAN_TYPE_META.FREE;
-                  const enabledFeatures = plan.features.filter((f) => f.enabled).length;
-                  return (
-                    <motion.div key={plan.planId}
-                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                      style={{
-                        display: "grid", gridTemplateColumns: "2fr 1fr 1.2fr 1fr 1fr 1fr 1.4fr",
-                        gap: 12, alignItems: "center", padding: "14px 18px",
-                        background: "#fff", borderRadius: 12, border: "1px solid #E2E8F0",
-                        transition: "box-shadow 0.15s",
-                      }}
-                      whileHover={{ boxShadow: "0 4px 16px rgba(15,23,42,0.08)" }}
-                    >
-                      {/* Name */}
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: "#0F172A" }}>{plan.planName}</div>
-                        {plan.description && (
-                          <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {plan.description}
-                          </div>
-                        )}
-                        <div style={{ fontSize: 10, color: "#CBD5E1", marginTop: 1 }}>Thứ tự: {plan.sortOrder ?? "—"}</div>
-                      </div>
+                          {/* Loại */}
+                          <td className="py-3.5 px-4 align-middle">
+                            <Badge className={meta.className}>{meta.label}</Badge>
+                          </td>
 
-                      {/* Type */}
-                      <Badge bg={meta.bg} text={meta.color} border={meta.border}>{meta.label}</Badge>
+                          {/* Giá */}
+                          <td className="py-3.5 px-4 align-middle">
+                            {plan.monthlyPrice <= 0 ? (
+                              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/60 font-semibold">Miễn phí</Badge>
+                            ) : (
+                              <span className="font-bold text-slate-900 text-sm">
+                                {formatPlanPrice(plan.monthlyPrice, plan.currency)}
+                              </span>
+                            )}
+                          </td>
 
-                      {/* Price */}
-                      <div style={{ fontWeight: 700, fontSize: 13, color: plan.monthlyPrice === 0 ? "#15803D" : "#0F172A" }}>
-                        {formatPrice(plan.monthlyPrice, plan.currency)}
-                      </div>
+                          {/* Trạng thái */}
+                          <td className="py-3.5 px-4 align-middle">
+                            <div className="flex items-center gap-1.5">
+                              {plan.active ? (
+                                <>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  <span className="text-sm font-semibold text-emerald-700">Hoạt động</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                                  <span className="text-sm font-medium text-slate-400">Vô hiệu</span>
+                                </>
+                              )}
+                            </div>
+                          </td>
 
-                      {/* Active status */}
-                      <div>
-                        {plan.active
-                          ? <Badge bg="rgba(34,197,94,0.08)" text="#15803D" border="rgba(34,197,94,0.28)">Hoạt động</Badge>
-                          : <Badge bg="#F3F4F6" text="#9CA3AF" border="#E5E7EB">Vô hiệu</Badge>}
-                      </div>
+                          {/* Hiển thị */}
+                          <td className="py-3.5 px-4 align-middle">
+                            {plan.publicVisible ? (
+                              <Badge className="bg-blue-50 text-blue-600 border-blue-200/60 font-semibold flex items-center gap-1">
+                                <Eye size={12} /> Công khai
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-slate-100 text-slate-400 border-slate-200 font-semibold flex items-center gap-1">
+                                <EyeOff size={12} /> Ẩn
+                              </Badge>
+                            )}
+                          </td>
 
-                      {/* Visibility */}
-                      <div>
-                        {plan.publicVisible
-                          ? <Badge bg="rgba(37,99,235,0.08)" text="#1D4ED8" border="rgba(37,99,235,0.25)"><Eye size={10} /> Công khai</Badge>
-                          : <Badge bg="#F3F4F6" text="#9CA3AF" border="#E5E7EB"><EyeOff size={10} /> Ẩn</Badge>}
-                      </div>
+                          {/* Tính năng */}
+                          <td className="py-3.5 px-4 align-middle">
+                            <div className="text-sm text-slate-700 font-semibold">
+                              {enabledFeatures}/{plan.features.length}
+                              <span className="text-slate-400 font-normal text-xs"> tính năng</span>
+                            </div>
+                          </td>
 
-                      {/* Features */}
-                      <div style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>
-                        {enabledFeatures}/{plan.features.length}
-                        <span style={{ color: "#9CA3AF", fontWeight: 400, fontSize: 11 }}> tính năng</span>
-                      </div>
-
-                      {/* Actions */}
-                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                        <ActionBtn icon={<Shield size={13} />} title="Chi tiết" onClick={() => openDetail(plan)} color="#64748B" />
-                        <ActionBtn icon={<Pencil size={13} />} title="Chỉnh sửa" onClick={() => openEdit(plan)} color="#2563EB" />
-                        <ActionBtn icon={<ToggleRight size={13} />} title="Trạng thái" onClick={() => openStatus(plan)} color={plan.active ? "#15803D" : "#9CA3AF"} />
-                        <ActionBtn icon={<Settings2 size={13} />} title="Tính năng" onClick={() => openFeatures(plan)} color={ACCENT} />
-                      </div>
-                    </motion.div>
-                  );
-                })}
-            </>
+                          {/* Hành động */}
+                          <td className="py-3.5 px-4 align-middle text-right">
+                            <div className="inline-flex items-center gap-0.5 bg-slate-50 p-1 rounded-xl border border-slate-100 group-hover:bg-white group-hover:shadow-sm transition-all">
+                              <ActionBtn
+                                icon={<Shield size={13} />}
+                                title="Chi tiết"
+                                onClick={() => openDetail(plan)}
+                                className="text-slate-500 hover:text-slate-700 hover:border-slate-400"
+                              />
+                              <ActionBtn
+                                icon={<Pencil size={13} />}
+                                title="Chỉnh sửa"
+                                onClick={() => openEdit(plan)}
+                                className="text-blue-600 hover:text-blue-700 hover:border-blue-500"
+                              />
+                              <ActionBtn
+                                icon={<ToggleRight size={13} />}
+                                title="Trạng thái"
+                                onClick={() => openStatus(plan)}
+                                className={
+                                  plan.active
+                                    ? "text-emerald-600 hover:text-emerald-700 hover:border-emerald-500"
+                                    : "text-slate-400 hover:text-slate-500 hover:border-slate-400"
+                                }
+                              />
+                              <ActionBtn
+                                icon={<Settings2 size={13} />}
+                                title="Tính năng"
+                                onClick={() => openFeatures(plan)}
+                                className="text-[#FF6B00] hover:text-[#e05e00] hover:border-[#FF6B00]"
+                              />
+                            </div>
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
 
       {/* ── Audit Log Tab ── */}
       {tab === "audit" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-end">
             <button onClick={() => { auditLoadedRef.current = false; loadAuditLogs(); }} disabled={loadingAudit}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", cursor: "pointer", fontSize: 13, color: "#374151", fontWeight: 600 }}>
-              <RefreshCw size={13} style={{ animation: loadingAudit ? "spin 1s linear infinite" : "none" }} />
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer text-xs font-semibold text-slate-700 disabled:opacity-50">
+              <RefreshCw size={13} className={loadingAudit ? "animate-spin" : ""} />
               Làm mới nhật ký
             </button>
           </div>
 
           {loadingAudit ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#9CA3AF", fontSize: 14 }}>Đang tải nhật ký...</div>
+            <div className="text-center py-16 text-slate-400 text-sm">Đang tải nhật ký...</div>
           ) : auditLogs.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#9CA3AF", fontSize: 14, background: "#fff", borderRadius: 12, border: "1px solid #E2E8F0" }}>
+            <div className="text-center py-16 text-slate-400 text-sm bg-white rounded-xl border border-slate-200">
               Chưa có nhật ký nào
             </div>
           ) : (
             <>
               {/* Audit header */}
-              <div style={{
-                display: "grid", gridTemplateColumns: "1.6fr 1.2fr 1.6fr 1fr auto",
-                gap: 12, padding: "8px 16px",
-                fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em",
-              }}>
+              <div className="grid grid-cols-[1.6fr_1.2fr_1.6fr_1fr_auto] gap-3 px-4 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <span>Admin</span>
                 <span>Hành động</span>
                 <span>Nội dung</span>
                 <span>Entity ID</span>
-                <span style={{ width: 16 }} />
+                <span className="w-4" />
               </div>
 
-              {auditLogs.map((log) => (
-                <AuditLogRow
-                  key={log.logId}
-                  log={log}
-                  expanded={expandedLogId === log.logId}
-                  onToggle={() => setExpandedLogId((id) => (id === log.logId ? null : log.logId))}
-                />
-              ))}
+              <div className="flex flex-col gap-2">
+                {auditLogs.map((log) => (
+                  <AuditLogRow
+                    key={log.logId}
+                    log={log}
+                    expanded={expandedLogId === log.logId}
+                    onToggle={() => setExpandedLogId((id) => (id === log.logId ? null : log.logId))}
+                  />
+                ))}
+              </div>
             </>
           )}
         </div>
@@ -1090,25 +1119,28 @@ export function SubscriptionPlansView() {
         plan={featuresPlan}
         onSaved={handlePlanSaved}
       />
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </motion.div>
   );
 }
 
 // ─── Tiny action button ───────────────────────────────────────────────────────
 
-function ActionBtn({ icon, title, onClick, color }: { icon: React.ReactNode; title: string; onClick: () => void; color: string }) {
+function ActionBtn({
+  icon,
+  title,
+  onClick,
+  className,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  onClick: () => void;
+  className?: string;
+}) {
   return (
-    <button title={title} onClick={onClick}
-      style={{
-        display: "flex", alignItems: "center", justifyContent: "center",
-        width: 28, height: 28, borderRadius: 7,
-        border: "1px solid #E2E8F0", background: "#F8FAFC", cursor: "pointer", color,
-        transition: "all 0.15s",
-      }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#fff"; (e.currentTarget as HTMLButtonElement).style.borderColor = color; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#F8FAFC"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#E2E8F0"; }}
+    <button
+      title={title}
+      onClick={onClick}
+      className={`flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200/80 bg-white hover:bg-slate-50 cursor-pointer transition-all duration-150 ${className || ""}`}
     >
       {icon}
     </button>
