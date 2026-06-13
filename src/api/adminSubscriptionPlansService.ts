@@ -33,6 +33,7 @@ export type ServicePlanResponse = {
   planId: string;
   planName: string;
   description: string | null;
+  benefits: string[];
   planType: ServicePlanType | null;
   monthlyPrice: number;
   currency: string;
@@ -76,6 +77,7 @@ export type FeatureToggle = {
 export type CreateServicePlanRequest = {
   planName: string;
   description?: string;
+  benefits?: string[];
   monthlyPrice: number;
   currency?: string;
   maxWorkspaces?: number;
@@ -92,6 +94,7 @@ export type CreateServicePlanRequest = {
 export type UpdateServicePlanRequest = {
   planName?: string;
   description?: string;
+  benefits?: string[];
   monthlyPrice?: number;
   currency?: string;
   maxWorkspaces?: number;
@@ -199,6 +202,7 @@ export type PublicPlanResponse = {
   planId: string;
   planName: string;
   description: string | null;
+  benefits?: string[];
   monthlyPrice: number;
   currency: string;
   quotas: ServicePlanQuota | null;
