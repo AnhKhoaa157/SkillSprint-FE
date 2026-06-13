@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Mail, Shield, CreditCard, Calendar, RefreshCw, Clock, LogIn, History, Settings, FileText, Info, CheckCircle2, UserPlus, Crown } from "lucide-react";
+import {
+  ArrowLeft, Mail, Shield, CreditCard, Calendar, RefreshCw, Clock, LogIn,
+  History, Settings, FileText, Info, CheckCircle2, UserPlus
+} from "lucide-react";
 import { toast } from "sonner";
 import adminUserService, { type AdminUserDetail } from "../../../api/adminUserService";
+import { PlanTypeBadge, PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
+import type { ServicePlanType } from "../../../api/adminSubscriptionPlansService";
 
 const ROLE_OPTIONS = [
   { label: "Quản trị viên (ADMIN)", value: "ADMIN" },
@@ -13,6 +18,13 @@ const ROLE_OPTIONS = [
 const STATUS_OPTIONS = [
   { label: "Hoạt động (ACTIVE)", value: "ACTIVE" },
   { label: "Vô hiệu (DISABLE)", value: "DISABLED" },
+];
+
+const PLAN_TYPE_OPTIONS = [
+  { label: "Gói người dùng mới (FREE)", value: "FREE" },
+  { label: "Gói cá nhân nâng cao (SKILL_BUILDER)", value: "SKILL_BUILDER" },
+  { label: "Gói tối cao đầy đủ (PREMIUM)", value: "PREMIUM" },
+  { label: "Gói hệ thống đặc quyền (ADMIN_DEFAULT)", value: "ADMIN_DEFAULT" }
 ];
 
 const STATUS_BADGE: Record<string, { bg: string; text: string; border: string; label: string }> = {
@@ -30,6 +42,29 @@ function getUserAvatarUrl(user: AdminUserDetail) {
   return trimmed;
 }
 
+function DynamicPlanBadge({ sub }: { sub: any }) {
+  if (!sub) {
+    return <span className="text-xs font-medium text-slate-400 italic">Chưa đăng ký gói</span>;
+  }
+
+  // Force the "ADMIN" label + ADMIN_DEFAULT type for admin accounts so the badge resolves the
+  // emerald fallback; a premium name with no explicit type still resolves to the premium look.
+  const isAdmin = sub.planType === "ADMIN_DEFAULT" || String(sub.planName).toUpperCase().includes("ADMIN");
+  const isPremium = sub.planType === "PREMIUM" || String(sub.planName).toUpperCase().includes("PREMIUM");
+  const planType: ServicePlanType = isAdmin ? "ADMIN_DEFAULT" : isPremium ? "PREMIUM" : (sub.planType ?? "FREE");
+  const planName = isAdmin ? "ADMIN" : (sub.planName || "Gói ẩn");
+
+  return (
+    <PlanTypeBadge
+      type={planType}
+      label={planName}
+      badgeColor={sub.badgeColor}
+      badgeIcon={sub.badgeIcon}
+      animationType={sub.animationType}
+    />
+  );
+}
+
 export default function AdminUserDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -37,6 +72,7 @@ export default function AdminUserDetailPage() {
   const [loading, setLoading] = useState(false);
   const [statusInput, setStatusInput] = useState("");
   const [roleInput, setRoleInput] = useState("LEARNER");
+  const [planTypeInput, setPlanTypeInput] = useState("FREE");
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
@@ -47,6 +83,7 @@ export default function AdminUserDetailPage() {
         setUser(data);
         setStatusInput(data.status || "");
         setRoleInput(data.role ? String(data.role).toUpperCase() : "LEARNER");
+        setPlanTypeInput(data.currentSubscription?.planType || "FREE");
         setImgError(false);
       })
       .catch((err) => {
@@ -64,7 +101,6 @@ export default function AdminUserDetailPage() {
       setUser(updated);
       toast.success("Cập nhật trạng thái thành công");
     } catch (e: any) {
-      console.error(e);
       toast.error(e.message || "Lỗi cập nhật trạng thái");
     } finally { setLoading(false); }
   }
@@ -77,8 +113,38 @@ export default function AdminUserDetailPage() {
       setUser(updated);
       toast.success("Cập nhật vai trò thành công");
     } catch (e: any) {
-      console.error(e);
       toast.error(e.message || "Lỗi cập nhật vai trò");
+    } finally { setLoading(false); }
+  }
+
+  async function saveSubscriptionPlan() {
+    if (!id) return;
+    try {
+      setLoading(true);
+      const response = await adminUserService.updateUserSubscription(id, { planType: planTypeInput });
+      
+      // 🟢 CHUẨN HÓA KHỚP DỮ LIỆU PHẲNG: Bóc tách object lồng `.plan` sang cấu trúc SubscriptionAdminResponse phẳng
+      const normalizedSub = {
+        subscriptionId: response.subscriptionId,
+        planName: response.plan?.planName || "Hệ Thống Admin",
+        planType: planTypeInput,
+        startDate: response.startDate || response.startAt,
+        endDate: planTypeInput === "ADMIN_DEFAULT" ? null : (response.endDate || response.endAt),
+        status: response.status,
+        badgeColor: response.plan?.badgeColor,
+        badgeIcon: response.plan?.badgeIcon,
+        animationType: response.plan?.animationType
+      };
+
+      if (user) {
+        setUser({
+          ...user,
+          currentSubscription: normalizedSub
+        });
+      }
+      toast.success("Phát gói dịch vụ mới cho thành viên thành công!");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi cập nhật gói đăng ký");
     } finally { setLoading(false); }
   }
 
@@ -89,6 +155,10 @@ export default function AdminUserDetailPage() {
 
   const isStatusChanged = user?.status !== statusInput;
   const isRoleChanged = (user?.role ? String(user.role).toUpperCase() : "LEARNER") !== roleInput;
+  const isPlanChanged = (sub?.planType || "FREE") !== planTypeInput;
+  
+  // 🟢 CHỐT CHẶN BẮT LOẠI GÓI ADMIN
+  const isAdminPlan = sub?.planType === "ADMIN_DEFAULT" || String(sub?.planName).toUpperCase().includes("ADMIN");
 
   const avatarUrl = user ? getUserAvatarUrl(user) : "";
   const shouldShowImage = avatarUrl.length > 0 && !imgError;
@@ -156,8 +226,6 @@ export default function AdminUserDetailPage() {
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 16 } }
   };
 
-  const isPremium = sub?.planName?.toUpperCase().includes("PREMIUM");
-
   return (
     <div className="min-h-screen p-6 md:p-8" style={{ background: "#F1F5F9", fontFamily: "'Inter', sans-serif" }}>
       <motion.div 
@@ -166,13 +234,12 @@ export default function AdminUserDetailPage() {
         animate="show"
         className="max-w-5xl mx-auto space-y-6"
       >
-        {/* Top Navigation */}
         <motion.div variants={itemVariants} className="flex items-center justify-between">
           <motion.button 
             whileHover={{ x: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(-1)} 
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 transition cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm"
           >
             <ArrowLeft size={16} /> Quay lại danh sách
           </motion.button>
@@ -186,7 +253,7 @@ export default function AdminUserDetailPage() {
           user && (
             <div className="space-y-6">
               
-              {/* ── 1. BANNER THÔNG TIN CHÍNH ── */}
+              {/* Banner */}
               <motion.div 
                 variants={itemVariants}
                 className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden"
@@ -195,22 +262,9 @@ export default function AdminUserDetailPage() {
                   style={{ background: "radial-gradient(circle, rgba(255,107,0,0.03) 0%, transparent 70%)", transform: "translate(20%, -20%)" }} />
                 
                 <div className="flex items-center gap-4 relative z-10">
-                  <motion.div 
-                    whileHover={{ scale: 1.03 }}
-                    className="w-14 h-14 rounded-xl flex items-center justify-center font-black text-xl text-white shadow-sm overflow-hidden shrink-0 border border-slate-100"
-                    style={{ background: "linear-gradient(135deg, #FF6B00, #EA580C)" }}
-                  >
-                    {shouldShowImage ? (
-                      <img 
-                        src={avatarUrl} 
-                        alt="User avatar" 
-                        className="w-full h-full object-cover"
-                        onError={() => setImgError(true)}
-                      />
-                    ) : (
-                      initial
-                    )}
-                  </motion.div>
+                  <div className="w-14 h-14 rounded-xl flex items-center justify-center font-black text-xl text-white shadow-sm shrink-0" style={{ background: "linear-gradient(135deg, #FF6B00, #EA580C)" }}>
+                    {initial}
+                  </div>
 
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -219,7 +273,7 @@ export default function AdminUserDetailPage() {
                         {badge.label}
                       </span>
                     </div>
-                    <p className="text-xs font-medium text-slate-500 flex items-center gap-1.5"><Mail size={13} className="text-slate-400" /> {user.email}</p>
+                    <p className="text-xs font-medium text-slate-500 flex items-center gap-1.5"><Mail size={13} /> {user.email}</p>
                     <p className="text-[11px] font-mono text-slate-400">UID: {id}</p>
                   </div>
                 </div>
@@ -236,16 +290,9 @@ export default function AdminUserDetailPage() {
                 </div>
               </motion.div>
 
-              {/* ── 2. GRID KÉP: GÓI DỊCH VỤ VÀ BẢNG ĐIỀU KHIỂN ── */}
+              {/* Grid content */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-                
-                {/* Khối Gói Dịch Vụ */}
-                <motion.div 
-                  variants={itemVariants}
-                  whileHover={{ y: -1 }}
-                  transition={{ duration: 0.2 }}
-                  className="md:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between"
-                >
+                <motion.div variants={itemVariants} className="md:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
                   <div className="space-y-5">
                     <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
                       <CreditCard size={16} className="text-orange-500" />
@@ -255,59 +302,13 @@ export default function AdminUserDetailPage() {
                     {sub ? (
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                          
-                          {/* BOX TÊN GÓI: FIX ĐƠ, TIA SÁNG QUÉT CHÉO LIÊN TỤC KHÔNG DỪNG */}
-                          {isPremium ? (
-                            <motion.div 
-                              animate={{ 
-                                boxShadow: [
-                                  "0 0 10px rgba(234,88,12,0.2)", 
-                                  "0 0 22px rgba(245,158,11,0.5)", 
-                                  "0 0 10px rgba(234,88,12,0.2)"
-                                ] 
-                              }}
-                              transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                              className="p-3.5 rounded-xl border relative overflow-hidden space-y-1 flex flex-col justify-center shadow-md select-none"
-                              style={{
-                                background: "linear-gradient(135deg, #EA580C 0%, #EAB308 100%)",
-                                borderColor: "transparent"
-                              }}
-                            >
-                              {/* Tia sáng quét chéo x dịch chuyển rộng, dùng phần trăm bao phủ để lặp mượt, triệt tiêu drop frame */}
-                              <motion.div 
-                                animate={{ x: ["-180%", "280%"] }}
-                                transition={{ 
-                                  repeat: Infinity, 
-                                  duration: 2.4, 
-                                  ease: [0.42, 0, 0.58, 1]
-                                }}
-                                className="absolute inset-y-0 w-1/2 skew-x-[25deg] pointer-events-none"
-                                style={{
-                                  background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), rgba(255,255,255,0.1), transparent)"
-                                }}
-                              />
-                              <div className="flex items-center gap-1.5 text-white/90 font-extrabold uppercase text-[10px] tracking-widest">
-                                <motion.div
-                                  animate={{ y: [0, -1.5, 0] }}
-                                  transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                                >
-                                  <Crown size={11} className="text-yellow-200 fill-yellow-200" />
-                                </motion.div>
-                                Gói hiện tại
-                              </div>
-                              <p className="text-sm font-black text-white tracking-wide uppercase drop-shadow-sm">
-                                {sub.planName}
-                              </p>
-                            </motion.div>
-                          ) : (
-                            <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/60 space-y-1">
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gói hiện tại</p>
-                              <p className="text-sm font-black text-slate-700">{sub.planName || "Gói ẩn"}</p>
-                            </div>
-                          )}
+                          <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/60 flex flex-col justify-center items-start gap-1.5 shadow-sm">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gói đăng ký hiện hành</span>
+                            <DynamicPlanBadge sub={sub} />
+                          </div>
 
                           <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/60 space-y-1 flex flex-col justify-center">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Trạng thái gói</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Trạng thái quyền lợi</p>
                             <div className="pt-0.5">
                               <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide" 
                                 style={{ 
@@ -322,149 +323,90 @@ export default function AdminUserDetailPage() {
                         </div>
 
                         <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/40 text-xs space-y-2.5 text-slate-600">
+                          {/* 🟢 ĐÃ FIX TRIỆT ĐỂ: Nếu là gói Admin (isAdminPlan) -> Ép giao diện hiển thị Vô hạn thời gian */}
                           <div className="flex items-center gap-3">
                             <Calendar size={15} className="text-slate-400 shrink-0" />
-                            <span><strong>Hạn sử dụng:</strong> {sub.endDate ? new Date(sub.endDate).toLocaleDateString("vi-VN", { day: 'numeric', month: 'long', year: 'numeric' }) : "Vô hạn (Không giới hạn thời gian)"}</span>
+                            <span>
+                              <strong>Hạn sử dụng:</strong>{" "}
+                              {isAdminPlan || !sub.endDate 
+                                ? "Vô hạn (Không giới hạn thời gian)" 
+                                : new Date(sub.endDate).toLocaleDateString("vi-VN", { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </span>
                           </div>
                           <div className="flex items-center gap-3 pt-2.5 border-t border-slate-100/70">
                             <FileText size={15} className="text-slate-400 shrink-0" />
-                            <span className="truncate"><strong>Mã đối chiếu cổng thanh toán:</strong> {sub.id ? String(sub.id) : "SUB_GEN_OR_LEGACY"}</span>
+                            <span className="truncate"><strong>Mã đối chiếu danh mục:</strong> {sub.planId ? String(sub.planId) : "SUB_GEN_OR_LEGACY"}</span>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="py-14 text-center text-slate-400 text-xs font-medium italic">
-                        Tài khoản này hiện tại chưa đăng ký gói dịch vụ nào trên SkillSprint.
-                      </div>
+                      <div className="py-14 text-center text-slate-400 text-xs font-medium italic">Tài khoản này chưa đăng ký gói dịch vụ.</div>
                     )}
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400 flex items-center gap-1">
-                    <Shield size={11} /> Dữ liệu hóa đơn tự động đồng bộ hóa thời gian thực với hệ thống cổng Core.
                   </div>
                 </motion.div>
 
-                {/* Khối Điều Khiển Admin */}
-                <motion.div 
-                  variants={itemVariants}
-                  whileHover={{ y: -1 }}
-                  transition={{ duration: 0.2 }}
-                  className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between gap-5"
-                >
+                {/* Control Panel */}
+                <motion.div variants={itemVariants} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between gap-5">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                       <Settings size={14} className="text-slate-400" />
                       <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hành động quản trị</h3>
                     </div>
                     
-                    {/* Trạng thái */}
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Trạng thái tài khoản</label>
-                      <select 
-                        value={statusInput} 
-                        onChange={(e) => setStatusInput(e.target.value)} 
-                        className="w-full h-9 px-3 rounded-xl text-xs border border-slate-200 bg-slate-50 outline-none transition focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-slate-700 font-medium cursor-pointer"
-                      >
-                        {STATUS_OPTIONS.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
+                      <select value={statusInput} onChange={(e) => setStatusInput(e.target.value)} className="w-full h-9 px-3 rounded-xl text-xs border border-slate-200 bg-slate-50 outline-none text-slate-700 font-medium">
+                        {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                       </select>
-                      <motion.button 
-                        onClick={saveStatus} 
-                        disabled={loading}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="w-full h-8.5 rounded-xl text-xs font-bold text-white transition shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-105"
-                        style={{ 
-                          background: "linear-gradient(135deg, #FF6B00 0%, #EA580C 100%)",
-                          opacity: loading ? 0.6 : (isStatusChanged ? 1 : 0.85)
-                        }}
-                      >
-                        {loading ? "Đang xử lý..." : "Cập nhật trạng thái"}
-                      </motion.button>
+                      <motion.button onClick={saveStatus} disabled={loading} className="w-full h-8.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#FF6B00] to-[#EA580C] shadow-sm" style={{ opacity: isStatusChanged ? 1 : 0.85 }}>Cập nhật trạng thái</motion.button>
                     </div>
 
-                    {/* Vai trò */}
                     <div className="space-y-1.5 pt-3 border-t border-slate-100">
                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Phân quyền hệ thống</label>
-                      <select 
-                        value={roleInput} 
-                        onChange={(e) => setRoleInput(e.target.value)} 
-                        className="w-full h-9 px-3 rounded-xl text-xs border border-slate-200 bg-slate-50 outline-none transition focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-slate-700 font-medium cursor-pointer"
-                      >
-                        {ROLE_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
+                      <select value={roleInput} onChange={(e) => setRoleInput(e.target.value)} className="w-full h-9 px-3 rounded-xl text-xs border border-slate-200 bg-slate-50 outline-none text-slate-700 font-medium">
+                        {ROLE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                       </select>
-                      <motion.button 
-                        onClick={saveRoles} 
-                        disabled={loading}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="w-full h-8.5 rounded-xl text-xs font-bold text-white transition shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-105"
-                        style={{ 
-                          background: "linear-gradient(135deg, #FF6B00 0%, #EA580C 100%)",
-                          opacity: loading ? 0.6 : (isRoleChanged ? 1 : 0.85)
-                        }}
-                      >
-                        {loading ? "Đang xử lý..." : "Cập nhật vai trò"}
-                      </motion.button>
+                      <motion.button onClick={saveRoles} disabled={loading} className="w-full h-8.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#FF6B00] to-[#EA580C] shadow-sm" style={{ opacity: isRoleChanged ? 1 : 0.85 }}>Cập nhật vai trò</motion.button>
+                    </div>
+
+                    <div className="space-y-1.5 pt-3 border-t border-slate-100">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Cấp phát gói dịch vụ</label>
+                      <select value={planTypeInput} onChange={(e) => setPlanTypeInput(e.target.value)} className="w-full h-9 px-3 rounded-xl text-xs border border-slate-200 bg-slate-50 outline-none text-slate-700 font-medium">
+                        {PLAN_TYPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                      <motion.button onClick={saveSubscriptionPlan} disabled={loading} className="w-full h-8.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] shadow-sm" style={{ opacity: isPlanChanged ? 1 : 0.85 }}>Cập nhật gói đăng ký</motion.button>
                     </div>
                   </div>
-
-                  <div className="p-3 rounded-xl bg-orange-50/50 border border-orange-100/60 flex items-start gap-2 text-[11px] text-amber-800">
-                    <Info size={14} className="text-orange-500 shrink-0 mt-0.5" />
-                    <p className="leading-normal">
-                      <strong>Lưu ý:</strong> Mọi thay đổi về trạng thái hoặc vai trò sẽ áp dụng ngay lập tức cho phiên đăng nhập tiếp theo của người dùng.
-                    </p>
-                  </div>
                 </motion.div>
-
               </div>
 
-              {/* ── 3. KHỐI NHẬT KÝ HỆ THỐNG ĐỘNG ── */}
+              {/* Logs */}
               <motion.div variants={itemVariants} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
                   <History size={15} className="text-slate-400" />
                   <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Nhật ký hệ thống</h3>
                 </div>
-                
                 <div className="mt-4 space-y-3 text-xs">
                   {systemLogs.length > 0 ? (
                     systemLogs.map((log) => (
-                      <motion.div 
-                        key={log.id}
-                        whileHover={{ x: 2 }} 
-                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50/80 border border-slate-100 transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5 text-slate-600">
-                          {log.icon}
-                          <span>{log.text}</span>
-                        </div>
-                        <span className="font-mono text-slate-400">
-                          {new Date(log.time).toLocaleString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric"
-                          })}
-                        </span>
+                      <motion.div key={log.id} whileHover={{ x: 2 }} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/80 border border-slate-100">
+                        <div className="flex items-center gap-2.5 text-slate-600">{log.icon}<span>{log.text}</span></div>
+                        <span className="font-mono text-slate-400">{new Date(log.time).toLocaleString("vi-VN")}</span>
                       </motion.div>
                     ))
                   ) : (
-                    <div className="text-center py-6 text-slate-400 italic">
-                      Chưa ghi nhận dòng thời gian hoạt động của tài khoản này.
-                    </div>
+                    <div className="text-center py-6 text-slate-400 italic">Chưa ghi nhận dòng thời gian hoạt động.</div>
                   )}
                 </div>
               </motion.div>
-              
+
             </div>
           )
         )}
       </motion.div>
+
+      {/* Badge keyframes + Tailwind safelist (single source: components/admin/PlanTypeBadge). */}
+      <PlanBadgeStyles />
     </div>
   );
 }

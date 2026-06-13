@@ -997,7 +997,7 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
                   </ul>
                 )}
                 <ul style={{ listStyle:"none", margin:0, padding:0, display:"flex", flexDirection:"column", gap:"8px" }}>
-                  {planFeatureList[plan.id].map((f, fi) => (
+                  {(planFeatureList[plan.id] ?? []).map((f, fi) => (
                     <PlanFeature key={f.featureKey ?? fi} text={f.featureName} enabled={isFeatureEnabled(f)} color={plan.id===currentPlanId?T1:T2}/>
                   ))}
                 </ul>

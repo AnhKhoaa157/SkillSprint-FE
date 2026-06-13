@@ -8,15 +8,19 @@ type ApiResponse<T> = {
   data: T | null;
 };
 
+// 🟢 ĐÃ CẬP NHẬT: Thêm các trường Visual và PlanType trực tiếp vào đây để hứng data phẳng từ User DTO
 export type SubscriptionAdminResponse = {
   subscriptionId: string | null;
   planName: string | null;
+  planType: string | null; // Phục vụ luồng fallback và check Vô hạn
   startDate: string | null;
   endDate: string | null;
   status: string | null;
+  badgeColor?: string | null;
+  badgeIcon?: string | null;
+  animationType?: string | null;
 };
 
-// Full response shape returned by the admin user endpoints
 export interface AdminUserResponse {
   userId: string;
   email: string;
@@ -48,6 +52,42 @@ export type AdminUserDetail = AdminUserSummary & {
   avatarUrl?: string | null;
   timeZone?: string;
   lastLoginAt?: string | null;
+};
+
+export type SubscriptionPlanType = "FREE" | "SKILL_BUILDER" | "PREMIUM" | "ADMIN_DEFAULT";
+
+export type UpdateUserSubscriptionRequest = {
+  planType: SubscriptionPlanType;
+};
+
+export type CurrentSubscriptionPlan = {
+  planId: string;
+  planName: string;
+  description: string | null;
+  benefits: string[];
+  badgeColor: string | null;
+  badgeIcon: string | null;
+  animationType: string | null;
+  monthlyPrice: number;
+  currency: string;
+  quotas: {
+    maxWorkspaces: number | null;
+    maxUploads: number | null;
+    aiGenerateLimit: number | null;
+    maxFileMb: number | null;
+    maxWorkspaceMb: number | null;
+  } | null;
+};
+
+export type CurrentSubscriptionResponse = {
+  subscriptionId: string;
+  plan: CurrentSubscriptionPlan;
+  startDate: string | null;
+  endDate: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  status: string;
+  createdAt: string;
 };
 
 async function authFetch<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
@@ -114,12 +154,11 @@ export async function updateUserStatus(userId: string, body: { status: "ACTIVE" 
     body: JSON.stringify(body),
   });
   if (!resp.data) throw new Error(resp.message || "Empty response");
-  const normalized = {
+  return {
     ...resp.data,
     id: resp.data.userId || resp.data.id,
     role: resp.data.roles?.length ? resp.data.roles[0] : undefined,
   };
-  return normalized;
 }
 
 export async function updateUserRole(userId: string, body: { role?: string; roles?: string[] }) {
@@ -129,12 +168,26 @@ export async function updateUserRole(userId: string, body: { role?: string; role
     body: JSON.stringify({ role }),
   });
   if (!resp.data) throw new Error(resp.message || "Empty response");
-  const normalized = {
+  return {
     ...resp.data,
     id: resp.data.userId || resp.data.id,
     role: resp.data.roles?.length ? resp.data.roles[0] : undefined,
   };
-  return normalized;
 }
 
-export default { getAdminUsers, getAdminUser, updateUserStatus, updateUserRole };
+export async function updateUserSubscription(
+  userId: string,
+  body: UpdateUserSubscriptionRequest,
+): Promise<CurrentSubscriptionResponse> {
+  const resp = await authFetch<CurrentSubscriptionResponse>(
+    `/api/admin/users/${encodeURIComponent(userId)}/subscription`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    },
+  );
+  if (!resp.data) throw new Error(resp.message || "Empty response");
+  return resp.data;
+}
+
+export default { getAdminUsers, getAdminUser, updateUserStatus, updateUserRole, updateUserSubscription };

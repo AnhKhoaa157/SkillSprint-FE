@@ -2,7 +2,7 @@ import { requestJson } from "./apiClient";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ServicePlanType = "FREE" | "SKILL_BUILDER" | "PREMIUM";
+export type ServicePlanType = "FREE" | "SKILL_BUILDER" | "PREMIUM" | "ADMIN_DEFAULT";
 
 export type BusinessActionType =
   | "SERVICE_PLAN_CREATED"
@@ -35,6 +35,9 @@ export type ServicePlanResponse = {
   description: string | null;
   benefits: string[];
   planType: ServicePlanType | null;
+  badgeColor: string | null;
+  badgeIcon: string | null;
+  animationType: string | null;
   monthlyPrice: number;
   currency: string;
   quotas: ServicePlanQuota | null;
@@ -79,6 +82,9 @@ export type CreateServicePlanRequest = {
   description?: string;
   benefits?: string[];
   planType: ServicePlanType;
+  badgeColor?: string;
+  badgeIcon?: string;
+  animationType?: string;
   monthlyPrice: number;
   currency?: string;
   maxWorkspaces?: number;
@@ -96,6 +102,9 @@ export type UpdateServicePlanRequest = {
   description?: string;
   benefits?: string[];
   planType?: ServicePlanType;
+  badgeColor?: string;
+  badgeIcon?: string;
+  animationType?: string;
   monthlyPrice?: number;
   currency?: string;
   maxWorkspaces?: number;

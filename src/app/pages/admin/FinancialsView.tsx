@@ -46,20 +46,10 @@ export function Sparkline({ data, color, width = 80, height = 28 }: { data: numb
   );
 }
 
-
+// Giữ lại mock data này cho tính năng Export CSV ngoài AdminDashboard không bị gãy
 export const USER_GROWTH_DATA = [
   { week: "W1", total: 148, organic: 90, paid: 38, referral: 20 },
   { week: "W2", total: 290, organic: 170, paid: 75, referral: 45 },
-  { week: "W3", total: 440, organic: 255, paid: 110, referral: 75 },
-  { week: "W4", total: 620, organic: 350, paid: 160, referral: 110 },
-  { week: "W5", total: 810, organic: 450, paid: 210, referral: 150 },
-  { week: "W6", total: 1020, organic: 560, paid: 265, referral: 195 },
-  { week: "W7", total: 1230, organic: 665, paid: 310, referral: 255 },
-  { week: "W8", total: 1410, organic: 760, paid: 345, referral: 305 },
-  { week: "W9", total: 1560, organic: 830, paid: 368, referral: 362 },
-  { week: "W10", total: 1680, organic: 883, paid: 378, referral: 419 },
-  { week: "W11", total: 1760, organic: 915, paid: 382, referral: 463 },
-  { week: "W12", total: 1840, organic: 940, paid: 385, referral: 515 },
 ];
 
 const UNIT_ECON_DATA = [
@@ -67,27 +57,47 @@ const UNIT_ECON_DATA = [
   { label: "LTV", value: 408000, fill: "#FF6B00" },
 ];
 
+/* ─────────────────────────────────────────────────────────
+   Hàm Helper format tiền tệ chuẩn Việt Nam
+───────────────────────────────────────────────────────── */
+const formatCurrency = (value: number) => {
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1)}M ₫`;
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(0)}K ₫`;
+  }
+  return `${value} ₫`;
+};
+
+// Hàm xử lý chuỗi ngày tháng thông minh từ Backend gửi ra trục X
+const formatChartDate = (dateStr: string) => {
+  if (!dateStr) return "";
+  // Nếu chuỗi có dạng định dạng chuẩn yyyy-MM-dd, ta cắt lấy MM-dd
+  if (dateStr.includes("-") && dateStr.length >= 10) {
+    const parts = dateStr.split("-");
+    return `${parts[1]}-${parts[2]}`; // Trả về dạng MM-dd
+  }
+  return dateStr; // Dữ liệu fallback nếu BE đã tự tối ưu sẵn chuỗi ngắn
+};
 
 /* ─────────────────────────────────────────────────────────
-   Custom Tooltip
+   Custom Tooltip hiển thị tiền tệ lung linh
 ───────────────────────────────────────────────────────── */
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "10px 14px", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
-      <p style={{ color: "#9CA3AF", fontSize: "11px", marginBottom: "6px" }}>{label}</p>
+      <p style={{ color: "#9CA3AF", fontSize: "11px", marginBottom: "6px", fontWeight: 700 }}>Ngày: {label}</p>
       {payload.map((p: any, i: number) => (
-        <p key={i} style={{ color: p.color || p.fill, fontSize: "12px", fontWeight: 600 }}>
-          {p.name}: {typeof p.value === "number" && p.value > 10000 ? `${(p.value / 1000).toFixed(0)}K ₫` : p.value?.toLocaleString()}
+        <p key={i} style={{ color: p.color || p.fill, fontSize: "13px", fontWeight: 700 }}>
+          {p.name}: {p.value?.toLocaleString()} ₫
         </p>
       ))}
     </div>
   );
 }
 
-/* ─────────────────────────────────────────────────────────
-   Custom bar shape for unit economics
-───────────────────────────────────────────────────────── */
 function UnitEconBar(props: any) {
   const { x, y, width, height, label } = props;
   const isLTV = label === "LTV";
@@ -136,7 +146,6 @@ export function FinancialsView() {
     return () => { mounted = false; };
   }, []);
 
-  /* ---------- loading skeleton ---------- */
   if (dashLoading) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -160,7 +169,6 @@ export function FinancialsView() {
     );
   }
 
-  /* ---------- error state ---------- */
   if (dashError && !dashData) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -177,13 +185,13 @@ export function FinancialsView() {
     );
   }
 
-  /* ---------- derived KPI cards ---------- */
+  /* ---------- Mapping dữ liệu thẻ KPI ---------- */
   const kpiCards = dashData ? [
     {
       id: "total-revenue",
       label: "Tổng doanh thu",
-      value: `${(dashData.overview.totalRevenue / 1_000_000).toFixed(1)}M ₫`,
-      sub: `Hôm nay: ${(dashData.overview.todayRevenue / 1_000).toFixed(0)}K ₫`,
+      value: formatCurrency(dashData.overview.totalRevenue),
+      sub: `Hôm nay: ${formatCurrency(dashData.overview.todayRevenue)}`,
       delta: `${dashData.overview.paidUsers} trả phí`,
       color: "#FF6B00",
       icon: DollarSign,
@@ -192,7 +200,7 @@ export function FinancialsView() {
     {
       id: "month-revenue",
       label: "Doanh thu tháng này",
-      value: `${(dashData.payments.revenueThisMonth / 1_000_000).toFixed(1)}M ₫`,
+      value: formatCurrency(dashData.payments.revenueThisMonth),
       sub: `${dashData.payments.paid}/${dashData.payments.total} giao dịch`,
       delta: `+${dashData.payments.paid} OK`,
       color: "#FB923C",
@@ -226,22 +234,23 @@ export function FinancialsView() {
     },
   ] : [];
 
+  // 🟢 Đã sửa: Map trục X an toàn bằng hàm formatChartDate giải quyết lỗi phẳng 0K
   const revenueChartData = (dashData?.charts.revenueByDay ?? []).map(d => ({
-    date: d.date?.slice(5) ?? d.date,
+    date: formatChartDate(d.date),
     revenue: d.revenue ?? 0,
   }));
 
   const usersChartData = (dashData?.charts.newUsersByDay ?? []).map(d => ({
-    date: d.date?.slice(5) ?? d.date,
+    date: formatChartDate(d.date),
     count: d.count ?? 0,
   }));
 
   const summaryStats = dashData ? [
     {
       label: "Tổng doanh thu",
-      value: `${(dashData.payments.revenueTotal / 1_000_000).toFixed(1)}M ₫`,
+      value: formatCurrency(dashData.payments.revenueTotal),
       color: "#22c55e",
-      sub: `Hôm nay: ${(dashData.payments.revenueToday / 1_000).toFixed(0)}K ₫`,
+      sub: `Hôm nay: ${formatCurrency(dashData.payments.revenueToday)}`,
     },
     {
       label: "Người dùng hoạt động",
@@ -257,13 +266,12 @@ export function FinancialsView() {
     },
     {
       label: "Tháng này",
-      value: `${(dashData.payments.revenueThisMonth / 1_000_000).toFixed(1)}M ₫`,
+      value: formatCurrency(dashData.payments.revenueThisMonth),
       color: "#d97706",
       sub: `${dashData.payments.paid} giao dịch thành công`,
     },
   ] : [];
 
-  /* ---------- render ---------- */
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
 
@@ -296,7 +304,7 @@ export function FinancialsView() {
               <p className="relative z-10 text-xs mb-3" style={{ color: "#6B7280" }}>{kpi.label}</p>
               <div className="relative z-10 flex items-end justify-between">
                 <Sparkline data={sparkData} color={kpi.color} width={75} height={26} />
-                <p style={{ fontSize: "9px", color: "#9CA3AF", textAlign: "right", maxWidth: 80 }}>{kpi.sub}</p>
+                <p style={{ fontSize: "9px", color: "#9CA3AF", textAlign: "right", maxWidth: 90 }}>{kpi.sub}</p>
               </div>
             </motion.div>
           );
@@ -306,63 +314,31 @@ export function FinancialsView() {
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
         <div className="xl:col-span-3 space-y-5">
 
-          {/* Revenue by Day */}
-          {revenueChartData.length > 0 ? (
-            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-              className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-              <div className="flex items-start justify-between mb-5">
-                <div>
-                  <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>Doanh thu theo ngày</p>
-                  <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>Biểu đồ doanh thu</p>
-                </div>
+          {/* 🟢 BIỂU ĐỒ DOANH THU THỰC TẾ ĐÃ ĐƯỢC FIX LỖI 0K */}
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+            className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>Doanh thu theo ngày</p>
+                <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>Biểu đồ doanh thu thực tế</p>
               </div>
-              <div style={{ height: "180px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={revenueChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                    <XAxis dataKey="date" stroke="#E5E7EB" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
-                    <YAxis stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={(v) => `${(v / 1_000).toFixed(0)}K`} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="revenue" name="Doanh thu (₫)"
-                      stroke={ACCENT} strokeWidth={2} fill={ACCENT} fillOpacity={0.12} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.div>
-          ) : (
-            /* Fallback: static CAC/LTV when no time-series data yet */
-            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-              className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-              <div className="flex items-start justify-between mb-5">
-                <div>
-                  <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>Hiệu quả đơn vị</p>
-                  <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>CAC vs LTV</p>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full"
-                  style={{ background: "rgba(34,197,94,0.08)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.2)", fontWeight: 700 }}>
-                  LTV/CAC: 10.2×
-                </div>
-              </div>
-              <div style={{ height: "180px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={[{ label: "CAC", value: 40000, name: "CAC" }, { label: "LTV", value: 408000, name: "LTV" }]}
-                    margin={{ top: 10, right: 20, left: 10, bottom: 5 }} barCategoryGap="50%">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-                    <XAxis dataKey="label" stroke="#E5E7EB" tick={{ fill: "#6B7280", fontSize: 12, fontWeight: 600 }} />
-                    <YAxis stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="value" name="value" shape={<UnitEconBar />} radius={[6, 6, 0, 0]}>
-                      {UNIT_ECON_DATA.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.div>
-          )}
+            </div>
+            <div style={{ height: "220px" }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenueChartData} margin={{ top: 5, right: 10, left: -5, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+                  <XAxis dataKey="date" stroke="#E5E7EB" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
+                  {/* Format lại cột mốc tiền tệ cho mượt mắt */}
+                  <YAxis stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : `${(v / 1000).toFixed(0)}K`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey="revenue" name="Doanh thu"
+                    stroke={ACCENT} strokeWidth={2.5} fill={ACCENT} fillOpacity={0.12} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
 
-          {/* New Users by Day */}
+          {/* Người dùng mới theo ngày */}
           {usersChartData.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
               className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
@@ -373,7 +349,7 @@ export function FinancialsView() {
                 </div>
                 <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full"
                   style={{ background: "rgba(6,182,212,0.08)", color: "#0891b2", border: "1px solid rgba(6,182,212,0.2)", fontWeight: 700 }}>
-                  <ArrowUpRight size={11} /> {dashData?.overview.totalUsers.toLocaleString()} total
+                  <ArrowUpRight size={11} /> {dashData?.overview.totalUsers.toLocaleString()} Tổng số
                 </div>
               </div>
               <div style={{ height: "200px" }}>
@@ -392,7 +368,7 @@ export function FinancialsView() {
           )}
         </div>
 
-        {/* Summary stats + subscription breakdown */}
+        {/* Tóm tắt chỉ số phụ + Phân bổ gói */}
         <div className="xl:col-span-2 space-y-5">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="grid grid-cols-2 gap-3">
@@ -401,16 +377,16 @@ export function FinancialsView() {
                 style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <p style={{ fontSize: "9px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>{s.label}</p>
                 <p style={{ fontWeight: 800, fontSize: "1.25rem", color: s.color, letterSpacing: "-0.04em", lineHeight: 1 }}>{s.value}</p>
-                <p style={{ fontSize: "10px", color: "#D1D5DB", marginTop: "2px" }}>{s.sub}</p>
+                <p style={{ fontSize: "10px", color: "#9CA3AF", marginTop: "4px" }}>{s.sub}</p>
               </div>
             ))}
           </motion.div>
 
-          {/* Subscription plan breakdown */}
+          {/* Phân bổ các gói Subs */}
           {dashData && (
             <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-              className="rounded-xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-              <p style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Phân bổ gói</p>
+              className="rounded-xl p-5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+              <p style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 16 }}>Phân bổ gói người dùng</p>
               {[
                 { label: "Free", value: dashData.subscriptions.free, color: "#94A3B8" },
                 { label: "Skill Builder", value: dashData.subscriptions.skillBuilder, color: "#FB923C" },
@@ -419,12 +395,12 @@ export function FinancialsView() {
                 const tierTotal = dashData.subscriptions.free + dashData.subscriptions.skillBuilder + dashData.subscriptions.premium || 1;
                 const pct = Math.round((tier.value / tierTotal) * 100);
                 return (
-                  <div key={tier.label} className="mb-3">
-                    <div className="flex justify-between mb-1">
+                  <div key={tier.label} className="mb-4 last:mb-0">
+                    <div className="flex justify-between mb-1.5">
                       <span style={{ fontSize: "12px", color: "#374151", fontWeight: 600 }}>{tier.label}</span>
-                      <span style={{ fontSize: "12px", color: "#6B7280" }}>{tier.value.toLocaleString()} ({pct}%)</span>
+                      <span style={{ fontSize: "12px", color: "#6B7280", fontWeight: 500 }}>{tier.value.toLocaleString()} tài khoản ({pct}%)</span>
                     </div>
-                    <div className="h-1.5 rounded-full" style={{ background: "#F3F4F6" }}>
+                    <div className="h-2 rounded-full" style={{ background: "#F3F4F6" }}>
                       <div className="h-full rounded-full transition-all duration-700"
                         style={{ width: `${pct}%`, background: tier.color }} />
                     </div>
