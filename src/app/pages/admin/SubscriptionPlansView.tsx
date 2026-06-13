@@ -51,11 +51,22 @@ import {
 
 const ACCENT = "#FF6B00";
 
+// Validation limits — guard against backend 400s from integer overflow.
+const MAX_PRICE_VND = 999999999;   // monthly price ceiling (~1 billion VND)
+const MAX_INT_JAVA = 2000000000;   // quota ceiling, just under Java Integer.MAX_VALUE
+
 const PLAN_TYPE_META: Record<ServicePlanType, { label: string; className: string }> = {
   FREE:          { label: "Free",          className: "bg-slate-100 text-slate-600 border-slate-200" },
   SKILL_BUILDER: { label: "Skill Builder", className: "bg-blue-50 text-blue-600 border-blue-200/60" },
   PREMIUM:       { label: "Premium",       className: "bg-orange-50 text-orange-600 border-orange-200/60" },
 };
+
+// Selectable plan types for the create/edit form. Each value is unique per plan (enforced by the backend).
+const PLAN_TYPE_OPTIONS: { value: ServicePlanType; label: string }[] = [
+  { value: "FREE", label: "Free" },
+  { value: "SKILL_BUILDER", label: "Skill Builder" },
+  { value: "PREMIUM", label: "Premium" },
+];
 
 const ACTION_TYPE_LABEL: Record<BusinessActionType, string> = {
   SERVICE_PLAN_CREATED:          "Tạo gói",
@@ -286,6 +297,7 @@ type PlanFormData = {
   planName: string;
   description: string;
   benefits: string[];
+  planType: ServicePlanType;
   monthlyPrice: string;
   currency: string;
   maxWorkspaces: string;
@@ -299,7 +311,7 @@ type PlanFormData = {
 };
 
 const DEFAULT_FORM: PlanFormData = {
-  planName: "", description: "", benefits: [], monthlyPrice: "0", currency: "VND",
+  planName: "", description: "", benefits: [], planType: "FREE", monthlyPrice: "0", currency: "VND",
   maxWorkspaces: "", maxUploads: "", aiGenerateLimit: "",
   maxFileMb: "", maxWorkspaceMb: "",
   active: true, publicVisible: true, sortOrder: "0",
@@ -310,6 +322,7 @@ function planToForm(p: ServicePlanResponse): PlanFormData {
     planName: p.planName,
     description: p.description ?? "",
     benefits: p.benefits ?? [],
+    planType: p.planType ?? "FREE",
     monthlyPrice: String(p.monthlyPrice),
     currency: p.currency ?? "VND",
     maxWorkspaces: p.quotas?.maxWorkspaces != null ? String(p.quotas.maxWorkspaces) : "",
@@ -351,6 +364,11 @@ function PlanFormModal({
   const parseOptInt = (s: string): number | undefined =>
     s.trim() === "" ? undefined : parseInt(s, 10);
 
+  // Inline overflow guards (recomputed each render) — keep in sync with the submit button + fields.
+  const priceOverflow = Number(form.monthlyPrice) > MAX_PRICE_VND;
+  const aiLimitOverflow = Number(form.aiGenerateLimit) > MAX_INT_JAVA;
+  const isFormInvalid = priceOverflow || aiLimitOverflow;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.planName.trim()) { toast.error("Tên gói không được để trống"); return; }
@@ -373,6 +391,7 @@ function PlanFormModal({
           planName: form.planName,
           description: form.description || undefined,
           benefits: form.benefits.map((b) => b.trim()).filter(Boolean),
+          planType: form.planType,
           monthlyPrice: price,
           currency: form.currency,
           ...quotas,
@@ -385,6 +404,7 @@ function PlanFormModal({
           planName: form.planName,
           description: form.description || undefined,
           benefits: form.benefits.map((b) => b.trim()).filter(Boolean),
+          planType: form.planType,
           monthlyPrice: price,
           currency: form.currency,
           ...quotas,
@@ -467,9 +487,52 @@ function PlanFormModal({
                     />
                   </Field>
 
+                  <Field label="Loại gói" required hint="Mỗi loại chỉ gán cho một gói (Free · Skill Builder · Premium)">
+                    <div className="grid grid-cols-3 gap-2">
+                      {PLAN_TYPE_OPTIONS.map((opt) => {
+                        const selected = form.planType === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => set("planType", opt.value)}
+                            className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
+                              selected
+                                ? "border-orange-500 bg-orange-50 text-orange-600 ring-2 ring-orange-500/20"
+                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Field>
+
                   <div className="grid grid-cols-2 gap-4">
-                    <Field label="Giá hàng tháng" required hint="Nhập 0 cho gói miễn phí">
-                      <input className={inputCls} type="number" value={form.monthlyPrice} onChange={(e) => set("monthlyPrice", e.target.value)} min={0} />
+                    <Field label="Giá hàng tháng" required>
+                      <input
+                        className={`${inputCls} ${priceOverflow ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
+                        type="number"
+                        value={form.monthlyPrice}
+                        onChange={(e) => set("monthlyPrice", e.target.value)}
+                        min={0}
+                      />
+                      <AnimatePresence mode="wait" initial={false}>
+                        {priceOverflow ? (
+                          <motion.span key="price-error"
+                            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                            className="text-xs font-medium text-red-500">
+                            ⚠️ Giá hàng tháng vượt quá giới hạn cho phép (Tối đa 999 triệu VNĐ)
+                          </motion.span>
+                        ) : (
+                          <motion.span key="price-hint"
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="text-xs text-slate-400">
+                            Nhập 0 cho gói miễn phí
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </Field>
                     <Field label="Đơn vị tiền tệ">
                       <select className={inputCls} value={form.currency} onChange={(e) => set("currency", e.target.value)}>
@@ -539,7 +602,29 @@ function PlanFormModal({
                       <input className={inputCls} type="number" min={0} value={form.maxUploads} onChange={(e) => set("maxUploads", e.target.value)} placeholder="∞ Không giới hạn" />
                     </Field>
                     <Field label="Lượt tạo AI">
-                      <input className={inputCls} type="number" min={0} value={form.aiGenerateLimit} onChange={(e) => set("aiGenerateLimit", e.target.value)} placeholder="∞ Không giới hạn" />
+                      <input
+                        className={`${inputCls} ${aiLimitOverflow ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
+                        type="number"
+                        min={0}
+                        value={form.aiGenerateLimit}
+                        onChange={(e) => set("aiGenerateLimit", e.target.value)}
+                        placeholder="∞ Không giới hạn"
+                      />
+                      <AnimatePresence mode="wait" initial={false}>
+                        {aiLimitOverflow ? (
+                          <motion.span key="ai-error"
+                            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                            className="text-xs font-medium text-red-500">
+                            ⚠️ Số lượt vượt quá giới hạn lưu trữ hệ thống (Tối đa 2 tỷ)
+                          </motion.span>
+                        ) : (
+                          <motion.span key="ai-hint"
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="text-xs text-slate-400">
+                            Để trống = không giới hạn
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </Field>
                     <Field label="Kích thước file (MB)">
                       <input className={inputCls} type="number" min={0} value={form.maxFileMb} onChange={(e) => set("maxFileMb", e.target.value)} placeholder="∞ Không giới hạn" />
@@ -576,8 +661,8 @@ function PlanFormModal({
                   className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition disabled:opacity-50">
                   Hủy bỏ
                 </button>
-                <button type="submit" disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-amber-500 shadow-lg shadow-orange-500/25 hover:brightness-105 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed">
+                <button type="submit" disabled={saving || isFormInvalid}
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-amber-500 shadow-lg shadow-orange-500/25 hover:brightness-105 active:scale-[0.98] transition disabled:opacity-40 disabled:cursor-not-allowed">
                   {saving && <Loader2 size={15} className="animate-spin" />}
                   {saving ? "Đang lưu..." : editPlan ? "Cập nhật" : "Tạo gói dịch vụ"}
                 </button>

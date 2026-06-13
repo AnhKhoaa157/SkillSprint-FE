@@ -78,6 +78,7 @@ export type CreateServicePlanRequest = {
   planName: string;
   description?: string;
   benefits?: string[];
+  planType: ServicePlanType;
   monthlyPrice: number;
   currency?: string;
   maxWorkspaces?: number;
@@ -94,6 +95,7 @@ export type UpdateServicePlanRequest = {
   planName?: string;
   description?: string;
   benefits?: string[];
+  planType?: ServicePlanType;
   monthlyPrice?: number;
   currency?: string;
   maxWorkspaces?: number;
