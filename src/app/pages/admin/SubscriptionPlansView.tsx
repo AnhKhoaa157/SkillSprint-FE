@@ -710,7 +710,10 @@ function FeaturesModal({
       const features: FeatureToggle[] = Object.entries(toggles).map(([featureKey, enabled]) => ({ featureKey, enabled }));
       const saved = await updatePlanFeatures(plan.planId, { features });
       toast.success("Đã cập nhật tính năng gói");
-      onSaved(saved);
+      // Features is the ONLY place toggles are persisted. Merge the response
+      // onto the current plan so any field the features endpoint may omit
+      // (benefits, quotas, pricing…) is preserved and never becomes undefined.
+      onSaved({ ...plan, ...saved });
       onClose();
     } catch (err) {
       toast.error((err as Error).message || "Có lỗi xảy ra");
@@ -1038,7 +1041,10 @@ export function SubscriptionPlansView() {
       const idx = prev.findIndex((p) => p.planId === saved.planId);
       if (idx >= 0) {
         const updated = [...prev];
-        updated[idx] = saved;
+        // Merge over the existing entry rather than replacing it: status- and
+        // features-update callers may return a partial plan, so we keep the
+        // prior fields instead of dropping them (avoids undefined render errors).
+        updated[idx] = { ...updated[idx], ...saved };
         return updated;
       }
       return [...prev, saved];

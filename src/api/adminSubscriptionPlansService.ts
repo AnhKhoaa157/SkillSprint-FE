@@ -88,7 +88,6 @@ export type CreateServicePlanRequest = {
   active?: boolean;
   publicVisible?: boolean;
   sortOrder?: number;
-  features?: FeatureToggle[];
 };
 
 export type UpdateServicePlanRequest = {
