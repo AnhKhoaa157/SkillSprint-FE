@@ -1,4 +1,5 @@
 import { getAuthHeaders, requestJson, type ApiResponse } from "./apiClient";
+import { triggerSessionExpiry, extractAuthCode } from "./sessionExpiry";
 import { API_BASE } from "./config";
 
 export enum FeedbackType {
@@ -148,7 +149,7 @@ async function parseApiResponse<T>(response: Response): Promise<ApiResponse<T>> 
 
   if (!response.ok) {
     if (response.status === 401) {
-      window.dispatchEvent(new Event("session-kickout-triggered"));
+      triggerSessionExpiry({ status: 401, code: extractAuthCode(payload) });
     }
     throw new Error(payload?.message || `Server error: ${response.status}`);
   }

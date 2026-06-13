@@ -1,4 +1,5 @@
 import { getStoredAuthSession, isValidAuthSession } from "./authService";
+import { triggerSessionExpiry, extractAuthCode } from "./sessionExpiry";
 import { API_BASE } from "./config";
 
 export type ApiResponse<T> = {
@@ -71,7 +72,7 @@ export async function requestJson<T>(
     }
 
     if (response.status === 401) {
-      window.dispatchEvent(new Event("session-kickout-triggered"));
+      triggerSessionExpiry({ status: 401, code: extractAuthCode(payload) });
     }
 
     const message = payload?.message || `Server error: ${response.status}`;

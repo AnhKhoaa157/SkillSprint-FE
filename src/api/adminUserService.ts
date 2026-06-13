@@ -1,4 +1,5 @@
 import { getAuthHeaders } from "./apiClient";
+import { triggerSessionExpiry, extractAuthCode } from "./sessionExpiry";
 import { API_BASE } from "./config";
 
 type ApiResponse<T> = {
@@ -104,7 +105,7 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<ApiRespon
 
     if (!res.ok) {
       if (res.status === 401) {
-        window.dispatchEvent(new Event("session-kickout-triggered"));
+        triggerSessionExpiry({ status: 401, code: extractAuthCode(payload) });
       }
       const message = payload?.message || `Server error ${res.status}`;
       throw new Error(message);

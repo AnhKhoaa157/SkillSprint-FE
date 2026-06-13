@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosResponse } from "axios";
 import { getAuthToken, getSessionId } from "./apiClient";
+import { triggerSessionExpiry, extractAuthCode } from "./sessionExpiry";
 import { API_BASE } from "./config";
 
 export type ApiResponse<T> = {
@@ -26,7 +27,7 @@ skillSprintApiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      window.dispatchEvent(new Event("session-kickout-triggered"));
+      triggerSessionExpiry({ status: 401, code: extractAuthCode(error.response?.data) });
     }
     // Extract the backend's error message from the response body if available
     const backendMessage: string | undefined = error.response?.data?.message;
