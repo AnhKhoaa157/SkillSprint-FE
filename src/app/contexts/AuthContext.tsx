@@ -13,6 +13,7 @@ import {
   isValidAuthSession,
   type AuthSession,
 } from "../../api/authService";
+import { resetSessionExpiry } from "../../api/sessionExpiry";
 
 const AUTH_STORAGE_KEY = "skillSprint.auth.tokens";
 const SESSION_HYDRATED_KEY = "skillSprint.auth.hydrated";
@@ -85,6 +86,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
     storeAuthTokens(tokens);
     hydrateSessionStorage(tokens);
     setSession(tokens);
+    resetSessionExpiry(); // re-arm the 401 guard so a future expiry fires again
   }, []);
 
   const logout = useCallback(() => {
