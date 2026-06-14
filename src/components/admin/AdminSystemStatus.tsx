@@ -21,6 +21,7 @@ import {
   type MaintenanceResponse,
   type UpdateMaintenanceRequest,
 } from "../../api/systemMaintenanceService";
+import { setCachedMaintenance } from "../../api/maintenanceState";
 
 // Shared SaaS input style: rounded-xl with a smooth orange focus ring.
 const inputCls =
@@ -51,6 +52,18 @@ export function AdminSystemStatus() {
     setMessage(next.message ?? "");
     setStartLocal(isoToLocalInput(next.startAt));
     setEndLocal(isoToLocalInput(next.endAt));
+
+    // Keep the shared (framework-agnostic) cache in lockstep with what the admin just toggled, so
+    // the apiClient interceptor + login guard react immediately instead of waiting for the next
+    // 30s poll. `active` already means "enabled AND inside the [startAt, endAt] window".
+    // NOTE: this only flips state in THIS admin browser. Learner sessions are force-logged-out by
+    // each client's <MaintenanceGate> (and, authoritatively, by the backend invalidating sessions).
+    setCachedMaintenance({
+      isActive: next.active,
+      message: next.message ?? "",
+      startAt: next.startAt,
+      endAt: next.endAt,
+    });
   }
 
   async function load() {
@@ -116,6 +129,10 @@ export function AdminSystemStatus() {
           <div>
             <h2 className="text-base font-bold text-slate-900 leading-tight">Chế độ bảo trì hệ thống</h2>
             <p className="text-xs text-slate-500 mt-0.5">Tạm ngưng truy cập cho người dùng · Admin luôn vào được</p>
+            {/* Operator reminder: the client-side lockdown is defense-in-depth only. */}
+            <p className="text-[11px] text-slate-400 mt-1 leading-snug">
+              Lưu ý: chặn phía giao diện chỉ là lớp phòng vệ bổ sung — hiệu lực thực sự phụ thuộc vào việc backend trả về 503 cho người dùng không phải admin.
+            </p>
           </div>
         </div>
         <button

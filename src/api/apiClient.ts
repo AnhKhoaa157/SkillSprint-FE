@@ -1,5 +1,6 @@
-import { getStoredAuthSession, isValidAuthSession } from "./authService";
+import { getStoredAuthSession, isValidAuthSession, isAdminRole } from "./authService";
 import { triggerSessionExpiry, extractAuthCode } from "./sessionExpiry";
+import { isMaintenanceActive } from "./maintenanceState";
 import { API_BASE } from "./config";
 
 export type ApiResponse<T> = {
@@ -17,6 +18,36 @@ export function getAuthToken(): string | null {
 export function getSessionId(): string | null {
   const session = getStoredAuthSession();
   return isValidAuthSession(session) ? session.sessionId : null;
+}
+
+/**
+ * Paths that must stay reachable even while maintenance is active — chiefly the public status
+ * endpoint we poll to *learn about* maintenance, plus the auth endpoints (those run through
+ * authService's own fetcher, but exempt them here defensively).
+ */
+function isMaintenanceExemptPath(path: string): boolean {
+  return path.startsWith("/api/system/status") || path.startsWith("/api/auth/");
+}
+
+/**
+ * Maintenance interceptor. While maintenance is active, every non-admin (and unauthenticated)
+ * request is rejected client-side before it hits the network — so learners can't perform any
+ * action, while admins keep full access. Throws a 503-shaped error.
+ *
+ * ⚠️ Defense-in-depth only: a learner can still call the API directly with a valid JWT, so the
+ * backend MUST also reject non-admin traffic with 503 during maintenance.
+ */
+function assertMaintenanceAllows(path: string): void {
+  if (!isMaintenanceActive() || isMaintenanceExemptPath(path)) return;
+
+  const session = getStoredAuthSession();
+  if (isAdminRole(session?.role)) return; // admins are unaffected
+
+  const error: any = new Error("Hệ thống đang bảo trì. Vui lòng quay lại sau khi quá trình hoàn tất.");
+  error.status = 503;
+  error.code = "MAINTENANCE_ACTIVE";
+  error.maintenance = true;
+  throw error;
 }
 
 export function getAuthHeaders(): Record<string, string> {
@@ -43,6 +74,9 @@ export async function requestJson<T>(
   path: string,
   opts: RequestInit = {},
 ): Promise<ApiResponse<T>> {
+  // Maintenance lockdown: short-circuit non-admin traffic before touching the network.
+  assertMaintenanceAllows(path);
+
   const authHeaders = getAuthHeaders();
 
   const headers: Record<string, string> = {

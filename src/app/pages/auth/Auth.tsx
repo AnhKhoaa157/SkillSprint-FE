@@ -5,9 +5,9 @@ import { Mail, Lock, ArrowLeft, Check } from "lucide-react";
 import { RegistrationSuccessModal } from "../../components/modals/RegistrationSuccessModal";
 import { BrandLogo } from "../../components/layout/BrandLogo";
 import { AuthForm, getEmailError } from "./AuthForm";
-import { clearAuthTokens, completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens, getPostLoginPath, redirectToCognitoGoogleSignIn } from "../../../api/authService";
-import { useMaintenance } from "../../../components/system/MaintenanceGate";
-import { MaintenancePopup } from "../../../components/system/MaintenancePopup";
+import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens, getPostLoginPath, redirectToCognitoGoogleSignIn } from "../../../api/authService";
+// TODO: Adjust this import path to match your file structure
+import { MaintenanceScreen } from "../../../components/system/MaintenanceScreen";
 
 /* ─── Tokens ─── */
 const F   = "'Plus Jakarta Sans','Inter',sans-serif";
@@ -134,7 +134,7 @@ function LeftPanel() {
               border: "1px solid #FFEDD5",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
+              justifyContent:"center",
               flexShrink: 0,
             }}>
               <Check size={11} color="#FF6B00" strokeWidth={3.5} />
@@ -184,9 +184,7 @@ function LeftPanel() {
   );
 }
 
-/* ═══════════════════════════════════════════
-   RESET PASSWORD MODAL
-═══════════════════════════════════════════ */
+/* ─── RESET PASSWORD MODAL ─── */
 function ResetPassword({ onBack }: { onBack:()=>void }) {
   const [email, setEmail] = useState("");
   const [confirmationCode, setConfirmationCode] = useState("");
@@ -547,18 +545,17 @@ function ConfirmRegisterModal({ email, onClose, onConfirmed }: { email: string; 
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { status } = useMaintenance();
-  const [isMaintenancePopupOpen, setIsMaintenancePopupOpen] = useState(false);
   const [tab,       setTab]     = useState<"signin"|"signup">("signin");
   const [showReset, setShowReset] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState("");
   const [challengeSession, setChallengeSession] = useState("");
   const [challengeRole, setChallengeRole] = useState<string | null>(null);
-  // removed local overlay; destination layout will display loader
+  
   /* form state */
   const [name,     setName]     = useState("");
   const [email,    setEmail]    = useState("");
@@ -573,29 +570,12 @@ export default function Auth() {
     if (mode === "login") setTab("signin");
   }, [location.search]);
 
-  /**
-   * Authentication-layer maintenance boundary. When maintenance is active and the freshly
-   * authenticated profile is NOT an admin, we intercept the learner BEFORE any route navigation:
-   * surface the maintenance popup and wipe any partial session/token so the client stays
-   * cleanly unauthenticated. Returns true when the caller must abort the login transition.
-   */
-  const blockLearnerDuringMaintenance = (role: unknown): boolean => {
-    if (status?.isActive === true && !isAdminRole(role)) {
-      clearAuthTokens();
-      setIsMaintenancePopupOpen(true);
-      return true;
-    }
-    return false;
-  };
-
   const onLoginSuccess = async (tokens: Parameters<typeof storeAuthTokens>[0]) => {
     try {
       localStorage.clear();
       sessionStorage.clear();
 
       storeAuthTokens(tokens);
-
-      console.log("[Auth] Fresh session stored. Initiating routing cooldown...");
 
       setTimeout(() => {
         window.location.href = getPostLoginPath(tokens.role);
@@ -627,11 +607,6 @@ export default function Auth() {
           return;
         }
 
-        // Maintenance boundary: block learners at the auth layer before navigating.
-        if (blockLearnerDuringMaintenance(result.tokens.role)) {
-          return;
-        }
-
         await onLoginSuccess(result.tokens);
       } else if (result.status === "new-password-required") {
         setChallengeSession(result.session);
@@ -639,8 +614,17 @@ export default function Auth() {
         setShowNewPassword(true);
       }
     } catch (e) {
-      setAuthError(e instanceof Error ? e.message : "Tự động đăng nhập thất bại. Vui lòng đăng nhập thủ công.");
-      setTab("signin");
+      const isMaintenance = e && typeof e === 'object' && ('status' in e ? e.status === 503 : false) || 
+                            (e instanceof Error && (e.message.includes("503") || e.message.toLowerCase().includes("maintenance")));
+      
+      if (isMaintenance) {
+        setPassword(""); // 🌟 Clear password lập tức để tránh gửi lại dữ liệu cũ
+        setAuthError("");
+        setShowMaintenanceModal(true);
+      } else {
+        setAuthError(e instanceof Error ? e.message : "Tự động đăng nhập thất bại. Vui lòng đăng nhập thủ công.");
+        setTab("signin");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -670,7 +654,16 @@ export default function Auth() {
           setShowConfirm(true);
           setShowSuccess(false);
         } catch (e) {
-          setAuthError(e instanceof Error ? e.message : "Không thể tạo tài khoản.");
+          const isMaintenance = e && typeof e === 'object' && ('status' in e ? e.status === 503 : false) || 
+                                (e instanceof Error && (e.message.includes("503") || e.message.toLowerCase().includes("maintenance")));
+          
+          if (isMaintenance) {
+            setPassword(""); // 🌟 Khóa payload form đăng ký
+            setAuthError("");
+            setShowMaintenanceModal(true);
+          } else {
+            setAuthError(e instanceof Error ? e.message : "Không thể tạo tài khoản.");
+          }
         }
 
         return;
@@ -691,11 +684,6 @@ export default function Auth() {
             return;
           }
 
-          // Maintenance boundary: block learners at the auth layer before navigating.
-          if (blockLearnerDuringMaintenance(result.tokens.role)) {
-            return;
-          }
-
           await onLoginSuccess(result.tokens);
         } else if (result.status === "new-password-required") {
           setChallengeSession(result.session);
@@ -703,9 +691,17 @@ export default function Auth() {
           setShowNewPassword(true);
         }
       } catch (e) {
-        setAuthError(e instanceof Error ? e.message : "Đăng nhập thất bại.");
-        // ensure user sees the error area
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        const isMaintenance = e && typeof e === 'object' && ('status' in e ? e.status === 503 : false) || 
+                              (e instanceof Error && (e.message.includes("503") || e.message.toLowerCase().includes("maintenance")));
+        
+        if (isMaintenance) {
+          setPassword(""); // 🌟 Khóa payload form đăng nhập thường
+          setAuthError("");
+          setShowMaintenanceModal(true);
+        } else {
+          setAuthError(e instanceof Error ? e.message : "Đăng nhập thất bại.");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -717,14 +713,6 @@ export default function Auth() {
       className="h-screen min-h-screen flex w-full overflow-hidden bg-white font-sans"
       style={{ fontFamily: F }}
     >
-      {/* Maintenance interceptor — surfaced when a learner tries to sign in during maintenance. */}
-      <MaintenancePopup
-        open={isMaintenancePopupOpen}
-        onClose={() => setIsMaintenancePopupOpen(false)}
-      />
-
-      {/* Navigates immediately to app; loader displayed by dashboard layout when needed */}
-      {/* ── Left dark panel ── */}
       <LeftPanel/>
 
       {/* ── Right white panel ── */}
@@ -750,7 +738,6 @@ export default function Auth() {
         {/* Form content */}
         <div className="w-full max-w-md mx-auto px-4 sm:px-6 py-8 flex flex-1 flex-col justify-center min-h-0">
           <div className="w-full">
-
             <AuthForm
               mode={tab}
               name={name}
@@ -779,6 +766,7 @@ export default function Auth() {
         )}
       </AnimatePresence>
 
+      {/* New Password Overlay */}
       <AnimatePresence>
         {showNewPassword && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
@@ -800,15 +788,6 @@ export default function Auth() {
                   return;
                 }
 
-                // Maintenance boundary: intercept the learner before routing into the workspace.
-                if (blockLearnerDuringMaintenance(role ?? challengeRole)) {
-                  setShowNewPassword(false);
-                  setChallengeSession("");
-                  setChallengeRole(null);
-                  setPassword("");
-                  return;
-                }
-
                 setShowNewPassword(false);
                 setChallengeSession("");
                 setChallengeRole(null);
@@ -820,6 +799,7 @@ export default function Auth() {
         )}
       </AnimatePresence>
       
+      {/* Confirm Register Overlay */}
       <AnimatePresence>
         {showConfirm && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
@@ -848,6 +828,26 @@ export default function Auth() {
           navigate("/");
         }}
       />
+
+      {/* Maintenance screen full modal overlay */}
+      <AnimatePresence>
+        {showMaintenanceModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            style={{ position: "fixed", inset: 0, zIndex: 100 }}
+          >
+            <MaintenanceScreen 
+              onClose={() => {
+                setShowMaintenanceModal(false);
+                setPassword(""); // 🌟 Đảm bảo khi modal hạ xuống form sẽ rỗng pass
+                setAuthError("");
+              }} 
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
