@@ -123,6 +123,7 @@ export async function getAdminUsers(search?: string, page = 0, size = 10) {
   if (search) q.set("search", search);
   q.set("page", String(page));
   q.set("size", String(size));
+  q.set("_t", String(Date.now())); // Bypass browser/proxy HTTP caches
   const resp = await authFetch<any>(`/api/admin/users?${q.toString()}`);
   if (!resp.data) throw new Error(resp.message || "Empty response");
 
@@ -138,7 +139,7 @@ export async function getAdminUsers(search?: string, page = 0, size = 10) {
 }
 
 export async function getAdminUser(userId: string) {
-  const resp = await authFetch<any>(`/api/admin/users/${encodeURIComponent(userId)}`);
+  const resp = await authFetch<any>(`/api/admin/users/${encodeURIComponent(userId)}?_t=${Date.now()}`);
   if (!resp.data) throw new Error(resp.message || "Empty response");
 
   return {

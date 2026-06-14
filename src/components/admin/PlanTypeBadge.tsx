@@ -91,6 +91,80 @@ function resolveIcon(name?: string | null): LucideIcon {
   return LucideIcons.Layers;
 }
 
+/**
+ * Static lookup mapping common Tailwind color keys to their exact Hex values.
+ * Used for dynamic inline gradient rendering to bypass Tailwind JIT compilation limits.
+ */
+const TAILWIND_HEX_MAP: Record<string, string> = {
+  "rose-500": "#f43f5e",
+  "rose-600": "#e11d48",
+  "red-500": "#ef4444",
+  "red-600": "#dc2626",
+  "orange-500": "#f97316",
+  "orange-600": "#ea580c",
+  "amber-500": "#f59e0b",
+  "amber-600": "#d97706",
+  "blue-500": "#3b82f6",
+  "blue-600": "#2563eb",
+  "emerald-500": "#10b981",
+  "emerald-600": "#059669",
+  "purple-500": "#a855f7",
+  "purple-600": "#9333ea",
+  // Common presets / fallbacks
+  "slate-200": "#e2e8f0",
+  "slate-300": "#cbd5e1",
+  "slate-700": "#334155",
+  "indigo-500": "#6366f1",
+  "indigo-600": "#4f46e5",
+  "teal-500": "#14b8a6",
+  "teal-600": "#0d9488",
+  "pink-500": "#ec4899",
+  "pink-600": "#db2777",
+  "amber-400": "#fbbf24",
+};
+
+/**
+ * Parses dynamic class string from database and returns corresponding inline styles
+ * containing CSS linear gradient background and customized drop shadow.
+ */
+function parseTailwindGradient(gradientString: string): CSSProperties {
+  if (!gradientString) return {};
+  const cleaned = gradientString.trim();
+
+  // If it's a raw CSS hex color or gradient, return directly
+  if (cleaned.startsWith("#") || cleaned.includes(",") || cleaned.includes("gradient") || cleaned.startsWith("rgb")) {
+    return { background: cleaned };
+  }
+
+  const tokens = cleaned.split(/\s+/);
+  let fromHex = "";
+  let toHex = "";
+
+  for (const t of tokens) {
+    if (t.startsWith("from-")) {
+      const name = t.replace("from-", "");
+      fromHex = TAILWIND_HEX_MAP[name];
+    } else if (t.startsWith("to-")) {
+      const name = t.replace("to-", "");
+      toHex = TAILWIND_HEX_MAP[name];
+    } else if (t.startsWith("via-") && !toHex) {
+      const name = t.replace("via-", "");
+      toHex = TAILWIND_HEX_MAP[name];
+    }
+  }
+
+  const styles: CSSProperties = {};
+
+  if (fromHex || toHex) {
+    const startColor = fromHex || toHex;
+    const endColor = toHex || fromHex;
+    styles.background = `linear-gradient(135deg, ${startColor}, ${endColor})`;
+    styles.boxShadow = `0 4px 12px ${endColor}40`; // ~25% alpha opacity
+  }
+
+  return styles;
+}
+
 export type PlanTypeBadgeProps = {
   type?: ServicePlanType | null;
   label?: string | null;
@@ -134,9 +208,12 @@ export function PlanTypeBadge({
   const pulseStyle =
     animation === "pulse" ? ({ "--plan-pulse": pulseRgb(gradient) } as CSSProperties) : undefined;
 
+  const inlineStyles = parseTailwindGradient(gradient);
+  const combinedStyle = { ...pulseStyle, ...inlineStyles };
+
   return (
     <span
-      style={pulseStyle}
+      style={combinedStyle}
       className={`inline-flex items-center rounded-full font-bold whitespace-nowrap shadow-sm select-none ${gradient} ${sizing} ${animClass}`}
     >
       <Icon size={iconSize} className="shrink-0" />

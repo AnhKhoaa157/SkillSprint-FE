@@ -1,5 +1,14 @@
 import type { AdminUserDetail, SubscriptionAdminResponse } from "../../../../api/adminUserService";
 import type { ServicePlanType } from "../../../../api/adminSubscriptionPlansService";
+import {
+  getStatusBadge,
+  safeFormatDate as formatDate,
+  safeFormatDateTime as formatDateTime,
+  SUB_TEXTS,
+  type StatusBadge,
+} from "../../../../utils/adminStatusHelpers";
+
+export { getStatusBadge, formatDate, formatDateTime, type StatusBadge };
 
 /* -------------------------------------------------------------------------- */
 /*  Select options — single source of truth for the admin action dropdowns.   */
@@ -23,29 +32,6 @@ export const PLAN_TYPE_OPTIONS: SelectOption[] = [
   { label: "Gói tối cao đầy đủ (PREMIUM)", value: "PREMIUM" },
   { label: "Gói hệ thống đặc quyền (ADMIN_DEFAULT)", value: "ADMIN_DEFAULT" },
 ];
-
-/* -------------------------------------------------------------------------- */
-/*  Account-status badge palette.                                             */
-/* -------------------------------------------------------------------------- */
-
-export type StatusBadge = { bg: string; text: string; border: string; label: string };
-
-const STATUS_BADGE: Record<string, StatusBadge> = {
-  ACTIVE: { bg: "rgba(34,197,94,0.08)", text: "#16A34A", border: "rgba(34,197,94,0.15)", label: "Hoạt động" },
-  DISABLE: { bg: "rgba(100,116,139,0.08)", text: "#475569", border: "rgba(100,116,139,0.15)", label: "Vô hiệu" },
-  DISABLED: { bg: "rgba(100,116,139,0.08)", text: "#475569", border: "rgba(100,116,139,0.15)", label: "Vô hiệu" },
-};
-
-export function getStatusBadge(status?: string | null): StatusBadge {
-  return (
-    STATUS_BADGE[String(status).toUpperCase()] ?? {
-      bg: "#F3F4F6",
-      text: "#6B7280",
-      border: "#E5E7EB",
-      label: status || "Không rõ",
-    }
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 /*  Pure helpers.                                                             */
@@ -83,16 +69,6 @@ export function resolvePlanBadge(sub: SubscriptionAdminResponse): { type: Servic
       ? "PREMIUM"
       : ((sub.planType as ServicePlanType) ?? "FREE");
 
-  return { type, label: admin ? "ADMIN" : sub.planName || "Gói ẩn" };
+  return { type, label: admin ? "ADMIN" : sub.planName || SUB_TEXTS.HIDDEN_PLAN };
 }
 
-/** Localised date, or an em-dash when the value is missing. */
-export function formatDate(value?: string | null, opts?: Intl.DateTimeFormatOptions): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("vi-VN", opts);
-}
-
-/** Localised date + time (used by the activity log). */
-export function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString("vi-VN");
-}

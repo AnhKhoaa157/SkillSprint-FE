@@ -29,6 +29,7 @@ export function SubscriptionPlansView() {
   function handlePlanSaved(saved: ServicePlanResponse) {
     upsert(saved);
     audit.invalidate(); // log changed → refetch next time the tab is opened
+    window.dispatchEvent(new CustomEvent("subscription-plans-updated"));
   }
 
   async function openDetail(plan: ServicePlanResponse) {

@@ -20,7 +20,7 @@ import {
 export default function AdminUserDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, viewState, loadError, form, dirty, setField, save, savingKey } = useAdminUserDetail(id);
+  const { user, plans, viewState, loadError, form, dirty, setField, save, savingKey } = useAdminUserDetail(id);
 
   function renderContent() {
     switch (viewState) {
@@ -38,7 +38,7 @@ export default function AdminUserDetailPage() {
             <UserBanner user={user!} id={id!} />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-              <SubscriptionCard sub={user!.currentSubscription} />
+              <SubscriptionCard sub={user!.currentSubscription} plans={plans} />
               <ControlPanel
                 form={form}
                 dirty={dirty}
