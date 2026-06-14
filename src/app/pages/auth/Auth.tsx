@@ -5,7 +5,9 @@ import { Mail, Lock, ArrowLeft, Check } from "lucide-react";
 import { RegistrationSuccessModal } from "../../components/modals/RegistrationSuccessModal";
 import { BrandLogo } from "../../components/layout/BrandLogo";
 import { AuthForm, getEmailError } from "./AuthForm";
-import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens, getPostLoginPath, redirectToCognitoGoogleSignIn } from "../../../api/authService";
+import { clearAuthTokens, completeNewPassword, confirmForgotPassword, confirmRegister, forgotPassword, isAdminRole, login, register, resendConfirmationCode, storeAuthTokens, getPostLoginPath, redirectToCognitoGoogleSignIn } from "../../../api/authService";
+import { useMaintenance } from "../../../components/system/MaintenanceGate";
+import { MaintenancePopup } from "../../../components/system/MaintenancePopup";
 
 /* ─── Tokens ─── */
 const F   = "'Plus Jakarta Sans','Inter',sans-serif";
@@ -545,6 +547,8 @@ function ConfirmRegisterModal({ email, onClose, onConfirmed }: { email: string; 
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { status } = useMaintenance();
+  const [isMaintenancePopupOpen, setIsMaintenancePopupOpen] = useState(false);
   const [tab,       setTab]     = useState<"signin"|"signup">("signin");
   const [showReset, setShowReset] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -568,6 +572,21 @@ export default function Auth() {
     if (mode === "register") setTab("signup");
     if (mode === "login") setTab("signin");
   }, [location.search]);
+
+  /**
+   * Authentication-layer maintenance boundary. When maintenance is active and the freshly
+   * authenticated profile is NOT an admin, we intercept the learner BEFORE any route navigation:
+   * surface the maintenance popup and wipe any partial session/token so the client stays
+   * cleanly unauthenticated. Returns true when the caller must abort the login transition.
+   */
+  const blockLearnerDuringMaintenance = (role: unknown): boolean => {
+    if (status?.isActive === true && !isAdminRole(role)) {
+      clearAuthTokens();
+      setIsMaintenancePopupOpen(true);
+      return true;
+    }
+    return false;
+  };
 
   const onLoginSuccess = async (tokens: Parameters<typeof storeAuthTokens>[0]) => {
     try {
@@ -605,6 +624,11 @@ export default function Auth() {
         if (isAdminRole(result.tokens.role)) {
           setAuthError("Tài khoản quản trị không thể đăng nhập ở cổng Learner. Vui lòng dùng cổng Admin.");
           setTab("signin");
+          return;
+        }
+
+        // Maintenance boundary: block learners at the auth layer before navigating.
+        if (blockLearnerDuringMaintenance(result.tokens.role)) {
           return;
         }
 
@@ -667,6 +691,11 @@ export default function Auth() {
             return;
           }
 
+          // Maintenance boundary: block learners at the auth layer before navigating.
+          if (blockLearnerDuringMaintenance(result.tokens.role)) {
+            return;
+          }
+
           await onLoginSuccess(result.tokens);
         } else if (result.status === "new-password-required") {
           setChallengeSession(result.session);
@@ -688,6 +717,12 @@ export default function Auth() {
       className="h-screen min-h-screen flex w-full overflow-hidden bg-white font-sans"
       style={{ fontFamily: F }}
     >
+      {/* Maintenance interceptor — surfaced when a learner tries to sign in during maintenance. */}
+      <MaintenancePopup
+        open={isMaintenancePopupOpen}
+        onClose={() => setIsMaintenancePopupOpen(false)}
+      />
+
       {/* Navigates immediately to app; loader displayed by dashboard layout when needed */}
       {/* ── Left dark panel ── */}
       <LeftPanel/>
@@ -762,6 +797,15 @@ export default function Auth() {
                   setChallengeRole(null);
                   setPassword("");
                   setAuthError("Tài khoản quản trị không thể đăng nhập ở cổng Learner. Vui lòng dùng cổng Admin.");
+                  return;
+                }
+
+                // Maintenance boundary: intercept the learner before routing into the workspace.
+                if (blockLearnerDuringMaintenance(role ?? challengeRole)) {
+                  setShowNewPassword(false);
+                  setChallengeSession("");
+                  setChallengeRole(null);
+                  setPassword("");
                   return;
                 }
 
