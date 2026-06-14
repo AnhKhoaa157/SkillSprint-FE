@@ -61,8 +61,11 @@ export const useMaintenance = () => useContext(MaintenanceContext);
  *   3. OPEN      — first check done AND not in maintenance → render `children`.
  *
  * The admin escape hatch (`/admin-login`, `/admin/*`) bypasses states 1 & 2 entirely so an operator
- * can always sign in and lift maintenance. The live status is published via context (useMaintenance)
- * for banners and the admin dashboard regardless of which state renders.
+ * can always sign in and lift maintenance. The learner auth routes (`/login`, `/auth*`) likewise
+ * bypass them and delegate to <Auth>, which uses a *soft lockdown*: the login form stays visible at
+ * all times, its buttons are disabled and an amber maintenance banner is shown while locked, and a
+ * 5s poll re-enables everything the moment maintenance lifts. The live status is published via
+ * context (useMaintenance) for banners and the admin dashboard regardless of which state renders.
  *
  *   <MaintenanceGate>
  *     <AppRoutes />
@@ -113,10 +116,31 @@ export function MaintenanceGate({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("popstate", onNavigate);
   }, []);
 
-  // Resolve the three-state machine. Order matters: the admin portal is always reachable; then we
-  // refuse to reveal the app until the first check resolves; then we enforce active maintenance.
+  const pathname = window.location.pathname;
+  // Learner auth pages own their ENTIRE maintenance lifecycle and use a *soft lockdown* UI: <Auth>
+  // keeps the login form visible at all times, disables the submit/Google buttons and shows an amber
+  // maintenance banner while locked, runs its own 5s poll, and re-enables everything automatically
+  // when the backend lifts maintenance. The OAuth callback under /auth* must also stay reachable so a
+  // Google sign-in can complete. So we ALWAYS let these routes mount their children — never pre-empt
+  // them with the loader or the full-screen <MaintenanceScreen />; <Auth> renders its own initial
+  // checking-spinner and its own locked treatment.
+  //   - "/login"        → <Auth>
+  //   - "/auth", "/auth/callback" → redirect + OAuth callback handler
+  const isAuthRoute = pathname === "/login" || pathname.startsWith("/auth");
+
+  // Resolve the state machine. ORDER IS LOAD-BEARING:
+  //
+  //   1. ADMIN + AUTH — always reachable. The admin portal must never be locked out of the
+  //                     maintenance toggle, and the learner auth routes run their own soft lockdown
+  //                     (form stays visible, buttons disabled, banner shown). Both own their UI, so
+  //                     we hand them `children` directly and let them mount immediately.
+  //   2. LOADING      — for every OTHER (protected/dashboard) route, the first status check hasn't
+  //                     resolved yet → hold a full-screen loader so the app never mounts (and never
+  //                     fires data requests) before the server's verdict is in.
+  //   3. ACTIVE       — those routes are replaced wholesale by <MaintenanceScreen />.
+  //   4. OPEN         — first check done and system healthy → render `children`.
   let content: ReactNode;
-  if (isAdminEscapeHatch(window.location.pathname)) {
+  if (isAdminEscapeHatch(pathname) || isAuthRoute) {
     content = children;
   } else if (loading) {
     content = <MaintenanceGateLoader />;
