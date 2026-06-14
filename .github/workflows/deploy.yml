@@ -25,6 +25,8 @@ env:
   S3_BUCKET: skillsprint-fe-prod
   CLOUDFRONT_DISTRIBUTION_ID: EYCOBM8GYKNFD
   DEPLOY_ROLE_ARN: arn:aws:iam::781863099930:role/GitHubActionsSkillSprintFrontendDeployRole
+  # ✅ SỬA CẢNH BÁO: Ép các runner chạy JavaScript actions trên Node.js 24 
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   ci-cd:
@@ -36,11 +38,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 1b) Node.js v20 runtime with npm cache controls
-      - name: Setup Node.js v20
+      # 1b) Node.js v24 runtime (Cập nhật từ bản cũ 20 lên bản mới 24 bảo mật hơn)
+      - name: Setup Node.js v24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       # 2) Clean, reproducible install from the lockfile
@@ -52,8 +54,8 @@ jobs:
         run: npx tsc --noEmit
 
       # 🛡️ TẦNG PHÒNG THỦ 2 — Break-Build Guard.
-      #     A single failing assertion exits non-zero and halts the pipeline immediately,
-      #     so corrupted layouts can never reach the cloud assets.
+      # A single failing assertion exits non-zero and halts the pipeline immediately,
+      # so corrupted layouts can never reach the cloud assets.
       - name: Run frontend test suite
         run: npm run test:ci
 
