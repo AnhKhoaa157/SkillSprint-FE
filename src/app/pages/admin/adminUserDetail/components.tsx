@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import { PlanTypeBadge } from "../../../../components/admin/PlanTypeBadge";
 import type { AdminUserDetail, SubscriptionAdminResponse } from "../../../../api/adminUserService";
+import { SUB_TEXTS, resolveLivePlan, safeFormatDate } from "../../../../utils/adminStatusHelpers";
+import SubscriptionStatusBadge from "../../../../components/admin/SubscriptionStatusBadge";
 import type { ActionKey } from "./useAdminUserDetail";
 import {
   type SelectOption,
@@ -65,26 +67,6 @@ export const NotFoundScreen = () => (
 export const InvalidIdScreen = () => (
   <StateScreen icon={<AlertTriangle size={22} className="text-amber-500" />} title="ID người dùng không hợp lệ." />
 );
-
-/* -------------------------------------------------------------------------- */
-/*  Plan badge — resolves the visual contract then defers to PlanTypeBadge.   */
-/* -------------------------------------------------------------------------- */
-
-export function DynamicPlanBadge({ sub }: { sub?: SubscriptionAdminResponse | null }) {
-  if (!sub) {
-    return <span className="text-xs font-medium text-slate-400 italic">Chưa đăng ký gói</span>;
-  }
-  const { type, label } = resolvePlanBadge(sub);
-  return (
-    <PlanTypeBadge
-      type={type}
-      label={label}
-      badgeColor={sub.badgeColor}
-      badgeIcon={sub.badgeIcon}
-      animationType={sub.animationType}
-    />
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 /*  Header banner.                                                            */
@@ -165,8 +147,24 @@ export function UserBanner({ user, id }: { user: AdminUserDetail; id: string }) 
 /*  Subscription summary card.                                                */
 /* -------------------------------------------------------------------------- */
 
-export function SubscriptionCard({ sub }: { sub?: SubscriptionAdminResponse | null }) {
+export function SubscriptionCard({ sub, plans }: { sub?: SubscriptionAdminResponse | null; plans?: any[] }) {
   const active = sub?.status?.toUpperCase() === "ACTIVE";
+
+  const livePlan = plans?.find(
+    (p) => String(p.planId).toLowerCase().trim() === String((sub as any)?.planId).toLowerCase().trim()
+  ) || null;
+
+  const badgeColor = livePlan?.customClasses || sub?.badgeColor;
+  const badgeIcon = livePlan?.iconName || sub?.badgeIcon;
+  const animationType = livePlan?.animation || sub?.animationType;
+
+  const livePlanName = livePlan?.planName || sub?.planName;
+  const isAdmin = sub?.planType === "ADMIN_DEFAULT" || String(livePlanName || "").toUpperCase().includes("ADMIN");
+  const isPremium = sub?.planType === "PREMIUM" || String(livePlanName || "").toUpperCase().includes("PREMIUM");
+
+  const planType = (isAdmin ? "ADMIN_DEFAULT" : isPremium ? "PREMIUM" : (sub?.planType ?? "FREE")) as any;
+  const planName = isAdmin ? "ADMIN" : (livePlanName || "HIDDEN PLAN");
+
   return (
     <motion.div
       variants={itemVariants}
@@ -185,22 +183,20 @@ export function SubscriptionCard({ sub }: { sub?: SubscriptionAdminResponse | nu
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/60 flex flex-col justify-center items-start gap-1.5 shadow-sm">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gói đăng ký hiện hành</span>
-                <DynamicPlanBadge sub={sub} />
+                <PlanTypeBadge
+                  type={planType}
+                  label={planName}
+                  badgeColor={badgeColor}
+                  badgeIcon={badgeIcon}
+                  animationType={animationType}
+                  size="md"
+                />
               </div>
 
               <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/60 space-y-1 flex flex-col justify-center">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Trạng thái quyền lợi</p>
                 <div className="pt-0.5">
-                  <span
-                    className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
-                    style={{
-                      background: active ? "rgba(34,197,94,0.08)" : "#F1F5F9",
-                      color: active ? "#16A34A" : "#64748B",
-                      border: active ? "1px solid rgba(34,197,94,0.15)" : "1px solid #E2E8F0",
-                    }}
-                  >
-                    {sub.status || "UNKNOWN"}
-                  </span>
+                  <SubscriptionStatusBadge status={sub.status} size="md" />
                 </div>
               </div>
             </div>
@@ -210,9 +206,9 @@ export function SubscriptionCard({ sub }: { sub?: SubscriptionAdminResponse | nu
                 <Calendar size={15} className="text-slate-400 shrink-0" />
                 <span>
                   <strong>Hạn sử dụng:</strong>{" "}
-                  {isAdminPlan(sub) || !sub.endDate
-                    ? "Vô hạn (Không giới hạn thời gian)"
-                    : formatDate(sub.endDate, { day: "numeric", month: "long", year: "numeric" })}
+                  {isAdmin || !sub.endDate 
+                    ? "Hết hạn: Vô hạn" 
+                    : `Hết hạn: ${safeFormatDate(sub.endDate)}`}
                 </span>
               </div>
               <div className="flex items-center gap-3 pt-2.5 border-t border-slate-100/70">
@@ -225,7 +221,7 @@ export function SubscriptionCard({ sub }: { sub?: SubscriptionAdminResponse | nu
           </div>
         ) : (
           <div className="py-14 text-center text-slate-400 text-xs font-medium italic">
-            Tài khoản này chưa đăng ký gói dịch vụ.
+            Tài khoản này {SUB_TEXTS.NO_SUBSCRIPTION.toLowerCase()}.
           </div>
         )}
       </div>

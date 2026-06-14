@@ -4,6 +4,7 @@ import adminUserService, {
   type AdminUserDetail,
   type SubscriptionAdminResponse,
 } from "../../../../api/adminUserService";
+import { getSubscriptionPlans } from "../../../../api/adminSubscriptionPlansService";
 
 /* -------------------------------------------------------------------------- */
 /*  Form model.                                                               */
@@ -79,10 +80,14 @@ export type ViewState = "invalid" | "loading" | "error" | "empty" | "ready";
 
 export function useAdminUserDetail(id: string | undefined) {
   const [user, setUser] = useState<AdminUserDetail | null>(null);
+  const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [savingKey, setSavingKey] = useState<ActionKey | null>(null);
+
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+  const reload = useCallback(() => setReloadTrigger((prev) => prev + 1), []);
 
   useEffect(() => {
     if (!id) {
@@ -110,10 +115,26 @@ export function useAdminUserDetail(id: string | undefined) {
         if (active) setLoading(false);
       });
 
+    getSubscriptionPlans()
+      .then((p) => {
+        if (active) setPlans(p);
+      })
+      .catch(console.error);
+
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, reloadTrigger]);
+
+  useEffect(() => {
+    const handlePlansUpdated = () => {
+      reload();
+    };
+    window.addEventListener("subscription-plans-updated", handlePlansUpdated);
+    return () => {
+      window.removeEventListener("subscription-plans-updated", handlePlansUpdated);
+    };
+  }, [reload]);
 
   const dirty = useMemo<Record<ActionKey, boolean>>(() => {
     const base = user ? serverValues(user) : EMPTY_FORM;
@@ -156,5 +177,5 @@ export function useAdminUserDetail(id: string | undefined) {
           ? "empty"
           : "ready";
 
-  return { user, viewState, loadError, form, dirty, setField, save, savingKey };
+  return { user, plans, viewState, loadError, form, dirty, setField, save, savingKey };
 }

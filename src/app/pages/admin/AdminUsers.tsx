@@ -5,16 +5,16 @@ import { useNavigate } from "react-router";
 import adminUserService, { type AdminUserSummary, type AdminUserDetail } from "../../../api/adminUserService";
 import { PlanTypeBadge, PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
 import type { ServicePlanType } from "../../../api/adminSubscriptionPlansService";
+import { getSubscriptionPlans } from "../../../api/adminSubscriptionPlansService";
+import {
+  getStatusBadge,
+  safeFormatDate,
+  SUB_TEXTS,
+  resolveLivePlan,
+} from "../../../utils/adminStatusHelpers";
+import SubscriptionStatusBadge from "../../../components/admin/SubscriptionStatusBadge";
 
-const STATUS_BADGE: Record<string, { bg: string; text: string; border: string; label: string }> = {
-  ACTIVE:  { bg: "rgba(34,197,94,0.08)",   text: "#16A34A", border: "rgba(34,197,94,0.2)",   label: "Hoạt động" },
-  DISABLE: { bg: "rgba(100,116,139,0.08)", text: "#475569", border: "rgba(100,116,139,0.2)", label: "Vô hiệu" },
-  LOCKED:  { bg: "rgba(239,68,68,0.08)",   text: "#DC2626", border: "rgba(239,68,68,0.2)",   label: "Bị khóa" },
-};
-
-function statusBadge(status: string) {
-  return STATUS_BADGE[String(status).toUpperCase()] ?? { bg: "#F3F4F6", text: "#6B7280", border: "#E5E7EB", label: status };
-}
+// Local status helper removed - using centralized getStatusBadge from adminStatusHelpers
 
 type AvatarCapableUser = AdminUserSummary & {
   avatarUrl?: string | null;
@@ -79,18 +79,24 @@ function UserAvatar({ user }: { user: AdminUserSummary }) {
   );
 }
 
-function DynamicPlanBadge({ sub }: { sub: any }) {
+function DynamicPlanBadge({ sub, livePlansList }: { sub: any; livePlansList: any[] }) {
   if (!sub) {
-    return <span style={{ color: "#94A3B8", fontSize: "0.8rem", fontStyle: "italic" }}>Chưa đăng ký</span>;
+    return <span style={{ color: "#94A3B8", fontSize: "0.8rem", fontStyle: "italic" }}>{SUB_TEXTS.NO_SUBSCRIPTION}</span>;
   }
 
-  // Admin accounts are forced to the "ADMIN" label + ADMIN_DEFAULT type even when the backend
-  // only reports a custom planName; the badge type then drives the emerald fallback. A premium
-  // name with no explicit type still resolves to the premium look.
-  const isAdmin = sub.planType === "ADMIN_DEFAULT" || String(sub.planName).toUpperCase().includes("ADMIN");
-  const isPremium = sub.planType === "PREMIUM" || String(sub.planName).toUpperCase().includes("PREMIUM");
-  const planType: ServicePlanType = isAdmin ? "ADMIN_DEFAULT" : isPremium ? "PREMIUM" : (sub.planType ?? "FREE");
-  const planName = isAdmin ? "ADMIN" : (sub.planName || "GÓI ẨN");
+  // Resolve dynamic live configuration properties from local cache
+  const live = resolveLivePlan(sub?.planId, livePlansList);
+
+  // Map mismatch fields safely with fallbacks
+  const badgeColor = live?.customClasses || sub.badgeColor;
+  const badgeIcon = live?.iconName || sub.badgeIcon;
+  const animationType = live?.animation || sub.animationType;
+
+  // Keep the clean label fallback but let the styling props flow dynamically
+  const planName = live?.planName || sub.planName || "ADMIN";
+  const planType = (live?.planType || sub.planType || "ADMIN_DEFAULT") as ServicePlanType;
+
+  const isAdmin = planType === "ADMIN_DEFAULT" || String(planName).toUpperCase().includes("ADMIN");
 
   return (
     <div className="flex flex-col gap-1 min-w-[130px]">
@@ -98,25 +104,18 @@ function DynamicPlanBadge({ sub }: { sub: any }) {
         <PlanTypeBadge
           type={planType}
           label={planName}
-          badgeColor={sub.badgeColor}
-          badgeIcon={sub.badgeIcon}
-          animationType={sub.animationType}
+          badgeColor={badgeColor}
+          badgeIcon={badgeIcon}
+          animationType={animationType}
         />
 
-        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide shrink-0" 
-          style={{ 
-            background: sub.status?.toUpperCase() === "ACTIVE" ? "rgba(34,197,94,0.08)" : "#F1F5F9", 
-            color: sub.status?.toUpperCase() === "ACTIVE" ? "#16A34A" : "#64748B",
-            border: sub.status?.toUpperCase() === "ACTIVE" ? "1px solid rgba(34,197,94,0.15)" : "1px solid #E2E8F0"
-          }}>
-          {sub.status || "UNKNOWN"}
-        </span>
+        <SubscriptionStatusBadge status={sub.status} />
       </div>
       
       <span style={{ color: "#94A3B8", fontSize: "0.7rem", fontWeight: 500 }}>
         {isAdmin || !sub.endDate 
           ? "Hết hạn: Vô hạn" 
-          : `Hết hạn: ${new Date(sub.endDate).toLocaleDateString("vi-VN")}`}
+          : `Hết hạn: ${safeFormatDate(sub.endDate)}`}
       </span>
     </div>
   );
@@ -127,29 +126,49 @@ export default function AdminUsers() {
   const [page, setPage] = useState(0);
   const [size] = useState(10); 
   const [users, setUsers] = useState<AdminUserDetail[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const load = (p: number, s = search) => {
-    let cancelled = false;
+  const load = async (p: number, s = search) => {
     setLoading(true);
-    adminUserService.getAdminUsers(s.trim() || undefined, p, size)
-      .then((data) => {
-        if (cancelled) return;
-        setUsers(data.content || []);
-        setTotal(data.totalElements || (data.content?.length ?? 0));
-        setPage(p);
-      })
-      .catch(console.error)
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    try {
+      const [usersRes, plansRes] = await Promise.all([
+        adminUserService.getAdminUsers(s.trim() || undefined, p, size),
+        getSubscriptionPlans()
+      ]);
+      setUsers(usersRes.content || []);
+      setTotal(usersRes.totalElements || 0);
+      const extractedPlans = Array.isArray((plansRes as any)?.data) 
+        ? (plansRes as any).data 
+        : Array.isArray(plansRes) 
+          ? plansRes 
+          : Array.isArray((plansRes as any)?.content)
+            ? (plansRes as any).content
+            : [];
+      setPlans(extractedPlans);
+      setPage(p);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    const cancel = load(0);
-    return () => cancel?.();
+    load(0);
   }, []);
+
+  useEffect(() => {
+    const handlePlansUpdated = () => {
+      load(page, search);
+    };
+    window.addEventListener("subscription-plans-updated", handlePlansUpdated);
+    return () => {
+      window.removeEventListener("subscription-plans-updated", handlePlansUpdated);
+    };
+  }, [page, search]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-6xl mx-auto space-y-6" style={{ fontFamily: "'Inter',sans-serif" }}>
@@ -244,7 +263,7 @@ export default function AdminUsers() {
                   </tr>
                 )}
                 {!loading && users.map((u) => {
-                  const badge = statusBadge(u.status || "");
+                  const badge = getStatusBadge(u.status);
                   const sub = u.currentSubscription; 
 
                   return (
@@ -272,11 +291,11 @@ export default function AdminUsers() {
                       </td>
 
                       <td style={{ padding: "12px 14px" }}>
-                        <DynamicPlanBadge sub={sub} />
+                        <DynamicPlanBadge sub={u.currentSubscription} livePlansList={plans} />
                       </td>
 
                       <td style={{ padding: "12px 14px", color: "#64748B", fontSize: "0.78rem" }}>
-                        {u.updatedAt ? new Date(u.updatedAt).toLocaleDateString("vi-VN") : "—"}
+                        {safeFormatDate(u.updatedAt)}
                       </td>
                       <td style={{ padding: "12px 14px" }}>
                         <button
