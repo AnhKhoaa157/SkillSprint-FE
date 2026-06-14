@@ -1,4 +1,5 @@
 import { requestJson } from "./apiClient";
+import { fetchSystemStatus, type MaintenanceSnapshot } from "./maintenanceState";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -6,14 +7,9 @@ import { requestJson } from "./apiClient";
  * Public system status — GET /api/system/status.
  *
  * NOTE: the backend wire field is `maintenance` (boolean); we normalize it to `isActive`
- * here so the rest of the app uses one consistent name. Timestamps are ISO-8601 strings.
+ * in {@link fetchSystemStatus} so the rest of the app uses one consistent name.
  */
-export type MaintenanceStatusResponse = {
-  isActive: boolean;
-  message: string;
-  startAt: string | null;
-  endAt: string | null;
-};
+export type MaintenanceStatusResponse = MaintenanceSnapshot;
 
 /** Full admin config returned by the protected maintenance endpoints. */
 export type MaintenanceResponse = {
@@ -36,30 +32,16 @@ export type UpdateMaintenanceRequest = {
   endAt?: string | null;
 };
 
-// Raw shape of the public endpoint before normalization.
-type SystemStatusWire = {
-  maintenance: boolean;
-  message: string;
-  startAt: string | null;
-  endAt: string | null;
-};
-
 // ─── API calls ───────────────────────────────────────────────────────────────
 
 /**
- * Public + unauthenticated. This endpoint is on the `@Order(1)` security chain, so it stays
- * reachable (HTTP 200) even while maintenance mode is active — making it safe to poll from a guard.
+ * Public + unauthenticated status poll. Delegates to the shared {@link fetchSystemStatus} so the
+ * framework-agnostic cache (read by the apiClient interceptor + login guard) stays warm every time
+ * the gate polls. The endpoint is on the backend's `@Order(1)` chain, so it stays reachable (HTTP
+ * 200) even during maintenance — safe to poll.
  */
 export async function getSystemStatus(): Promise<MaintenanceStatusResponse> {
-  const res = await requestJson<SystemStatusWire>("/api/system/status");
-  const data = res.data;
-  if (!data) throw new Error(res.message || "Không tải được trạng thái hệ thống");
-  return {
-    isActive: data.maintenance,
-    message: data.message,
-    startAt: data.startAt ?? null,
-    endAt: data.endAt ?? null,
-  };
+  return fetchSystemStatus();
 }
 
 /** Admin only — current full maintenance config (GET /api/admin/system/maintenance). */

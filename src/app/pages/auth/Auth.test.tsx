@@ -5,9 +5,8 @@ import { login, clearAuthTokens, storeAuthTokens } from "../../../api/authServic
 
 // ─── Hoisted spies (referenced inside vi.mock factories) ───────────────────────
 
-const { navigateMock, useMaintenanceMock } = vi.hoisted(() => ({
+const { navigateMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
-  useMaintenanceMock: vi.fn(),
 }));
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -66,13 +65,6 @@ vi.mock("motion/react", async () => {
   return { __esModule: true, motion, AnimatePresence };
 });
 
-// Centralized maintenance context (consumed by both Auth and the real MaintenancePopup).
-vi.mock("../../../components/system/MaintenanceGate", () => ({
-  __esModule: true,
-  useMaintenance: useMaintenanceMock,
-  MaintenanceGate: ({ children }: { children?: unknown }) => children,
-}));
-
 // Auth service: spy on storage sanitation + token persistence; keep role helpers realistic.
 vi.mock("../../../api/authService", () => ({
   __esModule: true,
@@ -92,7 +84,7 @@ vi.mock("../../../api/authService", () => ({
   resendConfirmationCode: vi.fn(),
 }));
 
-// Peripheral imports of Auth — stub to keep the render focused on the interceptor.
+// Peripheral imports of Auth — stub to keep the render focused on the sign-in flow.
 vi.mock("../../components/layout/BrandLogo", () => ({ __esModule: true, BrandLogo: () => null }));
 vi.mock("../../components/modals/RegistrationSuccessModal", () => ({
   __esModule: true,
@@ -111,25 +103,11 @@ const LEARNER_TOKENS = {
   sessionId: "session-123",
 };
 
-const activeMaintenanceState = {
-  status: {
-    isActive: true,
-    message: "Hệ thống SkillSprint đang bảo trì định kỳ",
-    startAt: null,
-    endAt: "2026-06-15T12:00:00.000Z",
-  },
-  loading: false,
-  refresh: vi.fn(),
-};
-
 beforeEach(() => {
   vi.clearAllMocks();
-  // Active blackout for every case in this suite.
-  useMaintenanceMock.mockReturnValue(activeMaintenanceState);
   // The auth API hands back a valid, NON-admin session payload.
   vi.mocked(login).mockResolvedValue({ status: "authenticated", tokens: LEARNER_TOKENS });
-  // Spy on the browser storage mechanisms the success path would otherwise touch.
-  vi.spyOn(Storage.prototype, "clear");
+  vi.spyOn(Storage.prototype, "clear").mockImplementation(() => {});
   vi.spyOn(Storage.prototype, "setItem");
 });
 
@@ -147,41 +125,22 @@ function submitLearnerLogin() {
 
 // ─── Specs ────────────────────────────────────────────────────────────────────
 
-describe("Auth — maintenance interceptor for learners", () => {
-  it("blocks a learner sign-in during maintenance: wipes tokens, aborts navigation, shows popup", async () => {
+// Maintenance lockdown now lives entirely in <MaintenanceGate> (it replaces the whole app,
+// including this page, when active). The login page itself must therefore carry NO maintenance
+// interception logic — a successful learner sign-in always proceeds.
+describe("Auth — no auth-layer maintenance interception", () => {
+  it("lets a successful learner sign-in proceed (gate owns the lockdown)", async () => {
     render(<Auth />);
 
     submitLearnerLogin();
 
-    // The auth API is allowed to resolve; the boundary is enforced AFTER the payload returns.
     await waitFor(() => expect(login).toHaveBeenCalledWith("learner@gmail.com", "Learner@123"));
 
-    // 1) Partial credentials are neutralized via the sanitation method.
-    await waitFor(() => expect(clearAuthTokens).toHaveBeenCalledTimes(1));
+    // onLoginSuccess runs: the fresh session is persisted and tokens are NOT wiped.
+    await waitFor(() => expect(storeAuthTokens).toHaveBeenCalledWith(LEARNER_TOKENS));
+    expect(clearAuthTokens).not.toHaveBeenCalled();
 
-    // 2) The route transition is strictly suppressed — onLoginSuccess (which persists tokens and
-    //    redirects) must never run, so neither storeAuthTokens nor navigate fire.
-    expect(storeAuthTokens).not.toHaveBeenCalled();
-    expect(navigateMock).not.toHaveBeenCalled();
-
-    // 3) The localized maintenance popup is now visible to the guest.
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Hệ thống đang bảo trì" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Hệ thống SkillSprint đang bảo trì định kỳ"),
-    ).toBeInTheDocument();
-  });
-
-  it("does not persist or hydrate any session while blocked", async () => {
-    render(<Auth />);
-
-    submitLearnerLogin();
-
-    await waitFor(() => expect(clearAuthTokens).toHaveBeenCalled());
-    // onLoginSuccess does localStorage.clear()+storeAuthTokens(); blocked path skips it entirely.
-    expect(storeAuthTokens).not.toHaveBeenCalled();
-    expect(Storage.prototype.setItem).not.toHaveBeenCalled();
+    // No blocking maintenance dialog is rendered from the login page anymore.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

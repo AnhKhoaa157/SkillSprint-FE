@@ -1,4 +1,5 @@
 import { API_BASE, COGNITO_CLIENT_ID, COGNITO_DOMAIN, COGNITO_REDIRECT_URI } from "./config";
+import { fetchSystemStatus, isMaintenanceActive } from "./maintenanceState";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -239,6 +240,63 @@ export function isAdminRole(role: unknown): boolean {
   return normalizeRole(role) === "ADMIN";
 }
 
+/**
+ * Thrown when a non-admin tries to authenticate while maintenance is active. Carries an HTTP-like
+ * `status`/`code` so callers (and any shared error handling) can distinguish it from a bad-password
+ * failure and surface the maintenance copy.
+ */
+export class MaintenanceError extends Error {
+  readonly status = 503;
+  readonly code = "MAINTENANCE_ACTIVE";
+
+  constructor(message = "Hệ thống đang bảo trì. Chỉ tài khoản quản trị mới có thể đăng nhập lúc này.") {
+    super(message);
+    this.name = "MaintenanceError";
+  }
+}
+
+/**
+ * Login-time maintenance boundary. After credentials are verified, re-check the live maintenance
+ * status: if it's active and the authenticated identity is NOT an admin, abort the login (wipe any
+ * partial session and throw a 503 MaintenanceError). Admins always pass.
+ *
+ * ⚠️ This is defense-in-depth — the backend must reject the non-admin /login itself with 503.
+ */
+async function assertLoginAllowed(role: AuthRole | null): Promise<void> {
+  if (isAdminRole(role)) return; // admins are never blocked
+
+  let active = false;
+  try {
+    active = (await fetchSystemStatus()).isActive;
+  } catch {
+    // Status endpoint unreachable → fall back to the last-known cache rather than failing the login.
+    active = isMaintenanceActive();
+  }
+
+  if (active) {
+    clearAuthTokens(); // ensure no partial session survives a blocked login
+    throw new MaintenanceError();
+  }
+}
+
+/**
+ * Force-logout hook for the maintenance lockdown. If maintenance is active and the *current* stored
+ * session belongs to a non-admin, wipe it. <MaintenanceGate> calls this on every status poll, so
+ * every learner browser self-logs-out shortly after maintenance starts. Admins are never touched.
+ *
+ * Returns true when a session was cleared. (Cross-user session invalidation is the backend's job;
+ * this only governs the local browser.)
+ */
+export function enforceMaintenanceLogout(active: boolean): boolean {
+  if (!active) return false;
+
+  const session = getStoredAuthSession();
+  if (!session || isAdminRole(session.role)) return false;
+
+  clearAuthTokens();
+  return true;
+}
+
 export function getPostLoginPath(role: unknown): string {
   return isAdminRole(role) ? "/admin" : "/app";
 }
@@ -431,6 +489,9 @@ export async function login(email: string, password: string): Promise<LoginResul
     throw new Error("Invalid or expired authentication session.");
   }
 
+  // Maintenance boundary: re-check status now that we know the role; block non-admins.
+  await assertLoginAllowed(tokens.role);
+
   return {
     status: "authenticated",
     tokens,
@@ -518,6 +579,9 @@ export async function completeNewPassword(email: string, newPassword: string, se
   if (!isValidAuthSession(tokens)) {
     throw new Error(response.message || "Invalid or expired authentication session.");
   }
+
+  // Same maintenance boundary as login() — the new-password challenge is just another sign-in path.
+  await assertLoginAllowed(tokens.role);
 
   return tokens;
 }
