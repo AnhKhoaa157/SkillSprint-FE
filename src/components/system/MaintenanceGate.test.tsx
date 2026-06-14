@@ -71,14 +71,35 @@ describe("MaintenanceGate — top-level lockdown", () => {
     expect(screen.queryByTestId("maintenance-screen")).not.toBeInTheDocument();
   });
 
-  it("replaces the entire app (incl. /login) with the lockdown screen when active", async () => {
-    setPath("/login");
+  it("replaces a normal route with the lockdown screen when active", async () => {
+    setPath("/app");
     vi.mocked(getSystemStatus).mockResolvedValue(ACTIVE);
 
     renderGate();
 
     await waitFor(() => expect(screen.getByTestId("maintenance-screen")).toBeInTheDocument());
     expect(screen.queryByTestId("app")).not.toBeInTheDocument();
+  });
+
+  it("delegates /login to children while active so <Auth> owns the lockdown", async () => {
+    setPath("/login");
+    vi.mocked(getSystemStatus).mockResolvedValue(ACTIVE);
+
+    renderGate();
+
+    // The gate must NOT pre-empt /login with its own screen — <Auth> renders its full-screen gate.
+    await waitFor(() => expect(screen.getByTestId("app")).toBeInTheDocument());
+    expect(screen.queryByTestId("maintenance-screen")).not.toBeInTheDocument();
+  });
+
+  it("delegates the OAuth callback to children while active (admin Google bypass)", async () => {
+    setPath("/auth/callback");
+    vi.mocked(getSystemStatus).mockResolvedValue(ACTIVE);
+
+    renderGate();
+
+    await waitFor(() => expect(screen.getByTestId("app")).toBeInTheDocument());
+    expect(screen.queryByTestId("maintenance-screen")).not.toBeInTheDocument();
   });
 
   it("keeps the admin login portal reachable while active (self-lockout guard)", async () => {

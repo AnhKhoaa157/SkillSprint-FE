@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { motion } from "motion/react";
-import { Wrench, Clock, ShieldCheck } from "lucide-react";
+import { Wrench, Clock } from "lucide-react";
 import { useMaintenance } from "./MaintenanceGate";
 
 const DEFAULT_MESSAGE =
@@ -16,7 +16,11 @@ function formatEndAt(endAt: string | null | undefined): string | null {
 
 /**
  * Full-screen maintenance lockdown. Reads the live message / ETA from the gate's context so the
- * copy always mirrors whatever the admin configured, and surfaces a discreet admin escape hatch.
+ * copy always mirrors whatever the admin configured.
+ *
+ * No public admin link is shown here on purpose: it tempted normal users back to the login form,
+ * where they'd just re-trigger the 503. Admins reach the portal directly via /admin-login (or
+ * /admin/*), which <MaintenanceGate> allowlists past this screen regardless.
  *
  * Two modes, driven by `onClose`:
  *   - omitted (default) → NON-dismissable. Rendered by <MaintenanceGate> *in place of* the whole
@@ -25,7 +29,7 @@ function formatEndAt(endAt: string | null | undefined): string | null {
  *     when a sign-in attempt is rejected with a 503 (the defense-in-depth race where the gate's
  *     cached status was still stale).
  */
-export function MaintenanceScreen({ onClose }: { onClose?: () => void } = {}) {
+export function MaintenanceScreen({ onClose, onBack }: { onClose?: () => void; onBack?: () => void } = {}) {
   const { status } = useMaintenance();
 
   // Escape-to-close, but only when dismissable.
@@ -83,16 +87,16 @@ export function MaintenanceScreen({ onClose }: { onClose?: () => void } = {}) {
           </button>
         )}
 
-        {/* Admin escape hatch — full-page nav so the gate re-evaluates the (now allowlisted) path. */}
-        <div className="mt-8 border-t border-slate-100 pt-6">
-          <a
-            href="/admin-login"
-            className="inline-flex items-center justify-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-orange-600"
+        {/* Soft back-to-login control — only when onBack is supplied (Learner Auth override). */}
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-5 py-2.5 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-100 hover:text-slate-800 cursor-pointer active:scale-[0.98]"
           >
-            <ShieldCheck size={15} />
-            Tài khoản quản trị? Đăng nhập tại đây
-          </a>
-        </div>
+            ← Quay lại trang Đăng nhập
+          </button>
+        )}
       </motion.div>
     </div>
   );

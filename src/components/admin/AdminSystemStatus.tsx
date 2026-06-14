@@ -34,6 +34,13 @@ function formatDateTime(iso: string | null): string {
   return d.toLocaleString("vi-VN", { dateStyle: "medium", timeStyle: "short" });
 }
 
+/** Current local wall-clock time as "YYYY-MM-DDTHH:mm" — for a datetime-local `min=` attribute
+    and for minute-precision past-date comparisons. The timezone-offset shift makes toISOString()
+    yield the *local* clock instead of UTC, which is what datetime-local inputs expect. */
+function nowLocalInput(): string {
+  return new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
 export function AdminSystemStatus() {
   const [config, setConfig] = useState<MaintenanceResponse | null>(null);
   const [message, setMessage] = useState("");
@@ -46,6 +53,8 @@ export function AdminSystemStatus() {
   const isActive = config?.active ?? false;
   const isEnabled = config?.enabled ?? false;
   const messageValid = message.trim().length > 0;
+  // Lower bound for both pickers: the current local minute. Native-disables past dates in the UI.
+  const nowStr = nowLocalInput();
 
   function applyConfig(next: MaintenanceResponse) {
     setConfig(next);
@@ -83,6 +92,20 @@ export function AdminSystemStatus() {
   }, []);
 
   async function submit(payload: UpdateMaintenanceRequest, successMsg: string) {
+    // Anti-past-date guard. The native `min=` already blocks past dates in the picker UI; this is
+    // the definitive backstop for a manually-typed/forced value. Compared at minute precision (to
+    // match `min=`), and only when a start is actually being submitted (so Deactivate/Clear are
+    // unaffected). We reject only a *changed* start, so re-saving an already-running maintenance —
+    // whose startAt is legitimately in the past — is never falsely blocked.
+    if (payload.startAt) {
+      const submittedStart = isoToLocalInput(payload.startAt);
+      const startChanged = submittedStart !== isoToLocalInput(config?.startAt);
+      if (startChanged && submittedStart < nowLocalInput()) {
+        toast.error("Thời gian bắt đầu không được nằm trong quá khứ");
+        return;
+      }
+    }
+
     // Guard against an inverted schedule before hitting the API.
     if (payload.startAt && payload.endAt && new Date(payload.endAt) <= new Date(payload.startAt)) {
       toast.error("Thời gian kết thúc phải sau thời gian bắt đầu");
@@ -237,6 +260,7 @@ export function AdminSystemStatus() {
                 type="datetime-local"
                 className={inputCls}
                 value={startLocal}
+                min={nowStr}
                 onChange={(e) => setStartLocal(e.target.value)}
                 disabled={saving}
               />
@@ -249,6 +273,7 @@ export function AdminSystemStatus() {
                 type="datetime-local"
                 className={inputCls}
                 value={endLocal}
+                min={nowStr}
                 onChange={(e) => setEndLocal(e.target.value)}
                 disabled={saving}
               />
