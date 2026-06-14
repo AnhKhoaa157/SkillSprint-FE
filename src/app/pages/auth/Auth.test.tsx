@@ -113,8 +113,12 @@ beforeEach(() => {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function submitLearnerLogin() {
-  fireEvent.change(screen.getByLabelText("Địa chỉ email"), {
+// <Auth> holds a full-screen spinner until its initial maintenance check resolves
+// (initialCheckDone). With no <MaintenanceContext> provider in the test, refresh() is the default
+// no-op, but it still resolves on a later microtask — so we must await the form entering the DOM
+// (findByLabelText waits out the spinner) before firing any events.
+async function submitLearnerLogin() {
+  fireEvent.change(await screen.findByLabelText("Địa chỉ email"), {
     target: { value: "learner@gmail.com" },
   });
   fireEvent.change(screen.getByLabelText("Mật khẩu"), {
@@ -132,7 +136,7 @@ describe("Auth — no auth-layer maintenance interception", () => {
   it("lets a successful learner sign-in proceed (gate owns the lockdown)", async () => {
     render(<Auth />);
 
-    submitLearnerLogin();
+    await submitLearnerLogin();
 
     await waitFor(() => expect(login).toHaveBeenCalledWith("learner@gmail.com", "Learner@123"));
 
