@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { DollarSign } from "lucide-react";
 import { toast } from "sonner";
-import { getAdminPayments, type PaymentTransactionResponse } from "../../../api/adminDashboardService";
+import { getAdminPayments, type PaymentTransactionResponse } from "../../../../../api/adminDashboardService";
 
 /* ─────────────────────────────────────────────────────────
    ── PAYMENTS view ──

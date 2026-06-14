@@ -5,7 +5,7 @@ import {
   getSubscriptionPlans,
   type AdminAuditLogResponse,
   type ServicePlanResponse,
-} from "../../../../api/adminSubscriptionPlansService";
+} from "../../../../../api/adminSubscriptionPlansService";
 
 /* -------------------------------------------------------------------------- */
 /*  Plans data.                                                               */

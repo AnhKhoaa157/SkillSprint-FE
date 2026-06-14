@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { clearAuthTokens } from "../../../api/authService";
-import meService, { type MeResponse } from "../../../api/meService";
+import { clearAuthTokens } from "../../../../api/authService";
+import meService, { type MeResponse } from "../../../../api/meService";
 import { ArrowLeft, Camera, Copy, CheckCircle, Shield, User, Mail, Save, LoaderCircle } from "lucide-react";
 
 type ApiError = { status?: number; message?: string };

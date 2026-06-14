@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import healthService from "../../../api/healthService";
-import { BrandLogo } from "../../components/layout/BrandLogo";
+import healthService from "../../../../../api/healthService";
+import { BrandLogo } from "../../../../components/layout/BrandLogo";
 
 type HistoryItem = { ts: string; payload: any; status: 'up' | 'down' | 'unknown' };
 

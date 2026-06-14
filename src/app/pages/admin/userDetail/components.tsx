@@ -8,7 +8,7 @@ import { PlanTypeBadge } from "../../../../components/admin/PlanTypeBadge";
 import type { AdminUserDetail, SubscriptionAdminResponse } from "../../../../api/adminUserService";
 import { SUB_TEXTS, resolveLivePlan, safeFormatDate } from "../../../../utils/adminStatusHelpers";
 import SubscriptionStatusBadge from "../../../../components/admin/SubscriptionStatusBadge";
-import type { ActionKey } from "./useAdminUserDetail";
+import type { ActionKey } from "./useUserDetail";
 import {
   type SelectOption,
   getStatusBadge,

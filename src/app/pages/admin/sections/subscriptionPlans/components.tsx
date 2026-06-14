@@ -7,9 +7,9 @@ import {
   formatPlanPrice,
   type AdminAuditLogResponse,
   type ServicePlanResponse,
-} from "../../../../api/adminSubscriptionPlansService";
-import { PlanTypeBadge } from "../../../../components/admin/PlanTypeBadge";
-import { Badge } from "./primitives";
+} from "../../../../../api/adminSubscriptionPlansService";
+import { PlanTypeBadge } from "../../../../../components/admin/PlanTypeBadge";
+import { Badge } from "../../_shared/primitives";
 import {
   ACTION_TYPE_COLOR, ACTION_TYPE_LABEL, BTN_THEMES, getStatCards, formatDate,
   type BtnType,
