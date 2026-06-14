@@ -23,6 +23,28 @@ const dayOptions = [
 
 type DayValue = (typeof dayOptions)[number]["value"];
 
+type DayChipProps = {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+};
+
+function DayChip({ label, active, onClick }: DayChipProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 cursor-pointer border ${
+        active
+          ? "bg-[#FF6B00] border-[#FF6B00] text-white shadow-sm shadow-orange-600/20"
+          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 const confidenceOptions = [
   { value: "LOW", title: "🥲 Bắt đầu từ số 0", description: "Cần lộ trình thật rõ ràng" },
   { value: "MEDIUM", title: "🤔 Đã biết chút ít", description: "Muốn học có nhịp độ vừa phải" },

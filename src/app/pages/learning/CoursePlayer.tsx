@@ -167,6 +167,9 @@ export default function CoursePlayer() {
   const [sideTab, setSideTab] = useState<"pomodoro" | "quiz">("pomodoro");
   const { planId, refresh: refreshSubscription } = useSubscription();
   const isPremiumMember = planId === "PREMIUM";
+  // PricingModal speaks plan *slugs*; map our NormalizedPlanId to its vocabulary.
+  const pricingCurrentPlan =
+    planId === "PREMIUM" ? "career_premium" : planId === "SKILL_BUILDER" ? "skill_builder" : "starter";
 
   const openPricingModal = useCallback(() => {
     setPricingOpen(true);
@@ -1261,7 +1264,7 @@ export default function CoursePlayer() {
           void refreshSubscription();
         }}
         initialPlan="premium"
-        currentPlan={planId}
+        currentPlan={pricingCurrentPlan}
       />
 
       {isNavigationBlocked && (

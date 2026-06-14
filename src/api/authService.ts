@@ -14,7 +14,7 @@ export type AuthTokens = {
   expiresIn: number;
   tokenType: string;
   /** Unique session identifier used for SingleSessionFilter (Redis). */
-  sessionId?: string;
+  sessionId?: string | null;
 };
 
 export type AuthRole = "ADMIN" | "LEARNER" | string;
