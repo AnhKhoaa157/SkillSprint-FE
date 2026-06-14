@@ -11,7 +11,7 @@ import { Footer as PublicFooter } from "../components/Footer";
 import { PublicNavbar } from "../components/PublicNavbar";
 import CursorSpotlight from "../components/CursorSpotlight";
 import { useAuth } from "../../contexts/AuthContext";
-import { listSubscriptionPlans, STATIC_FALLBACK_PLANS, formatPlanPrice, isFeatureEnabled, type PublicPlanResponse } from "../../../api/adminSubscriptionPlansService";
+import { listSubscriptionPlans, STATIC_FALLBACK_PLANS, formatPlanPrice, resolvePlanFeatures, type PublicPlanResponse } from "../../../api/adminSubscriptionPlansService";
 
 // ─── Dynamic badge tokens (BE-driven via badgeColor / badgeIcon / animationType) ─
 // Maps the lucide icon *name* the backend sends to the actual component. Unknown
@@ -175,10 +175,12 @@ export default function PricingPage() {
                       Bao gồm:
                     </div>
                     <ul className="space-y-4">
-                      {(plan.features ?? []).map(f => {
-                        const enabled = isFeatureEnabled(f);
+                      {/* Features resolved across BE naming/shape drift (features /
+                          planFeatures / featureList; string or object elements). */}
+                      {(resolvePlanFeatures(plan) ?? []).map((f, i) => {
+                        const enabled = f.enabled !== false;
                         return (
-                          <li key={f.featureKey} className={`flex items-start gap-3 text-sm font-medium ${enabled ? "text-slate-700" : "text-slate-300 line-through"}`}>
+                          <li key={f.featureKey || i} className={`flex items-start gap-3 text-sm font-medium ${enabled ? "text-slate-700" : "text-slate-300 line-through"}`}>
                             <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${enabled ? (isFeatured ? "bg-orange-50/50 text-[#FF6B00]" : "bg-blue-50 text-blue-500") : "bg-slate-50 text-slate-300"}`}>
                               {enabled ? <Check size={13} className="stroke-[3]" /> : <X size={12} />}
                             </div>
