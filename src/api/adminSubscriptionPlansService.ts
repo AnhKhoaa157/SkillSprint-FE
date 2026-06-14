@@ -213,16 +213,40 @@ export type PublicPlanResponse = {
   planName: string;
   description: string | null;
   benefits?: string[];
+  // Dynamic styling tokens now exposed by the public endpoint. All optional/nullable
+  // so older payloads (or the fallback plans) render fine without them.
+  badgeColor?: string | null;   // Tailwind gradient stops, e.g. "from-amber-400 to-orange-500 text-white"
+  badgeIcon?: string | null;    // lucide icon name, e.g. "Crown" | "Zap" | "Flame"
+  animationType?: string | null; // "none" | "shimmer" | "pulse"
   monthlyPrice: number;
   currency: string;
   quotas: ServicePlanQuota | null;
   features: PublicPlanFeature[];
 };
 
+/**
+ * Minimal shape of a Spring `Page<T>` envelope — the public plans endpoint may now
+ * return either a raw array or a paginated `{ content: [...] }` object.
+ */
+type Paginated<T> = { content?: T[] | null };
+
+/** Narrow an unknown payload to the plan array, whether it's raw or paginated. */
+function extractPlanArray(data: unknown): PublicPlanResponse[] {
+  if (Array.isArray(data)) return data as PublicPlanResponse[];
+  const content = (data as Paginated<PublicPlanResponse> | null)?.content;
+  return Array.isArray(content) ? content : [];
+}
+
+/**
+ * Public plan list. Tolerant of both response shapes (raw array or `{ content }`)
+ * and of a missing/null `data` field — always resolves to an array, never throws
+ * on an empty body, so the public PricingPage can fall back gracefully.
+ */
 export async function listSubscriptionPlans(): Promise<PublicPlanResponse[]> {
-  const res = await requestJson<PublicPlanResponse[]>("/api/subscriptions/plans");
-  if (!res.data) throw new Error(res.message || "Không tải được danh sách gói");
-  return res.data;
+  const res = await requestJson<PublicPlanResponse[] | Paginated<PublicPlanResponse>>(
+    "/api/subscriptions/plans",
+  );
+  return extractPlanArray(res.data);
 }
 
 /** True unless the feature is explicitly disabled (the public list only sends enabled ones). */
@@ -279,6 +303,9 @@ export const STATIC_FALLBACK_PLANS: PublicPlanResponse[] = [
     planId: "__premium",
     planName: "Gói Premium",
     description: "Bộ công cụ tăng tốc học tập với Gia sư AI và Quiz nhỏ theo chương.",
+    badgeColor: "from-amber-400 via-orange-500 to-amber-500 text-white shadow-orange-500/30",
+    badgeIcon: "Crown",
+    animationType: "shimmer",
     monthlyPrice: 199000,
     currency: "VND",
     quotas: { maxWorkspaces: null, maxUploads: null, aiGenerateLimit: null, maxFileMb: 100, maxWorkspaceMb: null },

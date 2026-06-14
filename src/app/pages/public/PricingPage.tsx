@@ -2,12 +2,38 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router";
 import { Link } from "react-router";
-import { Check, X, Sparkles, HelpCircle, Plus, LogIn, UserPlus } from "lucide-react";
+import {
+  Check, X, Sparkles, HelpCircle, Plus, LogIn, UserPlus,
+  Crown, Zap, Flame, ShieldAlert, Star, Rocket, Gem, Award, BadgeCheck,
+  type LucideIcon,
+} from "lucide-react";
 import { Footer as PublicFooter } from "../components/Footer";
 import { PublicNavbar } from "../components/PublicNavbar";
 import CursorSpotlight from "../components/CursorSpotlight";
 import { useAuth } from "../../contexts/AuthContext";
 import { listSubscriptionPlans, STATIC_FALLBACK_PLANS, formatPlanPrice, isFeatureEnabled, type PublicPlanResponse } from "../../../api/adminSubscriptionPlansService";
+
+// ─── Dynamic badge tokens (BE-driven via badgeColor / badgeIcon / animationType) ─
+// Maps the lucide icon *name* the backend sends to the actual component. Unknown
+// names simply resolve to `undefined`, so the badge degrades to text-only.
+const BADGE_ICONS: Record<string, LucideIcon> = {
+  Crown, Zap, Flame, Sparkles, ShieldAlert, Star, Rocket, Gem, Award, BadgeCheck,
+};
+
+// Default gradient when a plan is featured but the BE didn't supply a badgeColor.
+const DEFAULT_BADGE_GRADIENT = "from-[#FF6B00] to-[#FF7E21] text-white shadow-orange-500/20";
+
+/**
+ * Translate the BE `animationType` into Tailwind utility classes. `shimmer` also
+ * widens the gradient so the keyframe (background-position) has room to travel.
+ */
+function badgeAnimationClass(animationType?: string | null): string {
+  switch ((animationType ?? "").trim().toLowerCase()) {
+    case "shimmer": return "animate-shimmer bg-[length:200%_auto]";
+    case "pulse":   return "animate-pulse";
+    default:        return "";
+  }
+}
 
 // ─── Skeleton card shown while loading ───────────────────────────────────────
 function PlanCardSkeleton({ featured = false }: { featured?: boolean }) {
@@ -85,10 +111,17 @@ export default function PricingPage() {
 
   const planCards = (
     <div className={`mx-auto grid grid-cols-1 ${gridColsClass} gap-6 items-stretch justify-center`}>
-      {plans.map((plan, idx) => {
+      {plans?.map((plan, idx) => {
         const isFree = plan.monthlyPrice <= 0;
         const isFeatured = !isFree && idx === plans.length - 1 && plans.length > 1;
         const price = getEffectivePrice(plan);
+
+        // Dynamic badge: render whenever the BE styles the plan, or when it's the
+        // featured tier (which falls back to the default orange gradient).
+        const BadgeIcon = plan.badgeIcon ? BADGE_ICONS[plan.badgeIcon] : undefined;
+        const showBadge = Boolean(plan.badgeColor || plan.badgeIcon) || isFeatured;
+        const badgeGradient = plan.badgeColor?.trim() || DEFAULT_BADGE_GRADIENT;
+        const badgeAnim = badgeAnimationClass(plan.animationType);
 
         return (
           <div key={plan.planId} className="relative h-full flex">
@@ -110,9 +143,12 @@ export default function PricingPage() {
                     : "border border-slate-200 shadow-[0_10px_35px_rgba(0,0,0,0.06)]"
                 }`}
               >
-                {isFeatured && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#FF6B00] to-[#FF7E21] text-white px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase shadow-md shadow-orange-500/10 border border-white/20 whitespace-nowrap z-10">
-                    🔥 ĐƯỢC KHUYÊN DÙNG
+                {showBadge && (
+                  <div
+                    className={`absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1.5 bg-gradient-to-r ${badgeGradient} ${badgeAnim} px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase shadow-md border border-white/20 whitespace-nowrap`}
+                  >
+                    {BadgeIcon ? <BadgeIcon size={12} className="stroke-[2.5]" /> : "🔥"}
+                    ĐƯỢC KHUYÊN DÙNG
                   </div>
                 )}
 
@@ -139,7 +175,7 @@ export default function PricingPage() {
                       Bao gồm:
                     </div>
                     <ul className="space-y-4">
-                      {plan.features.map(f => {
+                      {(plan.features ?? []).map(f => {
                         const enabled = isFeatureEnabled(f);
                         return (
                           <li key={f.featureKey} className={`flex items-start gap-3 text-sm font-medium ${enabled ? "text-slate-700" : "text-slate-300 line-through"}`}>

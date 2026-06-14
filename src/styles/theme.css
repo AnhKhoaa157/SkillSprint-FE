@@ -1,5 +1,16 @@
 @custom-variant dark (&:is(.dark *));
 
+/* Plan badge "shimmer": flows the gradient across the badge. Pair with a
+   `bg-[length:200%_auto]` gradient so there's room for the position to travel. */
+@theme {
+  --animate-shimmer: shimmer 2.5s linear infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
 :root {
   --font-size: 16px;
   --background: #0D0D12;
