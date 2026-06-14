@@ -7,6 +7,18 @@ export type GenerateRoadmapRequest = {
   confidence: "HIGH" | "MEDIUM" | "LOW";
 };
 
+/**
+ * A learning resource attached to a roadmap or step. The backend shape is not
+ * yet fully contractually pinned, so the UI reads these fields defensively —
+ * every field is optional and parsed through toText()/toNumber() guards.
+ */
+export type RoadmapResource = {
+  type?: string | null;
+  url?: string | null;
+  title?: string | null;
+  description?: string | null;
+};
+
 export type RoadmapStepResponse = {
   stepId: string;
   roadmapId: string;
@@ -16,7 +28,20 @@ export type RoadmapStepResponse = {
   status: string;
   createdAt: string;
   updatedAt: string;
+  // Optional fields the UI reads defensively (backend may or may not send them).
+  id?: string | null;
+  _id?: string | null;
+  summary?: string | null;
+  difficulty?: string | null;
+  complexity?: string | null;
+  durationMinutes?: number | string | null;
+  duration?: number | string | null;
+  minutes?: number | string | null;
+  resources?: RoadmapResource[];
 };
+
+/** Alias kept for callers that import the pre-`*Response` name. */
+export type RoadmapStep = RoadmapStepResponse;
 
 export type RoadmapResponse = {
   roadmapId: string;
@@ -30,6 +55,11 @@ export type RoadmapResponse = {
   steps: RoadmapStepResponse[];
   createdAt: string;
   updatedAt: string;
+  // Optional fields the UI reads defensively (backend may or may not send them).
+  id?: string | null;
+  title?: string | null;
+  description?: string | null;
+  resources?: RoadmapResource[];
 };
 
 export type GenerateRoadmapResponse = {

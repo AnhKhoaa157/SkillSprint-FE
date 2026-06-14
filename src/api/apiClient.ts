@@ -25,10 +25,15 @@ export function getAuthHeaders(): Record<string, string> {
     return {};
   }
 
-  return {
+  const headers: Record<string, string> = {
     Authorization: `Bearer ${session.accessToken}`,
-    "X-Session-Id": session.sessionId,
   };
+  // isValidAuthSession() already guarantees a non-empty sessionId; guard anyway
+  // so we never emit a literal "null" X-Session-Id header.
+  if (session.sessionId) {
+    headers["X-Session-Id"] = session.sessionId;
+  }
+  return headers;
 }
 
 /**

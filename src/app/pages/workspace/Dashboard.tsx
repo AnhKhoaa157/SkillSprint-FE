@@ -107,7 +107,7 @@ export default function Dashboard() {
   const [pMode,  setPMode]   = useState<PMode>("focus");
   const [timeLeft,setTimeLeft]= useState(PMODE.focus.dur);
   const [running, setRunning] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const mm = String(Math.floor(timeLeft/60)).padStart(2,"0");
   const ss = String(timeLeft%60).padStart(2,"0");
 
