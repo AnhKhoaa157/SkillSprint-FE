@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { clearAuthTokens, getStoredUserProfile, type StoredUserProfile } from "../../../api/authService";
 import meService, { type MeResponse } from "../../../api/meService";
 import { getCurrentSubscription, getQuotaStatus, cancelSubscription } from "../../../api/subscriptionsService";
-import { listSubscriptionPlans, formatPlanPrice, isFeatureEnabled, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/adminSubscriptionPlansService";
+import { listSubscriptionPlans, formatPlanPrice, isFeatureEnabled, resolvePlanFeatures, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/adminSubscriptionPlansService";
 import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
 import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse, CurrentSubscriptionResponse, QuotaStatusResponse, ServicePlanType } from "../../../api/skillSprintModels";
 
@@ -701,10 +701,12 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
     { featureKey: "fallback_pomodoro", featureName: "Công cụ Pomodoro cơ bản" },
     { featureKey: "fallback_community", featureName: "Tham gia cộng đồng" },
   ];
+  // Resolve via the shared normalizer so BE naming/shape drift (features /
+  // planFeatures / featureList; string or object elements) doesn't blank the list.
   const planFeatureList: Record<PlanId,PublicPlanFeature[]> = {
-    starter:        planByKey.starter?.features ?? staticStarterFeatures,
-    skill_builder:  planByKey.skill_builder?.features ?? [],
-    career_premium: planByKey.career_premium?.features ?? [],
+    starter:        planByKey.starter        ? resolvePlanFeatures(planByKey.starter)        : staticStarterFeatures,
+    skill_builder:  resolvePlanFeatures(planByKey.skill_builder),
+    career_premium: resolvePlanFeatures(planByKey.career_premium),
   };
 
   // Dynamic benefit bullets from BE (jsonb string[]); same per-plan source as

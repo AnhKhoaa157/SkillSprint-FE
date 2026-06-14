@@ -208,6 +208,25 @@ export type PublicPlanFeature = {
   enabled?: boolean;
 };
 
+/**
+ * A single feature as it may arrive from the BE: a raw string ("Lộ trình AI"),
+ * or an object whose descriptive/key fields have drifted across API versions.
+ */
+export type RawPlanFeature =
+  | string
+  | {
+      featureKey?: string | null;
+      key?: string | null;
+      id?: string | number | null;
+      featureName?: string | null;
+      name?: string | null;
+      label?: string | null;
+      title?: string | null;
+      description?: string | null;
+      enabled?: boolean | null;
+      active?: boolean | null;
+    };
+
 export type PublicPlanResponse = {
   planId: string;
   planName: string;
@@ -221,7 +240,13 @@ export type PublicPlanResponse = {
   monthlyPrice: number;
   currency: string;
   quotas: ServicePlanQuota | null;
-  features: PublicPlanFeature[];
+  // The feature list has drifted in name (features / planFeatures / featureList) and
+  // element shape (string vs object) across BE revisions. Keep the canonical
+  // `features` typed, but tolerate the alternates so `resolvePlanFeatures` can pick
+  // whichever the current payload actually uses.
+  features?: RawPlanFeature[];
+  planFeatures?: RawPlanFeature[];
+  featureList?: RawPlanFeature[];
 };
 
 /**
@@ -252,6 +277,51 @@ export async function listSubscriptionPlans(): Promise<PublicPlanResponse[]> {
 /** True unless the feature is explicitly disabled (the public list only sends enabled ones). */
 export function isFeatureEnabled(feature: PublicPlanFeature): boolean {
   return feature.enabled !== false;
+}
+
+/**
+ * Normalize one plan's feature list into a stable `PublicPlanFeature[]` the UI can
+ * render directly. Resilient to the post-migration drift:
+ *
+ *  • Array name — picks the first populated array among `features`, `planFeatures`,
+ *    and `featureList` (also unwraps a nested `{ content: [...] }`).
+ *  • Element shape — accepts a raw string OR an object, reading the display label
+ *    from `featureName | name | label | title | description` and the key from
+ *    `featureKey | key | id` (falling back to the label or index).
+ *  • Enabled flag — defaults to true, dimmed only when `enabled`/`active` is `false`.
+ *
+ * Always returns an array (`?? []`), and drops entries with no resolvable label so
+ * the "BAO GỒM:" list never shows blank rows.
+ */
+export function resolvePlanFeatures(plan: PublicPlanResponse | null | undefined): PublicPlanFeature[] {
+  if (!plan) return [];
+
+  const unwrap = (v: unknown): RawPlanFeature[] =>
+    Array.isArray(v)
+      ? (v as RawPlanFeature[])
+      : Array.isArray((v as Paginated<RawPlanFeature> | null)?.content)
+        ? ((v as Paginated<RawPlanFeature>).content as RawPlanFeature[])
+        : [];
+
+  const candidates = [plan.features, plan.planFeatures, plan.featureList].map(unwrap);
+  // Prefer the first non-empty list; otherwise any present (possibly empty) one.
+  const list = candidates.find(arr => arr.length > 0) ?? candidates[0] ?? [];
+
+  return list
+    .map((item, idx): PublicPlanFeature => {
+      if (typeof item === "string") {
+        const name = item.trim();
+        return { featureKey: name || `feature-${idx}`, featureName: name, enabled: true };
+      }
+      const obj = item ?? {};
+      const featureName = String(
+        obj.featureName ?? obj.name ?? obj.label ?? obj.title ?? obj.description ?? "",
+      ).trim();
+      const featureKey = String(obj.featureKey ?? obj.key ?? obj.id ?? featureName ?? `feature-${idx}`);
+      const enabled = obj.enabled !== false && obj.active !== false;
+      return { featureKey, featureName, enabled };
+    })
+    .filter(f => f.featureName !== "");
 }
 
 /**

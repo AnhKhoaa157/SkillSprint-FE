@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
 import { getMe } from "../../../api/meService";
 import type { SepayPaymentCreateResponse, CreateSepayPaymentRequest } from "../../../api/skillSprintModels";
-import { listSubscriptionPlans, STATIC_FALLBACK_PLANS, formatPlanPrice, isFeatureEnabled, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/adminSubscriptionPlansService";
+import { listSubscriptionPlans, STATIC_FALLBACK_PLANS, formatPlanPrice, isFeatureEnabled, resolvePlanFeatures, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/adminSubscriptionPlansService";
 
 const F = "'Plus Jakarta Sans','Inter',sans-serif";
 const OG = "#FF6B00";
@@ -46,7 +46,9 @@ function toDisplayPlan(p: PublicPlanResponse): DisplayPlan {
     // ðŸ›¡ï¸ Airtight safety net: BE may return eatures as null/undefined when the
     // plan has no rows in plan_feature. Always coerce to [] so consumers can call
     // .map(...) without crashing.
-    features: p.features ?? [],
+    // Resolve across BE naming/shape drift (features / planFeatures / featureList;
+    // string or object elements) — always a normalized [], never blank or crashing.
+    features: resolvePlanFeatures(p),
     benefits: p.benefits ?? [],
   };
 }
