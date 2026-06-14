@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { Activity, ArrowUpRight, DollarSign, Repeat, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
-import { getAdminDashboardAnalytics, type AdminDashboardResponse } from "../../../api/adminDashboardService";
+import { getAdminDashboardAnalytics, type AdminDashboardResponse } from "../../../../../api/adminDashboardService";
 
 const ACCENT = "#FF6B00";
 
@@ -45,12 +45,6 @@ export function Sparkline({ data, color, width = 80, height = 28 }: { data: numb
     </svg>
   );
 }
-
-// Giữ lại mock data này cho tính năng Export CSV ngoài AdminDashboard không bị gãy
-export const USER_GROWTH_DATA = [
-  { week: "W1", total: 148, organic: 90, paid: 38, referral: 20 },
-  { week: "W2", total: 290, organic: 170, paid: 75, referral: 45 },
-];
 
 const UNIT_ECON_DATA = [
   { label: "CAC", value: 40000, fill: "#475569" },

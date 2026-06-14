@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft } from "lucide-react";
-import { PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
-import { useAdminUserDetail } from "./adminUserDetail/useAdminUserDetail";
-import { STATUS_OPTIONS, ROLE_OPTIONS, PLAN_TYPE_OPTIONS } from "./adminUserDetail/config";
+import { PlanBadgeStyles } from "../../../../components/admin/PlanTypeBadge";
+import { useAdminUserDetail } from "./useUserDetail";
+import { STATUS_OPTIONS, ROLE_OPTIONS, PLAN_TYPE_OPTIONS } from "./config";
 import {
   containerVariants,
   itemVariants,
@@ -15,7 +15,7 @@ import {
   SubscriptionCard,
   ControlPanel,
   SystemLogTimeline,
-} from "./adminUserDetail/components";
+} from "./components";
 
 export default function AdminUserDetailPage() {
   const { id } = useParams();

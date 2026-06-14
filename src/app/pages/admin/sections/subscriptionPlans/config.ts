@@ -6,7 +6,7 @@ import type {
   BusinessActionType,
   ServicePlanResponse,
   ServicePlanType,
-} from "../../../../api/adminSubscriptionPlansService";
+} from "../../../../../api/adminSubscriptionPlansService";
 
 /* -------------------------------------------------------------------------- */
 /*  Design tokens & hard limits.                                              */

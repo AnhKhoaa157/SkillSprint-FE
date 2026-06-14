@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Search, Users, ShieldCheck, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router";
-import adminUserService, { type AdminUserSummary, type AdminUserDetail } from "../../../api/adminUserService";
-import { PlanTypeBadge, PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
-import type { ServicePlanType } from "../../../api/adminSubscriptionPlansService";
-import { getSubscriptionPlans } from "../../../api/adminSubscriptionPlansService";
+import adminUserService, { type AdminUserSummary, type AdminUserDetail } from "../../../../../api/adminUserService";
+import { PlanTypeBadge, PlanBadgeStyles } from "../../../../../components/admin/PlanTypeBadge";
+import type { ServicePlanType } from "../../../../../api/adminSubscriptionPlansService";
+import { getSubscriptionPlans } from "../../../../../api/adminSubscriptionPlansService";
 import {
   getStatusBadge,
   safeFormatDate,
   SUB_TEXTS,
   resolveLivePlan,
-} from "../../../utils/adminStatusHelpers";
-import SubscriptionStatusBadge from "../../../components/admin/SubscriptionStatusBadge";
+} from "../../../../../utils/adminStatusHelpers";
+import SubscriptionStatusBadge from "../../../../../components/admin/SubscriptionStatusBadge";
 
 // Local status helper removed - using centralized getStatusBadge from adminStatusHelpers
 

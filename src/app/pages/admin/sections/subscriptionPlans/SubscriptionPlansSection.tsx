@@ -5,11 +5,11 @@ import { toast } from "sonner";
 import {
   getSubscriptionPlanDetail,
   type ServicePlanResponse,
-} from "../../../api/adminSubscriptionPlansService";
-import { PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
-import { usePlans, useAuditLogs, useModal } from "./subscriptionPlans/usePlanManager";
-import { StatCards, PlansTable, AuditLogList } from "./subscriptionPlans/components";
-import { PlanFormModal, StatusModal, FeaturesModal, PlanDetailModal } from "./subscriptionPlans/modals";
+} from "../../../../../api/adminSubscriptionPlansService";
+import { PlanBadgeStyles } from "../../../../../components/admin/PlanTypeBadge";
+import { usePlans, useAuditLogs, useModal } from "./usePlanManager";
+import { StatCards, PlansTable, AuditLogList } from "./components";
+import { PlanFormModal, StatusModal, FeaturesModal, PlanDetailModal } from "./modals";
 
 const TABS = [
   { id: "plans" as const, label: "Gói dịch vụ", icon: Layers },

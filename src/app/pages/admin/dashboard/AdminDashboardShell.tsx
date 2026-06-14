@@ -2,15 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, X, Layers, ServerCog } from "lucide-react";
 import { Link, useNavigate } from "react-router";
-import { useAuth } from "../../contexts/AuthContext";
-import AdminHealth from "./AdminHealth";
-import AdminFeedback from "./AdminFeedback";
-import AdminUsers from "./AdminUsers";
-import FinancialsView, { USER_GROWTH_DATA } from "./FinancialsView";
-import PaymentsView from "./PaymentsView";
-import { SubscriptionPlansView } from "./SubscriptionPlansView";
-import AdminSystemStatus from "../../../components/admin/AdminSystemStatus";
-import healthService from "../../../api/healthService";
+import { useAuth } from "../../../contexts/AuthContext";
+import AdminHealth from "../sections/health";
+import AdminFeedback from "../sections/feedback";
+import AdminUsers from "../sections/users";
+import FinancialsView from "../sections/financials";
+import { USER_GROWTH_DATA } from "../sections/financials/mocks";
+import PaymentsView from "../sections/payments";
+import SubscriptionPlansView from "../sections/subscriptionPlans";
+import AdminSystemStatus from "../../../../components/admin/AdminSystemStatus";
+import healthService from "../../../../api/healthService";
 
 function toCsv(rows: Record<string, string | number>[]) {
   if (!rows.length) return "";
@@ -85,7 +86,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let mounted = true;
-    import('../../../api/meService').then(mod => mod.getMe().then((me: any) => {
+    import('../../../../api/meService').then(mod => mod.getMe().then((me: any) => {
       if (!mounted) return;
       setCurrentUser(me);
     }).catch(() => { }));
