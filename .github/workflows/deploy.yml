@@ -1,0 +1,83 @@
+name: Frontend CI/CD — Test, Build & Deploy
+
+# Runs on every push to main and on every pull request targeting main.
+# The test → build gate runs for BOTH events; the AWS deploy runs ONLY for a push to main
+# (deploying unreviewed PR code to production — and exposing deploy credentials to PR runs —
+# would be a security hole).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# OIDC: assume the deploy role with a short-lived token instead of long-lived static keys.
+permissions:
+  id-token: write
+  contents: read
+
+# Never let two main deploys race; cancel superseded in-flight runs.
+concurrency:
+  group: frontend-cicd-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ap-southeast-1
+  S3_BUCKET: skillsprint-fe-prod
+  CLOUDFRONT_DISTRIBUTION_ID: EYCOBM8GYKNFD
+  DEPLOY_ROLE_ARN: arn:aws:iam::781863099930:role/GitHubActionsSkillSprintFrontendDeployRole
+
+jobs:
+  ci-cd:
+    name: Test → Build → Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 1b) Node.js v20 runtime with npm cache controls
+      - name: Setup Node.js v20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # 2) Clean, reproducible install from the lockfile
+      - name: Install dependencies
+        run: npm ci
+
+      # 🛡️ TẦNG PHÒNG THỦ 1 — Type Check TypeScript nghiêm ngặt (Compile-time Guard)
+      - name: Type check TypeScript
+        run: npx tsc --noEmit
+
+      # 🛡️ TẦNG PHÒNG THỦ 2 — Break-Build Guard.
+      #     A single failing assertion exits non-zero and halts the pipeline immediately,
+      #     so corrupted layouts can never reach the cloud assets.
+      - name: Run frontend test suite
+        run: npm run test:ci
+
+      # 4) Compile production-ready assets (only reached if every test passed)
+      - name: Build production bundle
+        run: npm run build
+
+      # 5) Authenticate to AWS via OIDC — push-to-main only
+      - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 5b) Sync the dist/ bundle into the S3 origin bucket
+      - name: Deploy dist/ to S3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: aws s3 sync dist/ "s3://${{ env.S3_BUCKET }}" --delete
+
+      # 6) Invalidate the CloudFront edge cache so users get the new client immediately
+      - name: Invalidate CloudFront cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ env.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
