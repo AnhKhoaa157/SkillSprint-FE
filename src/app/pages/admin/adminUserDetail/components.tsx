@@ -151,7 +151,7 @@ export function SubscriptionCard({ sub, plans }: { sub?: SubscriptionAdminRespon
   const active = sub?.status?.toUpperCase() === "ACTIVE";
 
   const livePlan = plans?.find(
-    (p) => String(p.planId).toLowerCase().trim() === String(sub?.planId).toLowerCase().trim()
+    (p) => String(p.planId).toLowerCase().trim() === String((sub as any)?.planId).toLowerCase().trim()
   ) || null;
 
   const badgeColor = livePlan?.customClasses || sub?.badgeColor;

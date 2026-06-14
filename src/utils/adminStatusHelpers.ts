@@ -54,17 +54,13 @@ export function safeFormatDateTime(value?: string | null): string {
  * the live configurations (badgeColor, badgeIcon, animationType, planName).
  * Performs case-insensitive matching on planId.
  */
-export function resolveLivePlan(
-  subOrId: any,
-  plans: any[]
-): any | undefined {
-  if (!subOrId) return undefined;
-  const planId = typeof subOrId === "string" ? subOrId : subOrId.planId;
-  const planType = typeof subOrId === "string" ? undefined : subOrId.planType;
-  const subId = String(planId || "").toLowerCase().trim();
-  return plans.find(
-    (p) =>
-      (p.planType && planType && p.planType === planType) ||
-      (p.planId && String(p.planId).toLowerCase().trim() === subId)
-  );
+export function resolveLivePlan(planId: string | null | undefined, livePlans: any[]) {
+  if (!planId || !Array.isArray(livePlans) || livePlans.length === 0) return null;
+  
+  const safeTargetId = String(planId).toLowerCase().trim();
+  
+  return livePlans.find((p) => {
+    if (!p || !p.planId) return false;
+    return String(p.planId).toLowerCase().trim() === safeTargetId;
+  }) || null;
 }
