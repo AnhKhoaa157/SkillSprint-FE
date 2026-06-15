@@ -9,8 +9,8 @@ import { completeNewPassword, confirmForgotPassword, confirmRegister, forgotPass
 import { useMaintenance } from "../../../components/system/MaintenanceGate";
 import { getSystemStatus } from "../../../api/systemMaintenanceService";
 
-const F   = "'Plus Jakarta Sans','Inter',sans-serif";
-const OG  = "#FF6B00";
+const F = "'Plus Jakarta Sans','Inter',sans-serif";
+const OG = "#FF6B00";
 
 function Field({
   label, type = "text", placeholder, icon: Icon, value, onChange,
@@ -50,50 +50,99 @@ function Field({
   );
 }
 
-const FEATURES = [
-  "Học đến đâu, gạch đầu dòng đến đó",
-  "Phát hiện những phần kiến thức bị hổng",
-  "Mô phỏng phòng vấn để luyện phản xạ",
-  "Tổng hợp lại hồ sơ học tập cực xịn",
-];
+
+/**
+ * GlobeOrbit3D — true volumetric "light wrapping around the crystal core" effect.
+ *
+ * Locked to the background art via a frame that mirrors Pannel.png's native aspect
+ * ratio (932×699) and `bg-left` anchoring, so the SVG never drifts across screen
+ * sizes. All geometry lives in the image's own pixel space (viewBox 0 0 932 699):
+ *   • globe core ≈ (465, 375), radius ≈ 115
+ *   • two tilted orbital rings whose rotation is baked into the arc paths
+ *     (animateMotion/mpath ignores element transforms, so it must be in the `d`).
+ *
+ * Each ring carries TWO synchronized sparks, half a period out of phase:
+ *   • a soft amber spark, masked to the globe disc + blurred → reads as light
+ *     gliding BEHIND / through the translucent crystal core.
+ *   • a sharp neon spark on top, unmasked → light whipping around the FRONT.
+ * The eye fuses them into one streak diving behind the sphere and swinging forward.
+ */
+const GLOBE = { cx: 465, cy: 375, r: 115 };
+
+// Two full-ellipse orbit tracks (rotation baked into the arc's x-axis-rotation
+// param and endpoints) tracing the golden trails already painted in the art.
+const ORBIT_A = "M 645.8 301.95 A 195 72 -22 1 1 284.2 448.05 A 195 72 -22 1 1 645.8 301.95";
+const ORBIT_B = "M 609.2 416.34 A 150 95 16 1 1 320.8 333.66 A 150 95 16 1 1 609.2 416.34";
+
+function OrbitRing({
+  path, dur, behindDelay,
+}: { path: string; dur: number; behindDelay: number }) {
+  return (
+    <>
+      {/* faint static trail reinforcing the painted golden ring */}
+      <path d={path} fill="none" className="stroke-[#FF6B00]/15" strokeWidth={1.5} />
+
+      {/* Layer 1 — BEHIND: soft amber spark, only visible through the globe disc */}
+      <g mask="url(#globeMask)">
+        <circle r={11} className="fill-[#FF6B00]/30" filter="url(#softBlur)">
+          <animateMotion dur={`${dur}s`} begin={`-${behindDelay}s`} repeatCount="indefinite" path={path} />
+        </circle>
+      </g>
+
+      {/* Layer 2 — FRONT: sharp electric spark gliding on top of everything */}
+      <circle r={9} className="fill-[#FF6B00]/25" filter="url(#softBlur)">
+        <animateMotion dur={`${dur}s`} repeatCount="indefinite" path={path} />
+      </circle>
+      <circle r={4} className="fill-[#FF6B00] drop-shadow-[0_0_8px_#FF6B00]">
+        <animateMotion dur={`${dur}s`} repeatCount="indefinite" path={path} />
+      </circle>
+    </>
+  );
+}
+
+function GlobeOrbit3D() {
+  return (
+    <div className="absolute left-0 top-0 h-full w-auto aspect-[932/699] pointer-events-none z-0">
+      <svg viewBox="0 0 932 699" className="h-full w-full" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" />
+          </filter>
+          <filter id="coreGlow" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="26" />
+          </filter>
+          {/* reveal the behind-spark only where it overlaps the crystal core, with a
+              feathered rim so it fades softly into the sphere */}
+          <mask id="globeMask" maskUnits="userSpaceOnUse" x="0" y="0" width="932" height="699">
+            <rect x="0" y="0" width="932" height="699" fill="black" />
+            <circle cx={GLOBE.cx} cy={GLOBE.cy} r={GLOBE.r + 4} fill="white" filter="url(#softBlur)" />
+          </mask>
+        </defs>
+
+        {/* breathing AI core glow — locked to image space so it can't drift */}
+        <circle cx={GLOBE.cx} cy={GLOBE.cy} r={118} className="fill-[#FF6B00]/10" filter="url(#coreGlow)">
+          <animate attributeName="opacity" values="0.45;0.9;0.45" dur="5s" repeatCount="indefinite" />
+        </circle>
+
+        <OrbitRing path={ORBIT_A} dur={7} behindDelay={3.5} />
+        <OrbitRing path={ORBIT_B} dur={9} behindDelay={4.5} />
+      </svg>
+    </div>
+  );
+}
 
 function LeftPanel() {
   return (
-    <div className="hidden md:flex h-screen w-[40%] flex-col pl-10 pr-12 py-12 relative overflow-hidden flex-shrink-0" style={{ background: "linear-gradient(180deg, #FAF6F2 0%, #F3ECE3 100%)" }}>
-      <BrandLogo size={100} align="left" className="mb-7" />
-      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "5px 14px", borderRadius: "99px", background: "#FFF7ED", border: "1px solid #FFEDD5", marginBottom: "28px", width: "fit-content" }}>
-        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#FF6B00" }} />
-        <span style={{ fontSize: "0.75rem", color: "#FF6B00", fontWeight: 700, fontFamily: F }}>
-          Dự án sinh viên (Bản thử nghiệm Beta)
-        </span>
-      </div>
-      <h1 style={{ fontSize: "2.2rem", fontWeight: 900, lineHeight: 1.25, letterSpacing: "-0.03em", color: "#1F2937", marginBottom: "16px", fontFamily: F }}>
-        Đừng để kiến thức<br />làm bạn <span style={{ color: "#FF6B00" }}>quá tải.</span>
-      </h1>
-      <p style={{ fontSize: "0.875rem", color: "#4B5563", lineHeight: 1.65, marginBottom: "32px", fontFamily: F }}>
-        Ứng dụng được tạo ra bởi sinh viên, dành cho sinh viên. Giúp bạn gom nhóm kiến thức, biết mình thiếu gì và cần học gì tiếp theo.
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "auto" }}>
-        {FEATURES.map(f => (
-          <div key={f} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FFF7ED", border: "1px solid #FFEDD5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Check size={11} color="#FF6B00" strokeWidth={3.5} />
-            </div>
-            <span style={{ fontSize: "0.875rem", color: "#374151", fontWeight: 600, fontFamily: F }}>{f}</span>
-          </div>
-        ))}
-      </div>
-      <div style={{ marginTop: "40px", padding: "20px 24px", borderRadius: "16px", background: "#FFFFFF", border: "1px solid rgba(0, 0, 0, 0.04)", boxShadow: "0 10px 25px rgba(0, 0, 0, 0.02)", position: "relative" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
-          <span style={{ color: "#10B981", fontSize: "16px", lineHeight: 1 }}>•</span>
-          <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#10B981", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: F }}>
-            LỜI NHẮN TỪ TEAM DEV 💻
-          </span>
-        </div>
-        <p style={{ fontSize: "0.82rem", color: "#4B5563", lineHeight: 1.6, fontFamily: F, fontWeight: 500, margin: 0 }}>
-          "Tụi mình hiểu cảm giác hoang mang khi đứng trước núi tài liệu. SkillSprint được sinh ra không phải để 'hack' brain, mà chỉ đơn giản là một công cụ giúp chúng ta đi từng bước vững chắc hơn."
-        </p>
-      </div>
+    <div className="hidden lg:flex h-screen w-[60%] flex-col px-12 pt-16 pb-4 xl:px-20 relative overflow-hidden flex-shrink-0 bg-[#F4EFE6] bg-[url('/assets/pannel/Pannel.png')] bg-[length:auto_100%] bg-left bg-no-repeat">
+      {/* True 3D volumetric light streams wrapping around the crystal core */}
+      <GlobeOrbit3D />
+
+      {/* Standalone project logo, pinned top-left above the background art + light streams */}
+      <img
+        src="/logo.png"
+        alt="SkillSprint"
+        className="absolute top-6 left-6 md:top-10 md:left-10 z-20 h-16 md:h-20 w-auto object-contain drop-shadow-[0_6px_16px_rgba(0,0,0,0.22)]"
+      />
     </div>
   );
 }
@@ -360,7 +409,7 @@ export default function Auth() {
   const { status: maintenanceStatus, loading: maintenanceLoading, refresh: refreshMaintenance } = useMaintenance();
 
   const [forceMaintenanceView, setForceMaintenanceView] = useState(false);
-  
+
   // 🟢 TRẠNG THÁI KHÓA CHÍNH XÁC: Bao gồm cả API trả về hoặc lỗi 503 kích hoạt ngầm
   const isCurrentlyLocked = maintenanceStatus?.isActive === true || forceMaintenanceView === true;
 
@@ -410,10 +459,10 @@ export default function Auth() {
     void performInitialCheck();
 
     // 🔄 Kịch bản spam kiểm tra ngầm mỗi 5 giây
-    const intervalId = setInterval(() => { 
+    const intervalId = setInterval(() => {
       void refreshMaintenance().catch((e) => {
         if (isMaintenanceError(e)) setForceMaintenanceView(true);
-      }); 
+      });
     }, 5000);
 
     return () => {
@@ -522,7 +571,7 @@ export default function Auth() {
 
   const handleSubmit = async () => {
     if (isCurrentlyLocked) return;
-    
+
     setIsSubmitting(true);
     setAuthError("");
 
@@ -607,7 +656,7 @@ export default function Auth() {
         className="flex min-h-screen w-full"
       >
         <LeftPanel />
-        <div className="h-screen min-h-screen w-full md:flex-1 flex flex-col bg-white overflow-hidden">
+        <div className="h-screen min-h-screen w-full lg:w-[40%] flex flex-col bg-white overflow-hidden relative">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", padding: "20px 32px" }}>
             <Link to="/" style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.8rem", color: "#6B7280", textDecoration: "none", fontFamily: F, transition: "color 0.2s ease" }}
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#111827"; }}
@@ -617,7 +666,7 @@ export default function Auth() {
               Về trang chủ
             </Link>
           </div>
-          <div className="w-full max-w-md mx-auto px-4 sm:px-6 py-8 flex flex-1 flex-col justify-center min-h-0">
+          <div className="w-full max-w-[390px] mx-auto px-4 py-8 flex flex-1 flex-col justify-center min-h-0 relative z-10">
             <div className="w-full">
               <AuthForm
                 mode={tab}

@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, User, Wrench } from "lucide-react";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import { Label } from "@/app/components/ui/label";
 
 const F = "'Plus Jakarta Sans', 'Inter', sans-serif";
 const EMAIL_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -39,22 +42,25 @@ function InputField({
   labelAction?: React.ReactNode; trailing?: React.ReactNode; disabled?: boolean;
 }) {
   return (
-    <div>
-      <div className="mb-2 flex items-baseline justify-between">
-        <label htmlFor={id} className="text-[13px] font-semibold tracking-[-0.01em] text-slate-700">
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <Label htmlFor={id} className="text-[13px] font-semibold tracking-[-0.01em] text-slate-700">
           {label}
-        </label>
+        </Label>
         {labelAction}
       </div>
-      <div className={`flex items-center rounded-xl border bg-white transition-all duration-200 ${error ? "border-red-400 focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10" : "border-slate-200 focus-within:border-[#FF6B00] focus-within:ring-4 focus-within:ring-[#FF6B00]/10"
-        } ${disabled ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}>
-        <Icon size={17} strokeWidth={2} aria-hidden className={`ml-3.5 shrink-0 transition-colors duration-200 ${error ? "text-red-400" : "text-slate-400"}`} />
-        <input
+      <div className="relative group flex items-center">
+        <Icon size={17} strokeWidth={2} aria-hidden className={`absolute left-3.5 z-10 transition-colors duration-300 ${error ? "text-red-400" : "text-slate-400 group-focus-within:text-[#FF6B00]"}`} />
+        <Input
           id={id} type={type} value={value} onChange={e => onChange(e.target.value)} onBlur={onBlur}
           placeholder={placeholder} autoComplete={autoComplete} aria-invalid={!!error} disabled={disabled}
-          className="min-h-[46px] w-full rounded-xl bg-transparent px-3 text-[15px] font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400 disabled:cursor-not-allowed autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[-webkit-text-fill-color:#0f172a]"
+          className={`min-h-[48px] w-full rounded-xl pl-[2.4rem] pr-10 text-[15px] font-medium text-slate-900 placeholder:font-normal placeholder:text-slate-400 disabled:cursor-not-allowed transition-all duration-300 ${
+            error 
+              ? "border-red-400 focus-visible:border-red-500 focus-visible:ring-4 focus-visible:ring-red-500/20" 
+              : "border-slate-200 focus-visible:border-[#FF6B00] focus-visible:ring-4 focus-visible:ring-[#FF6B00]/20"
+          }`}
         />
-        {trailing}
+        {trailing && <div className="absolute right-0 top-0 bottom-0 flex items-center pr-1.5 z-10">{trailing}</div>}
       </div>
       <AnimatePresence>
         {error && (
@@ -129,12 +135,14 @@ export function AuthForm({
   return (
     <AnimatePresence mode="wait">
       <motion.div key={mode} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }} style={{ fontFamily: F }}>
-        <h2 className="mb-2 text-[1.9rem] font-extrabold leading-tight tracking-[-0.035em] text-slate-900">
+        <h2 className={`text-[1.9rem] font-extrabold leading-tight tracking-[-0.035em] text-slate-900 ${isSignup ? "mb-2" : "mb-8"}`}>
           {isSignup ? "Tạo tài khoản mới ✨" : "Chào mừng trở lại 👋"}
         </h2>
-        <p className="mb-7 text-sm leading-relaxed text-slate-500">
-          {isSignup ? "Tham gia cùng các bạn sinh viên đang bứt phá." : "Đăng nhập để tiếp tục hành trình học tập"}
-        </p>
+        {isSignup && (
+          <p className="mb-10 text-sm leading-relaxed text-slate-500">
+            Tham gia cùng các bạn sinh viên đang bứt phá.
+          </p>
+        )}
 
         {/* Soft-lockdown banner. Stays mounted above the (still-visible) form whenever maintenance is
             active so the user understands why the buttons are greyed out, instead of the whole page
@@ -173,13 +181,14 @@ export function AuthForm({
             guard" that re-verifies maintenance status right before redirecting. The button is disabled
             while submitting, while that check runs (isGoogleLoading), and during soft lockdown. The SVG
             sits in a pointer-events-none wrapper so dragging across the button selects the label text. */}
-        <button
+        <Button
           type="button"
+          variant="outline"
           disabled={isSubmitting || isGoogleLoading || isMaintenanceActive}
           aria-disabled={isSubmitting || isGoogleLoading || isMaintenanceActive}
           onClick={onContinueWithGoogle}
           style={isMaintenanceActive ? { cursor: "not-allowed" } : undefined}
-          className="relative flex min-h-[46px] w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 cursor-pointer hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:bg-white"
+          className="relative flex min-h-[48px] w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[15px] font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 cursor-pointer hover:border-slate-300 hover:shadow-[0_6px_14px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:bg-white disabled:hover:-translate-y-0 disabled:hover:shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
         >
           {isGoogleLoading ? (
             <Loader2 size={17} className="animate-spin text-slate-400" />
@@ -193,15 +202,15 @@ export function AuthForm({
               ? "Đang kiểm tra hệ thống..."
               : isSignup ? "Sign up with Google" : "Sign in with Google"}
           </span>
-        </button>
+        </Button>
 
-        <div className="my-6 flex items-center gap-3">
+        <div className="my-8 flex items-center gap-3">
           <div className="h-px flex-1 border-t border-slate-100" />
           <span className="whitespace-nowrap text-xs text-slate-400">hoặc tiếp tục với email</span>
           <div className="h-px flex-1 border-t border-slate-100" />
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-6">
           {isSignup && (
             <InputField id="auth-name" label="Họ và tên" icon={User} value={name} onChange={onNameChange} onBlur={() => setTouched(t => ({ ...t, name: true }))} placeholder="Nguyễn Văn A" autoComplete="name" error={nameError} disabled={isMaintenanceActive} />
           )}
@@ -227,16 +236,13 @@ export function AuthForm({
             )}
           </AnimatePresence>
 
-          <motion.button
+          <Button
             type="submit"
             disabled={isSubmitting || isMaintenanceActive}
             aria-disabled={isSubmitting || isMaintenanceActive}
-            whileHover={isMaintenanceActive ? undefined : { scale: 1.015, y: -1 }}
-            whileTap={isMaintenanceActive ? undefined : { scale: 0.985 }}
-            transition={{ type: "spring", stiffness: 400, damping: 22 }}
-            className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-none text-[15px] font-bold text-white transition-[box-shadow,filter] duration-200 ${isMaintenanceActive
-              ? "cursor-not-allowed bg-slate-300 shadow-none"
-              : "bg-gradient-to-r from-[#FF6B00] to-[#FF7E21] shadow-[0_4px_20px_rgba(255,107,0,0.25)] hover:brightness-[1.06] hover:shadow-[0_8px_28px_rgba(255,107,0,0.35)]"
+            className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-none text-[15px] font-bold text-white transition-all duration-150 ${isMaintenanceActive
+              ? "cursor-not-allowed bg-slate-300 shadow-none hover:bg-slate-300"
+              : "bg-[#FF6B00] shadow-[0_4px_14px_rgba(255,107,0,0.2)] hover:bg-[#FF7A00] hover:shadow-[0_0_20px_rgba(255,107,0,0.3)] active:translate-y-0.5"
               }`}
             style={{ cursor: isMaintenanceActive ? "not-allowed" : "pointer" }}
           >
@@ -256,7 +262,7 @@ export function AuthForm({
                 <ArrowRight size={16} strokeWidth={2.5} />
               </>
             )}
-          </motion.button>
+          </Button>
         </form>
 
         {isSignup && <p className="mt-4 text-center text-xs text-slate-400">Bắt đầu miễn phí. Không cần thẻ tín dụng.</p>}
@@ -267,7 +273,7 @@ export function AuthForm({
             <button type="button" onClick={() => onSwitchMode(isSignup ? "signin" : "signup")} className="cursor-pointer border-none bg-transparent p-0 text-[13px] font-bold text-[#FF6B00] underline-offset-4 transition-all hover:text-orange-600 hover:underline">{isSignup ? "Đăng nhập" : "Đăng ký ngay"}</button>
           </p>
           <p className="text-center text-xs">
-            <Link to="/admin-login" className="text-slate-400 no-underline underline-offset-4 transition-colors hover:text-slate-600 hover:underline">Đăng nhập cho đối tác trường ĐH</Link>
+            <Link to="/admin-login" className="block w-full text-center mx-auto text-slate-400 no-underline underline-offset-4 transition-colors hover:text-slate-600 hover:underline">Đăng nhập cho đối tác trường ĐH</Link>
           </p>
         </div>
       </motion.div>
