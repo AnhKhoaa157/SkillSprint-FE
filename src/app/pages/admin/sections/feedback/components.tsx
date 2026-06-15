@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "motion/react";
 import {
   MessageSquare, Search, RefreshCw, LoaderCircle,
@@ -104,19 +104,60 @@ export function FeedbackToolbar({ fb }: { fb: FeedbackManager }) {
     accent, hasFilters, clearFilters, page,
   } = fb;
 
-  // Consolidated, uncommitted filter draft. Nothing is sent to the API until the
-  // user clicks "Áp dụng" — individual select/date changes only mutate this object.
+  // Uncommitted filter draft for dropdowns & dates.
   const [draft, setDraft] = useState({
-    status: statusFilter, type: typeFilter, search: searchInput, dateFrom, dateTo,
+    status: statusFilter, type: typeFilter, dateFrom, dateTo,
   });
 
-  // Re-sync the draft whenever the applied filters change from the outside
-  // (e.g. "Xóa lọc"), so the inputs reflect the live state.
-  useEffect(() => {
-    setDraft({ status: statusFilter, type: typeFilter, search: searchInput, dateFrom, dateTo });
-  }, [statusFilter, typeFilter, searchInput, dateFrom, dateTo]);
+  // Independent state for the debounce search pipeline
+  const [localSearch, setLocalSearch] = useState(searchInput);
+  const isFirstRender = useRef(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const apply = () => applyFilters(draft);
+  // Re-sync the draft whenever the applied filters change from the outside (e.g. "Xóa lọc")
+  useEffect(() => {
+    setDraft({ status: statusFilter, type: typeFilter, dateFrom, dateTo });
+  }, [statusFilter, typeFilter, dateFrom, dateTo]);
+
+  // Re-sync local search
+  useEffect(() => {
+    setLocalSearch(searchInput);
+  }, [searchInput]);
+
+  // The "Áp dụng" button applies the current dropdown drafts + the local search state
+  const apply = () => applyFilters({ ...draft, search: localSearch.trim() });
+
+  // Master useEffect for Debounce Search Pipeline
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const trimmedSearch = localSearch.trim();
+
+    // Rule A: completely cleared
+    if (trimmedSearch === "") {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      applyFilters({ ...draft, search: "" });
+      return;
+    }
+
+    // Rule B: length 1 -> halt
+    if (trimmedSearch.length === 1) {
+      return;
+    }
+
+    // Rule C: >= 2 -> debounce 400ms
+    timerRef.current = setTimeout(() => {
+      applyFilters({ ...draft, search: trimmedSearch });
+    }, 400);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localSearch]);
 
   // Uniform primitive styling shared across every input/select in the bar.
   const fieldCls = "text-sm px-3 py-2 rounded-md border border-slate-200 bg-white text-slate-700 outline-none transition focus:border-violet-400";
@@ -131,9 +172,17 @@ export function FeedbackToolbar({ fb }: { fb: FeedbackManager }) {
         <div className="relative flex-1">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
-            value={draft.search}
-            onChange={e => setDraft(d => ({ ...d, search: e.target.value }))}
-            onKeyDown={e => e.key === "Enter" && apply()}
+            value={localSearch}
+            onChange={e => setLocalSearch(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                if (timerRef.current) clearTimeout(timerRef.current);
+                const trimmed = localSearch.trim();
+                if (trimmed === "" || trimmed.length >= 2) {
+                  applyFilters({ ...draft, search: trimmed });
+                }
+              }
+            }}
             placeholder="Tìm tiêu đề, email, nội dung..."
             className={`${fieldCls} w-full pl-8`}
           />
