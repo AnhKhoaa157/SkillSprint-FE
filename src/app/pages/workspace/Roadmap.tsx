@@ -286,13 +286,18 @@ export default function Roadmap() {
           currentRoadmap = await roadmapService.getRoadmap(workspaceId);
         } catch (err: any) {
           if (err?.status === 404 || String(err?.message || "").includes("404") || String(err || "").includes("404")) {
-            if (mounted) setGenerating(true);
-            try {
-              await roadmapService.generateRoadmap(workspaceId);
-            } catch (genErr) {
-              console.warn("Auto-generate trigger failed", genErr);
+            const shouldAutoGenerate = (location.state as any)?.autoGenerate;
+            if (shouldAutoGenerate) {
+              if (mounted) setGenerating(true);
+              try {
+                await roadmapService.generateRoadmap(workspaceId);
+              } catch (genErr) {
+                console.warn("Auto-generate trigger failed", genErr);
+              }
+              currentRoadmap = await roadmapService.getRoadmap(workspaceId).catch(() => null);
+            } else {
+              currentRoadmap = null;
             }
-            currentRoadmap = await roadmapService.getRoadmap(workspaceId).catch(() => null);
           } else {
             throw err;
           }
@@ -645,16 +650,16 @@ export default function Roadmap() {
     return (
       <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] bg-[radial-gradient(circle_at_top_left,_rgba(255,107,0,0.10),_transparent_30%),linear-gradient(180deg,_#F8FAFC_0%,_#F1F5F9_100%)] px-6 py-8 text-slate-900 lg:px-10">
         <div className="mx-auto flex min-h-[70vh] max-w-3xl items-center justify-center">
-          <div className="w-full rounded-[2rem] border border-rose-200 bg-white p-8 text-center shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-50 text-rose-600"><BookOpenCheck className="h-8 w-8" /></div>
-            <h1 className="mt-5 text-2xl font-bold text-slate-900">Không thể tải lộ trình</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-500">{error || "Vui lòng kiểm tra lại cấu hình."}</p>
+          <div className="w-full rounded-[2rem] border border-amber-200 bg-white p-8 text-center shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B00]"><BookOpenCheck className="h-8 w-8" /></div>
+            <h1 className="mt-5 text-2xl font-bold text-slate-900">Chưa có lộ trình học tập</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-500">{"Vui lòng bấm 'Khởi tạo' để AI bắt đầu xây dựng lộ trình cá nhân hóa cho bạn."}</p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <button type="button" onClick={handleBackToDetail} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer">
                 <ArrowLeft size={16} /> Quay lại
               </button>
-              <button type="button" onClick={handleGenerate} className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[#E05E00] cursor-pointer">
-                <Sparkles size={16} /> Thử tạo lại roadmap
+              <button type="button" onClick={handleBackToDetail} className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[#E05E00] cursor-pointer">
+                <Sparkles size={16} /> Đến không gian làm việc để khởi tạo
               </button>
             </div>
           </div>

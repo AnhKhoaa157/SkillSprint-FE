@@ -152,27 +152,33 @@ export function FeedbackToolbar({ fb }: { fb: FeedbackManager }) {
 
       {/* Bottom Row: Filters & Actions Group */}
       <div className="flex items-center gap-2 flex-wrap w-full">
-        <select
-          value={draft.type}
-          onChange={e => setDraft(d => ({ ...d, type: e.target.value }))}
-          className={`${fieldCls} font-semibold flex-1 min-w-[130px]`}
-        >
-          <option value="">Tất cả loại</option>
-          {Object.entries(FEEDBACK_TYPE_LABEL).map(([key, { label }]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
+        <div className="relative flex-1 min-w-[130px]">
+          <select
+            value={draft.type}
+            onChange={e => setDraft(d => ({ ...d, type: e.target.value }))}
+            className={`${fieldCls} w-full appearance-none pr-8 font-semibold cursor-pointer`}
+          >
+            <option value="">Tất cả loại</option>
+            {Object.entries(FEEDBACK_TYPE_LABEL).map(([key, { label }]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+          <svg className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        </div>
 
-        <select
-          value={draft.status}
-          onChange={e => setDraft(d => ({ ...d, status: e.target.value }))}
-          className={`${fieldCls} font-semibold flex-1 min-w-[130px]`}
-        >
-          <option value="">Tất cả trạng thái</option>
-          {Object.entries(FEEDBACK_STATUS_LABEL).map(([key, { label }]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
+        <div className="relative flex-1 min-w-[130px]">
+          <select
+            value={draft.status}
+            onChange={e => setDraft(d => ({ ...d, status: e.target.value }))}
+            className={`${fieldCls} w-full appearance-none pr-8 font-semibold cursor-pointer`}
+          >
+            <option value="">Tất cả trạng thái</option>
+            {Object.entries(FEEDBACK_STATUS_LABEL).map(([key, { label }]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+          <svg className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        </div>
 
         <input
           type="date"

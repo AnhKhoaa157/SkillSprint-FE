@@ -673,8 +673,8 @@ export default function WorkspaceDetail() {
                 <div className="space-y-5">
                   <div className="flex flex-wrap items-center gap-3">
                     {normalizedStatus === 'CONFIRMED' ? (
-                      <button type="button" onClick={() => navigate(`/app/workspaces/${id}/roadmap`)} className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] transition">
-                        <Sparkles className="h-4 w-4" />Xem lộ trình học tập chi tiết
+                      <button type="button" onClick={() => navigate(`/app/workspaces/${id}/roadmap`, { state: { autoGenerate: true } })} className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] transition">
+                        <Sparkles className="h-4 w-4" />Khởi tạo lộ trình học tập chi tiết
                       </button>
                     ) : (
                       <>

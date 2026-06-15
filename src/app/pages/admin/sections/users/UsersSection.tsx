@@ -11,8 +11,9 @@ import {
   safeFormatDate,
   SUB_TEXTS,
   resolveLivePlan,
+  normalizePlanType,
+  normalizeStatus,
 } from "../../../../../utils/adminStatusHelpers";
-import SubscriptionStatusBadge from "../../../../../components/admin/SubscriptionStatusBadge";
 
 type AvatarCapableUser = AdminUserSummary & {
   avatarUrl?: string | null;
@@ -91,18 +92,19 @@ function DynamicPlanBadge({ sub, livePlansList }: { sub: any; livePlansList: any
     return <span style={{ color: "#94A3B8", fontSize: "0.8rem", fontStyle: "italic" }}>{SUB_TEXTS.NO_SUBSCRIPTION}</span>;
   }
 
-  const live = resolveLivePlan(sub?.planId, livePlansList);
-
-  // CỨU TRỢ UI: Tự động phục hồi dải màu gradient cam rực rỡ nếu DB hoặc cache cấu hình trả về trống rỗng
-  const badgeColor = live?.customClasses || sub.badgeColor || "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm shadow-orange-500/10";
-  const badgeIcon = live?.iconName || sub.badgeIcon || "Layers";
-  const animationType = live?.animation || sub.animationType || "none";
+  const live = resolveLivePlan(sub?.planId, livePlansList, sub?.planType, sub?.planName);
 
   const planName = live?.planName || sub.planName || "LEARNER";
-  const planType = (live?.planType || sub.planType || "LEARNER_DEFAULT") as ServicePlanType;
+  const rawPlanType = live?.planType || sub.planType || "LEARNER_DEFAULT";
+  const planType = normalizePlanType(rawPlanType, planName);
+
+  // Xóa bỏ "CỨU TRỢ UI" cục bộ để PlanTypeBadge quyết định fallback (Single Source of Truth)
+  const badgeColor = live?.badgeColor || sub.badgeColor;
+  const badgeIcon = live?.badgeIcon || sub.badgeIcon;
+  const animationType = live?.animationType || sub.animationType;
 
   // QUY TẮC NGHIỆM NGẶT: Chỉ những vai trò ADMIN thực thụ mới sử dụng nhãn Hệ thống
-  const isUltimateAdmin = planType === "ADMIN_DEFAULT" || String(planName).toUpperCase() === "ADMIN";
+  const isUltimateAdmin = planType === "ADMIN_DEFAULT";
 
   return (
     <div className="flex flex-col gap-1 min-w-[130px]">
@@ -114,7 +116,6 @@ function DynamicPlanBadge({ sub, livePlansList }: { sub: any; livePlansList: any
           badgeIcon={badgeIcon}
           animationType={animationType}
         />
-        <SubscriptionStatusBadge status={sub.status} />
       </div>
 
       {isUltimateAdmin ? (
@@ -277,7 +278,7 @@ export default function AdminUsers() {
         {[
           { label: "Tổng tài khoản", value: total.toLocaleString(), icon: Users, color: "#FF6B00", bg: "rgba(255,107,0,0.06)" },
           { label: "Đang hiển thị", value: String(users.length), icon: ShieldCheck, color: "#EA580C", bg: "rgba(234,88,12,0.06)" },
-          { label: "Tài khoản hoạt động", value: users.filter(u => String(u.status).toUpperCase() === "ACTIVE").length.toString(), icon: RefreshCw, color: "#22c55e", bg: "rgba(34,197,94,0.06)" },
+          { label: "Tài khoản hoạt động", value: users.filter(u => normalizeStatus(u.status) === "ACTIVE").length.toString(), icon: RefreshCw, color: "#22c55e", bg: "rgba(34,197,94,0.06)" },
         ].map((c, i) => (
           <motion.div key={c.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
             className="rounded-2xl p-4 flex items-center gap-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
