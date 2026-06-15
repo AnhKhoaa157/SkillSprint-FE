@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "motion/react";
 import { Search, Users, ShieldCheck, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -136,7 +136,9 @@ function DynamicPlanBadge({ sub, livePlansList }: { sub: any; livePlansList: any
 }
 
 export default function AdminUsers() {
-  const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [localSearch, setLocalSearch] = useState(searchParams.get("search") || "");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const [page, setPage] = useState(0);
   const [size] = useState(10);
   const [users, setUsers] = useState<AdminUserDetail[]>([]);
@@ -144,7 +146,9 @@ export default function AdminUsers() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+
+  const isFirstRender = useRef(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Single source of truth for the indicator: derive total pages from the API's
   // total count + page size, never from the length of the current page slice.
@@ -184,6 +188,42 @@ export default function AdminUsers() {
     }
   };
 
+  // Master useEffect for Debounce Search Pipeline
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const trimmedSearch = localSearch.trim();
+
+    // Rule A: Input is completely cleared
+    if (trimmedSearch === "") {
+      setSearch("");
+      setPage(0);
+      load(0, "");
+      return;
+    }
+
+    // Rule B: Input length exactly 1 - Halt API emission
+    if (trimmedSearch.length === 1) {
+      return;
+    }
+
+    // Rule C: Valid search (length >= 2) - Debounce 400ms
+    timerRef.current = setTimeout(() => {
+      setSearch(trimmedSearch);
+      setPage(0);
+      load(0, trimmedSearch);
+    }, 400);
+
+    // Cleanup phase: wipe out previous timers during rapid typing
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localSearch]);
+
   // On mount, honor a deep-linked ?page= so the active indicator and the fetch
   // parameter start in sync.
   useEffect(() => {
@@ -192,17 +232,21 @@ export default function AdminUsers() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Mirror the live currentPage back into the URL (?page=) so it survives reloads
+  // Mirror the live currentPage and search back into the URL so it survives reloads
   // and stays the single source of truth for both fetch + indicator.
   useEffect(() => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
       if (page > 0) next.set("page", String(page));
       else next.delete("page");
+      
+      if (search) next.set("search", search);
+      else next.delete("search");
+      
       return next;
     }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, search]);
 
   useEffect(() => {
     const handlePlansUpdated = () => {
@@ -253,21 +297,39 @@ export default function AdminUsers() {
           <div className="relative flex-1 max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && load(0)}
+              value={localSearch}
+              onChange={e => setLocalSearch(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter") {
+                  if (timerRef.current) clearTimeout(timerRef.current);
+                  const trimmed = localSearch.trim();
+                  if (trimmed === "" || trimmed.length >= 2) {
+                    setSearch(trimmed);
+                    setPage(0);
+                    load(0, trimmed);
+                  }
+                }
+              }}
               placeholder="Tìm email hoặc tên..."
               className="w-full h-9 pl-9 pr-3 rounded-xl text-sm outline-none transition-all"
               style={{ border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#0F172A" }}
             />
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => load(0)}
+            <button onClick={() => {
+                if (timerRef.current) clearTimeout(timerRef.current);
+                const trimmed = localSearch.trim();
+                if (trimmed === "" || trimmed.length >= 2) {
+                  setSearch(trimmed);
+                  setPage(0);
+                  load(0, trimmed);
+                }
+              }}
               className="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm active:scale-[0.98]"
               style={{ background: "linear-gradient(135deg,#FF6B00,#EA580C)" }}>
               Tìm kiếm
             </button>
-            <button onClick={() => { setSearch(""); load(0, ""); }}
+            <button onClick={() => { setLocalSearch(""); }}
               className="px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
               style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#64748B" }}>
               Xóa lọc
