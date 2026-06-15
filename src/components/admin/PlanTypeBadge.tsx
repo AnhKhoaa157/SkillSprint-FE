@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import * as LucideIcons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ServicePlanType } from "../../api/adminSubscriptionPlansService";
+import { normalizePlanType } from "../../utils/adminStatusHelpers";
 
 export type PlanBadgeAnimation = "shimmer" | "pulse" | "none";
 
@@ -186,7 +187,8 @@ export function PlanTypeBadge({
   animationType,
   size = "sm",
 }: PlanTypeBadgeProps) {
-  const fallback = TYPE_FALLBACK[(type ?? "FREE") as ServicePlanType] ?? TYPE_FALLBACK.FREE;
+  const normalizedType = normalizePlanType(type);
+  const fallback = TYPE_FALLBACK[normalizedType] ?? TYPE_FALLBACK.FREE;
 
   const rawGradient = (badgeColor && badgeColor.trim()) || fallback.badgeColor;
   // Normalization (spec §2): a `from-…/to-…` string with no direction token won't fire the

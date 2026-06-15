@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { PlanTypeBadge } from "../../../../components/admin/PlanTypeBadge";
 import type { AdminUserDetail, SubscriptionAdminResponse } from "../../../../api/adminUserService";
-import { SUB_TEXTS, resolveLivePlan, safeFormatDate } from "../../../../utils/adminStatusHelpers";
+import { SUB_TEXTS, resolveLivePlan, safeFormatDate, normalizePlanType } from "../../../../utils/adminStatusHelpers";
 import SubscriptionStatusBadge from "../../../../components/admin/SubscriptionStatusBadge";
 import type { ActionKey } from "./useUserDetail";
 import {
@@ -150,20 +150,17 @@ export function UserBanner({ user, id }: { user: AdminUserDetail; id: string }) 
 export function SubscriptionCard({ sub, plans }: { sub?: SubscriptionAdminResponse | null; plans?: any[] }) {
   const active = sub?.status?.toUpperCase() === "ACTIVE";
 
-  const livePlan = plans?.find(
-    (p) => String(p.planId).toLowerCase().trim() === String((sub as any)?.planId).toLowerCase().trim()
-  ) || null;
+  const livePlan = resolveLivePlan((sub as any)?.planId, plans || [], sub?.planType, sub?.planName);
 
-  const badgeColor = livePlan?.customClasses || sub?.badgeColor;
-  const badgeIcon = livePlan?.iconName || sub?.badgeIcon;
-  const animationType = livePlan?.animation || sub?.animationType;
+  const rawPlanType = livePlan?.planType || sub?.planType;
+  const planType = normalizePlanType(rawPlanType, livePlan?.planName || sub?.planName);
 
-  const livePlanName = livePlan?.planName || sub?.planName;
-  const isAdmin = sub?.planType === "ADMIN_DEFAULT" || String(livePlanName || "").toUpperCase().includes("ADMIN");
-  const isPremium = sub?.planType === "PREMIUM" || String(livePlanName || "").toUpperCase().includes("PREMIUM");
+  const badgeColor = livePlan?.badgeColor || sub?.badgeColor;
+  const badgeIcon = livePlan?.badgeIcon || sub?.badgeIcon;
+  const animationType = livePlan?.animationType || sub?.animationType;
 
-  const planType = (isAdmin ? "ADMIN_DEFAULT" : isPremium ? "PREMIUM" : (sub?.planType ?? "FREE")) as any;
-  const planName = isAdmin ? "ADMIN" : (livePlanName || "HIDDEN PLAN");
+  const isAdmin = planType === "ADMIN_DEFAULT";
+  const planName = isAdmin ? "ADMIN" : (livePlan?.planName || sub?.planName || "HIDDEN PLAN");
 
   return (
     <motion.div

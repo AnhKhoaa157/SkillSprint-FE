@@ -1,3 +1,5 @@
+import type { ServicePlanType } from "../api/adminSubscriptionPlansService";
+
 export type StatusBadge = { bg: string; text: string; border: string; label: string };
 
 export const STATUS_BADGE: Record<string, StatusBadge> = {
@@ -11,8 +13,28 @@ export const SUB_TEXTS = {
   HIDDEN_PLAN: "Gói ẩn",
 };
 
+export function normalizeStatus(status?: string | null): string {
+  return String(status || "").toUpperCase().trim();
+}
+
+export function normalizePlanType(type?: string | null, nameFallback?: string | null): ServicePlanType {
+  let t = String(type || "").toUpperCase().trim();
+  
+  if (!t || t === "LEARNER_DEFAULT" || t === "FREE" || t === "UNDEFINED" || t === "NULL") {
+     const n = String(nameFallback || "").toUpperCase().trim();
+     if (n.includes("ADMIN")) t = "ADMIN_DEFAULT";
+     else if (n.includes("SKILLBUILDER") || n.includes("SKILL_BUILDER")) t = "SKILL_BUILDER";
+     else if (n.includes("PREMIUM")) t = "PREMIUM";
+  }
+
+  if (t === "ADMIN" || t === "ADMIN_DEFAULT") return "ADMIN_DEFAULT";
+  if (t === "SKILLBUILDER" || t === "SKILL_BUILDER") return "SKILL_BUILDER";
+  if (t === "PREMIUM") return "PREMIUM";
+  return "FREE";
+}
+
 export function getStatusBadge(status?: string | null): StatusBadge {
-  const normalized = String(status || "").toUpperCase();
+  const normalized = normalizeStatus(status);
   return (
     STATUS_BADGE[normalized] ?? {
       bg: "#F3F4F6",
@@ -54,13 +76,23 @@ export function safeFormatDateTime(value?: string | null): string {
  * the live configurations (badgeColor, badgeIcon, animationType, planName).
  * Performs case-insensitive matching on planId.
  */
-export function resolveLivePlan(planId: string | null | undefined, livePlans: any[]) {
-  if (!planId || !Array.isArray(livePlans) || livePlans.length === 0) return null;
+export function resolveLivePlan(planId: string | null | undefined, livePlans: any[], planTypeFallback?: string | null, planNameFallback?: string | null) {
+  if (!Array.isArray(livePlans) || livePlans.length === 0) return null;
   
-  const safeTargetId = String(planId).toLowerCase().trim();
+  if (planId) {
+    const safeTargetId = String(planId).toLowerCase().trim();
+    const found = livePlans.find((p) => {
+      if (!p || !p.planId) return false;
+      return String(p.planId).toLowerCase().trim() === safeTargetId;
+    });
+    if (found) return found;
+  }
   
-  return livePlans.find((p) => {
-    if (!p || !p.planId) return false;
-    return String(p.planId).toLowerCase().trim() === safeTargetId;
-  }) || null;
+  const normalizedType = normalizePlanType(planTypeFallback, planNameFallback);
+  if (normalizedType !== "FREE") {
+     const foundByType = livePlans.find(p => normalizePlanType(p.planType, p.planName) === normalizedType);
+     if (foundByType) return foundByType;
+  }
+  
+  return null;
 }
