@@ -50,7 +50,6 @@ function PlanCardSkeleton({ featured = false }: { featured?: boolean }) {
 }
 
 export default function PricingPage() {
-  const [isAnnual, setIsAnnual] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [authGateOpen, setAuthGateOpen] = useState(false);
   const [pendingAuthPlan, setPendingAuthPlan] = useState<{ id: string; name: string } | null>(null);
@@ -73,7 +72,7 @@ export default function PricingPage() {
 
   const handlePlanCTA = (plan: PublicPlanResponse) => {
     if (isAuthenticated) {
-      navigate(`/app?pricing=${plan.planId}&period=${isAnnual ? "annual" : "monthly"}`);
+      navigate(`/app?pricing=${plan.planId}`);
       return;
     }
     setPendingAuthPlan({ id: plan.planId, name: plan.planName });
@@ -86,10 +85,6 @@ export default function PricingPage() {
     navigate(`/login?mode=${mode}`);
   };
 
-  function getEffectivePrice(plan: PublicPlanResponse) {
-    return isAnnual ? Math.round(plan.monthlyPrice * 0.75) : plan.monthlyPrice;
-  }
-
   const gridColsClass =
     plans.length >= 3 ? "md:grid-cols-3 max-w-5xl" : plans.length === 2 ? "md:grid-cols-2 max-w-4xl" : "max-w-sm";
 
@@ -98,7 +93,7 @@ export default function PricingPage() {
       {plans?.map((plan, idx) => {
         const isFree = plan.monthlyPrice <= 0;
         const isFeatured = !isFree && idx === plans.length - 1 && plans.length > 1;
-        const price = getEffectivePrice(plan);
+        const price = plan.monthlyPrice;
 
         const BadgeIcon = plan.badgeIcon ? BADGE_ICONS[plan.badgeIcon] : undefined;
         const showBadge = Boolean(plan.badgeColor || plan.badgeIcon) || isFeatured;
@@ -237,44 +232,8 @@ export default function PricingPage() {
             </motion.p>
           </section>
 
-          {/* TOGGLE BILLING PERIOD SWITCH */}
-          <section className="flex justify-center mb-16 px-4">
-            <div className="relative inline-flex bg-slate-100 rounded-full p-1 border border-slate-200/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
-              <motion.div
-                animate={{ y: [0, -3, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-7 right-2 bg-[#10B981] text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-[0_4px_12px_rgba(16,185,129,0.25)] z-20"
-              >
-                TIẾT KIỆM 25%
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 rotate-45 w-1.5 h-1.5 bg-[#10B981]" />
-              </motion.div>
-
-              <button
-                type="button"
-                onClick={() => setIsAnnual(false)}
-                className={`relative z-10 px-6 py-2.5 rounded-full font-bold text-sm transition-colors cursor-pointer ${!isAnnual ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
-              >
-                Trả theo tháng
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsAnnual(true)}
-                className={`relative z-10 px-6 py-2.5 rounded-full font-bold text-sm transition-colors cursor-pointer ${isAnnual ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
-              >
-                Trả theo năm
-              </button>
-
-              <motion.div
-                layout
-                transition={{ type: "spring", stiffness: 350, damping: 26 }}
-                className="absolute top-1 bottom-1 left-1 bg-white rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.08)] z-0"
-                style={{ width: "calc(50% - 4px)", x: isAnnual ? "100%" : "0%" }}
-              />
-            </div>
-          </section>
-
-          {/* PRICING CARDS SECTION */}
-          <section className="px-4 mb-24">
+          {/* PRICING CARDS SECTION — monthly billing only */}
+          <section className="px-4 mb-24 mt-16">
             {loadingPlans ? (
               <div className="mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch justify-center">
                 <PlanCardSkeleton />

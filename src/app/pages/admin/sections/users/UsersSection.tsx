@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Search, Users, ShieldCheck, RefreshCw } from "lucide-react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import adminUserService, { type AdminUserSummary, type AdminUserDetail } from "../../../../../api/adminUserService";
 import { PlanTypeBadge, PlanBadgeStyles } from "../../../../../components/admin/PlanTypeBadge";
 import type { ServicePlanType } from "../../../../../api/adminSubscriptionPlansService";
@@ -22,6 +22,15 @@ type AvatarCapableUser = AdminUserSummary & {
 
 function getUserInitial(user: AdminUserSummary) {
   return (user.fullName || user.email || "?").charAt(0).toUpperCase();
+}
+
+/** Compact, centered window of page indices around the active page. */
+function getPageWindow(current: number, totalPages: number): number[] {
+  const start = Math.max(0, Math.min(current - 2, totalPages - 5));
+  const end = Math.min(totalPages - 1, Math.max(current + 2, 4));
+  const pages: number[] = [];
+  for (let i = Math.max(0, start); i <= end; i++) pages.push(i);
+  return pages;
 }
 
 function getUserAvatarUrl(user: AdminUserSummary) {
@@ -135,6 +144,11 @@ export default function AdminUsers() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Single source of truth for the indicator: derive total pages from the API's
+  // total count + page size, never from the length of the current page slice.
+  const totalPages = Math.max(1, Math.ceil(total / size));
 
   const load = async (p: number, s = search) => {
     setLoading(true);
@@ -170,9 +184,25 @@ export default function AdminUsers() {
     }
   };
 
+  // On mount, honor a deep-linked ?page= so the active indicator and the fetch
+  // parameter start in sync.
   useEffect(() => {
-    load(0);
+    const initialPage = Math.max(0, parseInt(searchParams.get("page") || "0", 10) || 0);
+    load(initialPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Mirror the live currentPage back into the URL (?page=) so it survives reloads
+  // and stays the single source of truth for both fetch + indicator.
+  useEffect(() => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (page > 0) next.set("page", String(page));
+      else next.delete("page");
+      return next;
+    }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   useEffect(() => {
     const handlePlansUpdated = () => {
@@ -202,7 +232,7 @@ export default function AdminUsers() {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {[
           { label: "Tổng tài khoản", value: total.toLocaleString(), icon: Users, color: "#FF6B00", bg: "rgba(255,107,0,0.06)" },
-          { label: "Trang hiện tại", value: String(users.length), icon: ShieldCheck, color: "#EA580C", bg: "rgba(234,88,12,0.06)" },
+          { label: "Đang hiển thị", value: String(users.length), icon: ShieldCheck, color: "#EA580C", bg: "rgba(234,88,12,0.06)" },
           { label: "Tài khoản hoạt động", value: users.filter(u => String(u.status).toUpperCase() === "ACTIVE").length.toString(), icon: RefreshCw, color: "#22c55e", bg: "rgba(34,197,94,0.06)" },
         ].map((c, i) => (
           <motion.div key={c.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
@@ -328,14 +358,38 @@ export default function AdminUsers() {
         </div>
 
         {/* Pagination */}
-        <div className="px-4 py-3 flex items-center justify-between" style={{ borderTop: "1px solid #F1F5F9", background: "#FAFAFA" }}>
-          <span style={{ fontSize: "0.8rem", color: "#64748B" }}>Hiển thị {users.length} / {total.toLocaleString()} người dùng</span>
-          <div className="flex items-center gap-2">
+        <div className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap" style={{ borderTop: "1px solid #F1F5F9", background: "#FAFAFA" }}>
+          <span style={{ fontSize: "0.8rem", color: "#64748B" }}>
+            Trang {page + 1} / {totalPages} · {total.toLocaleString()} người dùng
+          </span>
+          <div className="flex items-center gap-1.5">
+            {/* All triggers disable while a fetch is in flight to prevent double-click races. */}
             <button onClick={() => load(Math.max(0, page - 1))} disabled={page === 0 || loading}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">
               ← Trước
             </button>
-            <button onClick={() => load(page + 1)} disabled={users.length < size || loading}
+
+            {getPageWindow(page, totalPages).map(idx => {
+              const isActive = idx === page;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => load(idx)}
+                  disabled={loading || isActive}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`min-w-9 h-8 px-2.5 rounded-lg text-xs font-bold border transition inline-flex items-center justify-center gap-1 cursor-pointer disabled:cursor-not-allowed ${
+                    isActive
+                      ? "bg-orange-100 text-orange-500 border-orange-200 shadow-[0_0_0_3px_rgba(255,107,0,0.08)]"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 disabled:opacity-40"
+                  }`}
+                >
+                  {isActive && <ShieldCheck size={12} className="shrink-0" />}
+                  {idx + 1}
+                </button>
+              );
+            })}
+
+            <button onClick={() => load(page + 1)} disabled={page + 1 >= totalPages || loading}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">
               Tiếp →
             </button>

@@ -147,55 +147,53 @@ export default function AdminProfile() {
   const hasChanges = fullName !== (profile?.fullName || "") || !!avatarFile;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-6 md:p-10">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="max-w-6xl mx-auto space-y-6"
-      >
+    <div className="min-h-screen p-6 md:p-10 bg-[#F8F9FA] bg-[radial-gradient(at_top_left,_rgba(255,107,0,0.05)_0%,_transparent_40%),_radial-gradient(at_bottom_right,_rgba(139,92,246,0.04)_0%,_transparent_45%)]">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* ── Top action bar ── */}
-        <button
+        <motion.button
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
           type="button"
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-[#FF6B00] uppercase tracking-wider transition-colors mb-4"
         >
           <ArrowLeft size={16} />
           Quay lại Dashboard
-        </button>
+        </motion.button>
 
         {/* ── Hero identity card ── */}
-        <div className="bg-white border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] rounded-2xl p-6 relative overflow-hidden flex flex-col sm:flex-row items-center gap-6">
-          {/* Brand top indicator line */}
-          <div className="absolute top-0 left-0 right-0 h-1" style={{ background: "linear-gradient(90deg,#FF6B00,#f59e0b)" }} />
-
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_12px_40px_rgba(30,41,59,0.04)] rounded-2xl p-6 relative flex flex-col sm:flex-row items-center gap-6"
+        >
           {/* Avatar + interactive upload */}
           <div className="relative flex-shrink-0">
-            <div
+            <motion.div
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               onClick={() => fileInputRef.current?.click()}
-              className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-white shadow-md flex items-center justify-center text-[#FF6B00] text-xl font-black relative group overflow-hidden cursor-pointer"
+              className="w-20 h-20 rounded-full bg-gradient-to-r from-[#FF6B00] to-[#8B5CF6] p-1 shadow-[0_0_15px_rgba(255,107,0,0.2)] cursor-pointer group"
             >
-              {avatarPreview || profile?.avatarUrl
-                ? <img src={avatarPreview || profile?.avatarUrl} alt={profile?.fullName || "Avatar"} className="w-full h-full object-cover" />
-                : <span>{initials}</span>}
-
-              {/* Hover overlay — signals image change */}
-              <div className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-[10px] font-black uppercase tracking-wider">
-                {saving && avatarFile
-                  ? <LoaderCircle size={16} className="animate-spin" />
-                  : <><Camera size={14} className="mb-1" />Đổi ảnh</>}
+              <div className="w-full h-full rounded-full bg-white border-2 border-white overflow-hidden flex items-center justify-center text-[#FF6B00] text-xl font-black relative">
+                {avatarPreview || profile?.avatarUrl
+                  ? <img src={avatarPreview || profile?.avatarUrl} alt={profile?.fullName || "Avatar"} className="w-full h-full object-cover" />
+                  : <span>{initials}</span>}
+                
+                {/* Hover overlay */}
+                <div className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-black uppercase tracking-wider">
+                  {saving && avatarFile
+                    ? <LoaderCircle size={16} className="animate-spin" />
+                    : <><Camera size={14} className="mb-1" />Đổi ảnh</>}
+                </div>
               </div>
-            </div>
+            </motion.div>
             <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-white flex items-center justify-center shadow">
               <Shield size={12} className="text-[#FF6B00]" />
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarChange}
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
           </div>
 
           {/* Identity text block */}
@@ -205,21 +203,26 @@ export default function AdminProfile() {
             </h1>
             <p className="text-sm text-slate-500 font-medium mt-0.5 truncate">{profile?.email}</p>
             <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap mt-3">
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-purple-50 text-purple-600 uppercase tracking-wide">
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-purple-50 text-purple-600 uppercase tracking-wide hover:scale-105 duration-200 transition-transform cursor-default">
                 {roles}
               </span>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${isActive ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"}`}>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide hover:scale-105 duration-200 transition-transform cursor-default ${isActive ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-slate-400"}`} />
                 {isActive ? "Đang hoạt động" : "Không hoạt động"}
               </span>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* ── Dual-column dashboard grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Personal information (cols 1-2) */}
-          <div className="lg:col-span-2 bg-white border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] rounded-2xl p-6 flex flex-col justify-between min-h-[400px]">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="lg:col-span-2 bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_12px_40px_rgba(30,41,59,0.04)] rounded-2xl p-6 flex flex-col justify-between min-h-[400px]"
+          >
             <div className="space-y-5">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center">
@@ -230,10 +233,10 @@ export default function AdminProfile() {
 
               {/* Email (read-only) */}
               <div>
-                <label className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-2 block">
+                <label className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2 block">
                   Email
                 </label>
-                <div className="flex items-center gap-2.5 w-full px-4 py-3 bg-slate-50 border border-slate-200/80 rounded-xl text-sm text-slate-400 cursor-not-allowed select-all">
+                <div className="flex items-center gap-2.5 w-full px-4 py-3 bg-[#F1F5F9]/60 border border-slate-200/60 shadow-[inner_0_2px_4px_rgba(0,0,0,0.03)] rounded-xl text-sm text-slate-400 cursor-not-allowed select-all transition-all duration-200">
                   <Mail size={14} className="text-slate-300 shrink-0" />
                   <span className="truncate">{profile?.email}</span>
                 </div>
@@ -242,7 +245,7 @@ export default function AdminProfile() {
 
               {/* Full name */}
               <div>
-                <label className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-2 block">
+                <label className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2 block">
                   Họ và tên
                 </label>
                 <input
@@ -250,7 +253,7 @@ export default function AdminProfile() {
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
                   placeholder="Nhập họ và tên của admin..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/20 focus:bg-white rounded-xl text-slate-800 text-sm font-semibold shadow-inner focus:outline-none transition-all"
+                  className="w-full px-4 py-3 bg-[#F1F5F9]/60 border border-slate-200/60 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-[#FF6B00]/10 focus-visible:border-[#FF6B00] shadow-[inner_0_2px_4px_rgba(0,0,0,0.03)] rounded-xl text-slate-800 text-sm font-semibold focus:outline-none transition-all duration-200"
                 />
               </div>
             </div>
@@ -260,19 +263,24 @@ export default function AdminProfile() {
               <button
                 onClick={handleSave}
                 disabled={saving || !hasChanges}
-                className="px-8 py-3 bg-[#FF6B00] hover:bg-[#FF5500] text-white font-black text-sm rounded-xl shadow-lg shadow-orange-500/20 transition-all inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#FF6B00]"
+                className="bg-gradient-to-r from-[#FF6B00] to-[#EA580C] text-white font-semibold shadow-[0_8px_20px_rgba(255,107,0,0.3)] hover:shadow-[0_12px_24px_rgba(255,107,0,0.4)] hover:scale-[1.02] active:scale-95 active:translate-y-0.5 transition-all duration-150 rounded-xl px-6 py-2.5 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-[0_8px_20px_rgba(255,107,0,0.3)] disabled:active:scale-100 disabled:active:translate-y-0"
               >
                 {saving ? (
-                  <><LoaderCircle size={14} className="animate-spin" />Đang lưu...</>
+                  <><LoaderCircle size={16} className="animate-spin" />Đang lưu...</>
                 ) : (
-                  <><Save size={14} />Lưu thông tin</>
+                  <><Save size={16} />Lưu thông tin</>
                 )}
               </button>
             </div>
-          </div>
+          </motion.div>
 
           {/* System metadata (col 3) */}
-          <div className="bg-white border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] rounded-2xl p-6 min-h-[400px] flex flex-col justify-between">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_12px_40px_rgba(30,41,59,0.04)] rounded-2xl p-6 min-h-[400px] flex flex-col justify-between"
+          >
             <div>
               <div className="flex items-center gap-2.5 mb-5">
                 <div className="w-8 h-8 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center">
@@ -281,32 +289,28 @@ export default function AdminProfile() {
                 <h2 className="text-base font-black text-slate-900">Hệ thống</h2>
               </div>
 
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100/50">
                 {/* User ID */}
                 <div className="pb-5">
-                  <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-2">User ID</p>
-                  <div className="bg-slate-100 px-3 py-1.5 rounded-lg font-mono text-xs flex items-center justify-between gap-2 group">
-                    <p className="font-mono text-xs text-slate-500 break-all leading-relaxed flex-1">
-                      {profile?.userId}
-                    </p>
+                  <p className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2">User ID</p>
+                  <div className={`border rounded-lg p-3 font-mono text-xs flex justify-between items-center transition-colors duration-200 ${copied ? "bg-emerald-500/10 border-emerald-500/20" : "bg-slate-900/5 border-slate-900/10"}`}>
+                    <span className="text-slate-600 break-all leading-relaxed flex-1 mr-2">{profile?.userId}</span>
                     <button
                       onClick={handleCopyId}
                       title="Copy User ID"
-                      className="p-1.5 rounded-lg hover:bg-slate-200 transition-colors shrink-0"
+                      className="p-1.5 hover:bg-slate-200/50 rounded-md transition-colors shrink-0 flex items-center justify-center"
                     >
-                      {copied
-                        ? <CheckCircle size={13} className="text-emerald-500" />
-                        : <Copy size={13} className="text-slate-400" />}
+                      {copied ? <CheckCircle size={14} className="text-emerald-500" /> : <Copy size={14} className="text-slate-400" />}
                     </button>
                   </div>
                 </div>
 
                 {/* System roles */}
                 <div className="py-5">
-                  <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-2.5">Vai trò hệ thống</p>
+                  <p className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2.5">Vai trò hệ thống</p>
                   <div className="flex flex-wrap gap-1.5">
                     {(profile?.roles || ["ADMIN"]).map(r => (
-                      <span key={r} className="px-3 py-1 text-xs font-black bg-purple-50 text-purple-600 rounded-full">
+                      <span key={r} className="px-3 py-1.5 text-xs font-black bg-purple-50 text-purple-600 rounded-full hover:scale-105 duration-200 transition-transform cursor-default shadow-sm border border-purple-100/50">
                         {r}
                       </span>
                     ))}
@@ -315,17 +319,17 @@ export default function AdminProfile() {
 
                 {/* Account status */}
                 <div className="pt-5">
-                  <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-2.5">Trạng thái tài khoản</p>
-                  <span className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-black rounded-full ${isActive ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"}`}>
+                  <p className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2.5">Trạng thái tài khoản</p>
+                  <span className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-black rounded-full hover:scale-105 duration-200 transition-transform cursor-default shadow-sm border ${isActive ? "bg-emerald-50 text-emerald-600 border-emerald-100/50" : "bg-slate-100 text-slate-500 border-slate-200/50"}`}>
                     <span className={`w-2 h-2 rounded-full ${isActive ? "bg-emerald-500 shadow-[0_0_6px_#22c55e]" : "bg-slate-400"}`} />
                     {isActive ? "Đang hoạt động" : "Không hoạt động"}
                   </span>
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

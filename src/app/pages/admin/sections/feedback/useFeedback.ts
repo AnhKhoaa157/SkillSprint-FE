@@ -26,6 +26,8 @@ export function useFeedback(isDashboard: boolean) {
   const [statusFilter, setStatusFilter] = useState("");
   const [typeFilter, setTypeFilter]     = useState("");
   const [searchInput, setSearchInput]   = useState("");
+  const [dateFrom, setDateFrom]         = useState("");
+  const [dateTo, setDateTo]             = useState("");
   const [updating, setUpdating]         = useState(false);
   const [adminNote, setAdminNote]       = useState("");
   const [statusDraft, setStatusDraft]   = useState(FeedbackStatus.OPEN);
@@ -35,7 +37,7 @@ export function useFeedback(isDashboard: boolean) {
   const [actionLoading, setActionLoading] = useState(false);
 
   const accent = isDashboard ? "#FF6B00" : "#7C3AED";
-  const hasFilters = searchInput || typeFilter || statusFilter;
+  const hasFilters = searchInput || typeFilter || statusFilter || dateFrom || dateTo;
   const isFetching = loading || isRefreshing;
   const showInitialSkeleton = loading && feedbacks.length === 0;
 
@@ -45,12 +47,21 @@ export function useFeedback(isDashboard: boolean) {
     status = statusFilter,
     type   = typeFilter,
     search = searchInput,
+    from   = dateFrom,
+    to     = dateTo,
     options?: { silent?: boolean },
   ) => {
     const setBusy = options?.silent ? setIsRefreshing : setLoading;
     setBusy(true);
     try {
-      const res = await getAdminFeedbacks(p, 15, status || undefined, type || undefined, search || undefined);
+      const res = await getAdminFeedbacks(
+        p, 15,
+        status || undefined,
+        type || undefined,
+        search || undefined,
+        from || undefined,
+        to || undefined,
+      );
       setFeedbacks(res.content ?? res.items ?? []);
       setTotalItems(res.totalElements ?? res.totalItems ?? 0);
       setTotalPages(res.totalPages ?? 0);
@@ -60,7 +71,7 @@ export function useFeedback(isDashboard: boolean) {
     } finally {
       setBusy(false);
     }
-  }, [searchInput, statusFilter, typeFilter]);
+  }, [searchInput, statusFilter, typeFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     load(0);
@@ -70,17 +81,36 @@ export function useFeedback(isDashboard: boolean) {
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
-      load(page, statusFilter, typeFilter, searchInput, { silent: true });
+      load(page, statusFilter, typeFilter, searchInput, dateFrom, dateTo, { silent: true });
     }, 10000);
 
     return () => window.clearInterval(intervalId);
-  }, [load, page, searchInput, statusFilter, typeFilter]);
+  }, [load, page, searchInput, statusFilter, typeFilter, dateFrom, dateTo]);
+
+  /**
+   * Apply the consolidated filter object in a single, explicit API request.
+   * Selects/date inputs only mutate a local draft in the toolbar; nothing hits
+   * the server until the user clicks "Áp dụng" (this), keeping individual filter
+   * changes from firing redundant requests.
+   */
+  const applyFilters = useCallback((next: {
+    status: string; type: string; search: string; dateFrom: string; dateTo: string;
+  }) => {
+    setStatusFilter(next.status);
+    setTypeFilter(next.type);
+    setSearchInput(next.search);
+    setDateFrom(next.dateFrom);
+    setDateTo(next.dateTo);
+    load(0, next.status, next.type, next.search, next.dateFrom, next.dateTo);
+  }, [load]);
 
   const clearFilters = () => {
     setSearchInput("");
     setTypeFilter("");
     setStatusFilter("");
-    load(0, "", "", "");
+    setDateFrom("");
+    setDateTo("");
+    load(0, "", "", "", "", "");
   };
 
   /* ── Detail Panel ── */
@@ -166,6 +196,9 @@ export function useFeedback(isDashboard: boolean) {
     statusFilter, setStatusFilter,
     typeFilter, setTypeFilter,
     searchInput, setSearchInput,
+    dateFrom, setDateFrom,
+    dateTo, setDateTo,
+    applyFilters,
     updating,
     adminNote, setAdminNote,
     statusDraft, setStatusDraft,

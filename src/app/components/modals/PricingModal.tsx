@@ -426,6 +426,19 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                 </div>
               ) : (
               <div className={`grid grid-cols-1 ${gridColsClass} border-t border-slate-100`}>
+                <style>{`
+                  @keyframes ssFadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+                  @keyframes ssShimmer { 0% { transform: translateX(-130%); } 100% { transform: translateX(130%); } }
+                  .ss-plan-card { animation: ssFadeInUp 0.5s cubic-bezier(0.22,1,0.36,1) both; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+                  .ss-plan-card:hover { transform: scale(1.02); box-shadow: 0 20px 45px rgba(0,0,0,0.10); z-index: 20; }
+                  .ss-shimmer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+                  .ss-shimmer::before { content: ""; position: absolute; top: 0; bottom: 0; width: 45%; background: linear-gradient(110deg, transparent, rgba(255,107,0,0.10), transparent); animation: ssShimmer 2.8s linear infinite; }
+                  @media (prefers-reduced-motion: reduce) {
+                    .ss-plan-card { animation: none; transition: none; }
+                    .ss-plan-card:hover { transform: none; box-shadow: none; }
+                    .ss-shimmer::before { animation: none; display: none; }
+                  }
+                `}</style>
                 {displayPlans.map((plan, idx) => {
                   const isFeatured  = !plan.isFree && idx === displayPlans.length - 1;
                   const isCurrent   = hasCurrentId ? plan.planId === currentPlanId : plan.monthlyPrice === currentPrice;
@@ -435,7 +448,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
 
                   return (
                     <div key={plan.planId}
-                      className={`p-7 flex flex-col h-full justify-between relative overflow-hidden ${
+                      className={`ss-plan-card p-7 flex flex-col h-full justify-between relative overflow-hidden ${
                         !isFeatured && isDowngrade ? "bg-slate-50/70 opacity-75" : !isFeatured ? "bg-slate-50/30" : "bg-white"
                       } ${idx < displayPlans.length - 1 ? "border-b md:border-b-0 md:border-r border-slate-100" : ""}`}
                       style={{
@@ -443,10 +456,13 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
                         boxShadow: isFeatured ? "0 15px 45px rgba(255,107,0,0.06)" : undefined,
                         borderRadius: isFeatured ? "20px" : undefined,
                         zIndex: isFeatured ? 10 : 1,
+                        animationDelay: `${idx * 90}ms`,
                       }}
                     >
+                      {/* Infinite shimmer sweep over the highlighted card */}
+                      {isFeatured && <span className="ss-shimmer" aria-hidden="true" />}
                       {isFeatured && (
-                        <div className="absolute top-4 -right-8 bg-[#FF6B00] text-white text-[9px] font-black tracking-wider uppercase py-1 px-8 rotate-45 shadow-sm">
+                        <div className="absolute top-4 -right-8 bg-[#FF6B00] text-white text-[9px] font-black tracking-wider uppercase py-1 px-8 rotate-45 shadow-sm z-10">
                           ĐỀ XUẤT
                         </div>
                       )}

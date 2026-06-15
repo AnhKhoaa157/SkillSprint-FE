@@ -201,11 +201,15 @@ export async function getAdminFeedbacks(
   status?: string,
   type?: string,
   search?: string,
+  dateFrom?: string,
+  dateTo?: string,
 ): Promise<FeedbackPageResponse<FeedbackAdminResponse>> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   if (status) params.set("status", status);
   if (type) params.set("type", type);
   if (search?.trim()) params.set("search", search.trim());
+  if (dateFrom?.trim()) params.set("dateFrom", dateFrom.trim());
+  if (dateTo?.trim()) params.set("dateTo", dateTo.trim());
   const result = await requestJson<unknown>(`/api/admin/feedback?${params.toString()}`);
   if (!result.data) throw new Error(result.message || "Could not load feedback list");
   return normalizePage(result.data, normalizeAdminFeedback);

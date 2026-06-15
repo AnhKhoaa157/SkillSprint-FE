@@ -8,7 +8,7 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
   const fb = useFeedback(isDashboard);
   const {
     confirmAction, handleConfirmAction, actionLoading, setConfirmAction,
-    isFetching, feedbacks, load, page, statusFilter, typeFilter, searchInput,
+    isFetching, feedbacks, load, page, statusFilter, typeFilter, searchInput, dateFrom, dateTo,
   } = fb;
 
   return (
@@ -41,7 +41,7 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
               </div>
             </div>
             <button
-              onClick={() => load(page, statusFilter, typeFilter, searchInput, { silent: feedbacks.length > 0 })}
+              onClick={() => load(page, statusFilter, typeFilter, searchInput, dateFrom, dateTo, { silent: feedbacks.length > 0 })}
               disabled={isFetching}
               className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition flex items-center gap-1.5 text-sm font-semibold cursor-pointer disabled:opacity-50 self-start sm:self-auto"
             >

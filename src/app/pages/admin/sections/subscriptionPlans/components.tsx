@@ -38,6 +38,39 @@ export function StatCards({ plans }: { plans: ServicePlanResponse[] }) {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Plan status badge — dynamic palette driven by the real backend state.     */
+/* -------------------------------------------------------------------------- */
+
+type PlanStatusKey = "active" | "inactive" | "draft";
+
+const PLAN_STATUS_META: Record<PlanStatusKey, { label: string; className: string; dot: string }> = {
+  active:   { label: "Hoạt động", className: "bg-emerald-50 text-emerald-700 border-emerald-200/60", dot: "bg-emerald-500" },
+  inactive: { label: "Vô hiệu",   className: "bg-slate-100 text-slate-500 border-slate-200",         dot: "bg-slate-300"  },
+  draft:    { label: "Bản nháp",  className: "bg-amber-50 text-amber-700 border-amber-200/60",        dot: "bg-amber-400"  },
+};
+
+/** Prefer an explicit BE `status` string when present; otherwise fall back to the
+ *  legacy `active` boolean. Keeps a single source of truth for the badge color. */
+function resolvePlanStatus(plan: ServicePlanResponse): PlanStatusKey {
+  const raw = (plan as { status?: string | null }).status;
+  if (typeof raw === "string") {
+    const key = raw.trim().toLowerCase();
+    if (key === "active" || key === "inactive" || key === "draft") return key;
+  }
+  return plan.active ? "active" : "inactive";
+}
+
+export function PlanStatusBadge({ plan }: { plan: ServicePlanResponse }) {
+  const meta = PLAN_STATUS_META[resolvePlanStatus(plan)];
+  return (
+    <Badge className={`${meta.className} font-semibold`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${meta.dot} ${meta.dot === "bg-emerald-500" ? "animate-pulse" : ""}`} />
+      {meta.label}
+    </Badge>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Plans table.                                                              */
 /* -------------------------------------------------------------------------- */
 
@@ -111,19 +144,7 @@ export function PlansTable({ plans, actions }: { plans: ServicePlanResponse[]; a
                 </td>
 
                 <td className="py-4 px-4 align-middle">
-                  <div className="flex items-center gap-1.5">
-                    {plan.active ? (
-                      <>
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-sm font-semibold text-emerald-700">Hoạt động</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                        <span className="text-sm font-medium text-slate-400">Vô hiệu</span>
-                      </>
-                    )}
-                  </div>
+                  <PlanStatusBadge plan={plan} />
                 </td>
 
                 <td className="py-4 px-4 align-middle">
