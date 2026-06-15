@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import {
   MessageSquare, Search, RefreshCw, LoaderCircle,
@@ -98,90 +99,120 @@ export function ConfirmModal({ action, onConfirm, onCancel, loading }: ConfirmMo
 ───────────────────────────────────────────────────────── */
 export function FeedbackToolbar({ fb }: { fb: FeedbackManager }) {
   const {
-    searchInput, setSearchInput, load, isFetching, feedbacks,
-    typeFilter, setTypeFilter, statusFilter, setStatusFilter,
+    load, isFetching, feedbacks, applyFilters,
+    typeFilter, statusFilter, searchInput, dateFrom, dateTo,
     accent, hasFilters, clearFilters, page,
   } = fb;
 
+  // Consolidated, uncommitted filter draft. Nothing is sent to the API until the
+  // user clicks "Áp dụng" — individual select/date changes only mutate this object.
+  const [draft, setDraft] = useState({
+    status: statusFilter, type: typeFilter, search: searchInput, dateFrom, dateTo,
+  });
+
+  // Re-sync the draft whenever the applied filters change from the outside
+  // (e.g. "Xóa lọc"), so the inputs reflect the live state.
+  useEffect(() => {
+    setDraft({ status: statusFilter, type: typeFilter, search: searchInput, dateFrom, dateTo });
+  }, [statusFilter, typeFilter, searchInput, dateFrom, dateTo]);
+
+  const apply = () => applyFilters(draft);
+
+  // Uniform primitive styling shared across every input/select in the bar.
+  const fieldCls = "text-sm px-3 py-2 rounded-md border border-slate-200 bg-white text-slate-700 outline-none transition focus:border-violet-400";
+
   return (
     <div
-      className="p-3 flex flex-wrap gap-2 items-center"
+      className="p-3 flex flex-col gap-3"
       style={{ borderBottom: "1px solid #F3F4F6", background: "#FAFAFA" }}
     >
-      {/* Search */}
-      <div className="relative flex-1 min-w-[180px]">
-        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          value={searchInput}
-          onChange={e => setSearchInput(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && load(0)}
-          placeholder="Tìm tiêu đề, email, nội dung..."
-          className="w-full h-9 pl-8 pr-3 rounded-xl outline-none transition"
-          style={{
-            border: "1px solid #E2E8F0",
-            background: "#FFFFFF",
-            color: "#0F172A",
-            fontSize: "0.8rem",
-          }}
-        />
+      {/* Top Row: Search & Refresh Group */}
+      <div className="flex items-center gap-2 w-full">
+        <div className="relative flex-1">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={draft.search}
+            onChange={e => setDraft(d => ({ ...d, search: e.target.value }))}
+            onKeyDown={e => e.key === "Enter" && apply()}
+            placeholder="Tìm tiêu đề, email, nội dung..."
+            className={`${fieldCls} w-full pl-8`}
+          />
+        </div>
+        <button
+          type="button"
+          title="Refresh list"
+          aria-label="Refresh list"
+          onClick={() => load(page, statusFilter, typeFilter, searchInput, dateFrom, dateTo, { silent: feedbacks.length > 0 })}
+          disabled={isFetching}
+          className="h-9 w-9 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+        >
+          <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
+        </button>
       </div>
 
-      {/* Manual reload */}
-      <button
-        type="button"
-        title="Refresh list"
-        aria-label="Refresh list"
-        onClick={() => load(page, statusFilter, typeFilter, searchInput, { silent: feedbacks.length > 0 })}
-        disabled={isFetching}
-        className="h-9 w-9 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-      >
-        <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
-      </button>
-
-      {/* Type filter */}
-      <select
-        value={typeFilter}
-        onChange={e => { setTypeFilter(e.target.value); load(0, statusFilter, e.target.value); }}
-        className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold outline-none"
-        style={{ fontSize: "0.8rem" }}
-      >
-        <option value="">Tất cả loại</option>
-        {Object.entries(FEEDBACK_TYPE_LABEL).map(([key, { label }]) => (
-          <option key={key} value={key}>{label}</option>
-        ))}
-      </select>
-
-      {/* Status filter */}
-      <select
-        value={statusFilter}
-        onChange={e => { setStatusFilter(e.target.value); load(0, e.target.value, typeFilter); }}
-        className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold outline-none"
-        style={{ fontSize: "0.8rem" }}
-      >
-        <option value="">Tất cả trạng thái</option>
-        {Object.entries(FEEDBACK_STATUS_LABEL).map(([key, { label }]) => (
-          <option key={key} value={key}>{label}</option>
-        ))}
-      </select>
-
-      {/* Search button */}
-      <button
-        onClick={() => load(0)}
-        className="h-9 px-3.5 rounded-xl text-xs font-bold text-white cursor-pointer shadow-sm shrink-0 transition active:scale-[0.97]"
-        style={{ background: `linear-gradient(135deg,${accent},${accent}cc)` }}
-      >
-        Tìm
-      </button>
-
-      {/* Clear filters */}
-      {hasFilters && (
-        <button
-          onClick={clearFilters}
-          className="h-9 px-3 rounded-xl text-xs font-semibold border border-slate-200 text-slate-500 hover:bg-slate-100 transition cursor-pointer shrink-0"
+      {/* Bottom Row: Filters & Actions Group */}
+      <div className="flex items-center gap-2 flex-wrap w-full">
+        <select
+          value={draft.type}
+          onChange={e => setDraft(d => ({ ...d, type: e.target.value }))}
+          className={`${fieldCls} font-semibold flex-1 min-w-[130px]`}
         >
-          Xóa lọc
-        </button>
-      )}
+          <option value="">Tất cả loại</option>
+          {Object.entries(FEEDBACK_TYPE_LABEL).map(([key, { label }]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
+        </select>
+
+        <select
+          value={draft.status}
+          onChange={e => setDraft(d => ({ ...d, status: e.target.value }))}
+          className={`${fieldCls} font-semibold flex-1 min-w-[130px]`}
+        >
+          <option value="">Tất cả trạng thái</option>
+          {Object.entries(FEEDBACK_STATUS_LABEL).map(([key, { label }]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
+        </select>
+
+        <input
+          type="date"
+          aria-label="Từ ngày"
+          title="Từ ngày"
+          value={draft.dateFrom}
+          max={draft.dateTo || undefined}
+          onChange={e => setDraft(d => ({ ...d, dateFrom: e.target.value }))}
+          className={`${fieldCls} flex-1 min-w-[130px]`}
+        />
+        <input
+          type="date"
+          aria-label="Đến ngày"
+          title="Đến ngày"
+          value={draft.dateTo}
+          min={draft.dateFrom || undefined}
+          onChange={e => setDraft(d => ({ ...d, dateTo: e.target.value }))}
+          className={`${fieldCls} flex-1 min-w-[130px]`}
+        />
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={apply}
+            disabled={isFetching}
+            className="px-6 py-2 rounded-md text-sm font-bold text-white cursor-pointer shadow-sm shrink-0 transition active:scale-[0.97] disabled:opacity-50"
+            style={{ background: `linear-gradient(135deg,${accent},${accent}cc)` }}
+          >
+            Áp dụng
+          </button>
+
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 rounded-md text-sm font-semibold border border-slate-200 text-slate-500 hover:bg-slate-100 transition cursor-pointer shrink-0"
+            >
+              Xóa lọc
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

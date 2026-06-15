@@ -37,6 +37,38 @@ function downloadCsv(filename: string, rows: Record<string, string | number>[]) 
   URL.revokeObjectURL(url);
 }
 
+/** Navbar profile avatar. Renders a strictly square, cropped circular image and
+ *  falls back to the styled initial circle on a missing/broken source. Keeping the
+ *  <img> a real w-8/h-8 node (not an absolutely-stretched overlay) lets object-cover
+ *  crop the native aspect ratio instead of squishing non-square sources. */
+function AdminNavAvatar({ avatarUrl, fullName }: { avatarUrl?: string; fullName?: string }) {
+  const [imgError, setImgError] = useState(false);
+  const initial = (fullName || "A").charAt(0).toUpperCase();
+  const showImage = !!avatarUrl && !imgError;
+
+  useEffect(() => { setImgError(false); }, [avatarUrl]);
+
+  if (showImage) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={fullName || "Admin avatar"}
+        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
+  return (
+    <div
+      className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
+      style={{ background: 'linear-gradient(135deg,#FF6B00,#FF9A3D)' }}
+    >
+      <span style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>{initial}</span>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions" | "system">("financials");
   const [, setLastSync] = useState(new Date());
@@ -329,9 +361,7 @@ export default function AdminDashboard() {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setUserMenuOpen(v => !v); } }}
                 aria-expanded={userMenuOpen}
               >
-                <div style={{ width: 28, height: 28, borderRadius: 999, background: 'linear-gradient(135deg,#FF6B00,#FF9A3D)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>{(currentUser?.fullName || "A").charAt(0).toUpperCase()}</span>
-                </div>
+                <AdminNavAvatar avatarUrl={currentUser?.avatarUrl} fullName={currentUser?.fullName} />
                 <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>Quản trị</span>
                   <span style={{ fontSize: '10px', color: '#9CA3AF' }}>Admin</span>

@@ -226,6 +226,33 @@ function getNotifMeta(type: string): NotifMeta {
   }
 }
 
+/* ─── Subscription plan pill ─── */
+type PlanTier = "free" | "pro" | "premium";
+
+const PLAN_BADGE_THEME: Record<PlanTier, { label: string; cls: string; Icon: typeof Zap }> = {
+  free:    { label: "Free",    cls: "bg-orange-50 border-orange-300 text-orange-500",     Icon: Zap },
+  pro:     { label: "Pro",     cls: "bg-emerald-50 border-emerald-300 text-emerald-600",  Icon: Sparkles },
+  premium: { label: "Premium", cls: "bg-purple-50 border-purple-300 text-purple-600",     Icon: Crown },
+};
+
+/** Self-contained plan pill. Click opens the pricing modal to drive conversion;
+ *  palette switches with the active tier (free→orange, pro→green, premium→purple). */
+function PlanBadge({ tier, onClick }: { tier: PlanTier; onClick: () => void }) {
+  const theme = PLAN_BADGE_THEME[tier];
+  const Icon = theme.Icon;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="Xem các gói SkillSprint"
+      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wide transition active:scale-95 cursor-pointer ${theme.cls}`}
+    >
+      <Icon size={12} className="shrink-0" />
+      {theme.label}
+    </button>
+  );
+}
+
 export default function DashboardLayout() {
   const [sideOpen, setSideOpen]       = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
@@ -235,6 +262,7 @@ export default function DashboardLayout() {
   const [roadmapWorkspaces, setRoadmapWorkspaces] = useState<RoadmapSidebarItem[]>([]);
   const { planId, planMeta, refresh: refreshSubscription } = useSubscription();
   const mappedPlanId = planId === "FREE" ? "starter" : planId === "SKILL_BUILDER" ? "skill_builder" : "career_premium";
+  const planTier: PlanTier = planId === "FREE" ? "free" : planId === "SKILL_BUILDER" ? "pro" : "premium";
   const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarLetter: string; avatarUrl?: string }>(() => {
     const stored = getStoredUserProfile();
     const fullName = stored?.fullName || "Learner";
@@ -590,6 +618,9 @@ export default function DashboardLayout() {
             </nav>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+            {/* ── Subscription plan pill — pinned top-right; click opens pricing ── */}
+            <PlanBadge tier={planTier} onClick={() => setPricingOpen(true)} />
+
             {/* ── Notification Bell ── */}
             <div style={{ position:"relative" }}>
               <button
