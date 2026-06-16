@@ -260,7 +260,7 @@ export default function DashboardLayout() {
   const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(true);
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [roadmapWorkspaces, setRoadmapWorkspaces] = useState<RoadmapSidebarItem[]>([]);
-  const { planId, planMeta, refresh: refreshSubscription } = useSubscription();
+  const { planId, planName, planMeta, refresh: refreshSubscription } = useSubscription();
   const mappedPlanId = planId === "FREE" ? "starter" : planId === "SKILL_BUILDER" ? "skill_builder" : "career_premium";
   const planTier: PlanTier = planId === "FREE" ? "free" : planId === "SKILL_BUILDER" ? "pro" : "premium";
   const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarLetter: string; avatarUrl?: string }>(() => {
@@ -368,6 +368,12 @@ export default function DashboardLayout() {
     };
   }, []);
 
+  useEffect(() => {
+    if (notifications.length > 0 && notifications[0].type === "SUBSCRIPTION_UPDATED") {
+      void refreshSubscription();
+    }
+  }, [notifications, refreshSubscription]);
+
   return (
     <div style={{
       display:"flex", height:"100vh", overflow:"hidden",
@@ -414,12 +420,6 @@ export default function DashboardLayout() {
         }}>
           <div style={{display:"flex",alignItems:"center",gap:"24px"}}>
             <BrandLogo size={65} align="left" />
-            <span style={{
-               fontSize:"9px",padding:"1px 6px",borderRadius:"4px",
-               display:"inline-block",background:"rgba(255,107,0,0.1)",
-               color:OG,fontWeight:700,letterSpacing:"0.06em",
-               flexShrink:0
-             }}>{planMeta?.badge || "FREE"}</span>
           </div>
           <button className="md:hidden" onClick={()=>setSideOpen(false)}
             style={{background:"none",border:"none",cursor:"pointer",color:STXT}}>
@@ -564,7 +564,7 @@ export default function DashboardLayout() {
           >
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2px"}}>
               <span style={{fontSize:"8.5px",fontWeight:700,color:OG,letterSpacing:"0.08em",textTransform:"uppercase"}}>
-                GÓI {planMeta?.label?.toUpperCase() || "STARTER"}
+                GÓI {planName ? planName.toUpperCase() : "STARTER"}
               </span>
               <Crown size={12} color="#F59E0B"/>
             </div>
