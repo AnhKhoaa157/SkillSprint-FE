@@ -1,71 +1,48 @@
 import { Link, useLocation } from "react-router";
-import { Menu, X, Zap, ChevronDown, Facebook } from "lucide-react";
+import { Menu, X, Zap } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { BrandLogo } from "./BrandLogo";
 
-/* ─── Nav items ─── */
+/* Requirement 1:
+   - Remove "Cộng đồng"
+   - Re-align remaining links for a balanced premium layout
+*/
 interface NavLink {
   to: string;
   label: string;
-  isDropdown?: false;
 }
 
-interface NavDropdown {
-  label: string;
-  isDropdown: true;
-  items: { label: string; href: string }[];
-}
-
-type NavItem = NavLink | NavDropdown;
-
-const NAV_LINKS: NavItem[] = [
-  { to: "/about",    label: "Giới thiệu" },
-  { to: "/features", label: "Tính năng"  },
-  { to: "/pricing",  label: "Bảng giá"   },
-  { to: "/contact",  label: "Liên hệ"    },
-  {
-    label: "Cộng đồng",
-    isDropdown: true,
-    items: [
-      { label: "Facebook", href: "https://www.facebook.com/profile.php?id=61590323403077" },
-      { label: "TikTok", href: "https://www.tiktok.com/@skillsprint26" },
-    ]
-  }
+const NAV_LINKS: NavLink[] = [
+  { to: "/about", label: "Giới thiệu" },
+  { to: "/features", label: "Tính năng" },
+  { to: "/pricing", label: "Bảng giá" },
+  { to: "/contact", label: "Liên hệ" },
 ];
 
 export function PublicNavbar() {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
 
-  /* Refs for sliding calculations */
-  const navContainerRef = useRef<HTMLDivElement>(null);
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-
-  /* Pill indicator styles for hover and active states */
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, opacity: 0 });
   const [activeStyle, setActiveStyle] = useState({ left: 0, width: 0, opacity: 0 });
 
-  /* ── Scroll detection ── */
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  /* ── Close mobile menu on route change ── */
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
-  /* ── Active link check ── */
   const isActive = (to: string) => location.pathname === to;
 
-  /* ── Update active underline position ── */
   const updateActiveIndicator = useCallback(() => {
-    const activeIdx = NAV_LINKS.findIndex(l => !l.isDropdown && l.to === location.pathname);
+    const activeIdx = NAV_LINKS.findIndex((l) => l.to === location.pathname);
     if (activeIdx !== -1) {
       const el = linkRefs.current[activeIdx];
       const parent = el?.parentElement;
@@ -73,17 +50,16 @@ export function PublicNavbar() {
         const parentRect = parent.getBoundingClientRect();
         const elRect = el.getBoundingClientRect();
         setActiveStyle({
-          left: elRect.left - parentRect.left + (elRect.width - 24) / 2, // centers a 24px wide underline
-          width: 24,
+          left: elRect.left - parentRect.left + (elRect.width - 26) / 2,
+          width: 26,
           opacity: 1,
         });
+        return;
       }
-    } else {
-      setActiveStyle({ left: 0, width: 0, opacity: 0 });
     }
+    setActiveStyle({ left: 0, width: 0, opacity: 0 });
   }, [location.pathname]);
 
-  /* ── Handle active underline updates ── */
   useEffect(() => {
     const timer = setTimeout(updateActiveIndicator, 60);
     window.addEventListener("resize", updateActiveIndicator);
@@ -91,9 +67,8 @@ export function PublicNavbar() {
       clearTimeout(timer);
       window.removeEventListener("resize", updateActiveIndicator);
     };
-  }, [location.pathname, updateActiveIndicator]);
+  }, [updateActiveIndicator]);
 
-  /* ── Hover calculations ── */
   const handleMouseEnter = (idx: number, el: HTMLElement) => {
     setHoveredIdx(idx);
     const parent = el.parentElement;
@@ -110,70 +85,49 @@ export function PublicNavbar() {
 
   const handleMouseLeave = () => {
     setHoveredIdx(null);
-    setPillStyle(prev => ({ ...prev, opacity: 0 }));
+    setPillStyle((prev) => ({ ...prev, opacity: 0 }));
   };
 
-  /* ── Dynamic text colors for nav links ── */
   const getLinkColor = (to: string, idx: number) => {
     if (isActive(to)) return "#FF6B00";
     if (hoveredIdx === idx) return "#FF6B00";
-    return "#4B5563";
+    return "#475569";
   };
 
   return (
     <>
-      {/* ── Global Styles & Keyframes ── */}
       <style>{`
-        /* Robust media query toggles for desktop/mobile elements */
         @media (max-width: 767px) {
-          .nav-desktop {
-            display: none !important;
-          }
-          .nav-mobile-btn {
-            display: flex !important;
-          }
+          .nav-desktop { display: none !important; }
+          .nav-mobile-btn { display: flex !important; }
         }
         @media (min-width: 768px) {
-          .nav-desktop {
-            display: flex !important;
-          }
-          .nav-mobile-btn {
-            display: none !important;
-          }
+          .nav-desktop { display: flex !important; }
+          .nav-mobile-btn { display: none !important; }
         }
-
-        /* Nav slide down animation */
         @keyframes navSlideDown {
           from { opacity: 0; transform: translateY(-10px); }
-          to   { opacity: 1; transform: translateY(0);     }
+          to { opacity: 1; transform: translateY(0); }
         }
-
-        /* Mobile menu dropdown slide-in */
         @keyframes mobileMenuIn {
           from { opacity: 0; transform: translateY(-6px) scale(0.99); }
-          to   { opacity: 1; transform: translateY(0)    scale(1);    }
+          to { opacity: 1; transform: translateY(0) scale(1); }
         }
-
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
       `}</style>
 
-      {/* ══════════════════════════════════════
-          MAIN NAVBAR WRAPPER (Full width header)
-          ══════════════════════════════════════ */}
       <nav
         style={{
           position: "absolute",
-          top: 0, left: 0, right: 0,
+          top: 0,
+          left: 0,
+          right: 0,
           zIndex: 1000,
           height: "76px",
-          /* Deep elite glassmorphism */
-          background: "rgba(255, 255, 255, 0.65)",
-          backdropFilter: "blur(20px) saturate(190%)",
-          WebkitBackdropFilter: "blur(20px) saturate(190%)",
-          /* Soft separation borders */
-          borderBottom: "1px solid rgba(229, 231, 235, 0.35)",
-          /* Soft ambient shadow when scrolled */
-          boxShadow: "none",
+          background: scrolled ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.68)",
+          backdropFilter: "blur(20px) saturate(180%)",
+          WebkitBackdropFilter: "blur(20px) saturate(180%)",
+          borderBottom: "1px solid rgba(226, 232, 240, 0.55)",
+          boxShadow: scrolled ? "0 12px 32px rgba(15,23,42,0.05)" : "none",
           transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
           animation: "navSlideDown 0.45s cubic-bezier(0.16, 1, 0.3, 1) both",
         }}
@@ -184,155 +138,102 @@ export function PublicNavbar() {
             height: "100%",
             margin: "0 auto",
             padding: "0 24px",
-            display: "flex",
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
-            justifyContent: "space-between",
+            gap: "20px",
           }}
         >
-          {/* ══════════════════════════════════════
-              LEFT: Brand Logo (Flex section)
-              ══════════════════════════════════════ */}
-          <div style={{ flex: 1, display: "flex", justifyContent: "flex-start", alignItems: "center" }}>
+          {/* Left: Logo */}
+          <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "center" }}>
             <Link
               to="/"
               className="flex items-center"
-              style={{
-                textDecoration: "none",
-                transition: "opacity 0.2s ease",
+              style={{ textDecoration: "none", transition: "opacity 0.2s ease" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = "0.85";
               }}
-              onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1";
+              }}
             >
-              {/* h-12 bounding box lets the scale(2.2) zoom expand naturally without being clipped */}
               <div className="h-12 flex items-center overflow-visible">
                 <BrandLogo size={60} align="left" />
               </div>
             </Link>
           </div>
 
-          {/* ══════════════════════════════════════
-              CENTER: Desktop Menu (Symmetric)
-              ══════════════════════════════════════ */}
+          {/* Center: Desktop nav */}
           <div
-            ref={navContainerRef}
             className="nav-desktop"
             style={{
               position: "relative",
               alignItems: "center",
-              gap: "4px",
-              padding: "4px",
-              borderRadius: "99px",
-              background: scrolled ? "rgba(241, 245, 249, 0.4)" : "rgba(241, 245, 249, 0.6)",
-              border: "1px solid rgba(226, 232, 240, 0.8)",
-              backdropFilter: "blur(8px)",
-              transition: "all 0.3s ease",
+              justifyContent: "center",
+              gap: "6px",
+              padding: "5px",
+              borderRadius: "999px",
+              background: scrolled ? "rgba(248,250,252,0.76)" : "rgba(248,250,252,0.9)",
+              border: "1px solid rgba(226,232,240,0.95)",
+              boxShadow: "0 6px 18px rgba(15,23,42,0.04)",
+              minWidth: "fit-content",
             }}
             onMouseLeave={handleMouseLeave}
           >
-            {/* Sliding Pill Hover Highlight */}
+            {/* Hover pill */}
             <span
               style={{
                 position: "absolute",
-                top: 4,
-                bottom: 4,
+                top: 5,
+                bottom: 5,
                 left: pillStyle.left,
                 width: pillStyle.width,
                 opacity: pillStyle.opacity,
-                borderRadius: "99px",
-                /* High-end warm orange-purple subtle gradient glow */
-                background: "linear-gradient(135deg, rgba(255, 107, 0, 0.09) 0%, rgba(124, 58, 237, 0.06) 100%)",
-                border: "1px solid rgba(255, 107, 0, 0.18)",
-                boxShadow: "0 4px 12px rgba(255, 107, 0, 0.05)",
-                transition: "left 0.24s cubic-bezier(0.25, 1, 0.5, 1), width 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.15s ease",
+                borderRadius: "999px",
+                background:
+                  "linear-gradient(135deg, rgba(255,107,0,0.08) 0%, rgba(255,140,66,0.04) 100%)",
+                border: "1px solid rgba(255,107,0,0.14)",
+                boxShadow: "0 4px 12px rgba(255,107,0,0.05)",
+                transition:
+                  "left 0.24s cubic-bezier(0.25, 1, 0.5, 1), width 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.15s ease",
                 pointerEvents: "none",
                 zIndex: 0,
               }}
             />
 
-            {/* Sliding Active Underline ("Điểm nhấn") */}
+            {/* Active underline */}
             <span
               style={{
                 position: "absolute",
-                bottom: "3px",
+                bottom: 3,
                 left: activeStyle.left,
                 width: activeStyle.width,
-                height: "3px",
-                borderRadius: "99px",
+                height: 3,
+                borderRadius: "999px",
                 background: "#FF6B00",
-                boxShadow: "0 2px 6px rgba(255, 107, 0, 0.4)",
+                boxShadow: "0 2px 8px rgba(255,107,0,0.35)",
                 opacity: activeStyle.opacity,
-                transition: "left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                transition:
+                  "left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
                 pointerEvents: "none",
                 zIndex: 0,
               }}
             />
 
-            {/* Links */}
             {NAV_LINKS.map((link, idx) => {
-              if (link.isDropdown) {
-                return (
-                  <div
-                    key={link.label}
-                    className="relative group flex items-center h-full"
-                    ref={el => { linkRefs.current[idx] = el as unknown as HTMLAnchorElement; }}
-                    onMouseEnter={e => handleMouseEnter(idx, e.currentTarget)}
-                  >
-                    <button
-                      type="button"
-                      className="relative z-10 flex items-center gap-1 px-4.5 py-2 text-xs font-semibold tracking-tight transition-colors duration-200 bg-transparent border-none cursor-pointer"
-                      style={{
-                        fontSize: "0.85rem",
-                        fontWeight: 500,
-                        fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                        letterSpacing: "-0.01em",
-                        color: hoveredIdx === idx ? "#FF6B00" : "#4B5563"
-                      }}
-                    >
-                      {link.label}
-                      <ChevronDown size={13} className="text-slate-400 group-hover:text-[#FF6B00] transition-colors duration-200" />
-                    </button>
-                    {/* Dropdown Menu */}
-                    <div className="absolute top-[80%] left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.08)] py-1.5 min-w-[140px] flex flex-col">
-                        {link.items.map((item) => (
-                          <a
-                            key={item.label}
-                            href={item.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label={item.label}
-                            className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-400 hover:text-[#FF6B00] hover:bg-slate-50 transition-all duration-200 hover:-translate-y-0.5 no-underline"
-                            style={{
-                              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                              fontSize: "0.85rem",
-                            }}
-                          >
-                            {item.label === "Facebook" ? (
-                              <Facebook size={14} />
-                            ) : (
-                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .79.11V9.5a6.27 6.27 0 0 0-3.1-1.74 6.36 6.36 0 0 0-6 5.56 6.34 6.34 0 0 0 6.1 7.18A6.3 6.3 0 0 0 15.82 16c0-.05.02-.1.02-.15V8.82a8.17 8.17 0 0 0 4.85 1.58V7a4.83 4.83 0 0 1-1.1-.31z" />
-                              </svg>
-                            )}
-                            <span>{item.label}</span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
               const active = isActive(link.to);
               return (
                 <Link
                   key={link.to}
                   to={link.to}
-                  ref={el => { linkRefs.current[idx] = el; }}
+                  ref={(el) => {
+                    linkRefs.current[idx] = el;
+                  }}
                   style={{
                     position: "relative",
                     zIndex: 1,
-                    padding: "8px 18px",
-                    fontSize: "0.85rem",
+                    padding: "9px 18px",
+                    fontSize: "0.875rem",
                     fontWeight: active ? 700 : 500,
                     fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
                     letterSpacing: "-0.01em",
@@ -340,9 +241,8 @@ export function PublicNavbar() {
                     textDecoration: "none",
                     whiteSpace: "nowrap",
                     transition: "color 0.2s ease",
-                    cursor: "pointer",
                   }}
-                  onMouseEnter={e => handleMouseEnter(idx, e.currentTarget)}
+                  onMouseEnter={(e) => handleMouseEnter(idx, e.currentTarget)}
                 >
                   {link.label}
                 </Link>
@@ -350,40 +250,34 @@ export function PublicNavbar() {
             })}
           </div>
 
-          {/* ══════════════════════════════════════
-              RIGHT: Desktop CTA & Mobile Toggle
-              ══════════════════════════════════════ */}
-          <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "10px" }}>
-            {/* Desktop Auth Buttons */}
+          {/* Right: CTA */}
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "10px" }}>
             <div className="nav-desktop" style={{ alignItems: "center", gap: "8px" }}>
-              {/* Login */}
               <Link
                 to="/login?mode=login"
                 style={{
                   padding: "8px 16px",
-                  borderRadius: "99px",
+                  borderRadius: "999px",
                   fontSize: "0.85rem",
                   fontWeight: 500,
                   fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                  letterSpacing: "-0.01em",
-                  color: "#4B5563",
+                  color: "#475569",
                   textDecoration: "none",
                   transition: "all 0.2s ease",
                   border: "1px solid transparent",
                 }}
-                onMouseEnter={e => {
+                onMouseEnter={(e) => {
                   e.currentTarget.style.color = "#111827";
-                  e.currentTarget.style.background = "rgba(0, 0, 0, 0.04)";
+                  e.currentTarget.style.background = "rgba(15,23,42,0.04)";
                 }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.color = "#4B5563";
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "#475569";
                   e.currentTarget.style.background = "transparent";
                 }}
               >
                 Đăng nhập
               </Link>
 
-              {/* High-end CTA Button */}
               <Link
                 to="/login?mode=register"
                 style={{
@@ -391,11 +285,10 @@ export function PublicNavbar() {
                   alignItems: "center",
                   gap: "6px",
                   padding: "8px 18px",
-                  borderRadius: "99px",
+                  borderRadius: "999px",
                   fontSize: "0.85rem",
                   fontWeight: 700,
                   fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                  letterSpacing: "-0.01em",
                   color: "#FFFFFF",
                   textDecoration: "none",
                   background: "linear-gradient(135deg, #FF6B00 0%, #FF8C42 100%)",
@@ -403,12 +296,12 @@ export function PublicNavbar() {
                   transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                   whiteSpace: "nowrap",
                 }}
-                onMouseEnter={e => {
+                onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translateY(-1px)";
                   e.currentTarget.style.boxShadow = "0 6px 20px rgba(255, 107, 0, 0.38)";
                   e.currentTarget.style.filter = "brightness(1.04)";
                 }}
-                onMouseLeave={e => {
+                onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "translateY(0)";
                   e.currentTarget.style.boxShadow = "0 4px 14px rgba(255, 107, 0, 0.25)";
                   e.currentTarget.style.filter = "brightness(1)";
@@ -419,7 +312,7 @@ export function PublicNavbar() {
               </Link>
             </div>
 
-            {/* Mobile Hamburger toggle */}
+            {/* Mobile menu button */}
             <button
               className="nav-mobile-btn"
               style={{
@@ -434,9 +327,7 @@ export function PublicNavbar() {
                 cursor: "pointer",
                 transition: "all 0.2s ease",
               }}
-              onClick={() => setIsMenuOpen(v => !v)}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255, 107, 0, 0.1)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255, 107, 0, 0.05)"; }}
+              onClick={() => setIsMenuOpen((v) => !v)}
               aria-label="Toggle menu"
             >
               {isMenuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -444,21 +335,20 @@ export function PublicNavbar() {
           </div>
         </div>
 
-        {/* ══════════════════════════════════════
-            MOBILE DROPDOWN DRAWER
-            ══════════════════════════════════════ */}
+        {/* Mobile menu */}
         {isMenuOpen && (
           <div
             style={{
               position: "absolute",
               top: "76px",
-              left: 0, right: 0,
+              left: 0,
+              right: 0,
               padding: "10px 16px 16px",
-              background: "rgba(255, 255, 255, 0.97)",
+              background: "rgba(255,255,255,0.97)",
               backdropFilter: "blur(20px)",
               WebkitBackdropFilter: "blur(20px)",
-              borderBottom: "1px solid rgba(229, 231, 235, 0.8)",
-              boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+              borderBottom: "1px solid rgba(229,231,235,0.8)",
+              boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
               animation: "mobileMenuIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both",
               display: "flex",
               flexDirection: "column",
@@ -466,49 +356,6 @@ export function PublicNavbar() {
             }}
           >
             {NAV_LINKS.map((link) => {
-              if (link.isDropdown) {
-                return (
-                  <div key={link.label} className="w-full">
-                    <button
-                      type="button"
-                      onClick={() => setIsMobileDropdownOpen(v => !v)}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 border-none bg-transparent cursor-pointer text-left"
-                      style={{
-                        fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                        fontSize: "0.9rem",
-                      }}
-                    >
-                      <span>{link.label}</span>
-                      <ChevronDown size={14} className={`text-slate-500 transition-transform ${isMobileDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {isMobileDropdownOpen && (
-                      <div className="pl-6 mt-1 flex flex-col gap-1.5">
-                        {link.items.map((item) => (
-                          <a
-                            key={item.label}
-                            href={item.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-[#FF6B00] hover:-translate-y-0.5 transition-all duration-200 no-underline"
-                            style={{
-                              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                            }}
-                          >
-                            {item.label === "Facebook" ? (
-                              <Facebook size={14} />
-                            ) : (
-                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .79.11V9.5a6.27 6.27 0 0 0-3.1-1.74 6.36 6.36 0 0 0-6 5.56 6.34 6.34 0 0 0 6.1 7.18A6.3 6.3 0 0 0 15.82 16c0-.05.02-.1.02-.15V8.82a8.17 8.17 0 0 0 4.85 1.58V7a4.83 4.83 0 0 1-1.1-.31z" />
-                              </svg>
-                            )}
-                            <span>{item.label}</span>
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
               const active = isActive(link.to);
               return (
                 <Link
@@ -524,7 +371,6 @@ export function PublicNavbar() {
                     color: active ? "#FF6B00" : "#374151",
                     background: active ? "rgba(255, 107, 0, 0.06)" : "transparent",
                     textDecoration: "none",
-                    transition: "all 0.15s ease",
                   }}
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -533,10 +379,8 @@ export function PublicNavbar() {
               );
             })}
 
-            {/* Divider */}
-            <div style={{ height: "1px", background: "rgba(229, 231, 235, 0.8)", margin: "4px 0" }} />
+            <div style={{ height: 1, background: "rgba(229,231,235,0.8)", margin: "4px 0" }} />
 
-            {/* Mobile Auth Links */}
             <Link
               to="/login?mode=login"
               style={{
@@ -579,9 +423,8 @@ export function PublicNavbar() {
           </div>
         )}
       </nav>
-      {/* Spacer to push content below fixed header */}
-      <div style={{ height: "76px", transition: "height 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }} />
+
+      <div style={{ height: "76px" }} />
     </>
   );
 }
-
