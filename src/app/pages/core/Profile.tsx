@@ -14,6 +14,7 @@ import { getCurrentSubscription, getQuotaStatus, cancelSubscription } from "../.
 import { listSubscriptionPlans, formatPlanPrice, isFeatureEnabled, resolvePlanFeatures, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/adminSubscriptionPlansService";
 import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
 import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse, CurrentSubscriptionResponse, QuotaStatusResponse, ServicePlanType } from "../../../api/skillSprintModels";
+import { PlanTypeBadge, PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -1250,17 +1251,12 @@ export default function Profile() {
   const [subData, setSubData] = useState<CurrentSubscriptionResponse | null>(null);
 
   // ── Derive current plan info from subscription data ──
-  const planType: ServicePlanType = subData?.plan?.planType || "FREE";
-  const planDisplayName =
+  const planType = (subData?.plan?.planType as ServicePlanType) || "FREE";
+  const planDisplayName = subData?.plan?.planName || (
     planType === "PREMIUM"       ? "Career Premium"
     : planType === "SKILL_BUILDER" ? "Skill Builder"
-    :                                "Starter";
-  const planBadgeStyle: { bg: string; color: string; border: string; icon: React.ReactNode } =
-    planType === "PREMIUM"
-      ? { bg: "#FEF3C7", color: "#92400E", border: "#FDE68A", icon: <Gem size={12} /> }
-      : planType === "SKILL_BUILDER"
-        ? { bg: "#FFF7ED", color: "#C2410C", border: "#FED7AA", icon: <Sparkles size={12} /> }
-        : { bg: "#F3F4F6", color: "#6B7280", border: "#E5E7EB", icon: <Crown size={12} color="#9CA3AF" /> };
+    :                                "Starter"
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -1366,16 +1362,13 @@ export default function Profile() {
             {profile.email || "Không có email trong phiên"} · {profile.roleLabel}
           </p>
           <div style={{ display:"flex", gap:"7px", flexWrap:"wrap" }}>
-            <span style={{
-              fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
-              background: planBadgeStyle.bg,
-              color: planBadgeStyle.color,
-              border: `1px solid ${planBadgeStyle.border}`,
-              fontWeight:700,
-              display:"inline-flex", alignItems:"center", gap:"4px",
-            }}>
-              {planBadgeStyle.icon} {planDisplayName}
-            </span>
+            <PlanTypeBadge
+              type={planType as any}
+              label={planDisplayName}
+              badgeColor={(subData?.plan as any)?.badgeColor}
+              badgeIcon={(subData?.plan as any)?.badgeIcon}
+              animationType={(subData?.plan as any)?.animationType}
+            />
             <span style={{
               fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
               background: profile.emailVerified ? "#ECFDF5" : "#FFF7ED",
@@ -1478,6 +1471,7 @@ export default function Profile() {
           </AnimatePresence>
         </div>
       </div>
+      <PlanBadgeStyles />
     </motion.div>
   );
 }
