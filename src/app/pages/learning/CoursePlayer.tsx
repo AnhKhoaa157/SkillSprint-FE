@@ -165,7 +165,7 @@ export default function CoursePlayer() {
 
   const [isSubActionLoading, setIsSubActionLoading] = useState(false);
   const [sideTab, setSideTab] = useState<"pomodoro" | "quiz">("pomodoro");
-  const { planId, refresh: refreshSubscription } = useSubscription();
+  const { planId, rawPlanId, refresh: refreshSubscription } = useSubscription();
   const isPremiumMember = planId === "PREMIUM";
   // PricingModal speaks plan *slugs*; map our NormalizedPlanId to its vocabulary.
   const pricingCurrentPlan =
@@ -1265,6 +1265,7 @@ export default function CoursePlayer() {
         }}
         initialPlan="premium"
         currentPlan={pricingCurrentPlan}
+        currentPlanId={rawPlanId}
       />
 
       {isNavigationBlocked && (
