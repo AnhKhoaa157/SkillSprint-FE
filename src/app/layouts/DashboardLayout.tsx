@@ -230,13 +230,13 @@ function getNotifMeta(type: string): NotifMeta {
 type PlanTier = "free" | "pro" | "premium";
 
 const PLAN_BADGE_THEME: Record<PlanTier, { label: string; cls: string; Icon: typeof Zap }> = {
-  free:    { label: "Free",    cls: "bg-orange-50 border-orange-300 text-orange-500",     Icon: Zap },
-  pro:     { label: "Pro",     cls: "bg-emerald-50 border-emerald-300 text-emerald-600",  Icon: Sparkles },
-  premium: { label: "Premium", cls: "bg-purple-50 border-purple-300 text-purple-600",     Icon: Crown },
+  free:    { label: "Free",    cls: "bg-slate-50 border-slate-200 text-slate-500",     Icon: Zap },
+  pro:     { label: "Skill Builder", cls: "bg-amber-50 border-amber-300 text-amber-600",  Icon: Sparkles },
+  premium: { label: "Premium", cls: "bg-orange-50 border-[#FF6B00]/40 text-[#FF6B00]",     Icon: Crown },
 };
 
 /** Self-contained plan pill. Click opens the pricing modal to drive conversion;
- *  palette switches with the active tier (free→orange, pro→green, premium→purple). */
+ *  palette switches with the active tier (free→slate, pro→amber, premium→orange). */
 function PlanBadge({ tier, label, onClick }: { tier: PlanTier; label?: string; onClick: () => void }) {
   const theme = PLAN_BADGE_THEME[tier];
   const Icon = theme.Icon;
@@ -480,7 +480,7 @@ export default function DashboardLayout() {
                   >
                     <span className="flex items-center gap-2">
                       <Sparkles size={14} className="text-[#FF6B00]" />
-                      Lộ trình AI theo workspace
+                      Lộ trình AI
                     </span>
                     <span className="flex items-center gap-1.5">
                       <span className="rounded-full bg-orange-500/10 px-1.5 py-0.2 text-[9px] font-bold text-[#FF6B00]">
