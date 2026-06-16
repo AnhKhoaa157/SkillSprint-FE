@@ -237,7 +237,7 @@ const PLAN_BADGE_THEME: Record<PlanTier, { label: string; cls: string; Icon: typ
 
 /** Self-contained plan pill. Click opens the pricing modal to drive conversion;
  *  palette switches with the active tier (free→orange, pro→green, premium→purple). */
-function PlanBadge({ tier, onClick }: { tier: PlanTier; onClick: () => void }) {
+function PlanBadge({ tier, label, onClick }: { tier: PlanTier; label?: string; onClick: () => void }) {
   const theme = PLAN_BADGE_THEME[tier];
   const Icon = theme.Icon;
   return (
@@ -248,7 +248,7 @@ function PlanBadge({ tier, onClick }: { tier: PlanTier; onClick: () => void }) {
       className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wide transition active:scale-95 cursor-pointer ${theme.cls}`}
     >
       <Icon size={12} className="shrink-0" />
-      {theme.label}
+      {label || theme.label}
     </button>
   );
 }
@@ -260,7 +260,7 @@ export default function DashboardLayout() {
   const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(true);
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [roadmapWorkspaces, setRoadmapWorkspaces] = useState<RoadmapSidebarItem[]>([]);
-  const { planId, planName, planMeta, refresh: refreshSubscription } = useSubscription();
+  const { planId, planName, rawPlanId, planMeta, refresh: refreshSubscription } = useSubscription();
   const mappedPlanId = planId === "FREE" ? "starter" : planId === "SKILL_BUILDER" ? "skill_builder" : "career_premium";
   const planTier: PlanTier = planId === "FREE" ? "free" : planId === "SKILL_BUILDER" ? "pro" : "premium";
   const [profile, setProfile] = useState<{ fullName: string; roleLabel: string; avatarLetter: string; avatarUrl?: string }>(() => {
@@ -619,7 +619,7 @@ export default function DashboardLayout() {
           </div>
           <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
             {/* ── Subscription plan pill — pinned top-right; click opens pricing ── */}
-            <PlanBadge tier={planTier} onClick={() => setPricingOpen(true)} />
+            <PlanBadge tier={planTier} label={planName} onClick={() => setPricingOpen(true)} />
 
             {/* ── Notification Bell ── */}
             <div style={{ position:"relative" }}>
@@ -857,6 +857,7 @@ export default function DashboardLayout() {
           void refreshSubscription();
         }}
         currentPlan={mappedPlanId}
+        currentPlanId={rawPlanId}
       />
     </div>
   );

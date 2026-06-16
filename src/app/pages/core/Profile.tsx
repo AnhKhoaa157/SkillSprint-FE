@@ -717,9 +717,20 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
     career_premium: planByKey.career_premium?.benefits ?? [],
   };
 
-  const rawPlan = subData?.plan?.planType;
-  const currentPlanId: PlanId = rawPlan === "PREMIUM" ? "career_premium"
-    : rawPlan === "SKILL_BUILDER" ? "skill_builder" : "starter";
+  const rawPlanType = subData?.plan?.planType;
+  const rawPlanId = subData?.plan?.planId;
+  const rawPlanName = subData?.plan?.planName;
+
+  const hasCurrentId = !!rawPlanId && availablePlans.some(p => p.planId === rawPlanId);
+  const currentPrice = (() => {
+    if (hasCurrentId) return availablePlans.find(p => p.planId === rawPlanId)?.monthlyPrice ?? 0;
+    if (rawPlanType === "PREMIUM") return planByKey.career_premium?.monthlyPrice ?? 0;
+    if (rawPlanType === "SKILL_BUILDER") return planByKey.skill_builder?.monthlyPrice ?? 0;
+    return 0; // FREE
+  })();
+
+  const currentPlanId: PlanId = currentPrice === (planByKey.career_premium?.monthlyPrice ?? -1) ? "career_premium"
+    : currentPrice === (planByKey.skill_builder?.monthlyPrice ?? -1) ? "skill_builder" : "starter";
   const currentPlanIndex = planValue[currentPlanId];
 
   // Benefits (jsonb string[]) of the user's active plan, sourced from the public
@@ -886,7 +897,7 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
   ];
 
   const bannerIcon  = currentPlanId==="career_premium" ? <Crown size={16} color={OG}/> : currentPlanId==="skill_builder" ? <Zap size={16} color={OG}/> : <Zap size={16} color="#9CA3AF"/>;
-  const bannerTitle = `${planLabel[currentPlanId]} Plan`;
+  const bannerTitle = rawPlanName || `${planLabel[currentPlanId]} Plan`;
   const bannerPrice = currentPlanId==="starter" ? "Miễn phí · 0đ / tháng" : `${planDisplayPrice[currentPlanId]} / tháng`;
 
   if (loading) return (

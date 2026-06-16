@@ -42,6 +42,7 @@ function normalizePlan(raw: string | undefined | null): NormalizedPlanId {
 export function useSubscription() {
   const [planId, setPlanId] = useState<NormalizedPlanId>("FREE");
   const [planName, setPlanName] = useState<string>("Starter");
+  const [rawPlanId, setRawPlanId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -52,6 +53,7 @@ export function useSubscription() {
       setPlanId(normalized);
       // Use the live planName from backend if available, otherwise fallback to the PLAN_META label
       setPlanName(sub?.plan?.planName || PLAN_META[normalized].label);
+      setRawPlanId(sub?.plan?.planId);
     } catch {
       // keep previous value on transient network errors
     } finally {
@@ -63,5 +65,5 @@ export function useSubscription() {
     void refresh();
   }, [refresh]);
 
-  return { planId, planName, planMeta: PLAN_META[planId], loading, refresh };
+  return { planId, planName, rawPlanId, planMeta: PLAN_META[planId], loading, refresh };
 }
