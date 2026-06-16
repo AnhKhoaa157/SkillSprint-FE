@@ -414,14 +414,13 @@ export default function DashboardLayout() {
       >
         {/* Logo */}
         <div style={{
-          display:"flex", alignItems:"center", justifyContent:"space-between",
+          position: "relative",
+          display:"flex", alignItems:"center", justifyContent:"center",
           padding:"16px",
           borderBottom:"1px solid rgba(255,107,0,0.08)",
         }}>
-          <div style={{display:"flex",alignItems:"center",gap:"24px"}}>
-            <BrandLogo size={65} align="left" />
-          </div>
-          <button className="md:hidden" onClick={()=>setSideOpen(false)}
+          <BrandLogo size={85} align="center" />
+          <button className="md:hidden absolute right-4" onClick={()=>setSideOpen(false)}
             style={{background:"none",border:"none",cursor:"pointer",color:STXT}}>
             <X size={16}/>
           </button>
