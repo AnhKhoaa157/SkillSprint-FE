@@ -15,6 +15,7 @@ import { listSubscriptionPlans, formatPlanPrice, isFeatureEnabled, resolvePlanFe
 import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
 import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse, CurrentSubscriptionResponse, QuotaStatusResponse, ServicePlanType } from "../../../api/skillSprintModels";
 import { PlanTypeBadge, PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
+import { normalizePlanType } from "../../../utils/adminStatusHelpers";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -1251,8 +1252,10 @@ export default function Profile() {
   const [subData, setSubData] = useState<CurrentSubscriptionResponse | null>(null);
 
   // ── Derive current plan info from subscription data ──
-  const planType = (subData?.plan?.planType as ServicePlanType) || "FREE";
-  const planDisplayName = subData?.plan?.planName || (
+  const rawPlanType = subData?.plan?.planType;
+  const rawPlanName = subData?.plan?.planName;
+  const planType = normalizePlanType(rawPlanType, rawPlanName);
+  const planDisplayName = rawPlanName || (
     planType === "PREMIUM"       ? "Career Premium"
     : planType === "SKILL_BUILDER" ? "Skill Builder"
     :                                "Starter"
