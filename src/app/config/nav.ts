@@ -35,8 +35,8 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
     label: "Học tập & AI",
     items: [
-      { path: "/app/roadmap", label: "Lộ trình AI", icon: Sparkles },
       { path: "/app/workspaces", label: "Workspaces", icon: Map, badge: true, match: "prefix" },
+      { path: "/app/roadmap", label: "Lộ trình AI", icon: Sparkles },
     ],
   },
   {

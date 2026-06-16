@@ -143,6 +143,7 @@ export const router = createBrowserRouter([
           { path: appRoutes.workspaces.new, Component: WorkspacesNew },
           { path: appRoutes.workspaces.detail, Component: WorkspaceDetail },
           { path: appRoutes.workspaces.roadmap, Component: Roadmap },
+          { path: "roadmap", Component: Roadmap },
           { path: appRoutes.profile, Component: Profile },
           { path: appRoutes.leaderboard, Component: Leaderboard },
           { path: appRoutes.notifications, Component: NotificationsPage },
