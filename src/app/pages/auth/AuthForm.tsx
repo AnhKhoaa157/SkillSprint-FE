@@ -131,7 +131,7 @@ function LoginForm({ props }: { props: CommonFormProps }) {
         <InputField id="auth-email" label="Địa chỉ email" icon={Mail} type="email" value={email} onChange={setEmail} onBlur={() => setTouched(t => ({ ...t, email: true }))} placeholder="student@gmail.com" autoComplete="email" error={emailError} disabled={props.isMaintenanceActive} />
         <InputField id="auth-password" label="Mật khẩu" icon={Lock} type={showPassword ? "text" : "password"} value={password} onChange={setPassword} onBlur={() => setTouched(t => ({ ...t, password: true }))} placeholder="••••••••" autoComplete="current-password" error={passwordError} disabled={props.isMaintenanceActive}
           labelAction={
-            <button type="button" onClick={props.onForgotPassword} className="cursor-pointer border-none bg-transparent p-0 text-[13px] font-semibold text-slate-400 underline-offset-4 transition-colors hover:text-[#FF6B00] hover:underline">Quên mật khẩu?</button>
+            <button type="button" onClick={props.onForgotPassword} className="cursor-pointer border-none bg-transparent p-0 text-[13px] font-semibold text-slate-700 underline-offset-4 transition-colors hover:text-[#FF6B00] hover:underline">Quên mật khẩu?</button>
           }
           trailing={
             <button type="button" onClick={() => setShowPassword(v => !v)} className="mr-3.5 flex cursor-pointer items-center border-none bg-transparent p-0 text-slate-400 hover:text-slate-600">
@@ -148,7 +148,7 @@ function LoginForm({ props }: { props: CommonFormProps }) {
           )}
         </AnimatePresence>
 
-        <Button type="submit" disabled={isSubmitting || props.isMaintenanceActive} className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-none text-[15px] font-bold text-white transition-all duration-150 ${props.isMaintenanceActive ? "cursor-not-allowed bg-slate-300" : "bg-[#FF6B00] hover:bg-[#FF7A00] active:translate-y-0.5 cursor-pointer"}`}>
+        <Button type="submit" disabled={isSubmitting || props.isMaintenanceActive} className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-none text-[15px] font-bold text-white transition-all duration-150 ${props.isMaintenanceActive ? "cursor-not-allowed bg-slate-300" : "bg-[#FF6B00] hover:bg-[#FF7A00] hover:shadow-lg hover:shadow-orange-500/30 active:translate-y-0.5 cursor-pointer"}`}>
           {props.isMaintenanceActive ? <><Wrench size={16} strokeWidth={2.4} /> Tạm khoá do bảo trì</> : isSubmitting ? <><Loader2 size={17} className="animate-spin" /> Đang đăng nhập...</> : <>Đăng nhập <ArrowRight size={16} strokeWidth={2.5} /></>}
         </Button>
       </form>
@@ -159,7 +159,7 @@ function LoginForm({ props }: { props: CommonFormProps }) {
           <button type="button" onClick={() => props.onSwitchMode("signup")} className="cursor-pointer border-none bg-transparent p-0 text-[13px] font-bold text-[#FF6B00] hover:underline">Đăng ký ngay</button>
         </p>
         <p className="text-center text-xs">
-          <Link to="/admin-login" className="block w-full text-center mx-auto text-slate-400 no-underline hover:text-slate-600 hover:underline">Đăng nhập cho đối tác trường ĐH</Link>
+          <Link to="/admin-login" className="block w-full text-center mx-auto font-medium text-slate-700 no-underline transition-colors hover:text-slate-900 hover:underline">Đăng nhập cho đối tác trường ĐH</Link>
         </p>
       </div>
     </motion.div>
@@ -252,7 +252,7 @@ function RegisterForm({ props }: { props: CommonFormProps }) {
           )}
         </AnimatePresence>
 
-        <Button type="submit" disabled={isSubmitting || props.isMaintenanceActive} className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-none text-[15px] font-bold text-white transition-all duration-150 ${props.isMaintenanceActive ? "cursor-not-allowed bg-slate-300" : "bg-[#FF6B00] hover:bg-[#FF7A00] active:translate-y-0.5 cursor-pointer"}`}>
+        <Button type="submit" disabled={isSubmitting || props.isMaintenanceActive} className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-none text-[15px] font-bold text-white transition-all duration-150 ${props.isMaintenanceActive ? "cursor-not-allowed bg-slate-300" : "bg-[#FF6B00] hover:bg-[#FF7A00] hover:shadow-lg hover:shadow-orange-500/30 active:translate-y-0.5 cursor-pointer"}`}>
           {props.isMaintenanceActive ? <><Wrench size={16} strokeWidth={2.4} /> Tạm khoá do bảo trì</> : isSubmitting ? <><Loader2 size={17} className="animate-spin" /> Đang tạo...</> : <>Tạo tài khoản <ArrowRight size={16} strokeWidth={2.5} /></>}
         </Button>
       </form>
