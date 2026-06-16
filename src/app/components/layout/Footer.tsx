@@ -1,25 +1,16 @@
-import { Link } from "react-router";
+﻿import { Link } from "react-router";
+import { ArrowRight, Facebook } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
-import { Mail, Facebook } from "lucide-react";
 
 const footerLinks = {
   "Sản phẩm": [
-    { label: "Tính năng", to: "/login" },
-    { label: "Gói dịch vụ", to: "/login" },
+    { label: "Tính năng", to: "/features" },
+    { label: "Bảng giá", to: "/pricing" },
     { label: "Lộ trình", to: "/login" },
-    { label: "Phân tích", to: "/login" }
   ],
   "Công ty": [
     { label: "Về chúng tôi", to: "/about" },
-    { label: "Blog", to: "#" },
-    { label: "Tuyển dụng", to: "#" },
     { label: "Liên hệ", to: "/contact" },
-  ],
-  "Tài nguyên": [
-    { label: "Tài liệu", to: "#" },
-    { label: "Tham chiếu API", to: "#" },
-    { label: "Trạng thái hệ thống", to: "#" },
-    { label: "Cộng đồng", to: "#" },
   ],
   "Pháp lý": [
     { label: "Chính sách bảo mật", to: "/privacy" },
@@ -28,121 +19,88 @@ const footerLinks = {
   ],
 };
 
+function TikTokIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={`${className} fill-current`} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .79.11V9.5a6.27 6.27 0 0 0-3.1-1.74 6.36 6.36 0 0 0-6 5.56 6.34 6.34 0 0 0 6.1 7.18A6.3 6.3 0 0 0 15.82 16c0-.05.02-.1.02-.15V8.82a8.17 8.17 0 0 0 4.85 1.58V7a4.83 4.83 0 0 1-1.1-.31z" />
+    </svg>
+  );
+}
+
 export function Footer() {
   return (
     <footer
       id="public-footer"
-      style={{
-        background: "transparent",
-        borderTop: "1px solid #E2E8F0",
-      }}
+      className="relative border-t border-slate-200/60 bg-[linear-gradient(180deg,#F8FAFC_0%,#FFFFFF_40%,#FFF7ED_100%)]"
     >
-
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-16">
-        <div
-          className="mb-10 rounded-2xl p-6 md:p-8"
-          style={{
-            border: "1px solid #FED7AA",
-            background: "linear-gradient(135deg, #FFF7ED 0%, #FFFFFF 65%)",
-          }}
-        >
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div style={{ width:"32px", height:"32px", borderRadius:"8px", background:"#FFEDD5", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <Mail size={16} color="#EA580C" />
-                </div>
-                <span
-                  className="text-[11px] px-2 py-1 rounded-full"
-                  style={{ color: "#9A3412", background: "#FFEDD5", fontWeight: 700 }}
-                >
-                  Bản tin học tập AI
-                </span>
-              </div>
-              <p className="text-sm" style={{ color: "#64748B" }}>
-                Nhận mẹo học theo tuần, mẫu lịch ôn thi và cập nhật tính năng mới từ SkillSprint.
+      <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:py-14">
+        
+        {/* Banner CTA */}
+        <section className="mb-12 rounded-[24px] border border-orange-100 bg-white px-6 py-8 shadow-[0_12px_40px_rgba(234,88,12,0.04)] md:px-8 md:py-10">
+          <div className="mx-auto flex max-w-6xl flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-500">
+                SkillSprint Platform
+              </p>
+              <h3 className="text-2xl font-bold tracking-tight text-slate-950 md:text-3xl lg:text-4xl">
+                Sẵn sàng bứt phá kết quả học tập cùng{" "}
+                <span className="bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">
+                  SkillSprint
+                </span>?
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                Kích hoạt lộ trình học tập cá nhân hóa, theo dõi tiến độ thông minh và xây dựng nhịp học tập tập trung, bền vững hơn mỗi ngày.
               </p>
             </div>
-            <form className="w-full md:w-auto" onSubmit={(e) => e.preventDefault()}>
-              {/* Wrapper box: the CTA sits INSIDE with a p-1.5 padding buffer so the
-                  border-radius flow of the white container is never broken */}
-              <div className="flex items-center gap-1.5 w-full max-w-md border border-slate-200 rounded-xl p-1.5 bg-white focus-within:border-[#FF6B00] focus-within:ring-4 focus-within:ring-[#FF6B00]/10 transition-all shadow-sm">
-                <input
-                  type="email"
-                  placeholder="Nhập email sinh viên"
-                  className="flex-1 min-w-0 bg-transparent border-none px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 outline-none"
-                />
-                <button
-                  type="submit"
-                  className="shrink-0 rounded-lg px-4 py-2 text-sm text-white border-none cursor-pointer"
-                  style={{
-                    fontWeight: 700,
-                    background: "linear-gradient(135deg, #FF6B00 0%, #EA580C 100%)",
-                    boxShadow: "0 2px 8px rgba(255,107,0,0.25)",
-                  }}
-                >
-                  Đăng ký nhận tin
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-6 lg:grid-cols-7 gap-8 mb-14">
-          <div className="col-span-2">
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <BrandLogo size={34} textColor="#0F172A" textSize="1rem" align="left" />
+            <div className="flex shrink-0 flex-col items-start gap-2.5 lg:items-end">
+              <Link
+                to="/login?mode=register"
+                className="group inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-3 text-xs font-semibold text-white no-underline transition-all duration-300 hover:-translate-y-0.5 hover:opacity-95 hover:shadow-[0_10px_20px_rgba(234,88,12,0.2)]"
+              >
+                Bắt đầu miễn phí ngay
+                <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-0.5" />
+              </Link>
+              <p className="text-[11px] text-slate-400 lg:text-right">
+                Không cần thẻ tín dụng • Thiết lập nhanh
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Links Grid */}
+        <section className="grid grid-cols-1 gap-10 border-b border-orange-100/70 pb-10 lg:grid-cols-[1.35fr_0.75fr_0.75fr_0.85fr]">
+          <div className="max-w-sm">
+            <Link to="/" className="inline-flex items-center no-underline">
+              <BrandLogo size={38} textColor="#0F172A" textSize="1rem" align="left" />
             </Link>
-            <p className="text-sm leading-relaxed mb-5" style={{ color: "#64748B", maxWidth: "260px" }}>
-              Trung tâm điều phối học tập dùng AI, giúp sinh viên có lộ trình rõ ràng, bám sát tiến độ và giữ nhịp học ổn định.
+            <p className="mt-4 text-sm leading-relaxed text-slate-500">
+              Nền tảng học tập ứng dụng AI giúp sinh viên xây dựng lộ trình rõ ràng, duy trì nhịp học bền vững và tập trung vào kết quả.
             </p>
-            <div className="flex items-center flex-wrap gap-2">
-              {["X", "GitHub", "Discord", "Facebook"].map(soc => (
-                <a
-                  key={soc}
-                  href="#"
-                  className="px-3 py-1.5 rounded-full text-xs transition-all duration-200"
-                  style={{
-                    color: "#64748B",
-                    border: "1px solid #E2E8F0",
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.color = "#0F172A";
-                    e.currentTarget.style.borderColor = "#CBD5E1";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.color = "#64748B";
-                    e.currentTarget.style.borderColor = "#E2E8F0";
-                  }}
-                >
-                  {soc}
-                </a>
-              ))}
+            <div className="mt-5 flex flex-wrap gap-1.5 text-[10px] font-semibold tracking-wide">
+              <span className="rounded-full bg-orange-50/80 px-2.5 py-0.5 text-orange-600 border border-orange-100/50">
+                AI Learning Flow
+              </span>
+              <span className="rounded-full bg-orange-50/80 px-2.5 py-0.5 text-orange-600 border border-orange-100/50">
+                Smart Progress
+              </span>
+              <span className="rounded-full bg-orange-50/80 px-2.5 py-0.5 text-orange-600 border border-orange-100/50">
+                Focused Results
+              </span>
             </div>
           </div>
 
           {Object.entries(footerLinks).map(([section, links]) => (
             <div key={section}>
-              <h4
-                className="text-xs uppercase tracking-widest mb-4"
-                style={{ color: "#94A3B8", fontWeight: 600, letterSpacing: "0.1em" }}
-              >
+              <h4 className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
                 {section}
               </h4>
-              <ul className="space-y-3">
+              <ul className="space-y-2.5">
                 {links.map(({ label, to }) => (
                   <li key={label}>
                     <Link
                       to={to}
-                      className={`text-sm font-medium transition-colors duration-200${
-                        section === "Pháp lý"
-                          ? " text-slate-500 hover:text-[#FF6B00]"
-                          : ""
-                      }`}
-                      style={section !== "Pháp lý" ? { color: "#64748B" } : undefined}
-                      onMouseEnter={e => { if (section !== "Pháp lý") e.currentTarget.style.color = "#0F172A"; }}
-                      onMouseLeave={e => { if (section !== "Pháp lý") e.currentTarget.style.color = "#64748B"; }}
+                      className="text-sm font-medium text-slate-600 no-underline transition-colors duration-150 hover:text-orange-500"
                     >
                       {label}
                     </Link>
@@ -151,56 +109,40 @@ export function Footer() {
               </ul>
             </div>
           ))}
-        </div>
+        </section>
 
-        <div
-          className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8"
-          style={{ borderTop: "1px solid #E2E8F0" }}
-        >
-          <div className="flex items-center gap-3">
-            <p className="text-xs" style={{ color: "#94A3B8" }}>
-              © 2026 SkillSprint. Đồng hành cùng sinh viên học đúng hướng.
+        {/* Bottom bar */}
+        <section className="flex flex-col gap-5 pt-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 text-xs font-medium text-slate-400">
+            <p>© 2026 SkillSprint. Đồng hành cùng sinh viên học đúng hướng.</p>
+            <span className="hidden text-slate-300 sm:inline">•</span>
+            <p>
+              Hỗ trợ: <span className="hover:text-orange-500 transition-colors cursor-pointer">skillsprint2026@gmail.com</span>
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-2 h-2 rounded-full"
-                  style={{ background: "#22c55e", boxShadow: "0 0 6px #22c55e" }}
-                />
-                <span className="text-xs" style={{ color: "#94A3B8" }}>
-                  Hệ thống hoạt động ổn định
-                </span>
-              </div>
-              <span className="text-xs" style={{ color: "#94A3B8" }}>
-                Hỗ trợ: skillsprint2026@gmail.com
-              </span>
-            </div>
-            <div className="flex items-center gap-4">
-              <a
-                href="https://www.facebook.com/profile.php?id=61590323403077"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook SkillSprint"
-                className="text-slate-400 hover:text-[#FF6B00] hover:-translate-y-0.5 transition-all duration-200"
-              >
-                <Facebook size={18} />
-              </a>
-              <a
-                href="https://www.tiktok.com/@skillsprint26"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="TikTok SkillSprint"
-                className="text-slate-400 hover:text-[#FF6B00] hover:-translate-y-0.5 transition-all duration-200"
-              >
-                <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
-                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .79.11V9.5a6.27 6.27 0 0 0-3.1-1.74 6.36 6.36 0 0 0-6 5.56 6.34 6.34 0 0 0 6.1 7.18A6.3 6.3 0 0 0 15.82 16c0-.05.02-.1.02-.15V8.82a8.17 8.17 0 0 0 4.85 1.58V7a4.83 4.83 0 0 1-1.1-.31z" />
-                </svg>
-              </a>
-            </div>
+
+          <div className="flex items-center gap-3">
+            <a
+              href="https://www.facebook.com/profile.php?id=61590323403077"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook Group SkillSprint"
+              className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white/80 text-slate-500 shadow-[0_1px_3px_rgba(15,23,42,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-orange-200 hover:bg-orange-50/60 hover:text-orange-500 hover:shadow-[0_8px_20px_rgba(234,88,12,0.12)]"
+            >
+              <Facebook size={17} className="transition-transform duration-300 group-hover:scale-110" />
+            </a>
+
+            <a
+              href="https://www.tiktok.com/@skillsprint26"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="TikTok SkillSprint"
+              className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white/80 text-slate-500 shadow-[0_1px_3px_rgba(15,23,42,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-orange-200 hover:bg-orange-50/60 hover:text-orange-500 hover:shadow-[0_8px_20px_rgba(234,88,12,0.12)]"
+            >
+              <TikTokIcon className="w-[17px] h-[17px] transition-transform duration-300 group-hover:scale-110" />
+            </a>
           </div>
-        </div>
+        </section>
       </div>
     </footer>
   );

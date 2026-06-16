@@ -25,7 +25,7 @@ export default function About() {
       <PublicNavbar />
 
       <main style={{ paddingTop:"140px", paddingBottom:"80px", overflow:"hidden" }}>
-        {/* Hero Section */}
+        {/* Hero Section - Đã cập nhật theo thiết kế image_eb3924.jpg */}
         <section style={{ textAlign:"center", padding:"0 16px", marginBottom:"100px", position:"relative" }}>
           <div style={{
             position:"absolute", top:"-50%", left:"50%", transform:"translateX(-50%)",
@@ -34,25 +34,52 @@ export default function About() {
           }}/>
           
           <div className="max-w-4xl mx-auto" style={{ position:"relative", zIndex:1 }}>
+            {/* Cập nhật giao diện Badge giống ảnh 2 */}
             <motion.div initial={{ opacity:0, y:-8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
               style={{
                 display:"inline-flex", alignItems:"center", gap:"6px",
-                padding:"6px 14px", borderRadius:"99px", marginBottom:"24px",
-                background:OGL, border:`1px solid ${OGLT}`,
+                padding:"6px 16px", borderRadius:"99px", marginBottom:"28px",
+                background: CARD, 
+                border: `1px solid ${OG}`,
+                boxShadow: "0 2px 8px rgba(255,107,0,0.04)"
               }}>
               <Sparkles size={12} color={OG}/>
-              <span style={{ fontFamily:F, fontSize:"0.78rem", color:OG, fontWeight:700 }}>
+              <span style={{ 
+                fontFamily:F, 
+                fontSize:"0.72rem", 
+                color:OG, 
+                fontWeight:800, 
+                letterSpacing:"0.1em",
+                textTransform: "uppercase" 
+              }}>
                 Câu chuyện của SkillSprint
               </span>
             </motion.div>
 
+            {/* Cập nhật Title gạch chân giống ảnh 2 */}
             <motion.h1 initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:0.2 }}
               style={{
                 fontFamily:F, fontWeight:900, fontSize:"clamp(2.5rem,5vw,4.5rem)",
-                letterSpacing:"-0.04em", lineHeight:1.1, color:T1, marginBottom:"24px",
+                letterSpacing:"-0.04em", lineHeight:1.2, color:T1, marginBottom:"24px",
               }}>
               Kiến tạo thế hệ <br />
-              <span style={{ color:OG }}>học tập chủ động.</span>
+              <span style={{ 
+                color: OG, 
+                position: "relative", 
+                display: "inline-block",
+                paddingBottom: "4px"
+              }}>
+                học tập chủ động.
+                {/* Đường gạch chân mảnh tinh tế phía dưới chữ */}
+                <span style={{
+                  position: "absolute",
+                  left: 0,
+                  bottom: "-4px",
+                  width: "100%",
+                  height: "2px",
+                  backgroundColor: OG,
+                }} />
+              </span>
             </motion.h1>
 
             <motion.p initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:0.3 }}
@@ -65,11 +92,14 @@ export default function About() {
           </div>
         </section>
 
-        {/* The Problem & Mission */}
+        {/* ─── THE PROBLEM & MISSION ─── */}
         <section style={{ padding:"0 16px", marginBottom:"120px" }}>
           <div className="max-w-6xl mx-auto">
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))", gap:"40px", alignItems:"center" }}>
               <motion.div initial={{ opacity:0, x:-20 }} whileInView={{ opacity:1, x:0 }} viewport={{ once:true }} transition={{ duration:0.6 }}>
+                <span style={{ display:"block", fontFamily:F, fontSize:"0.75rem", fontWeight:700, color:OG, textTransform:"uppercase", letterSpacing:"0.2em", marginBottom:"12px" }}>
+                  Thực trạng ngành IT
+                </span>
                 <h2 style={{ fontFamily:F, fontWeight:900, fontSize:"clamp(1.8rem,3vw,2.5rem)", color:T1, letterSpacing:"-0.03em", lineHeight:1.2, marginBottom:"20px" }}>
                   Giáo trình đồ sộ, <br/>thời gian có hạn.
                 </h2>
@@ -80,6 +110,7 @@ export default function About() {
                   <strong style={{ color:T1 }}>Giải pháp:</strong> Số hóa toàn bộ giáo trình thành lộ trình cá nhân hóa. Chia nhỏ kiến thức thành các mục tiêu đo lường được qua từng Sprint ngắn.
                 </p>
               </motion.div>
+              
               <motion.div initial={{ opacity:0, scale:0.95 }} whileInView={{ opacity:1, scale:1 }} viewport={{ once:true }} transition={{ duration:0.6 }}
                 style={{
                   background:CARD, borderRadius:"24px", padding:"40px",
@@ -90,7 +121,7 @@ export default function About() {
                   {[
                     { icon: Map, title:"Định hướng rõ ràng", desc:"Chỉ học những gì cần thiết nhất cho mục tiêu hiện tại." },
                     { icon: Target, title:"Lộ trình cá nhân hóa", desc:"Thích ứng với năng lực tiếp thu và quỹ thời gian của riêng bạn." },
-                    { icon: Zap, title:"Tăng tốc độ học", desc:"Tối đa hóa hiệu suất tự học thay vì thụ động lắng nghe." },
+                    { icon: Zap, title:"Tăng tốc tốc độ học", desc:"Tối đa hóa hiệu suất tự học thay vì thụ động lắng nghe." },
                   ].map((item, i) => (
                     <div key={i} style={{ display:"flex", gap:"16px" }}>
                       <div style={{
@@ -111,12 +142,15 @@ export default function About() {
           </div>
         </section>
 
-        {/* Core Values */}
+        {/* ─── CORE VALUES ─── */}
         <section style={{ padding:"0 16px", marginBottom:"120px" }}>
           <div className="max-w-6xl mx-auto">
             <motion.div initial={{ opacity:0, y:16 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} style={{ textAlign:"center", marginBottom:"56px" }}>
+              <span style={{ display:"block", fontFamily:F, fontSize:"0.75rem", fontWeight:700, color:OG, textTransform:"uppercase", letterSpacing:"0.2em", marginBottom:"12px" }}>
+                Triết lý cốt lõi
+              </span>
               <h2 style={{ fontFamily:F, fontWeight:900, fontSize:"clamp(2rem,3vw,3.1rem)", color:T1, letterSpacing:"-0.05em", lineHeight:1.05 }}>
-                Ba giá trị cốt lõi
+                Ba giá trị bền vững
               </h2>
             </motion.div>
 
@@ -150,6 +184,7 @@ export default function About() {
                         border:"1px solid rgba(229,231,235,0.88)",
                         boxShadow:"0 4px 12px rgba(15,23,42,0.035), 0 1px 4px rgba(15,23,42,0.02)",
                         transition:"transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease",
+                        cursor: 'default'
                       }}
                       onMouseEnter={e=>{
                         const card = e.currentTarget as HTMLDivElement;
@@ -196,7 +231,6 @@ export default function About() {
                         <h3 style={{ fontFamily:F, fontWeight:900, fontSize:"1.02rem", color:T1, letterSpacing:"-0.03em", lineHeight:1.06, marginBottom:"14px" }}>
                           {val.title}
                         </h3>
-                        {/* text-slate-600 — keeps descriptions WCAG-readable on white */}
                         <p className="text-slate-600" style={{ fontFamily:F, fontSize:"0.9rem", lineHeight:1.6, maxWidth:"100%" }}>
                           {val.desc}
                         </p>
@@ -209,7 +243,7 @@ export default function About() {
           </div>
         </section>
 
-        {/* Principles & Trust */}
+        {/* ─── PRINCIPLES & TRUST ─── */}
         <section style={{ padding:"0 16px", marginBottom:"80px" }}>
           <div className="max-w-6xl mx-auto">
             <motion.div initial={{ opacity:0, y:6 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
@@ -219,9 +253,14 @@ export default function About() {
                 boxShadow:"0 18px 48px rgba(15,23,42,0.04)", border:`1px solid ${BDR}`
               }}
             >
-              <h2 style={{ fontFamily:F, fontWeight:900, fontSize:"clamp(1.7rem,2.4vw,2.2rem)", color:T1, marginBottom:"32px", textAlign:"center" }}>
-                Cam kết phát triển sản phẩm
-              </h2>
+              <div style={{ textAlign:"center", marginBottom:"32px" }}>
+                <span style={{ display:"block", fontFamily:F, fontSize:"0.75rem", fontWeight:700, color:OG, textTransform:"uppercase", letterSpacing:"0.2em", marginBottom:"12px" }}>
+                  Sứ mệnh vững vàng
+                </span>
+                <h2 style={{ fontFamily:F, fontWeight:900, fontSize:"clamp(1.7rem,2.4vw,2.2rem)", color:T1, letterSpacing:"-0.03em" }}>
+                  Cam kết phát triển sản phẩm
+                </h2>
+              </div>
 
               <div style={{ display:"grid", gap:"22px", gridTemplateColumns:"repeat(2, minmax(0, 1fr))" }}>
                 {[
@@ -246,20 +285,20 @@ export default function About() {
                   onMouseEnter={(e)=>{const el=e.currentTarget as HTMLDivElement; el.style.transform='translateY(-6px)'; el.style.boxShadow='0 20px 40px rgba(15,23,42,0.06)';}}
                   onMouseLeave={(e)=>{const el=e.currentTarget as HTMLDivElement; el.style.transform='translateY(0)'; el.style.boxShadow='0 8px 26px rgba(15,23,42,0.03)';}}
                   >
-                        <div style={{
-                          width:52, height:52, borderRadius:26,
-                          display:"flex", alignItems:"center", justifyContent:"center",
-                          background:`linear-gradient(135deg, ${item.accent} 0%, rgba(255,255,255,0.6) 100%)`,
-                          border:`1px solid rgba(255,255,255,0.6)`,
-                          boxShadow:"inset 0 1px 0 rgba(255,255,255,0.6)"
-                        }}>
-                          <div style={{
-                            width:34, height:34, borderRadius:18, display:"flex", alignItems:"center", justifyContent:"center",
-                            background: "rgba(255,255,255,0.8)", boxShadow:"0 2px 8px rgba(15,23,42,0.06)"
-                          }}>
-                            <ShieldCheck size={16} color={OG} />
-                          </div>
-                        </div>
+                    <div style={{
+                      width:52, height:52, borderRadius:26,
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      background:`linear-gradient(135deg, ${item.accent} 0%, rgba(255,255,255,0.6) 100%)`,
+                      border:`1px solid rgba(255,255,255,0.6)`,
+                      boxShadow:"inset 0 1px 0 rgba(255,255,255,0.6)"
+                    }}>
+                      <div style={{
+                        width:34, height:34, borderRadius:18, display:"flex", alignItems:"center", justifyContent:"center",
+                        background: "rgba(255,255,255,0.8)", boxShadow:"0 2px 8px rgba(15,23,42,0.06)"
+                      }}>
+                        <ShieldCheck size={16} color={OG} />
+                      </div>
+                    </div>
 
                     <div style={{ flex:1 }}>
                       <span style={{ fontFamily:F, fontSize:"1.01rem", color:T1, fontWeight:700, lineHeight:1.35 }}>{item.text}</span>
