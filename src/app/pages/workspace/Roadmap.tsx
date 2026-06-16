@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import AiTutorChat from "./AiTutorChat";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 
 type StepTone = {
   label: string;
@@ -673,24 +674,37 @@ export default function Roadmap() {
   const workspaceDropdown = (
     <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 z-20 relative">
       <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800">Lộ trình AI</h2>
-      <select
+      <Select
         value={activeWorkspaceId}
-        onChange={e => {
-          setSelectedWorkspaceId(e.target.value);
+        onValueChange={value => {
+          setSelectedWorkspaceId(value);
           if (workspaceId) {
-            navigate(`/app/workspaces/${e.target.value}/roadmap`);
+            navigate(`/app/workspaces/${value}/roadmap`);
           } else {
             setRoadmapData(null);
             setTasks([]);
           }
         }}
-        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[#FF7E21]/60 focus:ring-4 focus:ring-[#FF7E21]/5 min-w-[220px] shadow-sm cursor-pointer"
       >
-        {workspaces.length === 0 && <option value="">Đang tải workspace...</option>}
-        {workspaces.map(ws => (
-          <option key={ws.workspaceId} value={ws.workspaceId}>{ws.name}</option>
-        ))}
-      </select>
+        <SelectTrigger className="rounded-2xl border-slate-200 bg-white px-4 h-[46px] text-sm font-bold text-slate-700 outline-none transition hover:bg-slate-50 focus:border-[#FF7E21]/60 focus:ring-4 focus:ring-[#FF7E21]/15 min-w-[220px] shadow-sm cursor-pointer data-[state=open]:border-[#FF7E21]/60 data-[state=open]:ring-4 data-[state=open]:ring-[#FF7E21]/15">
+          <SelectValue placeholder="Chọn workspace..." />
+        </SelectTrigger>
+        <SelectContent className="rounded-2xl border border-slate-100 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.08)] py-1.5 px-1 min-w-[220px]">
+          {workspaces.length === 0 ? (
+            <div className="py-3 text-center text-sm font-medium text-slate-400 italic">Đang tải workspace...</div>
+          ) : (
+            workspaces.map(ws => (
+              <SelectItem 
+                key={ws.workspaceId} 
+                value={ws.workspaceId}
+                className="rounded-xl py-2.5 px-3 text-sm font-bold text-slate-700 focus:bg-orange-50 focus:text-[#FF7E21] cursor-pointer transition-colors"
+              >
+                {ws.name}
+              </SelectItem>
+            ))
+          )}
+        </SelectContent>
+      </Select>
     </div>
   );
 
