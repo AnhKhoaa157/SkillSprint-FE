@@ -133,34 +133,35 @@ export default function Auth() {
 
   return (
     <AuthLayout>
-      <AuthForm
-        mode={tab}
-        isMaintenanceActive={isCurrentlyLocked}
-        isGoogleLoading={isGoogleLoading}
-        onContinueWithGoogle={handleContinueWithGoogle}
-        onSwitchMode={handleSwitchMode}
-        onLoginSuccess={onLoginSuccess}
-        onRequireNewPassword={(email, session, role) => {
-          setModalEmail(email);
-          setChallengeSession(session);
-          setChallengeRole(role);
-          setShowNewPassword(true);
-        }}
-        onRequireConfirmation={(email, password) => {
-          setModalEmail(email);
-          if (password) setModalPassword(password);
-          setShowConfirm(true);
-        }}
-        onForgotPassword={() => setShowReset(true)}
-        onError={(msg) => { if (msg === "maintenance") setForceMaintenanceView(true); }}
-      />
+      {!showReset ? (
+        <AuthForm
+          mode={tab}
+          isMaintenanceActive={isCurrentlyLocked}
+          isGoogleLoading={isGoogleLoading}
+          onContinueWithGoogle={handleContinueWithGoogle}
+          onSwitchMode={handleSwitchMode}
+          onLoginSuccess={onLoginSuccess}
+          onRequireNewPassword={(email, session, role) => {
+            setModalEmail(email);
+            setChallengeSession(session);
+            setChallengeRole(role);
+            setShowNewPassword(true);
+          }}
+          onRequireConfirmation={(email, password) => {
+            setModalEmail(email);
+            if (password) setModalPassword(password);
+            setShowConfirm(true);
+          }}
+          onForgotPassword={() => setShowReset(true)}
+          onError={(msg) => { if (msg === "maintenance") setForceMaintenanceView(true); }}
+        />
+      ) : (
+        <AnimatePresence mode="wait">
+          <ResetPassword key="reset-password" onBack={() => setShowReset(false)} />
+        </AnimatePresence>
+      )}
 
       <AnimatePresence>
-        {showReset && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <ResetPassword onBack={() => setShowReset(false)} />
-          </motion.div>
-        )}
         {showNewPassword && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <NewPasswordRequiredModal
