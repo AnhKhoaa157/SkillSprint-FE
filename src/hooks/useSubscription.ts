@@ -31,11 +31,18 @@ const PLAN_META: Record<NormalizedPlanId, PlanMeta> = {
   },
 };
 
-function normalizePlan(raw: string | undefined | null): NormalizedPlanId {
-  if (!raw) return "FREE";
-  const u = raw.toUpperCase();
+function normalizePlan(raw: string | undefined | null, price?: number | null): NormalizedPlanId {
+  const u = raw?.toUpperCase();
   if (u === "SKILL_BUILDER" || u === "BUILDER") return "SKILL_BUILDER";
   if (u === "PREMIUM" || u === "CAREER_PREMIUM") return "PREMIUM";
+  if (u === "FREE" || u === "STARTER") return "FREE";
+  
+  // Fallback heuristics: if backend planType is missing or custom, try to infer by price
+  if (price !== undefined && price !== null) {
+    if (price >= 150000) return "PREMIUM";
+    if (price > 0) return "SKILL_BUILDER";
+  }
+
   return "FREE";
 }
 
@@ -49,7 +56,7 @@ export function useSubscription() {
     setLoading(true);
     try {
       const sub = await getCurrentSubscription();
-      const normalized = normalizePlan(sub?.plan?.planType);
+      const normalized = normalizePlan(sub?.plan?.planType, sub?.plan?.monthlyPrice);
       setPlanId(normalized);
       // Use the live planName from backend if available, otherwise fallback to the PLAN_META label
       setPlanName(sub?.plan?.planName || PLAN_META[normalized].label);
