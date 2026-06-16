@@ -149,12 +149,14 @@ function isValidTimeSlot(slot: string): boolean {
 export default function OnboardingModal({
   open,
   onClose,
+  onSuccess,
   workspaceId,
   initialValues,
   mode = "onboarding",
 }: {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   workspaceId: string;
   initialValues?: OnboardingProfileResponse | null;
   mode?: "onboarding" | "edit";
@@ -272,6 +274,7 @@ export default function OnboardingModal({
     try {
       await upsertOnboardingProfile(workspaceId, payload);
       toast.success("Lưu lộ trình thành công");
+      onSuccess?.();
       onClose();
     } catch (error: any) {
       toast.error(error?.message || "Lỗi khi lưu lộ trình");

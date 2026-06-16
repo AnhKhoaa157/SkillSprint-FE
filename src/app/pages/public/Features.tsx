@@ -147,7 +147,7 @@ export default function FeaturesLanding() {
                     <div style={{ position: "absolute", right: "-30px", bottom: "-20px", width: "420px", height: "290px", background: "#FCFDFE", borderRadius: "24px", border: "1px solid #E2E8F0", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.08)", overflow: "hidden" }}
                          className="hidden md:flex flex-col transition-all duration-500 group-hover:translate-x-[-12px] group-hover:translate-y-[-10px] group-hover:border-orange-500/20">
                       {/* Window Header */}
-                      <div style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", padding: "14px 20px", borderBottom: "1px solid #F1F5F9", background: "#F8FAFC" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #F1F5F9", background: "#F8FAFC" }}>
                         <div style={{ display: "flex", gap: "6px" }}>
                           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#FF5F56" }}/>
                           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#FFBD2E" }}/>
@@ -343,7 +343,7 @@ export default function FeaturesLanding() {
                 
                 <div style={{ position: "relative", zIndex: 2 }}>
                   <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} transition={{ type: "spring", bounce: 0.5 }}
-                    style={{ width: "68px", height: "68px", borderRadius: "22px", background: OGL, border: `1px solid ${OGLT}`, display: "flex", alignItems: "center", justifyCenter: "center", marginBottom: "32px", margin: "0 auto", boxShadow: "0 8px 20px rgba(255,107,0,0.06)" }}>
+                    style={{ width: "68px", height: "68px", borderRadius: "22px", background: OGL, border: `1px solid ${OGLT}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "32px", margin: "0 auto", boxShadow: "0 8px 20px rgba(255,107,0,0.06)" }}>
                     <Sparkles size={30} color={OG} />
                   </motion.div>
                   

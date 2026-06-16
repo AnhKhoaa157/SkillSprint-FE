@@ -431,120 +431,130 @@ export default function DashboardLayout() {
           {APP_NAV_SECTIONS.map((section, idx) => (
             <div key={section.label} className="space-y-1">
               {idx > 0 && <div className="my-2 border-t border-orange-100/40" />}
-              {section.items
-                .filter(item => !(section.label === "Học tập & AI" && item.path === "/app/roadmap"))
-                .map(item => {
-                  const isActive = isNavItemActive(item.path, item.end, item.match);
-
+              {section.items.map(item => {
+                if (section.label === "Học tập & AI" && item.path === "/app/roadmap") {
+                  const isActive = pathname.startsWith("/app/workspaces/") && pathname.includes("/roadmap");
+                  
                   return (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      end={item.end}
-                      onClick={() => setSideOpen(false)}
-                      className={() => [
-                        "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition-all duration-200",
-                        "border-l-4 border-transparent",
-                        isActive
-                          ? "border-l-[#FF6B00] bg-gradient-to-r from-orange-500/8 to-amber-500/4 text-[#FF6B00] font-bold shadow-[0_4px_12px_rgba(255,107,0,0.03)]"
-                          : "text-slate-500 hover:bg-orange-500/4 hover:text-slate-800",
-                      ].join(" ")}
-                    >
-                      <>
-                        <item.icon
+                    <div key="roadmap-dropdown" className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => setRoadmapMenuOpen((value) => !value)}
+                        className={`group flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition-all duration-200 border-l-4 ${
+                          isActive
+                            ? "border-l-[#FF6B00] bg-gradient-to-r from-orange-500/8 to-amber-500/4 text-[#FF6B00] font-bold shadow-[0_4px_12px_rgba(255,107,0,0.03)]"
+                            : "border-transparent text-slate-500 hover:bg-orange-500/4 hover:text-slate-800"
+                        }`}
+                      >
+                        <Sparkles
                           size={18}
                           strokeWidth={isActive ? 2.5 : 2}
-                          className={[
-                            "shrink-0 transition-transform duration-200 group-hover:scale-105",
-                            isActive ? "text-[#FF6B00]" : "text-slate-400 group-hover:text-slate-600",
-                          ].join(" ")}
+                          className={`shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+                            isActive ? "text-[#FF6B00]" : "text-slate-400 group-hover:text-slate-600"
+                          }`}
                         />
-                        <span className="flex-1 font-medium">{item.label}</span>
-                        {item.badge && (
-                          <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
-                            <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
-                            <span className="relative h-2 w-2 rounded-full bg-orange-500" />
+                        <span className="flex-1 font-medium text-left">Lộ trình AI</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className={`rounded-full px-1.5 py-0.2 text-[9px] font-bold ${isActive ? "bg-orange-500/20 text-[#FF6B00]" : "bg-slate-100 text-slate-500"}`}>
+                            {roadmapLoading ? "..." : roadmapWorkspaces.length}
                           </span>
-                        )}
-                      </>
-                    </NavLink>
-                  );
-                })}
+                          <ChevronRight
+                            size={14}
+                            className={`text-slate-400 transition-transform ${roadmapMenuOpen ? "rotate-90" : ""}`}
+                          />
+                        </span>
+                      </button>
 
-              {section.label === "Học tập & AI" && (
-                <div className="mt-1 pl-4 border-l border-orange-100/80 ml-3 space-y-1 py-1">
-                  <button
-                    type="button"
-                    onClick={() => setRoadmapMenuOpen((value) => !value)}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold text-slate-500 hover:bg-orange-500/4 hover:text-[#FF6B00] transition"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Sparkles size={14} className="text-[#FF6B00]" />
-                      Lộ trình AI
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="rounded-full bg-orange-500/10 px-1.5 py-0.2 text-[9px] font-bold text-[#FF6B00]">
-                        {roadmapLoading ? "..." : roadmapWorkspaces.length}
-                      </span>
-                      <ChevronRight
-                        size={12}
-                        className={`text-slate-400 transition-transform ${roadmapMenuOpen ? "rotate-90" : ""}`}
-                      />
-                    </span>
-                  </button>
+                      <AnimatePresence initial={false}>
+                        {roadmapMenuOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="space-y-1 py-1 pl-4 ml-5 border-l border-orange-100/80">
+                              {roadmapLoading ? (
+                                Array.from({ length: 2 }).map((_, index) => (
+                                  <div key={index} className="h-7 w-full animate-pulse rounded-md bg-slate-100/60" />
+                                ))
+                              ) : roadmapWorkspaces.length > 0 ? (
+                                roadmapWorkspaces.map((workspace) => {
+                                  const roadmapPath = `/app/workspaces/${workspace.id}/roadmap`;
+                                  const isWorkspaceActive = pathname === roadmapPath || pathname.startsWith(`${roadmapPath}/`);
 
-                  <AnimatePresence initial={false}>
-                    {roadmapMenuOpen ? (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="space-y-1 py-1">
-                          {roadmapLoading ? (
-                            Array.from({ length: 2 }).map((_, index) => (
-                              <div key={index} className="h-7 w-full animate-pulse rounded-md bg-slate-100/60" />
-                            ))
-                          ) : roadmapWorkspaces.length > 0 ? (
-                            roadmapWorkspaces.map((workspace) => {
-                              const roadmapPath = `/app/workspaces/${workspace.id}/roadmap`;
-                              const isActive = pathname === roadmapPath || pathname.startsWith(`${roadmapPath}/`);
-
-                              return (
-                                <NavLink
-                                  key={workspace.id}
-                                  to={roadmapPath}
-                                  onClick={() => setSideOpen(false)}
-                                  className={() => [
-                                    "group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] transition-colors duration-200",
-                                    isActive
-                                      ? "bg-orange-500/8 text-[#FF6B00] font-bold"
-                                      : "text-slate-400 hover:bg-orange-500/4 hover:text-slate-700",
-                                  ].join(" ")}
-                                >
-                                  <div className="min-w-0 flex-1">
-                                    <div className="truncate font-medium">{workspace.name}</div>
-                                    <div className="mt-0.5 flex items-center gap-1 text-[9px] text-green-600/80">
-                                      <span className="h-1 w-1 rounded-full bg-green-500" />
-                                      <span className="uppercase tracking-wider">{workspace.statusLabel || "READY"}</span>
-                                    </div>
-                                  </div>
-                                  <ChevronRight size={12} className="shrink-0 opacity-50 transition-transform group-hover:translate-x-0.5" />
-                                </NavLink>
-                              );
-                            })
-                          ) : (
-                            <div className="rounded-lg border border-dashed border-orange-100/40 bg-orange-50/10 px-2.5 py-2 text-[10px] leading-relaxed text-slate-400">
-                              Chưa có workspace nào có roadmap đã xác nhận.
+                                  return (
+                                    <NavLink
+                                      key={workspace.id}
+                                      to={roadmapPath}
+                                      onClick={() => setSideOpen(false)}
+                                      className={() => [
+                                        "group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] transition-colors duration-200",
+                                        isWorkspaceActive
+                                          ? "bg-orange-500/8 text-[#FF6B00] font-bold"
+                                          : "text-slate-400 hover:bg-orange-500/4 hover:text-slate-700",
+                                      ].join(" ")}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <div className="truncate font-medium">{workspace.name}</div>
+                                        <div className="mt-0.5 flex items-center gap-1 text-[9px] text-green-600/80">
+                                          <span className="h-1 w-1 rounded-full bg-green-500" />
+                                          <span className="uppercase tracking-wider">{workspace.statusLabel || "READY"}</span>
+                                        </div>
+                                      </div>
+                                      <ChevronRight size={12} className="shrink-0 opacity-50 transition-transform group-hover:translate-x-0.5" />
+                                    </NavLink>
+                                  );
+                                })
+                              ) : (
+                                <div className="rounded-lg border border-dashed border-orange-100/40 bg-orange-50/10 px-2.5 py-2 text-[10px] leading-relaxed text-slate-400">
+                                  Chưa có workspace nào có roadmap đã xác nhận.
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
-                </div>
-              )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                }
+
+                const isActive = isNavItemActive(item.path, item.end, item.match);
+
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    end={item.end}
+                    onClick={() => setSideOpen(false)}
+                    className={() => [
+                      "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition-all duration-200",
+                      "border-l-4 border-transparent",
+                      isActive
+                        ? "border-l-[#FF6B00] bg-gradient-to-r from-orange-500/8 to-amber-500/4 text-[#FF6B00] font-bold shadow-[0_4px_12px_rgba(255,107,0,0.03)]"
+                        : "text-slate-500 hover:bg-orange-500/4 hover:text-slate-800",
+                    ].join(" ")}
+                  >
+                    <>
+                      <item.icon
+                        size={18}
+                        strokeWidth={isActive ? 2.5 : 2}
+                        className={[
+                          "shrink-0 transition-transform duration-200 group-hover:scale-105",
+                          isActive ? "text-[#FF6B00]" : "text-slate-400 group-hover:text-slate-600",
+                        ].join(" ")}
+                      />
+                      <span className="flex-1 font-medium">{item.label}</span>
+                      {item.badge && (
+                        <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
+                          <span className="relative h-2 w-2 rounded-full bg-orange-500" />
+                        </span>
+                      )}
+                    </>
+                  </NavLink>
+                );
+              })}
             </div>
           ))}
         </nav>

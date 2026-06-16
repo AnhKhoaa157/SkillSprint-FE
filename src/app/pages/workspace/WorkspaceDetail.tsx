@@ -295,7 +295,7 @@ export default function WorkspaceDetail() {
 
   const workspaceTabs: Array<{ id: WorkspaceDetailTab; label: string; icon: LucideIcon }> = [
     { id: "files", label: "Tài liệu", icon: FileText },
-    { id: "roadmap", label: "Roadmap", icon: Layers3 },
+    { id: "roadmap", label: "Lộ trình", icon: Layers3 },
     { id: "progress", label: "Tiến độ", icon: Radar },
     { id: "config", label: "Cấu hình", icon: SlidersHorizontal },
   ];
@@ -724,6 +724,7 @@ export default function WorkspaceDetail() {
       <OnboardingModal
         open={isOnboardingOpen}
         onClose={() => setIsOnboardingOpen(false)}
+        onSuccess={() => void onboarding.fetchOnboardingProfile()}
         workspaceId={workspaceId}
         initialValues={onboarding.profile}
         mode={shouldOpenOnboarding ? "onboarding" : "edit"}

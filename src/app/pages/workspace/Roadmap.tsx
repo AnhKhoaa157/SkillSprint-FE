@@ -393,7 +393,13 @@ export default function Roadmap() {
     const matchedTask = tasks.find((task) => task.roadmapStepId === getStepKey(step));
     const matchedTaskDate = matchedTask?.taskDate ? formatTaskDate(matchedTask.taskDate) : "";
     const canStart = Boolean(matchedTask);
-    const stepCompletionPercent = Math.min(100, 20 + idx * 15);
+    let stepCompletionPercent = 0;
+    if (step.status === "COMPLETED" || matchedTask?.status === "COMPLETED" || matchedTask?.status === "DONE") {
+      stepCompletionPercent = 100;
+    } else if (step.status === "CURRENT" || matchedTask?.status === "IN_PROGRESS" || matchedTask?.status === "TODO") {
+      // Show some progress to indicate it's currently active
+      stepCompletionPercent = 15;
+    }
 
     return (
       <div className={isMobileView 
