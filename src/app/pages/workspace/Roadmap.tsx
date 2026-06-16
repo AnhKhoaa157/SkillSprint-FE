@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router";
 import roadmapService, { RoadmapResponse, RoadmapResource, RoadmapStep } from "../../../api/roadmapService";
 import calendarService, { type CalendarTaskResponse } from "../../../api/calendarService";
 import { getCurrentSubscription } from "../../../api/subscriptionsService";
+import workspaceService, { WorkspaceResponse } from "../../../api/workspaceService";
 import {
   ArrowLeft,
   BookOpenCheck,
@@ -230,6 +231,23 @@ export default function Roadmap() {
   const [isPremium, setIsPremium] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [workspaces, setWorkspaces] = useState<WorkspaceResponse[]>([]);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
+  
+  const activeWorkspaceId = workspaceId || selectedWorkspaceId;
+
+  useEffect(() => {
+    let mounted = true;
+    workspaceService.getMyWorkspaces().then((res: any) => {
+      if (!mounted) return;
+      const items = res?.data || res || [];
+      setWorkspaces(items);
+      if (!workspaceId && !selectedWorkspaceId && items.length > 0) {
+        setSelectedWorkspaceId(items[0].workspaceId);
+      }
+    }).catch(console.error);
+    return () => { mounted = false; };
+  }, [workspaceId, selectedWorkspaceId]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -272,7 +290,7 @@ export default function Roadmap() {
     let mounted = true;
 
     const loadRoadmapAndTasks = async () => {
-      if (!workspaceId) {
+      if (!activeWorkspaceId) {
         if (mounted) setError("Không tìm thấy workspace");
         return;
       }
@@ -283,18 +301,18 @@ export default function Roadmap() {
       try {
         let currentRoadmap = null;
         try {
-          currentRoadmap = await roadmapService.getRoadmap(workspaceId);
+          currentRoadmap = await roadmapService.getRoadmap(activeWorkspaceId);
         } catch (err: any) {
           if (err?.status === 404 || String(err?.message || "").includes("404") || String(err || "").includes("404")) {
             const shouldAutoGenerate = (location.state as any)?.autoGenerate;
             if (shouldAutoGenerate) {
               if (mounted) setGenerating(true);
               try {
-                await roadmapService.generateRoadmap(workspaceId);
+                await roadmapService.generateRoadmap(activeWorkspaceId);
               } catch (genErr) {
                 console.warn("Auto-generate trigger failed", genErr);
               }
-              currentRoadmap = await roadmapService.getRoadmap(workspaceId).catch(() => null);
+              currentRoadmap = await roadmapService.getRoadmap(activeWorkspaceId).catch(() => null);
             } else {
               currentRoadmap = null;
             }
@@ -303,7 +321,7 @@ export default function Roadmap() {
           }
         }
 
-        const taskResult = await calendarService.getCalendarTasks(workspaceId).catch(() => []);
+        const taskResult = await calendarService.getCalendarTasks(activeWorkspaceId).catch(() => []);
 
         if (!mounted) return;
 
@@ -319,16 +337,16 @@ export default function Roadmap() {
 
     void loadRoadmapAndTasks();
     return () => { mounted = false; };
-  }, [workspaceId]);
+  }, [activeWorkspaceId]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const isGeneratingState = generating || roadmapData?.status === "GENERATING" || roadmapData?.status === "PENDING";
     
-    if (isGeneratingState && workspaceId) {
+    if (isGeneratingState && activeWorkspaceId) {
       interval = setInterval(async () => {
         try {
-          const fresh = await roadmapService.getRoadmap(workspaceId);
+          const fresh = await roadmapService.getRoadmap(activeWorkspaceId);
           setRoadmapData(fresh);
           
           if (fresh && fresh.status !== "GENERATING" && fresh.status !== "PENDING") {
@@ -343,16 +361,16 @@ export default function Roadmap() {
     }
     
     return () => clearInterval(interval);
-  }, [roadmapData?.status, generating, workspaceId]);
+  }, [roadmapData?.status, generating, activeWorkspaceId]);
 
   const handleGenerate = async () => {
-    if (!workspaceId) return;
+    if (!activeWorkspaceId) return;
     setGenerating(true);
     setError(null);
 
     try {
-      await roadmapService.generateRoadmap(workspaceId);
-      const fresh = await roadmapService.getRoadmap(workspaceId);
+      await roadmapService.generateRoadmap(activeWorkspaceId);
+      const fresh = await roadmapService.getRoadmap(activeWorkspaceId);
       setRoadmapData(fresh);
     } catch (err: any) {
       setError(err?.message || "Không thể khởi tạo lộ trình");
@@ -361,11 +379,11 @@ export default function Roadmap() {
   };
 
   const handleBackToDetail = () => {
-    if (!workspaceId) {
+    if (!activeWorkspaceId) {
       navigate("/app/workspaces");
       return;
     }
-    navigate(`/app/workspaces/${workspaceId}`);
+    navigate(`/app/workspaces/${activeWorkspaceId}`);
   };
 
   const handleStartLearning = () => {
@@ -652,9 +670,34 @@ export default function Roadmap() {
     );
   }
 
+  const workspaceDropdown = (
+    <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 z-20 relative">
+      <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800">Lộ trình AI</h2>
+      <select
+        value={activeWorkspaceId}
+        onChange={e => {
+          setSelectedWorkspaceId(e.target.value);
+          if (workspaceId) {
+            navigate(`/app/workspaces/${e.target.value}/roadmap`);
+          } else {
+            setRoadmapData(null);
+            setTasks([]);
+          }
+        }}
+        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[#FF7E21]/60 focus:ring-4 focus:ring-[#FF7E21]/5 min-w-[220px] shadow-sm cursor-pointer"
+      >
+        {workspaces.length === 0 && <option value="">Đang tải workspace...</option>}
+        {workspaces.map(ws => (
+          <option key={ws.workspaceId} value={ws.workspaceId}>{ws.name}</option>
+        ))}
+      </select>
+    </div>
+  );
+
   if (!roadmapData || error) {
     return (
       <div className="min-h-[calc(100vh-2rem)] rounded-[2rem] bg-[radial-gradient(circle_at_top_left,_rgba(255,107,0,0.10),_transparent_30%),linear-gradient(180deg,_#F8FAFC_0%,_#F1F5F9_100%)] px-6 py-8 text-slate-900 lg:px-10">
+        {workspaceDropdown}
         <div className="mx-auto flex min-h-[70vh] max-w-3xl items-center justify-center">
           <div className="w-full rounded-[2rem] border border-amber-200 bg-white p-8 text-center shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B00]"><BookOpenCheck className="h-8 w-8" /></div>
@@ -686,6 +729,8 @@ export default function Roadmap() {
       <div className="absolute inset-1.5 border border-[#EEDCC5]/40 pointer-events-none rounded-[1.8rem] z-0" />
       <div className="absolute inset-3 border border-dashed border-[#EEDCC5]/30 pointer-events-none rounded-[1.6rem] z-0" />
 
+      {workspaceDropdown}
+
       <div className="absolute top-[220px] left-[8%] opacity-20 pointer-events-none transform -translate-y-1/2 select-none">
         <svg className="w-24 h-24 text-[#D4A373]" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.5">
           <circle cx="50" cy="50" r="42" strokeDasharray="3,3" />
@@ -713,7 +758,7 @@ export default function Roadmap() {
                   <Sparkles className="h-3.5 w-3.5 text-[#FF7E21]" /> Bản đồ hành trình AI
                 </div>
                 <h1 className="mt-3.5 text-lg sm:text-2xl font-extrabold tracking-tight text-slate-800 leading-snug">{roadmapTitle}</h1>
-                <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{roadmapDescription} Mã: <span className="font-extrabold text-orange-850 bg-orange-50 px-2 py-0.5 rounded border border-orange-100/50">{formatRoadmapId(roadmapData?.id || workspaceId)}</span></p>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{roadmapDescription} Mã: <span className="font-extrabold text-orange-850 bg-orange-50 px-2 py-0.5 rounded border border-orange-100/50">{formatRoadmapId(roadmapData?.id || activeWorkspaceId)}</span></p>
               </div>
               <div className="grid grid-cols-3 gap-2 text-[11px] sm:text-xs shrink-0 w-full lg:w-auto">
                 <div className="rounded-xl border border-amber-200/60 bg-[#FDFBF7] px-2 sm:px-3 py-2 text-center min-w-0 shadow-sm">
