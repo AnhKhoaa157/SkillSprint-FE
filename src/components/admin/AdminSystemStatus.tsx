@@ -46,12 +46,20 @@ export function AdminSystemStatus() {
   const [message, setMessage] = useState("");
   const [startLocal, setStartLocal] = useState("");
   const [endLocal, setEndLocal] = useState("");
+  const [nowTS, setNowTS] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowTS(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const isActive = config?.active ?? false;
-  const isEnabled = config?.enabled ?? false;
+  const isEnabledRaw = config?.enabled ?? false;
+  const hasExpired = config?.endAt ? new Date(config.endAt).getTime() <= nowTS : false;
+  const isEnabled = isEnabledRaw && !hasExpired;
   const messageValid = message.trim().length > 0;
   // Lower bound for both pickers: the current local minute. Native-disables past dates in the UI.
   const nowStr = nowLocalInput();
@@ -106,11 +114,17 @@ export function AdminSystemStatus() {
       }
     }
 
-    // Guard against an inverted schedule before hitting the API.
     if (payload.startAt && payload.endAt && new Date(payload.endAt) <= new Date(payload.startAt)) {
       toast.error("Thời gian kết thúc phải sau thời gian bắt đầu");
       return;
     }
+    
+    // Guard against activating with an already expired endAt
+    if (payload.enabled && payload.endAt && new Date(payload.endAt).getTime() <= Date.now()) {
+      toast.error("Lịch bảo trì cũ đã kết thúc. Vui lòng chọn thời gian kết thúc ở tương lai.");
+      return;
+    }
+
     setSaving(true);
     try {
       applyConfig(await updateMaintenanceMode(payload));

@@ -20,6 +20,7 @@ export interface UpdateAnnouncementRequest {
   enabled?: boolean;
   title?: string;
   message?: string;
+  content?: string; // Backup for backend
   type?: AnnouncementType;
   clearSchedule?: boolean;
   startAt?: string | null;

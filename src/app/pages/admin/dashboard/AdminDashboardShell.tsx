@@ -10,8 +10,7 @@ import FinancialsView from "../sections/financials";
 import { USER_GROWTH_DATA } from "../sections/financials/mocks";
 import PaymentsView from "../sections/payments";
 import SubscriptionPlansView from "../sections/subscriptionPlans";
-import AdminSystemStatus from "../../../../components/admin/AdminSystemStatus";
-import AdminAnnouncements from "../sections/announcements/AdminAnnouncementsSection";
+import AdminSystemSection from "../sections/system/AdminSystemSection";
 import healthService from "../../../../api/healthService";
 
 function toCsv(rows: Record<string, string | number>[]) {
@@ -71,7 +70,7 @@ function AdminNavAvatar({ avatarUrl, fullName }: { avatarUrl?: string; fullName?
 }
 
 export default function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions" | "system" | "announcements">("financials");
+  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions" | "system">("financials");
   const [, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<{ fullName?: string; roles?: string[]; avatarUrl?: string } | null>(null);
@@ -87,8 +86,7 @@ export default function AdminDashboard() {
     { id: "payments",      label: "Quản lý thanh toán",  icon: DollarSign  },
     { id: "subscriptions", label: "Gói dịch vụ",         icon: Layers      },
     { id: "feedback",      label: "Feedback người dùng", icon: MessageSquare },
-    { id: "announcements", label: "Thông báo hệ thống",  icon: Megaphone   },
-    { id: "system",        label: "Trạng thái hệ thống", icon: ServerCog   },
+    { id: "system",        label: "Hệ thống & Cảnh báo", icon: ServerCog   },
   ] as const;
 
   const handleLogout = () => {
@@ -114,8 +112,7 @@ export default function AdminDashboard() {
     payments:      { title: "Quản lý thanh toán",  sub: "Lịch sử giao dịch · Phân tích thanh toán" },
     subscriptions: { title: "Gói dịch vụ",         sub: "Quản lý subscription plans · Tính năng · Nhật ký" },
     feedback:      { title: "Feedback người dùng", sub: "Xem và quản lý phản hồi từ người dùng" },
-    announcements: { title: "Thông báo hệ thống",  sub: "Quản lý thông báo công khai cho toàn hệ thống" },
-    system:        { title: "Trạng thái hệ thống", sub: "Chế độ bảo trì · Tình trạng vận hành" },
+    system:        { title: "Hệ thống & Cảnh báo", sub: "Bảo trì hệ thống · Thông báo chung" },
   };
   const current = headerLabels[activeNav];
 
@@ -156,9 +153,7 @@ export default function AdminDashboard() {
     { id: "goto-users", label: "Đi tới Quản lý người dùng", keywords: "users students cohorts quản lý người dùng phân quyền", action: () => setActiveNav("users") },
     { id: "goto-financials", label: "Đi tới Tài chính", keywords: "finance revenue mrr", action: () => setActiveNav("financials") },
     { id: "goto-payments", label: "Đi tới Quản lý thanh toán", keywords: "payments transactions giao dịch thanh toán", action: () => setActiveNav("payments") },
-    { id: "goto-subscriptions", label: "Đi tới Gói dịch vụ", keywords: "subscriptions plans gói dịch vụ features tính năng", action: () => setActiveNav("subscriptions") },
-    { id: "goto-announcements", label: "Đi tới Thông báo hệ thống", keywords: "announcements thông báo hệ thống banner công khai", action: () => setActiveNav("announcements") },
-    { id: "goto-system", label: "Đi tới Trạng thái hệ thống", keywords: "system maintenance bảo trì trạng thái hệ thống vận hành", action: () => setActiveNav("system") },
+    { id: "goto-system", label: "Đi tới Hệ thống & Cảnh báo", keywords: "system maintenance bảo trì trạng thái hệ thống vận hành thông báo announcements", action: () => setActiveNav("system") },
     { id: "export", label: "Xuất dữ liệu màn hình hiện tại", keywords: "export csv download", action: handleExport },
     { id: "sync", label: "Đồng bộ dữ liệu admin", keywords: "sync refresh", action: handleSync },
   ];
@@ -398,15 +393,8 @@ export default function AdminDashboard() {
           {activeNav === "payments" && <PaymentsView />}
           {activeNav === "subscriptions" && <SubscriptionPlansView />}
           {activeNav === "feedback" && <AdminFeedback isDashboard={true} />}
-          {activeNav === "announcements" && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <AdminAnnouncements />
-            </motion.div>
-          )}
           {activeNav === "system" && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <AdminSystemStatus />
-            </motion.div>
+            <AdminSystemSection />
           )}
         </div>
       </main>

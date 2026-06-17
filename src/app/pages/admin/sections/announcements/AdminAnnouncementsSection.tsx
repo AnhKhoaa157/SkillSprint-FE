@@ -115,6 +115,7 @@ export function AdminAnnouncementsSection() {
   const contentPayload = (): UpdateAnnouncementRequest => ({
     title: title.trim(),
     message: message.trim(),
+    content: message.trim(), // Backup if backend still expects 'content' instead of 'message'
     type,
     startAt: localInputToIso(startLocal),
     endAt: localInputToIso(endLocal),

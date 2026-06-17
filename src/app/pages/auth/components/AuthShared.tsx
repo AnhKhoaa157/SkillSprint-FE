@@ -68,7 +68,7 @@ export function isMaintenanceError(e: unknown): boolean {
   if (e instanceof Error) {
     const msg = e.message.toLowerCase();
     return (
-      msg.includes("503") || msg.includes("maintenance") || msg.includes("failed to fetch") ||
+      msg.includes("503") || msg.includes("maintenance") || msg.includes("bảo trì") || msg.includes("failed to fetch") ||
       msg.includes("load failed") || msg.includes("networkerror") || msg.includes("network request failed")
     );
   }

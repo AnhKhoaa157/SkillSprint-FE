@@ -7,7 +7,7 @@ import { useMaintenance } from "../../../../components/system/MaintenanceGate";
 
 function LeftPanel() {
   return (
-    <div className="hidden lg:flex h-screen w-[50%] flex-col px-12 pt-16 pb-4 xl:px-20 relative overflow-hidden flex-shrink-0 bg-[#F4EFE6] bg-[url('/assets/pannel/Pannel.png')] bg-[length:100%_100%] bg-center bg-no-repeat">
+    <div className="hidden lg:flex h-screen w-[50%] flex-col px-12 pt-16 pb-4 xl:px-20 relative overflow-hidden flex-shrink-0 bg-[#F4EFE6] bg-[url('/assets/pannel/Pannel.png')] bg-cover bg-center bg-no-repeat">
     </div>
   );
 }
@@ -18,16 +18,21 @@ function MaintenanceBannerPill() {
   let hasUpcoming = false;
   let scheduleText = "Hệ thống hoạt động bình thường. Hiện tại không có lịch bảo trì nào được lên kế hoạch.";
   
-  if (status && !status.isActive && status.startAt) {
+  if (status && status.isActive) {
+    hasUpcoming = true;
+    const end = status.endAt ? new Date(status.endAt) : null;
+    const endLabel = end && !Number.isNaN(end.getTime()) ? end.toLocaleString("vi-VN") : null;
+    scheduleText = `Hệ thống đang được bảo trì${endLabel ? `, dự kiến hoàn thành lúc ${endLabel}` : ""}. Vui lòng quay lại sau.`;
+  } else if (status && !status.isActive && status.startAt) {
     const start = new Date(status.startAt);
-      const msUntilStart = start.getTime() - Date.now();
-      if (msUntilStart > 0) {
-        hasUpcoming = true;
-        const startLabel = start.toLocaleString("vi-VN");
-        const end = status.endAt ? new Date(status.endAt) : null;
-        const endLabel = end && !Number.isNaN(end.getTime()) ? end.toLocaleString("vi-VN") : null;
-        scheduleText = `Cảnh báo: Hệ thống sẽ bảo trì từ ${startLabel}${endLabel ? ` đến ${endLabel}` : ""}. Vui lòng sắp xếp thời gian lưu dữ liệu của bạn.`;
-      }
+    const msUntilStart = start.getTime() - Date.now();
+    if (msUntilStart > 0) {
+      hasUpcoming = true;
+      const startLabel = start.toLocaleString("vi-VN");
+      const end = status.endAt ? new Date(status.endAt) : null;
+      const endLabel = end && !Number.isNaN(end.getTime()) ? end.toLocaleString("vi-VN") : null;
+      scheduleText = `Cảnh báo: Hệ thống sẽ bảo trì từ ${startLabel}${endLabel ? ` đến ${endLabel}` : ""}. Vui lòng sắp xếp thời gian lưu dữ liệu của bạn.`;
+    }
   }
 
   if (!hasUpcoming) return null;
