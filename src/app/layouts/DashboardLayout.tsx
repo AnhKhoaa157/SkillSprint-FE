@@ -445,7 +445,7 @@ export default function DashboardLayout() {
                 const isActive = isNavItemActive(item.path, item.end, item.match);
 
                 return (
-                  <div key={item.path}>
+                  <div key={item.path} className="relative">
                     <NavLink
                       to={item.path}
                     end={item.end}
@@ -468,17 +468,11 @@ export default function DashboardLayout() {
                         ].join(" ")}
                       />
                       <span className="flex-1 font-medium">{item.label}</span>
-                      {item.badge && (
-                        typeof item.badge === "string" ? (
-                          <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider text-orange-600 bg-orange-100 border border-orange-200 uppercase ml-auto">
-                            {item.badge}
-                          </span>
-                        ) : (
-                          <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
-                            <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
-                            <span className="relative h-2 w-2 rounded-full bg-orange-500" />
-                          </span>
-                        )
+                      {item.badge && typeof item.badge !== "string" && (
+                        <span className="relative flex h-2 w-2 shrink-0 items-center justify-center ml-auto">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
+                          <span className="relative h-2 w-2 rounded-full bg-orange-500" />
+                        </span>
                       )}
                       {item.dynamicChildren === "workspaces" && roadmapWorkspaces.length > 0 && (
                         <div 
@@ -497,6 +491,17 @@ export default function DashboardLayout() {
                       )}
                     </>
                   </NavLink>
+                  {typeof item.badge === "string" && (
+                    <div 
+                      className="absolute inset-0 z-10 flex items-center justify-end px-3 rounded-xl cursor-not-allowed"
+                      style={{ background: "rgba(255, 255, 255, 0.45)", backdropFilter: "blur(1px)" }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    >
+                      <span className="shrink-0 px-2 py-0.5 rounded text-[9px] font-bold tracking-wider text-orange-600 bg-orange-100 border border-orange-200 uppercase shadow-sm">
+                        {item.badge}
+                      </span>
+                    </div>
+                  )}
                   <AnimatePresence initial={false}>
                     {item.dynamicChildren === "workspaces" && roadmapWorkspaces.length > 0 && roadmapExpanded && (
                       <motion.div
