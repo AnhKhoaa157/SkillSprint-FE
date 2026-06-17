@@ -8,6 +8,7 @@ import {
   Users,
   TrendingUp,
   MessageSquare,
+  Zap,
 } from "lucide-react";
 
 export type NavIcon = typeof LayoutDashboard;
@@ -17,7 +18,7 @@ export type AppNavItem = {
   label: string;
   icon: NavIcon;
   end?: boolean;
-  badge?: boolean;
+  badge?: boolean | string;
   match?: "exact" | "prefix";
   dynamicChildren?: "workspaces";
 };
@@ -37,7 +38,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     label: "Học tập & AI",
     items: [
       { path: "/app/workspaces", label: "Workspaces", icon: Map, badge: true, match: "prefix" },
-      { path: "/app/roadmap", label: "Roadmap", icon: Sparkles, dynamicChildren: "workspaces" },
+      { path: "/app/roadmap", label: "Roadmap", icon: Zap, dynamicChildren: "workspaces" },
     ],
   },
   {
@@ -50,7 +51,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
     label: "Hệ thống",
     items: [
-      { path: "/app/leaderboard", label: "Bảng xếp hạng", icon: Trophy },
+      { path: "/app/leaderboard", label: "Bảng xếp hạng", icon: Trophy, badge: "Đang phát triển" },
       { path: "/app/feedback", label: "Gửi phản hồi", icon: MessageSquare },
     ],
   },
