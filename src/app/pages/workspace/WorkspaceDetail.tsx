@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
 import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
-import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Trash2, AlertTriangle, LoaderCircle, SlidersHorizontal, Check, Calendar, RefreshCw, type LucideIcon } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Trash2, AlertTriangle, LoaderCircle, SlidersHorizontal, Settings, Check, Calendar, RefreshCw, type LucideIcon } from "lucide-react";
 import EmptyState from "../../components/ui/EmptyState";
 import { getStoredAuthSession } from "../../../api/authService";
 import AiTutorChat from "./AiTutorChat";
@@ -323,7 +323,7 @@ export default function WorkspaceDetail() {
     { id: "files", label: "Tài liệu", icon: FileText },
     { id: "roadmap", label: "Lộ trình", icon: Layers3 },
     { id: "progress", label: "Tiến độ", icon: Radar },
-    { id: "config", label: "Cấu hình", icon: SlidersHorizontal },
+    { id: "config", label: "Cài đặt", icon: Settings },
   ];
 
   async function reloadWorkspaceMaterials() {
