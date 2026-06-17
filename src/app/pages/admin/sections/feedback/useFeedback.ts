@@ -30,6 +30,7 @@ export function useFeedback(isDashboard: boolean) {
   const [dateTo, setDateTo]             = useState("");
   const [updating, setUpdating]         = useState(false);
   const [adminNote, setAdminNote]       = useState("");
+  const [adminReply, setAdminReply]     = useState("");
   const [statusDraft, setStatusDraft]   = useState(FeedbackStatus.OPEN);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError]   = useState<string | null>(null);
@@ -128,6 +129,7 @@ export function useFeedback(isDashboard: boolean) {
       setSelected(fresh);
       setStatusDraft(sanitizeFeedbackStatus(fresh.status));
       setAdminNote(fresh.adminNote || "");
+      setAdminReply(fresh.adminReply || "");
     } catch (err: any) {
       const msg = err?.message || "Không thể tải chi tiết phản hồi";
       setDetailError(msg);
@@ -141,6 +143,7 @@ export function useFeedback(isDashboard: boolean) {
     setSelected(fb);
     setStatusDraft(sanitizeFeedbackStatus(fb.status));
     setAdminNote(fb.adminNote || "");
+    setAdminReply(fb.adminReply || "");
     fetchDetail(fb);
   };
 
@@ -148,7 +151,7 @@ export function useFeedback(isDashboard: boolean) {
     if (!selected) return;
     setUpdating(true);
     try {
-      const updated = await updateFeedbackStatus(selected.feedbackId, statusDraft, adminNote.trim() || undefined);
+      const updated = await updateFeedbackStatus(selected.feedbackId, statusDraft, adminNote.trim() || undefined, adminReply.trim() || undefined);
       setSelected(updated);
       setFeedbacks(prev => prev.map(fb => fb.feedbackId === updated.feedbackId ? updated : fb));
       toast.success("Cập nhật feedback thành công");
@@ -201,6 +204,7 @@ export function useFeedback(isDashboard: boolean) {
     applyFilters,
     updating,
     adminNote, setAdminNote,
+    adminReply, setAdminReply,
     statusDraft, setStatusDraft,
     detailLoading,
     detailError,

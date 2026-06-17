@@ -21,10 +21,9 @@ export const FEEDBACK_TYPE_LABEL: Record<string, { label: string; color: string;
 };
 
 export const FEEDBACK_STATUS_LABEL: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  OPEN:        { label: "Chờ xử lý",     color: "#B45309", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.28)"  },
-  IN_PROGRESS: { label: "Đang xử lý",    color: "#0284C7", bg: "rgba(2,132,199,0.08)",   border: "rgba(2,132,199,0.28)"   },
-  RESOLVED:    { label: "Đã giải quyết", color: "#15803D", bg: "rgba(34,197,94,0.08)",   border: "rgba(34,197,94,0.28)"   },
-  CLOSED:      { label: "Đã đóng",       color: "#64748B", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.28)" },
+  OPEN:        { label: "Chờ xử lý",  color: "#B45309", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.28)"  },
+  IN_PROGRESS: { label: "Đang xử lý", color: "#0284C7", bg: "rgba(2,132,199,0.08)",   border: "rgba(2,132,199,0.28)"   },
+  CLOSED:      { label: "Đã đóng",    color: "#15803D", bg: "rgba(34,197,94,0.08)",   border: "rgba(34,197,94,0.28)"   },
 };
 
 export const sanitizeFeedbackStatus = (status: string | undefined | null): FeedbackStatus => {
@@ -32,7 +31,7 @@ export const sanitizeFeedbackStatus = (status: string | undefined | null): Feedb
   const upper = status.toUpperCase();
   if (upper === "PENDING") return "OPEN" as FeedbackStatus;
   if (upper === "REVIEWED") return "IN_PROGRESS" as FeedbackStatus;
-  if (["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"].includes(upper)) return upper as FeedbackStatus;
+  if (["OPEN", "IN_PROGRESS", "CLOSED"].includes(upper)) return upper as FeedbackStatus;
   return "OPEN" as FeedbackStatus;
 };
 

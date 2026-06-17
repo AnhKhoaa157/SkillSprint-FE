@@ -12,7 +12,6 @@ export enum FeedbackType {
 export enum FeedbackStatus {
   OPEN = "OPEN",
   IN_PROGRESS = "IN_PROGRESS",
-  RESOLVED = "RESOLVED",
   CLOSED = "CLOSED",
 }
 
@@ -28,6 +27,8 @@ export interface FeedbackResponse {
   imageUrl: string | null;
   status: FeedbackStatus;
   adminNote: string | null;
+  adminReply?: string | null;
+  repliedAt?: string | null;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -68,7 +69,6 @@ function normalizeStatus(status: unknown): FeedbackStatus {
   if (
     value === FeedbackStatus.OPEN ||
     value === FeedbackStatus.IN_PROGRESS ||
-    value === FeedbackStatus.RESOLVED ||
     value === FeedbackStatus.CLOSED
   ) {
     return value;
@@ -100,6 +100,8 @@ function normalizeFeedback(raw: any): FeedbackResponse {
     imageUrl: raw?.imageUrl ?? null,
     status: normalizeStatus(raw?.status),
     adminNote: raw?.adminNote ?? null,
+    adminReply: raw?.adminReply ?? null,
+    repliedAt: raw?.repliedAt ?? null,
     createdAt: String(raw?.createdAt ?? ""),
     updatedAt: raw?.updatedAt ?? null,
   };
@@ -236,10 +238,11 @@ export async function updateFeedbackStatus(
   feedbackId: string,
   status: FeedbackStatus | string,
   adminNote?: string,
+  adminReply?: string,
 ): Promise<FeedbackAdminResponse> {
   const result = await requestJson<unknown>(`/api/admin/feedback/${encodeURIComponent(feedbackId)}/status`, {
     method: "PATCH",
-    body: JSON.stringify({ status, adminNote: cleanText(adminNote) }),
+    body: JSON.stringify({ status, adminNote: cleanText(adminNote), adminReply: cleanText(adminReply) }),
   });
   if (!result.data) throw new Error(result.message || "Could not update feedback");
   return normalizeAdminFeedback(result.data);

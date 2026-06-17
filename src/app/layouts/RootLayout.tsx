@@ -1,6 +1,8 @@
 import { Outlet } from "react-router";
 import { PomodoroProvider } from "../contexts/PomodoroContext";
 import { SessionExpiryHandler } from "../components/auth/SessionExpiryHandler";
+import GlobalAnnouncementBanner from "../components/ui/GlobalAnnouncementBanner";
+import UpcomingMaintenanceBanner from "../components/system/UpcomingMaintenanceBanner";
 
 /**
  * Pathless root layout — wraps the entire route tree so that PomodoroProvider
@@ -12,6 +14,8 @@ export default function RootLayout() {
   return (
     <PomodoroProvider>
       <SessionExpiryHandler />
+      <GlobalAnnouncementBanner />
+      <UpcomingMaintenanceBanner />
       <Outlet />
     </PomodoroProvider>
   );

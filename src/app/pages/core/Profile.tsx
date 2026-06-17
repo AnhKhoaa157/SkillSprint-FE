@@ -4,12 +4,13 @@ import {
   User, Award, Crown, Bell, Shield, Zap, LogOut,
   ChevronDown, AlertTriangle, Check, Trash2, CalendarClock, Loader2, MailCheck, BadgeCheck,
   Copy, Eye, EyeOff, HardDrive, Layers, Upload,
-  Gem, Sparkles, RefreshCw, AlertCircle, ArrowUp, ArrowDown, X,
+  Gem, Sparkles, RefreshCw, AlertCircle, ArrowUp, ArrowDown, X, MessageSquare,
 } from "lucide-react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { clearAuthTokens, getStoredUserProfile, type StoredUserProfile } from "../../../api/authService";
 import meService, { type MeResponse } from "../../../api/meService";
+import { getMyFeedbacks, FeedbackStatus, FeedbackType, type FeedbackResponse } from "../../../api/feedbackService";
 import { getCurrentSubscription, getQuotaStatus, cancelSubscription } from "../../../api/subscriptionsService";
 import { listSubscriptionPlans, formatPlanPrice, isFeatureEnabled, resolvePlanFeatures, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/adminSubscriptionPlansService";
 import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
@@ -35,6 +36,7 @@ const TABS = [
   { id:"achievements",  label:"Thành tựu",            icon:Award,  danger:false },
   { id:"subscription",  label:"Quản lý gói",          icon:Crown,  danger:false },
   { id:"notifications", label:"Thông báo",            icon:Bell,   danger:false },
+  { id:"feedback",      label:"Lịch sử phản hồi",     icon:MessageSquare, danger:false },
   { id:"privacy",       label:"Bảo mật",              icon:Shield, danger:false },
   { id:"integrations",  label:"Tiện ích tích hợp",    icon:Zap,    danger:false },
 ];
@@ -1238,11 +1240,241 @@ function DevPlaceholderTab({ label, icon, description }: { label: string; icon: 
 }
 
 /* ═══════════════════════════════════════════════
+   FEEDBACK HISTORY TAB (Learner)
+═══════════════════════════════════════════════ */
+const FB_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  [FeedbackStatus.OPEN]:        { label: "Chờ xử lý",  cls: "bg-amber-50 text-amber-700 border-amber-200" },
+  [FeedbackStatus.IN_PROGRESS]: { label: "Đang xử lý", cls: "bg-blue-50 text-blue-700 border-blue-200" },
+  [FeedbackStatus.CLOSED]:      { label: "Đã đóng",    cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+};
+
+const FB_TYPE_LABEL: Record<string, string> = {
+  [FeedbackType.BUG]:         "Lỗi",
+  [FeedbackType.IMPROVEMENT]: "Cải tiến",
+  [FeedbackType.QUESTION]:    "Câu hỏi",
+  [FeedbackType.OTHER]:       "Khác",
+};
+
+function formatFbDate(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" });
+}
+
+function FeedbackHistoryTab() {
+  const [items, setItems]           = useState<FeedbackResponse[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState<string | null>(null);
+  const [page, setPage]             = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [selected, setSelected]     = useState<FeedbackResponse | null>(null);
+  const SIZE = 10;
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError(null);
+    getMyFeedbacks(page, SIZE)
+      .then(res => {
+        if (!mounted) return;
+        setItems(res.content ?? res.items ?? []);
+        setTotalPages(res.totalPages ?? 0);
+        setTotalItems(res.totalElements ?? res.totalItems ?? 0);
+      })
+      .catch((err: unknown) => {
+        if (!mounted) return;
+        setError(err instanceof Error ? err.message : "Không thể tải lịch sử phản hồi");
+      })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, [page]);
+
+  const statusBadge = (status: string) => FB_STATUS_BADGE[status] ?? FB_STATUS_BADGE[FeedbackStatus.OPEN];
+
+  return (
+    <div>
+      <SectionHeading title="Lịch sử phản hồi" />
+
+      {loading ? (
+        <div className="divide-y divide-slate-100" aria-busy="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 py-3.5 animate-pulse">
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-2/3 rounded-full bg-slate-200/80" />
+                <div className="h-2.5 w-1/3 rounded-full bg-slate-100" />
+              </div>
+              <div className="h-6 w-20 rounded-full bg-slate-100" />
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="py-12 text-center">
+          <AlertCircle size={26} className="mx-auto mb-3 text-rose-300" />
+          <p className="text-sm text-slate-500 mb-3">{error}</p>
+          <button
+            type="button"
+            onClick={() => setPage(p => p)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
+          >
+            <RefreshCw size={13} /> Thử lại
+          </button>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="py-14 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 text-slate-300">
+            <MessageSquare size={24} />
+          </div>
+          <h3 className="text-base font-extrabold text-slate-800">Chưa có phản hồi nào</h3>
+          <p className="mx-auto mt-1.5 max-w-sm text-xs text-slate-500">
+            Các phản hồi bạn gửi cho đội ngũ SkillSprint sẽ xuất hiện ở đây cùng với câu trả lời từ quản trị viên.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="divide-y divide-slate-100 rounded-2xl border border-slate-100 overflow-hidden">
+            {items.map(fb => {
+              const badge = statusBadge(fb.status);
+              return (
+                <button
+                  key={fb.feedbackId}
+                  type="button"
+                  onClick={() => setSelected(fb)}
+                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50/70"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-100/60 bg-orange-50 text-[#FF6B00]">
+                    <MessageSquare size={16} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-bold text-slate-800">{fb.title || "(Không có tiêu đề)"}</p>
+                      {fb.adminReply && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-600 ring-1 ring-violet-100">
+                          <MessageSquare size={9} /> Đã trả lời
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-[11px] font-semibold text-slate-400">
+                      {FB_TYPE_LABEL[fb.type] ?? "Khác"} · {formatFbDate(fb.createdAt)}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${badge.cls}`}>
+                    {badge.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400">Trang {page + 1} · {totalItems} phản hồi</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ← Trước
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage(p => p + 1)}
+                disabled={page + 1 >= totalPages}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Tiếp →
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Detail modal */}
+      <AnimatePresence>
+        {selected && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
+            onClick={() => setSelected(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 8 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 8 }}
+              transition={{ duration: 0.16 }}
+              className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
+              {/* Modal header */}
+              <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
+                <div className="min-w-0">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
+                      {FB_TYPE_LABEL[selected.type] ?? "Khác"}
+                    </span>
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusBadge(selected.status).cls}`}>
+                      {statusBadge(selected.status).label}
+                    </span>
+                  </div>
+                  <h3 className="truncate text-base font-extrabold text-slate-900">{selected.title || "(Không có tiêu đề)"}</h3>
+                  <p className="mt-0.5 text-[11px] font-semibold text-slate-400">Gửi lúc {formatFbDate(selected.createdAt)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal body */}
+              <div className="space-y-4 p-5">
+                <div>
+                  <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Nội dung</p>
+                  <p className="whitespace-pre-wrap rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3 text-sm leading-relaxed text-slate-700">
+                    {selected.content || "—"}
+                  </p>
+                </div>
+
+                {selected.adminReply ? (
+                  <div className="rounded-xl border border-[#FFEDD5] bg-[#FFF7ED] px-3.5 py-3">
+                    <div className="mb-1 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#C2410C]">
+                      <MessageSquare size={12} /> Admin phản hồi
+                      {selected.repliedAt && <span className="font-semibold normal-case tracking-normal text-[#EA580C]">· {formatFbDate(selected.repliedAt)}</span>}
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{selected.adminReply}</p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3 text-center text-xs font-semibold text-slate-400">
+                    Quản trị viên chưa phản hồi phản hồi này.
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    PROFILE PAGE
 ═══════════════════════════════════════════════ */
 export default function Profile() {
   const navigate  = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("account");
+
+  // Deep-link support (e.g. the FEEDBACK_REPLIED notification routes to ?tab=feedback)
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && TABS.some(t => t.id === tab)) setActiveTab(tab);
+  }, [searchParams]);
   const [profile, setProfile] = useState<UserProfileViewModel>(() => {
     const storedProfile = getStoredUserProfile();
     return storedProfile ? mapStoredProfile(storedProfile) : emptyProfile();
@@ -1468,6 +1700,7 @@ export default function Profile() {
               }}/>}
               {activeTab === "achievements"  && <DevPlaceholderTab label="Thành tựu" icon="🏆" description="Hệ thống huy hiệu và thành tựu học tập đang được xây dựng. Sẽ ra mắt trong phiên bản tới."/>}
               {activeTab === "notifications" && <DevPlaceholderTab label="Cài đặt thông báo" icon="🔔" description="Tính năng tùy chỉnh thông báo đang phát triển. API backend chưa sẵn sàng."/>}
+              {activeTab === "feedback"      && <FeedbackHistoryTab />}
               {activeTab === "privacy"       && <DevPlaceholderTab label="Bảo mật & Quyền riêng tư" icon="🔒" description="Tính năng bảo mật nâng cao (2FA, nhật ký đăng nhập) đang được tích hợp."/>}
               {activeTab === "integrations"  && <DevPlaceholderTab label="Tiện ích tích hợp" icon="⚡" description="Tích hợp lịch, ứng dụng bên thứ ba sẽ được bổ sung sau khi backend hoàn thiện."/>}
             </motion.div>

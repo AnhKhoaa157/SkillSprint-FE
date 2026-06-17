@@ -30,6 +30,7 @@ type NotificationType =
   | "TASK_REMINDER"
   | "TASK_OVERDUE"
   | "AI_SCHEDULE_READY"
+  | "FEEDBACK_REPLIED"
   | string;
 
 function toastIcon(type: NotificationType): string {
@@ -40,6 +41,7 @@ function toastIcon(type: NotificationType): string {
     case "TASK_REMINDER": return "⏰";
     case "TASK_OVERDUE": return "⚠️";
     case "AI_SCHEDULE_READY": return "🤖";
+    case "FEEDBACK_REPLIED": return "💬";
     default: return "🔔";
   }
 }
