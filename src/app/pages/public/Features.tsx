@@ -120,13 +120,13 @@ export default function FeaturesLanding() {
           {/* ================= HYPER-PREMIUM BENTO GRID ================= */}
           <section style={{ padding: "0 24px", marginBottom: "140px" }} className="relative">
             <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
                 
                 {/* 🌟 BOX 1: AI SYLLABUS INTEGRATION (Span 2) */}
-                <CursorSpotlight className="md:col-span-2" color="rgba(255,107,0,0.15)" size={280}>
+                <CursorSpotlight className="lg:col-span-2" color="rgba(255,107,0,0.15)" size={280}>
                   <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
                     whileHover={{ y: -6, boxShadow: "0 40px 80px -15px rgba(15,23,42,0.12)" }}
-                    className="rounded-[40px] p-8 md:p-11 relative overflow-hidden group flex flex-col justify-between"
+                    className="rounded-[40px] p-8 md:p-11 relative overflow-hidden group flex flex-col justify-between h-full"
                     style={{ background: CARD, border: `1px solid ${BDR}`, minHeight: "460px", boxShadow: SHL, transition: "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)" }}
                   >
                     <div style={{ position: "absolute", top: 0, right: 0, width: "350px", height: "350px", background: "radial-gradient(circle, rgba(255,107,0,0.05) 0%, transparent 70%)", pointerEvents: "none" }}/>
@@ -145,7 +145,7 @@ export default function FeaturesLanding() {
                     
                     {/* 🖥️ High-Fidelity Mockup Window */}
                     <div style={{ position: "absolute", right: "-30px", bottom: "-20px", width: "420px", height: "290px", background: "#FCFDFE", borderRadius: "24px", border: "1px solid #E2E8F0", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.08)", overflow: "hidden" }}
-                         className="hidden md:flex flex-col transition-all duration-500 group-hover:translate-x-[-12px] group-hover:translate-y-[-10px] group-hover:border-orange-500/20">
+                         className="hidden md:flex flex-col transition-all duration-500 origin-bottom-right lg:scale-[0.7] xl:scale-100 group-hover:translate-x-[-12px] group-hover:translate-y-[-10px] group-hover:border-orange-500/20">
                       {/* Window Header */}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #F1F5F9", background: "#F8FAFC" }}>
                         <div style={{ display: "flex", gap: "6px" }}>
@@ -190,10 +190,10 @@ export default function FeaturesLanding() {
                 </CursorSpotlight>
 
                 {/* 🌟 BOX 2: ADVANCED TIME MANAGEMENT (Span 1) */}
-                <CursorSpotlight className="md:col-span-1" color="rgba(147,51,234,0.15)" size={240}>
+                <CursorSpotlight className="lg:col-span-1" color="rgba(147,51,234,0.15)" size={240}>
                   <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
                     whileHover={{ y: -6, boxShadow: "0 40px 80px -15px rgba(15,23,42,0.12)" }}
-                    className="rounded-[40px] p-8 md:p-10 relative overflow-hidden group flex flex-col justify-between"
+                    className="rounded-[40px] p-8 md:p-10 relative overflow-hidden group flex flex-col justify-between h-full"
                     style={{ background: CARD, boxShadow: SHL, border: `1px solid ${BDR}`, minHeight: "460px", transition: "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)" }}
                   >
                     <div className="relative z-10">
@@ -230,10 +230,10 @@ export default function FeaturesLanding() {
                 </CursorSpotlight>
 
                 {/* 🌟 BOX 3: PERFORMANCE ANALYTICS (Span 1) */}
-                <CursorSpotlight className="md:col-span-1" color="rgba(14,165,233,0.15)" size={240}>
+                <CursorSpotlight className="lg:col-span-1" color="rgba(14,165,233,0.15)" size={240}>
                   <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
                     whileHover={{ y: -6, boxShadow: "0 40px 80px -15px rgba(15,23,42,0.12)" }}
-                    className="rounded-[40px] p-8 md:p-10 relative overflow-hidden group flex flex-col justify-between"
+                    className="rounded-[40px] p-8 md:p-10 relative overflow-hidden group flex flex-col justify-between h-full"
                     style={{ background: CARD, boxShadow: SHL, border: `1px solid ${BDR}`, minHeight: "460px", transition: "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)" }}
                   >
                     <div className="relative z-10">
@@ -272,10 +272,10 @@ export default function FeaturesLanding() {
                 </CursorSpotlight>
 
                 {/* 🌟 BOX 4: ADAPTIVE ROADMAP CONTROLLER (Span 2) */}
-                <CursorSpotlight className="md:col-span-2" color="rgba(34,197,94,0.15)" size={280}>
+                <CursorSpotlight className="lg:col-span-2" color="rgba(34,197,94,0.15)" size={280}>
                   <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}
                     whileHover={{ y: -6, boxShadow: "0 40px 80px -15px rgba(15,23,42,0.12)" }}
-                    className="rounded-[40px] p-8 md:p-11 relative overflow-hidden group flex flex-col justify-between"
+                    className="rounded-[40px] p-8 md:p-11 relative overflow-hidden group flex flex-col justify-between h-full"
                     style={{ background: CARD, border: `1px solid ${BDR}`, minHeight: "460px", boxShadow: SHL, transition: "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)" }}
                   >
                     <div style={{ position: "absolute", top: 0, right: 0, width: "350px", height: "350px", background: "radial-gradient(circle, rgba(34,197,94,0.04) 0%, transparent 70%)", pointerEvents: "none" }}/>
@@ -293,7 +293,7 @@ export default function FeaturesLanding() {
                     </div>
                     
                     <div style={{ position: "absolute", right: "24px", bottom: "35px", width: "410px", background: "#FAFBFD", borderRadius: "24px", border: "1px solid #E2E8F0", boxShadow: "0 20px 45px rgba(0,0,0,0.05)", padding: "20px", zIndex: 1 }} 
-                         className="hidden md:block transition-all duration-500 group-hover:translate-x-[-8px] group-hover:border-emerald-500/20">
+                         className="hidden md:block transition-all duration-500 origin-bottom-right lg:scale-[0.7] xl:scale-100 group-hover:translate-x-[-8px] group-hover:border-emerald-500/20">
                       
                       <div className="flex items-center gap-4 mb-4">
                         <div className="w-16 text-[10px] font-black text-slate-400 tracking-wider">STAGE 01</div>

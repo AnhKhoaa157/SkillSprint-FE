@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Outlet, NavLink, useLocation, Link, useNavigate } from "react-router";
+import { Outlet, NavLink, useLocation, Link, useNavigate, useMatch } from "react-router";
 import {
   LayoutDashboard, Map, Mic,
-  Menu, X, Zap, Bell, ChevronRight, Crown, Gift, Sparkles,
+  Menu, X, Zap, Bell, ChevronRight, ChevronDown, Crown, Gift, Sparkles,
   AlertTriangle, CalendarClock, BookOpenCheck, CheckCircle2,
-  LoaderCircle, User, Calendar, CheckSquare,
+  LoaderCircle, User, Calendar, CheckSquare, Shield
 } from "lucide-react";
 import { useNotificationSocket } from "../hooks/useNotificationSocket";
 import { APP_NAV_SECTIONS } from "../config/nav";
@@ -36,7 +36,7 @@ const BDR    = "#E5E7EB";
 const CRUMBS: Record<string,string> = {
   "/app":"Trung tâm điều khiển",
   "/app/syllabus":"Nhập syllabus",
-  "/app/roadmap":"Lộ trình AI",
+  "/app/roadmap":"Roadmap",
   "/app/calendar":"Lịch học",
   "/app/matrix":"Ma trận công việc",
   "/app/leaderboard":"Bảng xếp hạng",
@@ -199,7 +199,7 @@ function toRelativeTime(dateStr: string): string {
   }
 }
 
-type NotifIconType = "check" | "alert" | "calendar" | "sparkles" | "bell";
+type NotifIconType = "check" | "alert" | "calendar" | "sparkles" | "bell" | "shield";
 type NotifMeta = {
   iconType: NotifIconType;
   iconBg: string; iconBorder: string; iconColor: string;
@@ -221,6 +221,10 @@ function getNotifMeta(type: string): NotifMeta {
       return { iconType:"alert", iconBg:"#FEF2F2", iconBorder:"#FECACA", iconColor:"#DC2626", label:"Quá hạn", labelColor:"#DC2626", itemBg:"#FFF5F5", leftBorderColor:"#EF4444" };
     case "AI_SCHEDULE_READY":
       return { iconType:"sparkles", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"AI Lịch học", labelColor:OG, itemBg:CARD };
+    case "SYSTEM_INFO":
+      return { iconType:"shield", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Hệ thống", labelColor:OG, itemBg:CARD, leftBorderColor:OG };
+    case "SYSTEM_WARNING":
+      return { iconType:"alert", iconBg:"#FEF2F2", iconBorder:"#FECACA", iconColor:"#DC2626", label:"Cảnh báo", labelColor:"#DC2626", itemBg:"#FFF5F5", leftBorderColor:"#EF4444" };
     default:
       return { iconType:"bell", iconBg:"#EFF6FF", iconBorder:"#BFDBFE", iconColor:"#2563EB", label:"Thông báo", labelColor:"#2563EB", itemBg:CARD };
   }
@@ -276,6 +280,11 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const loc   = useLocation();
   const pathname = loc.pathname.replace(/\/+$/, "") || "/";
+  const isRoadmapPage = pathname === "/app/roadmap" || pathname.match(/^\/app\/workspaces\/[^\/]+\/roadmap$/);
+  const workspaceIdMatch = pathname.match(/^\/app\/workspaces\/([^\/]+)\/roadmap$/);
+  const dropdownWorkspaceId = workspaceIdMatch ? workspaceIdMatch[1] : (roadmapWorkspaces.length > 0 ? roadmapWorkspaces[0].id : "");
+  
+  const [roadmapExpanded, setRoadmapExpanded] = useState(true);
   const showAuthLoader = (loc.state as any)?.showLoadingFromAuth ?? false;
   let crumb = CRUMBS[loc.pathname] ?? "Trung tâm điều khiển";
   if (loc.pathname.startsWith("/app/workspaces")) {
@@ -436,9 +445,9 @@ export default function DashboardLayout() {
                 const isActive = isNavItemActive(item.path, item.end, item.match);
 
                 return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
+                  <div key={item.path}>
+                    <NavLink
+                      to={item.path}
                     end={item.end}
                     onClick={() => setSideOpen(false)}
                     className={() => [
@@ -465,8 +474,56 @@ export default function DashboardLayout() {
                           <span className="relative h-2 w-2 rounded-full bg-orange-500" />
                         </span>
                       )}
+                      {item.dynamicChildren === "workspaces" && roadmapWorkspaces.length > 0 && (
+                        <div 
+                          className="p-1 rounded hover:bg-orange-500/10 transition-colors ml-1"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setRoadmapExpanded(!roadmapExpanded);
+                          }}
+                        >
+                          <ChevronDown 
+                            size={14} 
+                            className={`transition-transform duration-200 text-slate-400 group-hover:text-slate-600 ${roadmapExpanded ? "rotate-180" : ""}`} 
+                          />
+                        </div>
+                      )}
                     </>
                   </NavLink>
+                  <AnimatePresence initial={false}>
+                    {item.dynamicChildren === "workspaces" && roadmapWorkspaces.length > 0 && roadmapExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-1 ml-[22px] mr-2 space-y-0.5 border-l-2 border-orange-100/50 pl-3 py-1">
+                          {roadmapWorkspaces.map(ws => {
+                            const childActive = pathname === `/app/workspaces/${ws.id}/roadmap`;
+                            return (
+                              <NavLink
+                                key={ws.id}
+                                to={`/app/workspaces/${ws.id}/roadmap`}
+                                onClick={() => setSideOpen(false)}
+                                className={[
+                                  "block truncate rounded-lg px-3 py-2 text-xs transition-colors cursor-pointer",
+                                  childActive
+                                    ? "bg-orange-50 text-[#FF6B00] font-bold"
+                                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-700 font-medium"
+                                ].join(" ")}
+                              >
+                                {ws.name}
+                              </NavLink>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  </div>
                 );
               })}
             </div>
@@ -628,6 +685,7 @@ export default function DashboardLayout() {
                           meta.iconType === "alert"    ? <AlertTriangle  size={15} color={meta.iconColor}/> :
                           meta.iconType === "calendar" ? <CalendarClock  size={15} color={meta.iconColor}/> :
                           meta.iconType === "sparkles" ? <Sparkles        size={15} color={meta.iconColor}/> :
+                          meta.iconType === "shield"   ? <Shield          size={15} color={meta.iconColor}/> :
                                                          <Bell            size={15} color={meta.iconColor}/>;
                         return (
                           <div

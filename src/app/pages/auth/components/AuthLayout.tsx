@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Link } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, Hammer, FileText, ChevronDown } from "lucide-react";
+import { ArrowLeft, Hammer, FileText, ChevronDown, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { F } from "./AuthShared";
+import { useMaintenance } from "../../../../components/system/MaintenanceGate";
 
 function LeftPanel() {
   return (
@@ -11,48 +12,67 @@ function LeftPanel() {
   );
 }
 
-function MaintenanceDropdown() {
-  const [isOpen, setIsOpen] = useState(false);
+function MaintenanceBannerPill() {
+  const { status } = useMaintenance();
+
+  let hasUpcoming = false;
+  let scheduleText = "Hệ thống hoạt động bình thường. Hiện tại không có lịch bảo trì nào được lên kế hoạch.";
+  
+  if (status && !status.isActive && status.startAt) {
+    const start = new Date(status.startAt);
+      const msUntilStart = start.getTime() - Date.now();
+      if (msUntilStart > 0) {
+        hasUpcoming = true;
+        const startLabel = start.toLocaleString("vi-VN");
+        const end = status.endAt ? new Date(status.endAt) : null;
+        const endLabel = end && !Number.isNaN(end.getTime()) ? end.toLocaleString("vi-VN") : null;
+        scheduleText = `Cảnh báo: Hệ thống sẽ bảo trì từ ${startLabel}${endLabel ? ` đến ${endLabel}` : ""}. Vui lòng sắp xếp thời gian lưu dữ liệu của bạn.`;
+      }
+  }
+
+  if (!hasUpcoming) return null;
 
   return (
-    <div className="absolute top-6 right-6 z-[999] flex flex-col items-end">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`group flex items-center gap-2.5 px-3 py-2 rounded-full transition-all duration-300 cursor-pointer border ${
-          isOpen
-            ? "bg-orange-50/80 border-orange-200 shadow-inner"
-            : "bg-white border-slate-200 shadow-sm hover:border-orange-300 hover:shadow-[0_4px_16px_rgba(255,107,0,0.12)] hover:-translate-y-0.5"
-        }`}
+    <div className="absolute top-6 right-6 z-[999]">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-[340px] flex items-center gap-3 p-3 bg-white rounded-2xl border border-orange-100 shadow-xl shadow-orange-900/5 overflow-hidden"
       >
-        <div className={`flex items-center justify-center p-1.5 rounded-full transition-colors duration-300 ${isOpen ? "bg-[#FF6B00] text-white shadow-sm shadow-orange-500/30" : "bg-orange-100/70 text-[#FF6B00] group-hover:bg-[#FF6B00] group-hover:text-white"}`}>
-          <FileText className="w-3.5 h-3.5" />
+        <div className="flex items-center justify-center shrink-0 w-9 h-9 rounded-full bg-amber-100 text-amber-600">
+           <AlertTriangle className="w-4 h-4" />
         </div>
-        <span className={`text-[11px] font-extrabold uppercase tracking-wide transition-colors duration-300 ${isOpen ? "text-[#FF6B00]" : "text-slate-600 group-hover:text-slate-800"}`}>
-          Nhật ký bảo trì
-        </span>
-        <ChevronDown className={`w-4 h-4 ml-1 transition-transform duration-300 ${isOpen ? "rotate-180 text-[#FF6B00]" : "text-slate-400 group-hover:text-orange-400"}`} />
-      </button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="absolute top-full right-0 mt-2 w-80 flex flex-col items-center justify-center text-center p-6 bg-white rounded-3xl border border-orange-100 shadow-2xl shadow-orange-900/10 origin-top-right"
+        
+        <div className="flex-1 overflow-hidden relative">
+          <div 
+            className="whitespace-nowrap flex w-fit" 
+            style={{ animation: "marquee 15s linear infinite" }}
           >
-            <div className="h-12 w-12 rounded-2xl bg-orange-50 flex items-center justify-center mb-4 ring-4 ring-orange-50/50">
-              <Hammer className="h-6 w-6 text-[#FF6B00]" />
-            </div>
-            <h2 className="text-lg font-extrabold text-slate-800 mb-2 tracking-tight">Tính năng đang phát triển</h2>
-            <p className="text-slate-500 leading-relaxed text-xs">
-              Phân hệ này hiện đang trong quá trình nâng cấp và bảo trì để mang lại trải nghiệm tốt nhất cho bạn. Vui lòng quay lại sau!
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <span className="pr-8 text-amber-900 text-[12px] font-medium leading-tight tracking-tight">{scheduleText}</span>
+            <span className="pr-8 text-amber-900 text-[12px] font-medium leading-tight tracking-tight" aria-hidden="true">{scheduleText}</span>
+          </div>
+          <style>{`
+            @keyframes marquee {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .whitespace-nowrap.flex.w-fit {
+                animation: none !important;
+                transform: none !important;
+                flex-wrap: wrap !important;
+              }
+              .pr-8:nth-child(2) {
+                display: none;
+              }
+              .pr-8 {
+                white-space: normal;
+                padding-right: 0 !important;
+              }
+            }
+          `}</style>
+        </div>
+      </motion.div>
     </div>
   );
 }
@@ -69,7 +89,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
       >
         <LeftPanel />
         <div className="h-screen min-h-screen w-full lg:w-[50%] flex flex-col bg-white overflow-hidden relative">
-          <MaintenanceDropdown />
+          <MaintenanceBannerPill />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", padding: "20px 32px" }}>
             <Link to="/" style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.8rem", color: "#6B7280", textDecoration: "none", fontFamily: F, transition: "color 0.2s ease" }}
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#111827"; }}

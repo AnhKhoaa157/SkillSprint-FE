@@ -13,7 +13,7 @@ const OG   = "#FF6B00";
 
 const SHOWCASE_MODULES = [
   {
-    title: "Lộ trình AI",
+    title: "Roadmap",
     desc: "Lộ trình kỹ năng theo phase, có gate assessment và tiến độ trực quan.",
     to: "/app/workspaces",
     icon: Map,

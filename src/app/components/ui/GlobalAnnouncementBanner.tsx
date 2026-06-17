@@ -4,17 +4,23 @@ import { getActivePublicAnnouncement, type AnnouncementType, type AnnouncementRe
 
 const STORAGE_KEY = "dismissed_announcement_id";
 
-const TYPE_STYLES: Record<AnnouncementType, { container: string; icon: string; dismiss: string; Icon: LucideIcon }> = {
+const TYPE_STYLES: Record<AnnouncementType, { bg: string; iconBox: string; icon: string; title: string; text: string; dismiss: string; Icon: LucideIcon }> = {
   INFO: {
-    container: "border-indigo-200 bg-indigo-50 text-indigo-900",
-    icon: "text-indigo-600",
-    dismiss: "text-indigo-500 hover:bg-indigo-100 hover:text-indigo-700",
+    bg: "bg-orange-50/90 backdrop-blur-xl border-b border-orange-200/60",
+    iconBox: "bg-gradient-to-br from-[#FF6B00] to-orange-500 text-white shadow-md shadow-orange-500/30",
+    icon: "text-white",
+    title: "text-slate-900 font-extrabold tracking-tight",
+    text: "text-slate-600 font-medium",
+    dismiss: "text-slate-400 hover:bg-orange-100 hover:text-[#FF6B00]",
     Icon: Info,
   },
   WARNING: {
-    container: "border-amber-300 bg-amber-50 text-amber-900",
-    icon: "text-amber-600",
-    dismiss: "text-amber-600 hover:bg-amber-100 hover:text-amber-800",
+    bg: "bg-red-50/90 backdrop-blur-xl border-b border-red-200/60",
+    iconBox: "bg-gradient-to-br from-red-600 to-rose-500 text-white shadow-md shadow-red-500/30",
+    icon: "text-white",
+    title: "text-slate-900 font-extrabold tracking-tight",
+    text: "text-slate-600 font-medium",
+    dismiss: "text-slate-400 hover:bg-red-100 hover:text-red-600",
     Icon: AlertTriangle,
   },
 };
@@ -47,7 +53,16 @@ export default function GlobalAnnouncementBanner() {
     getActivePublicAnnouncement()
       .then(a => { if (mounted) setAnnouncement(a); })
       .catch(() => { if (mounted) setAnnouncement(null); }); // silent — banner is non-critical
-    return () => { mounted = false; };
+      
+    const handleDismissed = () => {
+      if (mounted) setDismissed(readDismissed());
+    };
+    window.addEventListener("system_announcement_dismissed", handleDismissed);
+    
+    return () => { 
+      mounted = false; 
+      window.removeEventListener("system_announcement_dismissed", handleDismissed);
+    };
   }, []);
 
   if (!announcement || announcement.active !== true) return null;
@@ -64,25 +79,33 @@ export default function GlobalAnnouncementBanner() {
   };
 
   return (
-    <div className="sticky top-0 z-50 w-full">
-      <div
-        role="status"
-        className={`flex items-start gap-3 border-b px-4 py-2.5 sm:px-6 ${styles.container}`}
-      >
-        <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${styles.icon}`} />
-        <div className="min-w-0 flex-1 text-sm leading-snug">
-          <span className="font-bold">{announcement.title}</span>
-          {announcement.message && <span className="ml-1.5 font-medium opacity-90">{announcement.message}</span>}
+    <div className="sticky top-0 z-[60] w-full">
+      <div className={`${styles.bg} shadow-sm overflow-hidden relative transition-all duration-300`}>
+        <div className="max-w-7xl mx-auto px-4 py-2.5 sm:px-6 relative z-10 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 flex-1 min-w-0">
+            <div className={`shrink-0 h-8 w-8 rounded-xl flex items-center justify-center ${styles.iconBox}`}>
+              <Icon size={16} strokeWidth={2.5} className={styles.icon} />
+            </div>
+            <div className="flex-1 min-w-0 text-[14px] flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2.5">
+              <span className={`truncate ${styles.title}`}>{announcement.title}</span>
+              {announcement.message && (
+                <>
+                  <span className="hidden sm:inline text-slate-300 font-bold">•</span>
+                  <span className={`truncate ${styles.text}`}>{announcement.message}</span>
+                </>
+              )}
+            </div>
+          </div>
+          
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="Đóng thông báo"
+            className={`shrink-0 rounded-lg p-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500/50 ${styles.dismiss}`}
+          >
+            <X size={16} strokeWidth={2.5} />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label="Đóng thông báo"
-          title="Đóng thông báo"
-          className={`shrink-0 rounded-md p-1 transition ${styles.dismiss}`}
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
       </div>
     </div>
   );
