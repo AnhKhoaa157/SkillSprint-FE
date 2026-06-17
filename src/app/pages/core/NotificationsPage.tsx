@@ -120,9 +120,10 @@ export default function NotificationsPage() {
         };
       case "SYSTEM_WARNING":
         return {
-          bg: "bg-red-50 text-red-600 border-red-100",
-          icon: <AlertTriangle size={18} className="stroke-[2.2]" />,
-          label: "Cảnh báo"
+          bg: "bg-orange-50 text-orange-600 border-orange-100",
+          icon: <Shield size={18} className="stroke-[2.2]" />,
+          label: "Hệ thống",
+          labelColor: "text-orange-600"
         };
       default:
         return {
@@ -275,6 +276,12 @@ export default function NotificationsPage() {
                           {formatDate(notif.createdAt)}
                         </span>
                       </div>
+                      {notif.type === "SYSTEM_INFO" && (
+                        <div className="text-[11px] font-bold text-blue-600 mb-1">Thông tin</div>
+                      )}
+                      {notif.type === "SYSTEM_WARNING" && (
+                        <div className="text-[11px] font-bold text-red-600 mb-1">Cảnh báo</div>
+                      )}
                       <h4 className={`text-sm font-extrabold leading-snug tracking-tight text-slate-800 ${!notif.read ? 'text-slate-900' : ''}`}>
                         {notif.title}
                       </h4>

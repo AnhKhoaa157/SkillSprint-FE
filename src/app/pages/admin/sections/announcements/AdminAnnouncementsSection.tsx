@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   X,
   Bell,
+  Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -386,25 +387,30 @@ export function AdminAnnouncementsSection() {
                       padding:"12px 15px",
                       borderBottom:"1px solid #E2E8F0",
                       background: "#FFFFFF",
-                      borderLeft: `3px solid ${type === "WARNING" ? "#EF4444" : "#3B82F6"}`,
+                      borderLeft: "3px solid #FF6B00",
                       display:"flex", alignItems:"flex-start", gap:10,
                     }}>
                       <div style={{
                         width:32, height:32, borderRadius:8, flexShrink:0,
-                        background: type === "WARNING" ? "#FEF2F2" : "#EFF6FF", 
-                        border: `1.5px solid ${type === "WARNING" ? "#FECACA" : "#BFDBFE"}`,
+                        background: "#FFF7ED", 
+                        border: "1.5px solid #FED7AA",
                         display:"flex", alignItems:"center", justifyContent:"center",
                       }}>
-                        {type === "WARNING" ? <AlertTriangle size={15} color="#DC2626" /> : <Info size={15} color="#2563EB" />}
+                        <Shield size={15} color="#FF6B00" />
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
-                          <span style={{ fontFamily:"'Inter', sans-serif", fontSize:"0.60rem", fontWeight:700, color: type === "WARNING" ? "#DC2626" : "#2563EB" }}>
-                            {type === "WARNING" ? "Cảnh báo" : "Thông tin"}
+                          <span style={{ fontFamily:"'Inter', sans-serif", fontSize:"0.60rem", fontWeight:700, color: "#FF6B00", textTransform: "uppercase" }}>
+                            Hệ thống
                           </span>
-                          <span style={{ fontFamily:"'Inter', sans-serif", fontSize:"0.60rem", color:"#94A3B8" }}>Vừa xong</span>
+                          <span style={{ fontFamily:"'Inter', sans-serif", fontSize:"0.60rem", color:"#94A3B8" }}>• Vừa xong</span>
                           <span style={{ marginLeft:"auto", width:6, height:6, borderRadius:"50%", background:"#FF6B00", display:"inline-block", flexShrink:0 }}/>
                         </div>
+                        {type === "WARNING" ? (
+                          <div style={{ fontFamily:"'Inter', sans-serif", fontSize:"0.65rem", fontWeight: 600, color: "#DC2626", marginBottom: 2 }}>Cảnh báo</div>
+                        ) : (
+                          <div style={{ fontFamily:"'Inter', sans-serif", fontSize:"0.65rem", fontWeight: 600, color: "#2563EB", marginBottom: 2 }}>Thông tin</div>
+                        )}
                         <div style={{ fontFamily:"'Inter', sans-serif", fontSize:"0.75rem", color: "#334155", lineHeight:1.5, wordBreak:"break-word" }}>
                           {titleValid && <strong className="block text-slate-900 mb-0.5">{title}</strong>}
                           {messageValid && message}
