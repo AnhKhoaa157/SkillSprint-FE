@@ -469,10 +469,16 @@ export default function DashboardLayout() {
                       />
                       <span className="flex-1 font-medium">{item.label}</span>
                       {item.badge && (
-                        <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
-                          <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
-                          <span className="relative h-2 w-2 rounded-full bg-orange-500" />
-                        </span>
+                        typeof item.badge === "string" ? (
+                          <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider text-orange-600 bg-orange-100 border border-orange-200 uppercase ml-auto">
+                            {item.badge}
+                          </span>
+                        ) : (
+                          <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
+                            <span className="relative h-2 w-2 rounded-full bg-orange-500" />
+                          </span>
+                        )
                       )}
                       {item.dynamicChildren === "workspaces" && roadmapWorkspaces.length > 0 && (
                         <div 
