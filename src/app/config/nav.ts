@@ -9,6 +9,7 @@ import {
   TrendingUp,
   MessageSquare,
   Zap,
+  BarChart3,
 } from "lucide-react";
 
 export type NavIcon = typeof LayoutDashboard;
@@ -39,6 +40,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     items: [
       { path: "/app/workspaces", label: "Workspaces", icon: Map, badge: true, match: "prefix" },
       { path: "/app/roadmap", label: "Roadmap", icon: Zap, dynamicChildren: "workspaces" },
+      { path: "/app/progress", label: "Tiến độ", icon: BarChart3, dynamicChildren: "workspaces" },
     ],
   },
   {
