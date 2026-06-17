@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Map, Mic,
   Menu, X, Zap, Bell, ChevronRight, ChevronDown, Crown, Gift, Sparkles,
   AlertTriangle, CalendarClock, BookOpenCheck, CheckCircle2,
-  LoaderCircle, User, Calendar, CheckSquare, Shield
+  LoaderCircle, User, Calendar, CheckSquare, Shield, Info
 } from "lucide-react";
 import { useNotificationSocket } from "../hooks/useNotificationSocket";
 import { APP_NAV_SECTIONS } from "../config/nav";
@@ -200,7 +200,7 @@ function toRelativeTime(dateStr: string): string {
   }
 }
 
-type NotifIconType = "check" | "alert" | "calendar" | "sparkles" | "bell" | "shield";
+type NotifIconType = "check" | "alert" | "calendar" | "sparkles" | "bell" | "shield" | "info";
 type NotifMeta = {
   iconType: NotifIconType;
   iconBg: string; iconBorder: string; iconColor: string;
@@ -223,7 +223,7 @@ function getNotifMeta(type: string): NotifMeta {
     case "AI_SCHEDULE_READY":
       return { iconType:"sparkles", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"AI Lịch học", labelColor:OG, itemBg:CARD };
     case "SYSTEM_INFO":
-      return { iconType:"shield", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Hệ thống", labelColor:OG, itemBg:CARD, leftBorderColor:OG };
+      return { iconType:"info", iconBg:"#EFF6FF", iconBorder:"#BFDBFE", iconColor:"#2563EB", label:"Thông tin", labelColor:"#2563EB", itemBg:CARD, leftBorderColor:"#3B82F6" };
     case "SYSTEM_WARNING":
       return { iconType:"alert", iconBg:"#FEF2F2", iconBorder:"#FECACA", iconColor:"#DC2626", label:"Cảnh báo", labelColor:"#DC2626", itemBg:"#FFF5F5", leftBorderColor:"#EF4444" };
     default:
@@ -706,6 +706,7 @@ export default function DashboardLayout() {
                           meta.iconType === "calendar" ? <CalendarClock  size={15} color={meta.iconColor}/> :
                           meta.iconType === "sparkles" ? <Sparkles        size={15} color={meta.iconColor}/> :
                           meta.iconType === "shield"   ? <Shield          size={15} color={meta.iconColor}/> :
+                          meta.iconType === "info"     ? <Info            size={15} color={meta.iconColor}/> :
                                                          <Bell            size={15} color={meta.iconColor}/>;
                         return (
                           <div
