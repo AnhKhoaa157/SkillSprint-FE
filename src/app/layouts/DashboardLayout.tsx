@@ -223,9 +223,9 @@ function getNotifMeta(type: string): NotifMeta {
     case "AI_SCHEDULE_READY":
       return { iconType:"sparkles", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"AI Lịch học", labelColor:OG, itemBg:CARD };
     case "SYSTEM_INFO":
-      return { iconType:"info", iconBg:"#EFF6FF", iconBorder:"#BFDBFE", iconColor:"#2563EB", label:"Thông tin", labelColor:"#2563EB", itemBg:CARD, leftBorderColor:"#3B82F6" };
+      return { iconType:"shield", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Hệ thống", labelColor:OG, itemBg:CARD, leftBorderColor:OG };
     case "SYSTEM_WARNING":
-      return { iconType:"alert", iconBg:"#FEF2F2", iconBorder:"#FECACA", iconColor:"#DC2626", label:"Cảnh báo", labelColor:"#DC2626", itemBg:"#FFF5F5", leftBorderColor:"#EF4444" };
+      return { iconType:"shield", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Hệ thống", labelColor:OG, itemBg:CARD, leftBorderColor:OG };
     default:
       return { iconType:"bell", iconBg:"#EFF6FF", iconBorder:"#BFDBFE", iconColor:"#2563EB", label:"Thông báo", labelColor:"#2563EB", itemBg:CARD };
   }
@@ -732,15 +732,22 @@ export default function DashboardLayout() {
                             </div>
                             <div style={{ flex:1, minWidth:0 }}>
                               <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
-                                <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:meta.labelColor }}>
+                                <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:meta.labelColor, textTransform:"uppercase" }}>
                                   {meta.label}
                                 </span>
-                                <span style={{ fontFamily:F, fontSize:"0.60rem", color:T3 }}>{relTime}</span>
+                                <span style={{ fontFamily:F, fontSize:"0.60rem", color:T3 }}>• {relTime}</span>
                                 {!notif.read && (
                                   <span style={{ marginLeft:"auto", width:6, height:6, borderRadius:"50%", background:OG, display:"inline-block", flexShrink:0 }}/>
                                 )}
                               </div>
+                              {notif.type === "SYSTEM_INFO" && (
+                                <div style={{ fontFamily:F, fontSize:"0.65rem", fontWeight: 600, color: "#2563EB", marginBottom: 2 }}>Thông tin</div>
+                              )}
+                              {notif.type === "SYSTEM_WARNING" && (
+                                <div style={{ fontFamily:F, fontSize:"0.65rem", fontWeight: 600, color: "#DC2626", marginBottom: 2 }}>Cảnh báo</div>
+                              )}
                               <p style={{ fontFamily:F, fontSize:"0.75rem", color: notif.read ? T2 : T1, lineHeight:1.5, wordBreak:"break-word" }}>
+                                {(notif as any).title ? <strong style={{display:"block", marginBottom:2}}>{(notif as any).title}</strong> : null}
                                 {notif.message}
                               </p>
                             </div>
