@@ -10,28 +10,38 @@ export default function AdminSystemSection() {
   return (
     <div className="flex flex-col gap-5">
       {/* Custom Tabs List */}
-      <div className="inline-flex h-12 items-center justify-center rounded-xl bg-slate-200/60 p-1.5 text-slate-500 w-fit">
+      <div className="relative inline-flex h-12 items-center justify-center rounded-xl bg-slate-100 p-1.5 text-slate-500 w-fit border border-slate-200">
         <button
           onClick={() => setActiveTab("announcements")}
-          className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2 text-sm font-bold transition-all duration-200 ${
-            activeTab === "announcements"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "hover:bg-slate-200/80 hover:text-slate-800"
+          className={`relative z-10 inline-flex items-center justify-center whitespace-nowrap rounded-lg px-5 py-2 text-sm font-bold transition-colors duration-200 ${
+            activeTab === "announcements" ? "text-slate-900" : "hover:text-slate-800"
           }`}
         >
-          <Megaphone size={16} className={`mr-2 ${activeTab === "announcements" ? "text-orange-500" : "text-slate-400"}`} />
-          Thông báo chung
+          {activeTab === "announcements" && (
+            <motion.div
+              layoutId="system-tab-bg"
+              className="absolute inset-0 rounded-lg bg-white shadow-sm border border-slate-200/50"
+              transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+            />
+          )}
+          <Megaphone size={16} className={`relative z-10 mr-2 transition-colors ${activeTab === "announcements" ? "text-[#FF6B00]" : "text-slate-400"}`} />
+          <span className="relative z-10">Thông báo chung</span>
         </button>
         <button
           onClick={() => setActiveTab("maintenance")}
-          className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2 text-sm font-bold transition-all duration-200 ${
-            activeTab === "maintenance"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "hover:bg-slate-200/80 hover:text-slate-800"
+          className={`relative z-10 inline-flex items-center justify-center whitespace-nowrap rounded-lg px-5 py-2 text-sm font-bold transition-colors duration-200 ${
+            activeTab === "maintenance" ? "text-slate-900" : "hover:text-slate-800"
           }`}
         >
-          <ServerCog size={16} className={`mr-2 ${activeTab === "maintenance" ? "text-red-500" : "text-slate-400"}`} />
-          Bảo trì hệ thống
+          {activeTab === "maintenance" && (
+            <motion.div
+              layoutId="system-tab-bg"
+              className="absolute inset-0 rounded-lg bg-white shadow-sm border border-slate-200/50"
+              transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+            />
+          )}
+          <ServerCog size={16} className={`relative z-10 mr-2 transition-colors ${activeTab === "maintenance" ? "text-red-500" : "text-slate-400"}`} />
+          <span className="relative z-10">Bảo trì hệ thống</span>
         </button>
       </div>
 

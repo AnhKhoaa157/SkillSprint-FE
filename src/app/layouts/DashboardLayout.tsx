@@ -15,6 +15,7 @@ import meService from "../../api/meService";
 import workspaceService from "../../api/workspaceService";
 import { getStoredUserProfile } from "../../api/authService";
 import { useSubscription } from "../../hooks/useSubscription";
+import { listSubscriptionPlans } from "../../api/adminSubscriptionPlansService";
 
 /* ─── Sidebar Design Tokens ─── */
 const F      = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -264,6 +265,7 @@ export default function DashboardLayout() {
   const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(true);
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [roadmapWorkspaces, setRoadmapWorkspaces] = useState<RoadmapSidebarItem[]>([]);
+  const [dynamicNextPlan, setDynamicNextPlan] = useState<string>("");
   const { planId, planName, rawPlanId, planMeta, refresh: refreshSubscription } = useSubscription();
   const mappedPlanId = planId === "FREE" ? "starter" : planId === "SKILL_BUILDER" ? "skill_builder" : "career_premium";
   const planTier: PlanTier = planId === "FREE" ? "free" : planId === "SKILL_BUILDER" ? "pro" : "premium";
@@ -305,6 +307,13 @@ export default function DashboardLayout() {
 
     return pathname === normalizedPath || pathname.startsWith(`${normalizedPath}/`);
   };
+
+  useEffect(() => {
+    listSubscriptionPlans().then(plans => {
+      const nextPlan = plans.find(p => p.monthlyPrice > 0);
+      if (nextPlan) setDynamicNextPlan(nextPlan.planName);
+    }).catch(() => {});
+  }, []);
 
   const refreshRoadmapWorkspaces = async () => {
     setRoadmapLoading(true);
@@ -560,7 +569,7 @@ export default function DashboardLayout() {
               <Crown size={12} color="#F59E0B"/>
             </div>
             <p style={{fontWeight:700,fontSize:"0.8rem",color:"#0F172A",marginBottom:"1px"}}>
-              {planMeta?.upgradeLabel || "Nâng cấp lên Pro"}
+              {planId === "FREE" && dynamicNextPlan ? `Nâng cấp lên ${dynamicNextPlan}` : (planMeta?.upgradeLabel || "Nâng cấp lên Pro")}
             </p>
             <p style={{color:"#64748B",fontSize:"0.7rem"}}>
               {planMeta?.upgradeSubtext || "Mở khóa tính năng AI và nhiều hơn"}
