@@ -11,7 +11,8 @@ import {
   Sparkles,
   ArrowRight,
   LoaderCircle,
-  Inbox
+  Inbox,
+  MessageSquare
 } from "lucide-react";
 import { useNotificationSocket } from "../../hooks/useNotificationSocket";
 
@@ -49,6 +50,10 @@ export default function NotificationsPage() {
     }
 
     // Interactive routing based on type
+    if (notif.type === "FEEDBACK_REPLIED") {
+      navigate("/app/profile?tab=feedback");
+      return;
+    }
     if (notif.workspaceId) {
       if (notif.type === "ROADMAP_READY") {
         navigate(`/app/workspaces/${notif.workspaceId}/roadmap`);
@@ -97,6 +102,12 @@ export default function NotificationsPage() {
           bg: "bg-blue-50 text-blue-600 border-blue-100",
           icon: <Sparkles size={18} className="stroke-[2.2]" />,
           label: "Lịch học AI"
+        };
+      case "FEEDBACK_REPLIED":
+        return {
+          bg: "bg-violet-50 text-violet-600 border-violet-100",
+          icon: <MessageSquare size={18} className="stroke-[2.2]" />,
+          label: "Phản hồi"
         };
       default:
         return {
@@ -282,6 +293,13 @@ export default function NotificationsPage() {
                           className="p-2 rounded-lg border border-slate-250 bg-white hover:border-[#FF7E21] hover:bg-orange-50/20 hover:text-[#E05E00] text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold"
                         >
                           Lịch học <ArrowRight size={13} />
+                        </button>
+                      ) : (notif.type === "FEEDBACK_REPLIED") ? (
+                        <button
+                          onClick={() => handleNotificationClick(notif)}
+                          className="p-2 rounded-lg border border-slate-250 bg-white hover:border-violet-400 hover:bg-violet-50/40 hover:text-violet-700 text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+                        >
+                          Xem phản hồi <ArrowRight size={13} />
                         </button>
                       ) : null}
                     </div>
