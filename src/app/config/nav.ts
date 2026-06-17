@@ -19,6 +19,7 @@ export type AppNavItem = {
   end?: boolean;
   badge?: boolean;
   match?: "exact" | "prefix";
+  dynamicChildren?: "workspaces";
 };
 
 export type AppNavSection = {
@@ -36,7 +37,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     label: "Học tập & AI",
     items: [
       { path: "/app/workspaces", label: "Workspaces", icon: Map, badge: true, match: "prefix" },
-      { path: "/app/roadmap", label: "Lộ trình AI", icon: Sparkles },
+      { path: "/app/roadmap", label: "Roadmap", icon: Sparkles, dynamicChildren: "workspaces" },
     ],
   },
   {

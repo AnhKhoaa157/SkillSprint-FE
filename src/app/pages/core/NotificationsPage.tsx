@@ -12,7 +12,9 @@ import {
   ArrowRight,
   LoaderCircle,
   Inbox,
-  MessageSquare
+  MessageSquare,
+  Info,
+  Shield
 } from "lucide-react";
 import { useNotificationSocket } from "../../hooks/useNotificationSocket";
 
@@ -108,6 +110,19 @@ export default function NotificationsPage() {
           bg: "bg-violet-50 text-violet-600 border-violet-100",
           icon: <MessageSquare size={18} className="stroke-[2.2]" />,
           label: "Phản hồi"
+        };
+      case "SYSTEM_INFO":
+        return {
+          bg: "bg-orange-50 text-orange-600 border-orange-100",
+          icon: <Shield size={18} className="stroke-[2.2]" />,
+          label: "Hệ thống",
+          labelColor: "text-orange-600"
+        };
+      case "SYSTEM_WARNING":
+        return {
+          bg: "bg-red-50 text-red-600 border-red-100",
+          icon: <AlertTriangle size={18} className="stroke-[2.2]" />,
+          label: "Cảnh báo"
         };
       default:
         return {
@@ -235,7 +250,7 @@ export default function NotificationsPage() {
                     exit={{ opacity: 0 }}
                     className={`flex items-start gap-4 p-5 transition-all relative ${
                       !notif.read
-                        ? "bg-orange-50/20 hover:bg-orange-50/20 bg-[#FFF7ED]/40"
+                        ? "bg-[#FFF7ED] hover:bg-[#FFF7ED]/80"
                         : "hover:bg-slate-50/50"
                     }`}
                   >
@@ -252,7 +267,7 @@ export default function NotificationsPage() {
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                        <span className={`text-xs font-extrabold uppercase tracking-wider ${visuals.labelColor || 'text-slate-400'}`}>
                           {visuals.label}
                         </span>
                         <span className="text-slate-300 text-xs">•</span>
@@ -280,7 +295,7 @@ export default function NotificationsPage() {
                         </button>
                       )}
                       
-                      {notif.workspaceId ? (
+                      {notif.workspaceId && !notif.type.startsWith("SYSTEM_") ? (
                         <button
                           onClick={() => handleNotificationClick(notif)}
                           className="p-2 rounded-lg border border-slate-250 bg-white hover:border-[#FF7E21] hover:bg-orange-50/20 hover:text-[#E05E00] text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold"
