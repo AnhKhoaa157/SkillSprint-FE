@@ -5,8 +5,7 @@ import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
-import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
-import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Trash2, AlertTriangle, LoaderCircle, SlidersHorizontal, Settings, Check, Calendar, RefreshCw, type LucideIcon } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Trash2, AlertTriangle, LoaderCircle, SlidersHorizontal, Settings, Check, Calendar, RefreshCw, type LucideIcon } from "lucide-react";
 import EmptyState from "../../components/ui/EmptyState";
 import { getStoredAuthSession } from "../../../api/authService";
 import AiTutorChat from "./AiTutorChat";
@@ -48,7 +47,7 @@ type LearningStructureResponse = {
 
 type ApiResponse<T> = { data?: T; [key: string]: unknown; };
 type StepStatus = 'completed' | 'active' | 'pending';
-type WorkspaceDetailTab = "files" | "roadmap" | "progress" | "config";
+type WorkspaceDetailTab = "files" | "roadmap" | "config";
 
 function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
   const headers: Record<string, string> = includeJsonContentType ? { "Content-Type": "application/json" } : {};
@@ -322,7 +321,6 @@ export default function WorkspaceDetail() {
   const workspaceTabs: Array<{ id: WorkspaceDetailTab; label: string; icon: LucideIcon }> = [
     { id: "files", label: "Tài liệu", icon: FileText },
     { id: "roadmap", label: "Lộ trình", icon: Layers3 },
-    { id: "progress", label: "Tiến độ", icon: Radar },
     { id: "config", label: "Cài đặt", icon: Settings },
   ];
 
@@ -730,11 +728,6 @@ export default function WorkspaceDetail() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* PROGRESS TAB */}
-        <div className={`${activeTab === "progress" ? "" : "hidden"}`}>
-          {activeTab === "progress" && <WorkspaceProgress workspaceId={workspaceId} />}
         </div>
       </div>
 
