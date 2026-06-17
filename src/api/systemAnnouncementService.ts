@@ -1,74 +1,62 @@
 import { requestJson } from "./apiClient";
+import { API_BASE } from "./config";
 
 export type AnnouncementType = "INFO" | "WARNING";
 
-export interface SystemAnnouncementResponse {
-  announcementId: string;
+export interface AnnouncementResponse {
+  announcementId?: string;
+  enabled: boolean;
+  active: boolean;
   title: string;
-  content: string;
+  message: string;
   type: AnnouncementType;
   startAt: string | null;
   endAt: string | null;
-  isActive: boolean;
-  createdAt: string;
+  updatedBy?: string | null;
+  updatedAt?: string | null;
 }
 
-export interface CreateAnnouncementPayload {
-  title: string;
-  content: string;
-  type: AnnouncementType;
+export interface UpdateAnnouncementRequest {
+  enabled?: boolean;
+  title?: string;
+  message?: string;
+  type?: AnnouncementType;
+  clearSchedule?: boolean;
   startAt?: string | null;
   endAt?: string | null;
 }
 
 /**
- * Public, unauthenticated feed — backend returns ONLY the currently active
- * (enabled + within start/end window) announcements. Safe to call on Landing/Auth.
+ * Public, unauthenticated feed — backend returns the single currently active
+ * (enabled + within start/end window) announcement, or null. Safe to call on
+ * Landing/Auth. Fetched directly (no auth headers) so it never trips the
+ * session interceptor.
  */
-export async function getPublicAnnouncements(): Promise<SystemAnnouncementResponse[]> {
-  const res = await requestJson<SystemAnnouncementResponse[]>("/api/public/system-announcements", {
-    method: "GET",
-  });
-  return res.data || [];
+export async function getActivePublicAnnouncement(): Promise<AnnouncementResponse | null> {
+  const res = await fetch(`${API_BASE}/api/public/announcements/active`);
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json?.data || null;
 }
 
-/** Admin: full list including inactive/scheduled/expired announcements. */
-export async function getAdminAnnouncements(): Promise<SystemAnnouncementResponse[]> {
-  const res = await requestJson<SystemAnnouncementResponse[]>("/api/admin/system-announcements", {
-    method: "GET",
-  });
-  return res.data || [];
-}
-
-export async function createAnnouncement(payload: CreateAnnouncementPayload): Promise<SystemAnnouncementResponse> {
-  const res = await requestJson<SystemAnnouncementResponse>("/api/admin/system-announcements", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-  if (!res.data) throw new Error(res.message || "Failed to create announcement");
+/** Admin: the singleton announcement config (including disabled/scheduled state). */
+export async function getAdminAnnouncement(): Promise<AnnouncementResponse> {
+  const res = await requestJson<AnnouncementResponse>("/api/admin/system/announcement");
+  if (!res.data) throw new Error(res.message || "Không tải được cấu hình thông báo");
   return res.data;
 }
 
-export async function updateAnnouncement(id: string, payload: CreateAnnouncementPayload): Promise<SystemAnnouncementResponse> {
-  const res = await requestJson<SystemAnnouncementResponse>(`/api/admin/system-announcements/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
+export async function updateAdminAnnouncement(request: UpdateAnnouncementRequest): Promise<AnnouncementResponse> {
+  const res = await requestJson<AnnouncementResponse>("/api/admin/system/announcement", {
+    method: "PATCH",
+    body: JSON.stringify(request),
   });
-  if (!res.data) throw new Error(res.message || "Failed to update announcement");
+  if (!res.data) throw new Error(res.message || "Không cập nhật được thông báo");
   return res.data;
-}
-
-export async function deleteAnnouncement(id: string): Promise<void> {
-  const res = await requestJson<null>(`/api/admin/system-announcements/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-  if (!res.success) throw new Error(res.message || "Failed to delete announcement");
 }
 
 export default {
-  getPublicAnnouncements,
-  getAdminAnnouncements,
-  createAnnouncement,
-  updateAnnouncement,
-  deleteAnnouncement,
+  getActivePublicAnnouncement,
+  getAdminAnnouncement,
+  updateAdminAnnouncement,
 };
