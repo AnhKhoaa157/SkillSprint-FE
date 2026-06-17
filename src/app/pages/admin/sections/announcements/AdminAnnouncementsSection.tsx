@@ -14,6 +14,7 @@ import {
   Type as TypeIcon,
   CheckCircle2,
   X,
+  Bell,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -356,23 +357,69 @@ export function AdminAnnouncementsSection() {
                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                    className={`w-full max-w-sm shadow-xl relative overflow-hidden rounded-xl border ${
-                      type === "WARNING"
-                        ? "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200"
-                        : "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200"
-                    }`}
+                    className="w-full max-w-sm relative overflow-hidden text-left"
+                    style={{
+                      background: "#FFFFFF",
+                      borderRadius: 14,
+                      border: "1px solid #E2E8F0",
+                      boxShadow: "0 4px 8px rgba(0,0,0,0.05), 0 16px 48px rgba(0,0,0,0.12)",
+                    }}
                   >
-                    <div className="px-4 py-3 flex items-start gap-3">
-                      <div className={`mt-0.5 shrink-0 ${type === "WARNING" ? "text-orange-500" : "text-blue-500"}`}>
-                        {type === "WARNING" ? <AlertTriangle size={18} /> : <Info size={18} />}
+                    {/* Header */}
+                    <div style={{ padding:"12px 16px 10px", borderBottom:"1px solid #E2E8F0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                        <Bell size={13} color="#64748B" />
+                        <span style={{ fontFamily:"'Inter', sans-serif", fontWeight:700, fontSize:"0.875rem", color:"#334155" }}>Thông báo</span>
+                        <div style={{ padding:"1px 7px", borderRadius:99, background:"rgba(255,107,0,0.08)", border:"1px solid rgba(255,107,0,0.2)" }}>
+                          <span style={{ fontFamily:"'Inter', sans-serif", fontSize:"0.60rem", fontWeight:700, color:"#FF6B00" }}>
+                            1 mới
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0 pb-0.5">
-                        {titleValid && <h4 className={`text-sm font-bold ${type === "WARNING" ? "text-orange-900" : "text-blue-900"}`}>{title}</h4>}
-                        {messageValid && <p className={`text-[13px] mt-0.5 leading-relaxed ${type === "WARNING" ? "text-orange-800" : "text-blue-800"}`}>{message}</p>}
-                      </div>
-                      <button className={`shrink-0 p-1 -mr-1 rounded-md transition-colors ${type === "WARNING" ? "hover:bg-orange-200/50 text-orange-400" : "hover:bg-blue-200/50 text-blue-400"}`}>
-                        <X size={16} />
+                      <button style={{ background:"none", border:"none", color:"#94A3B8", padding:2, display:"flex", cursor: "default" }}>
+                        <X size={14}/>
                       </button>
+                    </div>
+
+                    {/* Notification item */}
+                    <div style={{
+                      padding:"12px 15px",
+                      borderBottom:"1px solid #E2E8F0",
+                      background: "#FFFFFF",
+                      borderLeft: `3px solid ${type === "WARNING" ? "#EF4444" : "#3B82F6"}`,
+                      display:"flex", alignItems:"flex-start", gap:10,
+                    }}>
+                      <div style={{
+                        width:32, height:32, borderRadius:8, flexShrink:0,
+                        background: type === "WARNING" ? "#FEF2F2" : "#EFF6FF", 
+                        border: `1.5px solid ${type === "WARNING" ? "#FECACA" : "#BFDBFE"}`,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                      }}>
+                        {type === "WARNING" ? <AlertTriangle size={15} color="#DC2626" /> : <Info size={15} color="#2563EB" />}
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
+                          <span style={{ fontFamily:"'Inter', sans-serif", fontSize:"0.60rem", fontWeight:700, color: type === "WARNING" ? "#DC2626" : "#2563EB" }}>
+                            {type === "WARNING" ? "Cảnh báo" : "Thông tin"}
+                          </span>
+                          <span style={{ fontFamily:"'Inter', sans-serif", fontSize:"0.60rem", color:"#94A3B8" }}>Vừa xong</span>
+                          <span style={{ marginLeft:"auto", width:6, height:6, borderRadius:"50%", background:"#FF6B00", display:"inline-block", flexShrink:0 }}/>
+                        </div>
+                        <div style={{ fontFamily:"'Inter', sans-serif", fontSize:"0.75rem", color: "#334155", lineHeight:1.5, wordBreak:"break-word" }}>
+                          {titleValid && <strong className="block text-slate-900 mb-0.5">{title}</strong>}
+                          {messageValid && message}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div style={{ padding:"9px 15px", background:"#F8FAFC", textAlign:"center" }}>
+                      <span style={{
+                        fontFamily:"'Inter', sans-serif", fontSize:"0.72rem", fontWeight:700,
+                        color:"#FF6B00"
+                      }}>
+                        Xem tất cả thông báo →
+                      </span>
                     </div>
                   </motion.div>
                 ) : (
