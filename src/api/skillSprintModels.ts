@@ -150,6 +150,7 @@ export type LeaderboardEntry = {
   fullName: string | null;
   avatarObjectKey: string | null;
   points: number;
+  streakDays: number;
 };
 
 /** GET /api/leaderboard/{weekly|monthly|all-time}. */

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, X, Layers, ServerCog, Megaphone } from "lucide-react";
+import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, X, Layers, ServerCog, Megaphone, Trophy } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminHealth from "../sections/health";
@@ -11,6 +11,7 @@ import { USER_GROWTH_DATA } from "../sections/financials/mocks";
 import PaymentsView from "../sections/payments";
 import SubscriptionPlansView from "../sections/subscriptionPlans";
 import AdminSystemSection from "../sections/system/AdminSystemSection";
+import AdminLeaderboard from "../sections/leaderboard";
 import healthService from "../../../../api/healthService";
 
 function toCsv(rows: Record<string, string | number>[]) {
@@ -70,7 +71,7 @@ function AdminNavAvatar({ avatarUrl, fullName }: { avatarUrl?: string; fullName?
 }
 
 export default function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions" | "system">("financials");
+  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions" | "system" | "leaderboard">("financials");
   const [, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<{ fullName?: string; roles?: string[]; avatarUrl?: string } | null>(null);
@@ -83,6 +84,7 @@ export default function AdminDashboard() {
   const navItems = [
     { id: "financials",    label: "Tài chính",           icon: TrendingUp  },
     { id: "users",         label: "Quản lý người dùng",  icon: ShieldCheck },
+    { id: "leaderboard",   label: "Bảng xếp hạng",       icon: Trophy      },
     { id: "payments",      label: "Quản lý thanh toán",  icon: DollarSign  },
     { id: "subscriptions", label: "Gói dịch vụ",         icon: Layers      },
     { id: "feedback",      label: "Feedback người dùng", icon: MessageSquare },
@@ -109,6 +111,7 @@ export default function AdminDashboard() {
   const headerLabels: Record<string, { title: string; sub: string }> = {
     financials:    { title: "Tài chính",           sub: "Chỉ số doanh thu · Unit economics" },
     users:         { title: "Quản lý người dùng",  sub: "Quản lý người dùng và phân quyền" },
+    leaderboard:   { title: "Bảng xếp hạng",       sub: "Xếp hạng người dùng theo XP · Tuần · Tháng · Tổng" },
     payments:      { title: "Quản lý thanh toán",  sub: "Lịch sử giao dịch · Phân tích thanh toán" },
     subscriptions: { title: "Gói dịch vụ",         sub: "Quản lý subscription plans · Tính năng · Nhật ký" },
     feedback:      { title: "Feedback người dùng", sub: "Xem và quản lý phản hồi từ người dùng" },
@@ -151,6 +154,7 @@ export default function AdminDashboard() {
 
   const commandActions = [
     { id: "goto-users", label: "Đi tới Quản lý người dùng", keywords: "users students cohorts quản lý người dùng phân quyền", action: () => setActiveNav("users") },
+    { id: "goto-leaderboard", label: "Đi tới Bảng xếp hạng", keywords: "leaderboard ranking xp điểm bảng xếp hạng", action: () => setActiveNav("leaderboard") },
     { id: "goto-financials", label: "Đi tới Tài chính", keywords: "finance revenue mrr", action: () => setActiveNav("financials") },
     { id: "goto-payments", label: "Đi tới Quản lý thanh toán", keywords: "payments transactions giao dịch thanh toán", action: () => setActiveNav("payments") },
     { id: "goto-system", label: "Đi tới Hệ thống & Cảnh báo", keywords: "system maintenance bảo trì trạng thái hệ thống vận hành thông báo announcements", action: () => setActiveNav("system") },
@@ -387,6 +391,11 @@ export default function AdminDashboard() {
           {activeNav === "users" && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <AdminUsers />
+            </motion.div>
+          )}
+          {activeNav === "leaderboard" && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <AdminLeaderboard />
             </motion.div>
           )}
           {activeNav === "financials" && <FinancialsView />}

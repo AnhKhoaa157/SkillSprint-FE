@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { getCurrentSubscription } from "../api/subscriptionsService";
+import { useAuth } from "../app/contexts/AuthContext";
 
 export type NormalizedPlanId = "FREE" | "SKILL_BUILDER" | "PREMIUM";
 
@@ -34,7 +35,7 @@ const PLAN_META: Record<NormalizedPlanId, PlanMeta> = {
 function normalizePlan(raw: string | undefined | null, price?: number | null): NormalizedPlanId {
   const u = raw?.toUpperCase();
   if (u === "SKILL_BUILDER" || u === "BUILDER") return "SKILL_BUILDER";
-  if (u === "PREMIUM" || u === "CAREER_PREMIUM") return "PREMIUM";
+  if (u === "PREMIUM" || u === "CAREER_PREMIUM" || u === "ADMIN" || u === "ADMIN_DEFAULT") return "PREMIUM";
   if (u === "FREE" || u === "STARTER") return "FREE";
   
   // Fallback heuristics: if backend planType is missing or custom, try to infer by price
@@ -47,20 +48,49 @@ function normalizePlan(raw: string | undefined | null, price?: number | null): N
 }
 
 export function useSubscription() {
-  const [planId, setPlanId] = useState<NormalizedPlanId>("FREE");
-  const [planName, setPlanName] = useState<string>("Starter");
+  const { session } = useAuth();
+  const isAdmin = 
+    session?.role === "ADMIN" || 
+    session?.role === "ADMINISTRATOR" || 
+    session?.role === "ADMIN_DEFAULT";
+
+  const [planId, setPlanId] = useState<NormalizedPlanId>(isAdmin ? "PREMIUM" : "FREE");
+  const [planName, setPlanName] = useState<string>(isAdmin ? "Career Premium" : "Starter");
   const [rawPlanId, setRawPlanId] = useState<string | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
+  const [rawPlanType, setRawPlanType] = useState<string | undefined>(isAdmin ? "ADMIN_DEFAULT" : undefined);
+  const [loading, setLoading] = useState(!isAdmin); // if admin, we might not even need to wait to know they are premium
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
       const sub = await getCurrentSubscription();
-      const normalized = normalizePlan(sub?.plan?.planType, sub?.plan?.monthlyPrice);
+      
+      const rawPlanType = sub?.plan?.planType || (sub?.plan as any)?.plan_type || (sub?.plan as any)?.type || (sub as any)?.planType || (sub as any)?.plan_type;
+      const rawPlanId = sub?.plan?.planId || (sub?.plan as any)?.plan_id || (sub?.plan as any)?.id || (sub as any)?.planId || (sub as any)?.plan_id;
+      const rawPlanName = sub?.plan?.planName || (sub?.plan as any)?.plan_name || (sub?.plan as any)?.name || (sub as any)?.planName || (sub as any)?.plan_name;
+
+      const pType = rawPlanType?.toUpperCase();
+      const pId = String(rawPlanId)?.toUpperCase();
+      const pName = rawPlanName?.toUpperCase();
+      const isDevPlan = 
+        pType === "ADMIN_DEFAULT" || 
+        pType?.includes("ADMIN") ||
+        pId === "ADMIN_DEFAULT" || 
+        pName === "ADMIN_DEFAULT" || 
+        pName?.includes("ADMIN");
+
+      let normalized = normalizePlan(rawPlanType, sub?.plan?.monthlyPrice);
+      
+      if (isAdmin || isDevPlan) {
+        normalized = "PREMIUM";
+      }
+
       setPlanId(normalized);
-      // Use the live planName from backend if available, otherwise fallback to the PLAN_META label
-      setPlanName(sub?.plan?.planName || PLAN_META[normalized].label);
-      setRawPlanId(sub?.plan?.planId);
+      setPlanName(rawPlanName || PLAN_META[normalized].label);
+      setRawPlanId(rawPlanId);
+      
+      // Override rawPlanType if it's the dev plan so the cheat button works
+      setRawPlanType(isDevPlan ? "ADMIN_DEFAULT" : rawPlanType);
     } catch {
       // keep previous value on transient network errors
     } finally {
@@ -72,5 +102,5 @@ export function useSubscription() {
     void refresh();
   }, [refresh]);
 
-  return { planId, planName, rawPlanId, planMeta: PLAN_META[planId], loading, refresh };
+  return { planId, planName, rawPlanId, rawPlanType, planMeta: PLAN_META[planId], loading, refresh };
 }
