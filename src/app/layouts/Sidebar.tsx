@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { NavLink, useLocation } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronDown, X, Crown } from "lucide-react";
+import { ChevronDown, X, Zap } from "lucide-react";
 import { BrandLogo } from "../components/layout/BrandLogo";
 import { APP_NAV_SECTIONS } from "../config/nav";
 import type { RoadmapSidebarItem } from "./DashboardLayout";
 
 // Extracted from DashboardLayout.tsx
-const SHOVER = "rgba(255, 107, 0, 0.04)";
+const SHOVER = "rgba(15, 23, 42, 0.02)";
 const OG = "#FF6B00";
 const STXT = "#475569";
 
@@ -57,9 +57,9 @@ const SidebarComponent: React.FC<SidebarProps> = ({
     <>
       <style>{`
         .ss-nav-link{border:1px solid transparent;transform:translateX(0);}
-        .ss-nav-link:hover{background:${SHOVER};border-color:rgba(148,163,184,0.20);transform:translateX(2px);}
-        .ss-nav-link:focus-visible{outline:none;border-color:rgba(255,107,0,0.45);box-shadow:0 0 0 2px rgba(255,107,0,0.18)}
-        .ss-upgrade:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(255,107,0,0.22)}
+        .ss-nav-link:hover{background:${SHOVER};border-color:rgba(148,163,184,0.12);transform:translateX(1px);}
+        .ss-nav-link:focus-visible{outline:none;border-color:rgba(255,107,0,0.3);box-shadow:0 0 0 2px rgba(255,107,0,0.1)}
+        .ss-upgrade:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(255,107,0,0.08)}
       `}</style>
       
       {/* Mobile overlay */}
@@ -68,7 +68,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
             onClick={()=>setSideOpen(false)}
             className="md:hidden"
-            style={{position:"fixed",inset:0,zIndex:40,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)"}}/>
+            style={{position:"fixed",inset:0,zIndex:40,background:"rgba(0,0,0,0.4)",backdropFilter:"blur(3px)"}}/>
         )}
       </AnimatePresence>
 
@@ -77,20 +77,19 @@ const SidebarComponent: React.FC<SidebarProps> = ({
           md:relative md:translate-x-0 transition-transform duration-300
           ${sideOpen?"translate-x-0":"-translate-x-full"} hidden md:flex`}
         style={{
-          width:"228px", flexShrink:0,
-          background:"linear-gradient(180deg, #FFFDFB 0%, #FAF7F2 100%)",
-          borderRight:"1px solid rgba(255,107,0,0.08)",
-          boxShadow:"4px 0 24px rgba(255,107,0,0.02), 1px 0 5px rgba(0,0,0,0.01)",
+          width:"220px", flexShrink:0,
+          background:"#FFFFFF",
+          borderRight:"1px solid #F1F5F9",
         }}
       >
         {/* Logo */}
         <div style={{
           position: "relative",
           display:"flex", alignItems:"center", justifyContent:"center",
-          padding:"16px",
-          borderBottom:"1px solid rgba(255,107,0,0.08)",
+          padding:"16px 12px",
+          borderBottom:"1px solid #F1F5F9",
         }}>
-          <BrandLogo size={85} align="center" />
+          <BrandLogo size={80} align="center" />
           <button className="md:hidden absolute right-4" onClick={()=>setSideOpen(false)}
             style={{background:"none",border:"none",cursor:"pointer",color:STXT}}>
             <X size={16}/>
@@ -98,10 +97,10 @@ const SidebarComponent: React.FC<SidebarProps> = ({
         </div>
 
         {/* Navigation groups */}
-        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-3 custom-scrollbar">
+        <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-2 custom-scrollbar">
           {APP_NAV_SECTIONS.map((section, idx) => (
-            <div key={section.label} className="space-y-1">
-              {idx > 0 && <div className="my-2 border-t border-orange-100/40" />}
+            <div key={section.label} className="space-y-0.5">
+              {idx > 0 && <div className="my-1.5 border-t border-slate-100/50" />}
               {section.items.map(item => {
                 const isActive = isNavItemActive(item.path, item.end, item.match);
                 const isExpanded = expandedNavs[item.label] !== false;
@@ -113,32 +112,32 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                       end={item.end}
                       onClick={() => setSideOpen(false)}
                       className={() => [
-                        "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition-all duration-200",
-                        "border-l-4 border-transparent",
+                        "group flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs transition-all duration-150",
+                        "border-l-2 border-transparent",
                         isActive
-                          ? "border-l-[#FF6B00] bg-gradient-to-r from-orange-500/8 to-amber-500/4 text-[#FF6B00] font-bold shadow-[0_4px_12px_rgba(255,107,0,0.03)]"
-                          : "text-slate-500 hover:bg-orange-500/4 hover:text-slate-800",
+                          ? "border-l-[#FF6B00] bg-[#FF6B00]/[0.03] text-[#FF6B00] font-semibold"
+                          : "text-slate-600 hover:bg-slate-550/[0.03] hover:text-slate-900",
                       ].join(" ")}
                     >
                       <>
                         <item.icon
-                          size={18}
-                          strokeWidth={isActive ? 2.5 : 2}
+                          size={15}
+                          strokeWidth={isActive ? 2.2 : 1.8}
                           className={[
-                            "shrink-0 transition-transform duration-200 group-hover:scale-105",
-                            isActive ? "text-[#FF6B00]" : "text-slate-400 group-hover:text-slate-600",
+                            "shrink-0 transition-transform duration-150",
+                            isActive ? "text-[#FF6B00]" : "text-slate-400 group-hover:text-slate-650",
                           ].join(" ")}
                         />
                         <span className="flex-1 font-medium">{item.label}</span>
                         {item.badge && typeof item.badge !== "string" && (
-                          <span className="relative flex h-2 w-2 shrink-0 items-center justify-center ml-auto">
-                            <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
-                            <span className="relative h-2 w-2 rounded-full bg-orange-500" />
+                          <span className="relative flex h-1.5 w-1.5 shrink-0 items-center justify-center ml-auto">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/25 animate-ping" />
+                            <span className="relative h-1.5 w-1.5 rounded-full bg-orange-500" />
                           </span>
                         )}
                         {item.dynamicChildren === "workspaces" && navWorkspaces.length > 0 && (
                           <div 
-                            className="p-1 rounded hover:bg-orange-500/10 transition-colors ml-1"
+                            className="p-0.5 rounded hover:bg-orange-500/10 transition-colors ml-0.5"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -146,8 +145,8 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                             }}
                           >
                             <ChevronDown 
-                              size={14} 
-                              className={`transition-transform duration-200 text-slate-400 group-hover:text-slate-600 ${isExpanded ? "rotate-180" : ""}`} 
+                              size={12} 
+                              className={`transition-transform duration-150 text-slate-400 group-hover:text-slate-600 ${isExpanded ? "rotate-180" : ""}`} 
                             />
                           </div>
                         )}
@@ -155,11 +154,11 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                     </NavLink>
                     {typeof item.badge === "string" && (
                       <div 
-                        className="absolute inset-0 z-10 flex items-center justify-end px-3 rounded-xl cursor-not-allowed"
-                        style={{ background: "rgba(255, 255, 255, 0.45)", backdropFilter: "blur(1px)" }}
+                        className="absolute inset-0 z-10 flex items-center justify-end px-3 rounded-lg cursor-not-allowed"
+                        style={{ background: "rgba(255, 255, 255, 0.45)", backdropFilter: "blur(0.5px)" }}
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                       >
-                        <span className="shrink-0 px-2 py-0.5 rounded text-[9px] font-bold tracking-wider text-orange-600 bg-orange-100 border border-orange-200 uppercase shadow-sm">
+                        <span className="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider text-orange-655 bg-orange-50 border border-orange-200/60 uppercase shadow-none">
                           {item.badge}
                         </span>
                       </div>
@@ -170,10 +169,10 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2, ease: "easeInOut" }}
+                          transition={{ duration: 0.15, ease: "easeInOut" }}
                           className="overflow-hidden"
                         >
-                          <div className="mt-1 ml-[22px] mr-2 space-y-0.5 border-l-2 border-orange-100/50 pl-3 py-1">
+                          <div className="mt-0.5 ml-[18px] mr-1.5 border-l border-slate-100 pl-2.5 py-0.5 space-y-0.5">
                             {navWorkspaces.map(ws => {
                               const childSegment = item.path.split("/").pop() || "";
                               const childPath = `/app/workspaces/${ws.id}/${childSegment}`;
@@ -186,15 +185,15 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                                   to={childPath}
                                   onClick={() => setSideOpen(false)}
                                   className={[
-                                    "flex items-center justify-between rounded-lg px-3 py-2 text-xs transition-colors cursor-pointer",
+                                    "flex items-center justify-between rounded-md px-2.5 py-1.5 text-[11px] transition-colors cursor-pointer",
                                     childActive
-                                      ? "bg-orange-50 text-[#FF6B00] font-bold"
-                                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-700 font-medium"
+                                      ? "bg-orange-500/[0.04] text-[#FF6B00] font-semibold"
+                                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium"
                                   ].join(" ")}
                                 >
-                                  <span className="truncate pr-2">{ws.name}</span>
+                                  <span className="truncate pr-1.5">{ws.name}</span>
                                   {showProgress && (
-                                    <span className={`shrink-0 text-[10px] font-bold ${childActive ? "text-orange-600" : "text-slate-400"}`}>
+                                    <span className={`shrink-0 text-[9px] font-bold ${childActive ? "text-orange-600" : "text-slate-400"}`}>
                                       {Math.round(ws.progressPercent!)}%
                                     </span>
                                   )}
@@ -213,42 +212,42 @@ const SidebarComponent: React.FC<SidebarProps> = ({
         </nav>
 
         {/* Bottom */}
-        <div className="px-3 pb-4 pt-2">
+        <div className="px-2.5 pb-4 pt-2">
           <div className="ss-upgrade mb-2" onClick={()=>setPricingOpen(true)}
             style={{
-              padding:"12px",borderRadius:"10px",cursor:"pointer",
-              background:"rgba(255,107,0,0.08)",
-              border:"1px solid rgba(255,107,0,0.18)",
+              padding:"10px",borderRadius:"8px",cursor:"pointer",
+              background:"rgba(255,107,0,0.04)",
+              border:"1px solid rgba(255,107,0,0.1)",
               transition:"all 0.15s ease",
             }}
-            onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.background="rgba(255,107,0,0.14)";}}
-            onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.background="rgba(255,107,0,0.08)";}}
+            onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.background="rgba(255,107,0,0.08)";}}
+            onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.background="rgba(255,107,0,0.04)";}}
           >
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2px"}}>
-              <span style={{fontSize:"8.5px",fontWeight:700,color:OG,letterSpacing:"0.08em",textTransform:"uppercase"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5px"}}>
+              <span style={{fontSize:"8px",fontWeight:700,color:OG,letterSpacing:"0.06em",textTransform:"uppercase"}}>
                 GÓI {planName ? planName.toUpperCase() : "STARTER"}
               </span>
-              <Crown size={12} color="#F59E0B"/>
+              <Zap size={10} className="text-[#FF6B00]" fill="currentColor" />
             </div>
-            <p style={{fontWeight:700,fontSize:"0.8rem",color:"#0F172A",marginBottom:"1px"}}>
+            <p style={{fontWeight:700,fontSize:"0.75rem",color:"#0F172A",marginBottom:"0.5px"}}>
               {planId === "FREE" && dynamicNextPlan ? `Nâng cấp lên ${dynamicNextPlan}` : (planMeta?.upgradeLabel || "Nâng cấp lên Pro")}
             </p>
-            <p style={{color:"#64748B",fontSize:"0.7rem"}}>
+            <p style={{color:"#64748B",fontSize:"0.65rem",lineHeight:"1.2"}}>
               {planMeta?.upgradeSubtext || "Mở khóa tính năng AI và nhiều hơn"}
             </p>
           </div>
 
-          <div className="border-t border-slate-100 pt-3">
-            <NavLink to="/app/profile" className="block rounded-xl transition hover:bg-slate-100" style={{ textDecoration: "none" }} onClick={() => setSideOpen(false)}>
-              <div className="flex items-center gap-3 px-3 py-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-sm font-bold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)] overflow-hidden">
+          <div className="border-t border-slate-100 pt-2.5">
+            <NavLink to="/app/profile" className="block rounded-lg transition hover:bg-slate-50" style={{ textDecoration: "none" }} onClick={() => setSideOpen(false)}>
+              <div className="flex items-center gap-2 px-2.5 py-1.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-xs font-bold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.04)] overflow-hidden">
                   {profile.avatarUrl
                     ? <img src={profile.avatarUrl} alt={profile.fullName} className="w-full h-full object-cover" />
                     : profile.avatarLetter}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-800">{profile.fullName}</p>
-                  <p className="text-xs text-slate-500">{profile.roleLabel}</p>
+                  <p className="truncate text-xs font-medium text-slate-800">{profile.fullName}</p>
+                  <p className="text-[10px] text-slate-500">{profile.roleLabel}</p>
                 </div>
               </div>
             </NavLink>
