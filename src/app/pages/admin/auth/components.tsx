@@ -28,7 +28,7 @@ export function ErrBanner({ msg }: { msg: string }) {
 
 export function BrandPanel() {
   return (
-    <div className="relative p-8 md:p-12 flex flex-col justify-between gap-10 overflow-hidden bg-gradient-to-br from-[#FF6B00] via-[#F97316] to-[#EA580C]">
+    <div className="relative p-8 md:p-12 flex flex-col justify-between gap-10 overflow-hidden bg-gradient-to-br from-orange-500 to-orange-700">
       {/* Decorative blobs */}
       <div className="absolute top-[-20%] right-[-20%] w-[450px] h-[450px] rounded-full bg-white/10 blur-[80px] pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-20%] w-[350px] h-[350px] rounded-full bg-[#FFD29D]/15 blur-[60px] pointer-events-none" />
@@ -36,13 +36,11 @@ export function BrandPanel() {
 
       {/* Brand Logo Header */}
       <div className="flex items-center relative z-10">
-        <div className="p-1.5 bg-white rounded-[1.25rem] shadow-[0_12px_30px_-4px_rgba(0,0,0,0.15)] ring-1 ring-black/5">
-          <img
-            src="/logo.png"
-            alt="SkillSprint Logo"
-            className="h-14 w-14 object-contain rounded-xl"
-          />
-        </div>
+        <img
+          src="/logo.png"
+          alt="SkillSprint Logo"
+          className="h-14 w-auto object-contain drop-shadow-md brightness-0 invert"
+        />
       </div>
 
       {/* Brand copy */}
@@ -97,39 +95,39 @@ export function LoginView({ auth }: { auth: AdminAuthState }) {
         </p>
       </div>
 
-      <form onSubmit={handleLogin} className="space-y-5">
+      <form onSubmit={handleLogin} className="space-y-6">
         {/* Email */}
         <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
             Email quản trị
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-              <Mail className="w-4 h-4" />
+              <Mail className="w-5 h-5" />
             </span>
             <input
               type="email" required value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@company.com"
-              className={`${fieldCls} pl-10 pr-4 py-2.5`}
+              className={`${fieldCls} pl-10 pr-4 py-3`}
             />
           </div>
         </div>
 
         {/* Password */}
         <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
             Mật khẩu
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-              <Lock className="w-4 h-4" />
+              <Lock className="w-5 h-5" />
             </span>
             <input
               type={showPwd ? "text" : "password"} required
               value={password} onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className={`${fieldCls} pl-10 pr-10 py-2.5`}
+              className={`${fieldCls} pl-10 pr-10 py-3`}
             />
             <button
               type="button"
@@ -137,7 +135,7 @@ export function LoginView({ auth }: { auth: AdminAuthState }) {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Toggle password visibility"
             >
-              {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showPwd ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
         </div>
@@ -198,21 +196,21 @@ export function ForgotStep1View({ auth }: { auth: AdminAuthState }) {
         </div>
       </div>
 
-      <form onSubmit={handleFpStep1} className="space-y-5">
+      <form onSubmit={handleFpStep1} className="space-y-6">
         <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
             Email tài khoản Admin
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-              <Mail className="w-4 h-4" />
+              <Mail className="w-5 h-5" />
             </span>
             <input
               type="email" required autoFocus
               value={recoveryEmail}
               onChange={(e) => setRecoveryEmail(e.target.value)}
               placeholder="admin@company.com"
-              className={`${fieldCls} pl-10 pr-4 py-2.5`}
+              className={`${fieldCls} pl-10 pr-4 py-3`}
             />
           </div>
         </div>
@@ -257,22 +255,22 @@ export function ForgotStep2View({ auth }: { auth: AdminAuthState }) {
         </p>
       </div>
 
-      <form onSubmit={handleFpStep2} className="space-y-4">
+      <form onSubmit={handleFpStep2} className="space-y-6">
         {/* Verification code */}
         <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
             Mã xác nhận
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-              <ShieldCheck className="w-4 h-4" />
+              <ShieldCheck className="w-5 h-5" />
             </span>
             <input
               type="text" inputMode="numeric" required autoFocus maxLength={6}
               value={fpCode}
               onChange={(e) => setFpCode(e.target.value.replace(/\D/g, ""))}
               placeholder="000000"
-              className={`${fieldCls} pl-10 pr-4 py-2.5 tracking-[0.3em] font-mono text-center text-base`}
+              className={`${fieldCls} pl-10 pr-4 py-3 tracking-[0.3em] font-mono text-center text-base`}
             />
           </div>
           <p className="mt-1 text-xs text-slate-400">
@@ -289,18 +287,18 @@ export function ForgotStep2View({ auth }: { auth: AdminAuthState }) {
 
         {/* New password */}
         <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
             Mật khẩu mới
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-              <Lock className="w-4 h-4" />
+              <Lock className="w-5 h-5" />
             </span>
             <input
               type={fpShowPwd ? "text" : "password"} required
               value={fpPassword} onChange={(e) => setFpPassword(e.target.value)}
               placeholder="••••••••"
-              className={`${fieldCls} pl-10 pr-10 py-2.5`}
+              className={`${fieldCls} pl-10 pr-10 py-3`}
             />
             <button
               type="button"
@@ -308,7 +306,7 @@ export function ForgotStep2View({ auth }: { auth: AdminAuthState }) {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Toggle new password visibility"
             >
-              {fpShowPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {fpShowPwd ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
 
@@ -346,19 +344,18 @@ export function ForgotStep2View({ auth }: { auth: AdminAuthState }) {
 
         {/* Confirm password */}
         <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
             Xác nhận mật khẩu
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-              <Lock className="w-4 h-4" />
+              <Lock className="w-5 h-5" />
             </span>
             <input
               type={fpShowConfirm ? "text" : "password"} required
               value={fpConfirm} onChange={(e) => setFpConfirm(e.target.value)}
               placeholder="••••••••"
-              className={`${fieldCls} pl-10 pr-10 py-2.5 ${confirmMismatch ? "border-red-300 focus:border-red-400" : ""
-                }`}
+              className={`${fieldCls} pl-10 pr-10 py-3 ${confirmMismatch ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
             />
             <button
               type="button"
@@ -366,7 +363,7 @@ export function ForgotStep2View({ auth }: { auth: AdminAuthState }) {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Toggle confirm password visibility"
             >
-              {fpShowConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {fpShowConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
           {confirmMismatch && (
