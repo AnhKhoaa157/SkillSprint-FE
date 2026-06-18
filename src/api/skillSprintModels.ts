@@ -124,3 +124,61 @@ export type SepayTransactionHistoryResponse = {
   page: number;
   size: number;
 };
+
+/* ─── Points / Leaderboard / Scoring ─── */
+
+/** Leaderboard scope. Maps to the BE endpoints /api/leaderboard/{weekly|monthly|all-time}. */
+export type LeaderboardPeriod = "weekly" | "monthly" | "all-time";
+
+/** GET /api/leaderboard/me — the logged-in user's own points + per-scope ranks. */
+export type UserPointSummary = {
+  totalPoints: number;
+  weeklyPoints: number;
+  monthlyPoints: number;
+  streakDays: number;
+  lastPointDate: string | null;
+  /** null when the user has no points in that scope yet (i.e. unranked). */
+  weeklyRank: number | null;
+  monthlyRank: number | null;
+  allTimeRank: number | null;
+};
+
+/** A single row of any leaderboard scope. `avatarObjectKey` is an S3 key, not a URL. */
+export type LeaderboardEntry = {
+  rank: number;
+  userId: string;
+  fullName: string | null;
+  avatarObjectKey: string | null;
+  points: number;
+};
+
+/** GET /api/leaderboard/{weekly|monthly|all-time}. */
+export type LeaderboardResponse = {
+  period: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  entries: LeaderboardEntry[];
+};
+
+/**
+ * One admin manual-adjustment audit entry (GET /api/admin/users/{id}/point-history).
+ * Denormalized: `adminFullName` ("Performed By") is rendered directly — never resolve
+ * it via a second relational fetch on the client (avoids client-side N+1).
+ */
+export type PointHistoryLog = {
+  logId: string;
+  targetUserId: string;
+  targetFullName: string | null;
+  adminUserId: string | null;
+  adminFullName: string | null;
+  scoreDelta: number;
+  reason: string;
+  balanceAfter: number | null;
+  createdAt: string;
+};
+
+/** PATCH /api/admin/users/{id}/adjust-score body. `scoreDelta` may be negative. */
+export type AdjustUserPointsRequest = {
+  scoreDelta: number;
+  reason: string;
+};

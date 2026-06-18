@@ -9,15 +9,19 @@ import {
   CheckCircle2,
   Clock,
   Clock3,
+  Coffee,
   Dices,
   ExternalLink,
   FileText,
   Gamepad2,
+  Leaf,
+  Lightbulb,
   LoaderCircle,
   Lock,
   PlayCircle,
   RefreshCw,
   Rocket,
+  Save,
   Sparkles,
   Target,
   Timer,
@@ -128,11 +132,12 @@ export default function CoursePlayer() {
   const [isFinishing, setIsFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [toastNotification, setToastNotification] = useState<{ type: "success" | "warning"; message: string } | null>(null);
-
   const showToast = useCallback((type: "success" | "warning", message: string) => {
-    setToastNotification({ type, message });
-    setTimeout(() => setToastNotification(null), 5000);
+    if (type === "success") {
+      toast.success(message);
+    } else {
+      toast.warning(message);
+    }
   }, []);
 
   const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
@@ -206,7 +211,7 @@ export default function CoursePlayer() {
   scheduledDate.setHours(0, 0, 0, 0);
   const canStartByDate = Number.isNaN(scheduledDate.getTime()) ? true : today.getTime() >= scheduledDate.getTime();
 
-  const canStart = canStartByDate && Boolean(taskId) && (actions?.canStart ?? true) && !hasStartedSession && !isStarting && !isFinishing;
+  const canStart = canStartByDate && Boolean(taskId) && !hasStartedSession && !isStarting && !isFinishing && !isSessionCompleted;
   const canFinish = Boolean(activeSessionId) && !isSessionCompleted && !isStarting && !isFinishing;
 
   const taskDuration = task?.durationMinutes ?? 0;
@@ -337,11 +342,6 @@ export default function CoursePlayer() {
   };
 
   const handleGenerateAndOpenQuiz = async () => {
-    if (!isSessionCompleted && !hasMetMinimum) {
-      showToast("warning", `Vui lòng tập trung học tối thiểu ${minimumRequiredMinutes} phút trước khi làm bài kiểm tra!`);
-      return;
-    }
-
     if (!isPremiumMember) {
       showPremiumQuizToast();
       return;
@@ -353,8 +353,13 @@ export default function CoursePlayer() {
     try {
       const quiz = await quizService.generate(stepId);
       setHasQuizCreated(true); // Đổi state lạc quan để khóa UI
-      setShowQuiz(true);
-      setQuizStatus("idle");
+      
+      if (isSessionCompleted || hasMetMinimum) {
+        setShowQuiz(true);
+        setQuizStatus("idle");
+      } else {
+        showToast("success", "Đã thiết kế đề thành công! Hãy tiếp tục học để mở khóa bài kiểm tra.");
+      }
     } catch (err: any) {
       showToast("warning", err?.message || "Không thể tạo đề kiểm tra AI.");
     } finally {
@@ -552,44 +557,7 @@ export default function CoursePlayer() {
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute top-[20%] left-0 w-[300px] h-[300px] bg-orange-500/5 rounded-full blur-[60px] pointer-events-none" />
 
-      {toastNotification && (
-        <div
-          className={`fixed top-4 right-4 z-50 w-[380px] max-w-[calc(100vw-32px)] rounded-2xl border p-4 shadow-2xl transition-all duration-300 animate-in slide-in-from-top-8 fade-in ${
-            toastNotification.type === "success"
-              ? "border-emerald-200/60 bg-emerald-50/90 backdrop-blur-xl text-emerald-900 shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)]"
-              : "border-amber-200/60 bg-amber-50/90 backdrop-blur-xl text-amber-900 shadow-[0_10px_40px_-10px_rgba(245,158,11,0.2)]"
-          }`}
-        >
-          <div className="flex items-start gap-3.5">
-            <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border shadow-sm ${
-              toastNotification.type === "success"
-                ? "border-emerald-200/80 bg-emerald-100 text-emerald-600"
-                : "border-amber-200/80 bg-amber-100 text-amber-600"
-            }`}>
-              {toastNotification.type === "success" ? (
-                <CheckCircle2 size={16} className="stroke-[2.5]" />
-              ) : (
-                <AlertTriangle size={16} className="stroke-[2.5]" />
-              )}
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-extrabold tracking-tight">
-                {toastNotification.type === "success" ? "Thành công" : "Chú ý"}
-              </h4>
-              <p className="mt-1 text-[13px] leading-relaxed font-medium opacity-90">
-                {toastNotification.message}
-              </p>
-            </div>
-            <button 
-              type="button" 
-              onClick={() => setToastNotification(null)}
-              className="mt-0.5 shrink-0 rounded-full p-1 opacity-50 transition-opacity hover:bg-black/5 hover:opacity-100"
-            >
-              <X size={14} className="stroke-[2.5]" />
-            </button>
-          </div>
-        </div>
-      )}
+
 
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur-xl shadow-sm shadow-slate-100/40">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
@@ -965,11 +933,13 @@ export default function CoursePlayer() {
                     <p className={`text-[9px] font-black uppercase tracking-[0.25em] ${
                       pomodoroPhase !== "FOCUS" ? "text-emerald-600" : "text-orange-600"
                     }`}>
-                      {pomodoroPhase === "SHORT_BREAK"
-                        ? "☕ Nghỉ giải lao (5 phút)"
-                        : pomodoroPhase === "LONG_BREAK"
-                        ? "🌿 Nghỉ dài (15 phút)"
-                        : "🎯 Thời gian tập trung"}
+                      {pomodoroPhase === "SHORT_BREAK" ? (
+                        <span className="inline-flex items-center gap-1.5"><Coffee size={14} className="mb-0.5" /> Nghỉ giải lao (5 phút)</span>
+                      ) : pomodoroPhase === "LONG_BREAK" ? (
+                        <span className="inline-flex items-center gap-1.5"><Leaf size={14} className="mb-0.5" /> Nghỉ dài (15 phút)</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5"><Target size={14} className="mb-0.5" /> Thời gian tập trung</span>
+                      )}
                     </p>
 
                     <p className="mt-1 text-[8px] font-extrabold uppercase tracking-widest text-slate-400">
@@ -1087,7 +1057,7 @@ export default function CoursePlayer() {
                       <button
                         type="button"
                         onClick={handleGenerateAndOpenQuiz}
-                        disabled={isGeneratingQuiz || (!isSessionCompleted && !hasMetMinimum)}
+                        disabled={isGeneratingQuiz}
                         className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
                         style={{
                           background: "linear-gradient(135deg, #FF6B00, #EA580C)",
@@ -1096,8 +1066,6 @@ export default function CoursePlayer() {
                       >
                         {isGeneratingQuiz ? (
                           <><LoaderCircle size={16} className="animate-spin" /> Đang thiết kế đề...</>
-                        ) : !isSessionCompleted && !hasMetMinimum ? (
-                          <><Clock size={16} /> Học thêm {minimumRequiredMinutes - elapsedStudyMinutes}p để mở khóa</>
                         ) : (
                           <><WandSparkles size={16} /> Thiết kế bài kiểm tra bằng AI</>
                         )}
@@ -1140,8 +1108,9 @@ export default function CoursePlayer() {
                           </div>
                         </div>
                       ) : (
-                        <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 text-[11px] text-slate-500 font-semibold leading-relaxed">
-                          🎯 Đề kiểm tra AI đã sẵn sàng! Vào làm ngay để kiểm tra mức độ hiểu bài của bạn.
+                        <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 text-[11px] text-slate-500 font-semibold leading-relaxed flex items-start gap-2">
+                          <Target size={14} className="text-[#FF6B00] shrink-0 mt-0.5" />
+                          <span>Đề kiểm tra AI đã sẵn sàng! Vào làm ngay để kiểm tra mức độ hiểu bài của bạn.</span>
                         </div>
                       )}
 
@@ -1288,8 +1257,11 @@ export default function CoursePlayer() {
                 />
               </div>
 
-              <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 text-[11px] text-slate-400 leading-relaxed font-semibold">
-                💡 <strong className="text-slate-600">Quy chế tính tiến độ:</strong> Thời gian học thực tế hiện tại là <span className="font-extrabold text-slate-700">{elapsedStudyMinutes} phút</span>. Bạn cần học đủ <span className="font-extrabold text-orange-600">{minimumRequiredMinutes} phút</span> để hệ thống chuyển trạng thái sang <strong className="text-emerald-600">COMPLETED</strong>.
+              <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 text-[11px] text-slate-400 leading-relaxed font-semibold flex items-start gap-2.5">
+                <Lightbulb size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                <p>
+                  <strong className="text-slate-600">Quy chế tính tiến độ:</strong> Thời gian học thực tế hiện tại là <span className="font-extrabold text-slate-700">{elapsedStudyMinutes} phút</span>. Bạn cần học đủ <span className="font-extrabold text-orange-600">{minimumRequiredMinutes} phút</span> để hệ thống chuyển trạng thái sang <strong className="text-emerald-600">COMPLETED</strong>.
+                </p>
               </div>
             </div>
 
@@ -1310,8 +1282,8 @@ export default function CoursePlayer() {
                 disabled={isFinishing}
                 className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-500/10 transition active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                {isFinishing && <LoaderCircle size={13} className="animate-spin" />}
-                💾 Xác nhận đóng
+                {isFinishing ? <LoaderCircle size={14} className="animate-spin" /> : <Save size={14} />}
+                Xác nhận đóng
               </button>
             </div>
           </div>
@@ -1345,13 +1317,17 @@ export default function CoursePlayer() {
               <button
                 type="button"
                 onClick={resetNavigation}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-xs font-bold text-white shadow-md shadow-orange-500/10 transition active:scale-95"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-xs font-bold text-white shadow-md shadow-orange-500/10 transition active:scale-95 flex items-center justify-center gap-1.5"
               >
-                🎯 Tiếp tục học tập (Giữ kỉ luật)
+                <Target size={16} /> Tiếp tục học tập (Giữ kỉ luật)
               </button>
               <button
                 type="button"
-                onClick={proceedNavigation}
+                onClick={() => {
+                  if (taskId) clearStoredSessionId(taskId);
+                  setActiveSessionId(null);
+                  proceedNavigation();
+                }}
                 className="w-full py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-400 hover:bg-slate-50 hover:text-red-500 transition active:scale-95"
               >
                 Hủy phiên & Rời đi

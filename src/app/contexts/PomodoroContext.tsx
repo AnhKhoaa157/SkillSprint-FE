@@ -205,7 +205,10 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
     clearTimerContext,
     isNavigationBlocked: blocker.state === "blocked",
     proceedNavigation: () => {
-      if (blocker.state === "blocked") blocker.proceed();
+      if (blocker.state === "blocked") {
+        clearTimerContext();
+        blocker.proceed();
+      }
     },
     resetNavigation: () => {
       if (blocker.state === "blocked") blocker.reset();
