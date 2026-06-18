@@ -231,6 +231,7 @@ export default function Roadmap() {
   const [detailTab, setDetailTab] = useState<"overview" | "resources" | "tutor">("overview");
   const [isPremium, setIsPremium] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showSchedulePrompt, setShowSchedulePrompt] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceResponse[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
@@ -354,6 +355,9 @@ export default function Roadmap() {
             clearInterval(interval);
             setGenerating(false);
             toast.success("Khởi tạo lộ trình thành công!");
+            // Brand-new roadmap finished streaming — nudge the learner to lay out
+            // a study schedule, since a fresh roadmap has no calendar tasks yet.
+            setShowSchedulePrompt(true);
           }
         } catch (e) {
           console.warn("Polling roadmap failed", e);
@@ -876,6 +880,47 @@ export default function Roadmap() {
               <div className="flex flex-col gap-3">
                 <button onClick={() => { setShowUpgradeModal(false); navigate("/pricing"); }} className="w-full py-3 rounded-2xl text-sm font-bold text-white transition cursor-pointer" style={{ background: "linear-gradient(135deg,#EA580C,#FF6B00)" }}>Nâng cấp ngay →</button>
                 <button onClick={() => setShowUpgradeModal(false)} className="w-full py-2.5 rounded-2xl text-sm font-semibold text-slate-500 hover:text-slate-700 transition cursor-pointer">Để sau</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POST-GENERATION SCHEDULER PROMPT */}
+      {showSchedulePrompt && (
+        <div
+          className="fixed inset-0 z-[160] flex items-center justify-center p-4"
+          style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
+          onClick={() => setShowSchedulePrompt(false)}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="h-2 w-full bg-gradient-to-r from-orange-400 via-orange-500 to-amber-400" />
+            <div className="px-7 pt-7 pb-8 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 border border-orange-100">
+                <CalendarDays className="h-6 w-6 text-orange-500" />
+              </div>
+              <h2 className="text-xl font-extrabold text-slate-900 mb-2">Lịch học còn trống</h2>
+              <p className="text-sm text-slate-500 leading-relaxed mb-6">
+                Bạn chưa soạn lịch cho roadmap, bấm soạn lịch ngay
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setShowSchedulePrompt(false); navigate("/app/calendar"); }}
+                  className="w-full py-3 rounded-2xl text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 transition-all active:scale-[0.98] cursor-pointer shadow-[0_8px_20px_-6px_rgba(249,115,22,0.5)] hover:shadow-[0_10px_24px_-6px_rgba(249,115,22,0.6)]"
+                >
+                  Soạn lịch ngay →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSchedulePrompt(false)}
+                  className="w-full py-2.5 rounded-2xl text-sm font-semibold text-slate-500 hover:text-slate-700 transition cursor-pointer"
+                >
+                  Để sau
+                </button>
               </div>
             </div>
           </div>

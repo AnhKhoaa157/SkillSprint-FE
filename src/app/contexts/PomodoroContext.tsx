@@ -18,6 +18,20 @@ export const PHASE_DURATIONS: Record<PomodoroPhase, number> = {
   LONG_BREAK: 900,   // 15 min
 };
 
+/**
+ * Snapshot used to re-seed the in-memory timer from an authoritative source
+ * (the backend) — e.g. after an F5 hard refresh, where all React state is lost.
+ */
+export type PomodoroHydrationState = {
+  stepId: string;
+  phase: PomodoroPhase;
+  /** True remaining seconds in the current phase, already computed vs. the BE clock. */
+  timeLeft: number;
+  isRunning: boolean;
+  /** Accumulated focus seconds so the "đã học" counter survives the reload. */
+  studySeconds: number;
+};
+
 // Paths where the Pomodoro session is allowed to run uninterrupted.
 // Navigation within this zone never triggers the exit blocker.
 //
@@ -64,6 +78,8 @@ interface PomodoroContextValue {
   skipToNextPhase: () => void;
   clearTimerContext: () => void;
   fastForwardTime: (seconds: number) => void;
+  /** Re-seed the timer from a backend snapshot (F5 resiliency). */
+  hydrateTimer: (state: PomodoroHydrationState) => void;
 
   // Navigation guard — exposes blocker state so consumers can render a modal
   isNavigationBlocked: boolean;
@@ -194,6 +210,23 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
     setActualStudySeconds((prev) => prev + seconds);
   }, []);
 
+  /**
+   * Restore the timer from an authoritative backend snapshot. Used by the
+   * CoursePlayer on mount to recover the exact countdown after an F5 refresh —
+   * the caller is responsible for computing `timeLeft`/`studySeconds` against
+   * the backend timestamps so the clock never rewinds or resets.
+   */
+  const hydrateTimer = useCallback((snapshot: PomodoroHydrationState) => {
+    const safeTimeLeft = Math.max(0, Math.floor(snapshot.timeLeft));
+    setActiveStepId(snapshot.stepId);
+    setPomodoroPhase(snapshot.phase);
+    setTimeLeft(safeTimeLeft);
+    setActualStudySeconds(Math.max(0, Math.floor(snapshot.studySeconds)));
+    // Only resume ticking if the phase genuinely has time left; a 0s phase
+    // would otherwise immediately fire expiry on the very next tick.
+    setIsTimerRunning(snapshot.isRunning && safeTimeLeft > 0);
+  }, []);
+
   // ── Compose value ─────────────────────────────────────────────────────────────
 
   const value: PomodoroContextValue = {
@@ -209,6 +242,7 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
     skipToNextPhase,
     clearTimerContext,
     fastForwardTime,
+    hydrateTimer,
     isNavigationBlocked: blocker.state === "blocked",
     proceedNavigation: () => {
       if (blocker.state === "blocked") {
