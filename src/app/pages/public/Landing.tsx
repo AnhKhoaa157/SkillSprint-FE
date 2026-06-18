@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "motion/react";
 import {
   ArrowRight, Zap, Map, FileText, FolderKanban, Star,
-  CheckCircle, ChevronRight, Sparkles, Brain,
+  CheckCircle, ChevronRight, Brain,
   TrendingUp, Shield, Users, Github,
   Twitter, Linkedin, Menu, X, Target, Clock, ChevronUp,
 } from "lucide-react";
@@ -399,7 +399,7 @@ function Hero() {
             padding:"6px 14px", borderRadius:"99px", marginBottom:"28px",
             background:OGL, border:`1px solid ${OGLT}`,
           }}>
-          <Sparkles size={12} color={OG}/>
+          <Zap size={12} color={OG} fill={OG} />
           <span style={{ fontFamily:F, fontSize:"0.78rem", color:OG, fontWeight:700 }}>
             Study Coach AI cho sinh viên Gen Z
           </span>
@@ -558,7 +558,7 @@ function Features() {
             padding:"5px 14px", borderRadius:"99px", marginBottom:"16px",
             background:OGL, border:`1px solid ${OGLT}`,
           }}>
-            <Sparkles size={12} color={OG}/>
+            <Zap size={12} color={OG} fill={OG} />
             <span style={{ fontFamily:F, fontSize:"0.78rem", color:OG, fontWeight:700 }}>Hệ sinh thái thông minh</span>
           </div>
           <h2 style={{ fontFamily:F, fontWeight:900, fontSize:"clamp(1.8rem,3.5vw,2.8rem)", color:T1, letterSpacing:"-0.03em", lineHeight:1.1, margin:"0 auto 16px" }}>
@@ -600,7 +600,7 @@ function Features() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "28px" }}>
                   <span style={{ fontSize: "10.5px", fontWeight: 800, color: OG, letterSpacing: "0.06em", background: OGL, border: `1px solid ${OGLT}`, padding: "4px 10px", borderRadius: "6px" }}>PHÂN TÍCH TỰ ĐỘNG</span>
-                  <Sparkles size={12} color={OG} />
+                  <Zap size={12} color={OG} fill={OG} />
                 </div>
               </div>
 
@@ -1247,7 +1247,7 @@ function FinalCTA() {
           transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut" }}
           whileHover={{ scale: 1.18, rotate: -180 }}
         >
-          <Sparkles size={26} color="#FFFFFF" fill="#FFFFFF" style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.15))" }}/>
+          <Zap size={26} color="#FFFFFF" fill="#FFFFFF" style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.15))" }}/>
         </motion.div>
 
         <motion.div

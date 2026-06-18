@@ -1,18 +1,107 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useRef } from "react";
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { useNavigate } from "react-router";
 import { Link } from "react-router";
 import {
-  X, Sparkles, HelpCircle, Plus, Check,
-  Crown, Layers3, Shield, ArrowUpRight
+  X, HelpCircle, Plus, Check,
+  Crown, Layers3, Shield, ArrowUpRight, Zap
 } from "lucide-react";
 import { Footer as PublicFooter } from "../components/Footer";
 import { PublicNavbar } from "../components/PublicNavbar";
 import { useAuth } from "../../contexts/AuthContext";
-import { listSubscriptionPlans, STATIC_FALLBACK_PLANS, formatPlanPrice, resolvePlanFeatures, type PublicPlanResponse } from "../../../api/adminSubscriptionPlansService";
+import {
+  listSubscriptionPlans,
+  STATIC_FALLBACK_PLANS,
+  formatPlanPrice,
+  resolvePlanFeatures,
+  type PublicPlanResponse
+} from "../../../api/adminSubscriptionPlansService";
+import { useEffect } from "react";
+
+/* ──────────────────────────────────────────────────────────────
+   🎴 Tilt 3D Card — Wrapper tạo hiệu ứng nghiêng 3D khi hover
+   (Nâng cấp độ nhạy và hiệu ứng bóng đổ khi nghiêng)
+ ────────────────────────────────────────────────────────────── */
+function TiltCard({
+  children,
+  className,
+  isPremium,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  isPremium?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const springX = useSpring(mouseX, { stiffness: 180, damping: 24 });
+  const springY = useSpring(mouseY, { stiffness: 180, damping: 24 });
+
+  const tiltLimit = isPremium ? 12 : 8;
+  const rotateY = useTransform(springX, [-0.5, 0.5], [-tiltLimit, tiltLimit]);
+  const rotateX = useTransform(springY, [-0.5, 0.5], [tiltLimit, -tiltLimit]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    mouseX.set(x);
+    mouseY.set(y);
+  };
+
+  const handleMouseLeave = () => {
+    mouseX.set(0);
+    mouseY.set(0);
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        rotateX,
+        rotateY,
+        transformPerspective: 1500,
+        transformStyle: "preserve-3d",
+      }}
+      whileHover={{ 
+        scale: isPremium ? 1.04 : 1.03, 
+        y: isPremium ? -16 : -10,
+        z: 30 
+      }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────
+   ✨ Shimmer highlight — Ánh sáng quét chéo qua thẻ khi hover
+ ────────────────────────────────────────────────────────────── */
+function ShimmerOverlay() {
+  return (
+    <motion.div
+      className="absolute inset-0 rounded-[inherit] overflow-hidden pointer-events-none z-10"
+      initial={{ opacity: 0 }}
+      whileHover={{ opacity: 1 }}
+    >
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-25deg]"
+        initial={{ x: "-150%" }}
+        whileHover={{ x: "250%" }}
+        transition={{ duration: 0.95, ease: "easeInOut" }}
+      />
+    </motion.div>
+  );
+}
 
 export default function UltraPremiumPricingPage() {
-  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [authGateOpen, setAuthGateOpen] = useState(false);
   const [pendingAuthPlan, setPendingAuthPlan] = useState<{ id: string; name: string } | null>(null);
@@ -34,7 +123,7 @@ export default function UltraPremiumPricingPage() {
 
   const handlePlanCTA = (plan: PublicPlanResponse) => {
     if (isAuthenticated) {
-      navigate(`/app?pricing=${plan.planId}&period=${billingPeriod}`);
+      navigate(`/app?pricing=${plan.planId}&period=monthly`);
       return;
     }
     setPendingAuthPlan({ id: plan.planId, name: plan.planName });
@@ -42,313 +131,627 @@ export default function UltraPremiumPricingPage() {
   };
 
   return (
-    <div className="bg-[#FAFAFA] min-h-screen relative overflow-x-hidden antialiased selection:bg-orange-500/20 selection:text-orange-600 text-slate-800" style={{ fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}>
-      
-      {/* 🔮 Hệ lưới nền ma trận */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,107,0,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,107,0,0.03)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none z-0" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,transparent_0%,#FAFAFA_70%)] pointer-events-none z-0" />
-      <div className="absolute top-[600px] left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-r from-orange-400/[0.06] to-amber-400/[0.04] blur-[140px] rounded-full pointer-events-none z-0" />
+    <div
+      className="min-h-screen relative overflow-x-hidden antialiased selection:bg-orange-500/20 selection:text-orange-600 text-slate-800"
+      style={{
+        fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+        background: "linear-gradient(180deg, #ffffff 0%, #fffbf7 30%, #fff7ef 60%, #faf6f0 100%)",
+      }}
+    >
+      {/* ── Lưới nền trang trí tinh xảo ── */}
+      <div
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, rgba(255,107,0,0.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,107,0,0.02) 1px, transparent 1px)",
+          backgroundSize: "30px 30px",
+          maskImage: "radial-gradient(ellipse at 50% 30%, black 60%, transparent 100%)",
+          WebkitMaskImage: "radial-gradient(ellipse at 50% 30%, black 60%, transparent 100%)",
+        }}
+      />
+
+      {/* ── Hệ thống hào quang ambient 2 lớp ── */}
+      <div
+        className="absolute top-[180px] left-1/2 -translate-x-1/2 w-[1100px] h-[550px] rounded-full pointer-events-none z-0 opacity-80"
+        style={{
+          background: "radial-gradient(ellipse at center, rgba(255,107,0,0.08) 0%, rgba(251,146,60,0.03) 45%, transparent 70%)",
+          filter: "blur(70px)",
+        }}
+      />
+      <div
+        className="absolute top-12 left-1/4 w-[400px] h-[400px] rounded-full pointer-events-none z-0 opacity-60"
+        style={{
+          background: "radial-gradient(circle, rgba(255,237,213,0.6) 0%, transparent 80%)",
+          filter: "blur(60px)",
+        }}
+      />
 
       <div className="relative z-10">
         <PublicNavbar />
 
         <main className="pt-36 pb-32">
-          {/* ================= HERO SECTION ================= */}
-          <section className="px-4 max-w-5xl mx-auto text-center mb-24 relative z-10">
+          {/* ══════════════════════════════════════════
+              HERO SECTION (Không còn nút Toggle Hàng năm)
+              ══════════════════════════════════════════ */}
+          <section className="px-4 max-w-5xl mx-auto text-center mb-16 relative z-10">
+            {/* Badge tiêu chớp mới */}
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 rounded-full border border-orange-200/80 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-widest text-orange-600 mb-6 shadow-[0_4px_12px_rgba(234,88,12,0.05)]"
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 mb-8"
+              style={{
+                background: "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,247,237,0.95))",
+                border: "1.5px solid rgba(255,107,0,0.25)",
+                boxShadow: "0 10px 30px -5px rgba(255,107,0,0.12), inset 0 1.5px 0 rgba(255,255,255,1)",
+                backdropFilter: "blur(10px)",
+              }}
             >
-              <Sparkles size={12} className="text-orange-500 animate-spin" style={{ animationDuration: '4s' }} />
-              Báo giá đặc quyền công nghệ mã hóa lộ trình
+              <Zap size={13} className="text-orange-500 fill-orange-500 animate-pulse" />
+              <span className="text-[11px] font-black uppercase tracking-wider text-orange-600">
+                LỰA CHỌN TỐI ƯU · CAM KẾT HIỆU QUẢ TRỌN VẸN
+              </span>
             </motion.div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-[64px] font-black tracking-tight text-slate-900 leading-[1.08] mb-6">
-              Đầu tư thông minh. <br />
-              <span className="relative inline-block">
-                <span className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 bg-clip-text text-transparent">
+            {/* Tiêu đề nâng cấp */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-4xl sm:text-5xl md:text-[62px] font-black tracking-tight text-slate-900 leading-[1.08] mb-6"
+            >
+              Đầu tư thông minh.{" "}
+              <br />
+              <span className="relative inline-block mt-2">
+                <span
+                  className="bg-clip-text text-transparent"
+                  style={{ backgroundImage: "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #e65c00 100%)" }}
+                >
                   Làm chủ lộ trình tương lai.
                 </span>
-                <span className="absolute -bottom-2 left-0 w-full h-[6px] bg-gradient-to-r from-orange-500/20 via-amber-500/20 to-transparent rounded-full" />
+                <span
+                  className="absolute -bottom-2.5 left-0 w-full h-[6px] rounded-full"
+                  style={{ background: "linear-gradient(90deg, rgba(255,107,0,0.45) 0%, rgba(251,146,60,0.05) 100%)" }}
+                />
               </span>
-            </h1>
+            </motion.h1>
 
-            <p className="max-w-2xl mx-auto text-sm sm:text-base text-slate-400 leading-relaxed font-semibold mt-4">
-              Kích hoạt đặc quyền xử lý tri thức chuyên sâu từ hệ thống AI thông minh bậc nhất. Chọn lộ trình của bạn — Tăng tốc tiến độ, cam kết hiệu quả thực chất vượt trội.
-            </p>
-
-            {/* 🔄 Bộ chuyển đổi kỳ hạn */}
-            <div className="mt-12 inline-flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-[0_16px_32px_rgba(15,23,42,0.04)]">
-              <button
-                onClick={() => setBillingPeriod("monthly")}
-                className={`px-6 py-3 text-xs font-black rounded-xl transition-all duration-300 cursor-pointer ${
-                  billingPeriod === "monthly" 
-                    ? "bg-slate-900 text-white shadow-md shadow-slate-950/20" 
-                    : "text-slate-400 hover:text-slate-800"
-                }`}
-              >
-                Thanh toán hàng tháng
-              </button>
-              <button
-                onClick={() => setBillingPeriod("yearly")}
-                className={`relative px-6 py-3 text-xs font-black rounded-xl transition-all duration-300 cursor-pointer flex items-center gap-2 ${
-                  billingPeriod === "yearly" 
-                    ? "bg-slate-900 text-white shadow-md shadow-slate-950/20" 
-                    : "text-slate-400 hover:text-slate-800"
-                }`}
-              >
-                Thanh toán theo năm
-                <span className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[9px] px-2 py-0.5 rounded-md font-black tracking-wider uppercase">
-                  -20%
-                </span>
-              </button>
-            </div>
+            {/* Mô tả phụ mượt mà */}
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="max-w-2xl mx-auto text-[15px] text-slate-500 leading-relaxed font-semibold mt-4"
+            >
+              Kích hoạt đặc quyền xử lý tri thức chuyên sâu từ hệ thống AI thông minh bậc nhất.
+              Tập trung hoàn toàn vào gói tháng linh hoạt, không lo lắng các ràng buộc dài hạn.
+            </motion.p>
           </section>
 
-          {/* ================= PRICING CARDS ================= */}
-          <section className="max-w-6xl mx-auto px-4 mt-4 relative z-10">
+          {/* ══════════════════════════════════════════
+              PRICING CARDS SECTION
+              ══════════════════════════════════════════ */}
+          <section className="max-w-6xl mx-auto px-4 mt-2 relative z-10">
             {loadingPlans ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center justify-center">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-white rounded-[32px] p-10 h-[580px] border border-slate-100 animate-pulse" />
+                  <div
+                    key={i}
+                    className="rounded-[36px] h-[620px] animate-pulse"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,237,213,0.3))",
+                      border: "1px solid rgba(255,107,0,0.08)",
+                    }}
+                  />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-6 items-stretch justify-center">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-7 items-stretch">
                 {plans.map((plan, idx) => {
                   const isFree = plan.monthlyPrice <= 0;
                   const isPremium = !isFree && idx === plans.length - 1 && plans.length > 1;
-                  
-                  let displayPrice = plan.monthlyPrice;
-                  let originalPrice = plan.monthlyPrice;
-                  if (billingPeriod === "yearly" && !isFree) {
-                    displayPrice = Math.round((plan.monthlyPrice * 12 * 0.8) / 12);
-                  }
+                  const isMiddle = !isFree && !isPremium && idx > 0;
 
                   return (
                     <motion.div
                       key={plan.planId}
-                      initial={{ opacity: 0, y: 50 }}
+                      initial={{ opacity: 0, y: 60 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: idx * 0.1 }}
-                      whileHover={{ y: isPremium ? -12 : -6 }}
-                      className={`relative rounded-[38px] flex flex-col justify-between transition-all duration-500 ${
-                        isPremium 
-                          ? "bg-[#0B0F19] text-white p-9 lg:p-11 shadow-[0_40px_90px_-15px_rgba(234,88,12,0.35)] border border-slate-800 lg:-translate-y-4 z-20" 
-                          : "bg-white p-8 lg:p-9 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.06)] border border-slate-200/70 z-10"
-                      }`}
+                      transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: idx * 0.12 }}
+                      className={`flex flex-col ${isPremium ? "lg:-translate-y-4" : ""}`}
+                      style={{ transformStyle: "preserve-3d" }}
                     >
-                      {isPremium && (
-                        <>
-                          <div className="absolute top-0 right-12 w-32 h-32 bg-gradient-to-b from-orange-500/20 to-transparent blur-2xl rounded-full pointer-events-none" />
-                          <div className="absolute -inset-px bg-gradient-to-b from-orange-500/40 via-transparent to-slate-800/20 rounded-[38px] pointer-events-none z-0" />
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-orange-600 via-amber-500 to-orange-500 text-white text-[10px] font-black tracking-widest uppercase px-6 py-2.5 rounded-full shadow-[0_8px_24px_rgba(234,88,12,0.4)] border border-white/20 whitespace-nowrap flex items-center gap-1.5 z-30 animate-pulse">
-                            <Crown size={12} />
-                            KHUYÊN DÙNG NHẤT
-                          </div>
-                        </>
-                      )}
+                      <TiltCard isPremium={isPremium} className="relative h-full flex flex-col flex-1">
+                        {/* ── CARD WRAPPER ── */}
+                        <div
+                          className="relative rounded-[36px] flex flex-col h-full overflow-hidden flex-1 transition-all duration-350"
+                          style={
+                            isPremium
+                              ? {
+                                  /* Nền tối sâu thẳm Obsidian Black cho Premium */
+                                  background: "linear-gradient(160deg, #090e18 0%, #0d1525 50%, #060a12 100%)",
+                                  border: "1.5px solid rgba(249,115,22,0.6)",
+                                  boxShadow:
+                                    "0 35px 70px -15px rgba(249,115,22,0.3), 0 15px 30px -10px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.1)",
+                                  padding: "44px 36px 36px",
+                                }
+                              : isMiddle
+                              ? {
+                                  /* Thẻ giữa: Kính sáng cao cấp và viền cam nhẹ */
+                                  background: "linear-gradient(165deg, rgba(255,255,255,0.98) 0%, rgba(255,250,245,0.95) 100%)",
+                                  border: "1.5px solid rgba(255,107,0,0.2)",
+                                  boxShadow:
+                                    "0 30px 60px -15px rgba(255,107,0,0.1), 0 10px 20px -8px rgba(15,23,42,0.04), inset 0 1.5px 0 rgba(255,255,255,1)",
+                                  backdropFilter: "blur(20px)",
+                                  padding: "40px 32px 32px",
+                                }
+                              : {
+                                  /* Gói Free: Nền kính tinh tế, muted hơn */
+                                  background: "linear-gradient(165deg, rgba(255,255,255,0.92) 0%, rgba(248,250,252,0.85) 100%)",
+                                  border: "1px solid rgba(226,232,240,0.9)",
+                                  boxShadow:
+                                    "0 20px 40px -10px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,1)",
+                                  backdropFilter: "blur(16px)",
+                                  padding: "40px 32px 32px",
+                                }
+                          }
+                        >
+                          <ShimmerOverlay />
 
-                      <div className="relative z-10">
-                        {/* Card Header */}
-                        <div className="flex justify-between items-start gap-4 mb-6">
-                          <div>
-                            <span className={`text-[9px] font-black tracking-widest uppercase px-3 py-1 rounded-full ${
-                              isPremium ? "bg-orange-500/20 text-orange-400 border border-orange-500/30" : "bg-slate-100 text-slate-500"
-                            }`}>
-                              {isFree ? "Starter" : isPremium ? "Ultimate Power" : "Pro Core"}
+                          {/* Glow viền & góc cho Premium */}
+                          {isPremium && (
+                            <>
+                              <div
+                                className="absolute top-0 right-0 w-56 h-56 pointer-events-none opacity-40"
+                                style={{
+                                  background: "radial-gradient(circle at top right, rgba(249,115,22,0.45) 0%, transparent 70%)",
+                                }}
+                              />
+                              <div
+                                className="absolute bottom-0 left-0 w-44 h-44 pointer-events-none opacity-30"
+                                style={{
+                                  background: "radial-gradient(circle at bottom left, rgba(234,88,12,0.3) 0%, transparent 70%)",
+                                }}
+                              />
+                            </>
+                          )}
+
+                          {/* Badge nổi bật Premium */}
+                          {isPremium && (
+                            <div
+                              className="absolute -top-px left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-6 py-2 rounded-b-2xl z-20"
+                              style={{
+                                background: "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #e65c00 100%)",
+                                boxShadow: "0 6px 20px rgba(249,115,22,0.45)",
+                              }}
+                            >
+                              <Zap size={11} className="text-white fill-white animate-bounce" />
+                              <span className="text-[10px] text-white font-extrabold tracking-widest uppercase">
+                                KHUYÊN DÙNG NHẤT
+                              </span>
+                            </div>
+                          )}
+
+                          {/* CARD HEADER */}
+                          <div className="flex items-start justify-between gap-4 mb-8 relative z-10" style={{ marginTop: isPremium ? "12px" : "0" }}>
+                            {/* Icon gói */}
+                            <div
+                              className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                              style={
+                                isPremium
+                                  ? {
+                                      background: "linear-gradient(135deg, rgba(249,115,22,0.25), rgba(234,88,12,0.1))",
+                                      border: "1.5px solid rgba(249,115,22,0.45)",
+                                      boxShadow: "0 10px 25px rgba(249,115,22,0.35)",
+                                    }
+                                  : isMiddle
+                                  ? {
+                                      background: "linear-gradient(135deg, rgba(255,247,237,1), rgba(255,237,213,0.7))",
+                                      border: "1.5px solid rgba(255,107,0,0.25)",
+                                      boxShadow: "0 6px 18px rgba(255,107,0,0.1)",
+                                    }
+                                  : {
+                                      background: "linear-gradient(135deg, rgba(241,245,249,0.9), rgba(226,232,240,0.6))",
+                                      border: "1px solid rgba(203,213,225,0.5)",
+                                    }
+                              }
+                            >
+                              {isFree ? (
+                                <Layers3 size={24} className="text-slate-600" />
+                              ) : isPremium ? (
+                                <Crown size={24} className="text-orange-400 fill-orange-400/20" />
+                              ) : (
+                                <Shield size={24} className="text-orange-500" />
+                              )}
+                            </div>
+
+                            {/* Tag định danh gói */}
+                            <span
+                              className="text-[9px] font-black tracking-widest uppercase px-3 py-1.5 rounded-full"
+                              style={
+                                isPremium
+                                  ? {
+                                      background: "rgba(249,115,22,0.18)",
+                                      color: "#ff914d",
+                                      border: "1px solid rgba(249,115,22,0.3)",
+                                    }
+                                  : isMiddle
+                                  ? {
+                                      background: "rgba(255,107,0,0.08)",
+                                      color: "#ea580c",
+                                      border: "1px solid rgba(255,107,0,0.15)",
+                                    }
+                                  : {
+                                      background: "rgba(100,116,139,0.08)",
+                                      color: "#475569",
+                                      border: "1px solid rgba(100,116,139,0.15)",
+                                    }
+                              }
+                            >
+                              {isFree ? "Starter" : isPremium ? "Gói Đỉnh Cao" : "Pro Core"}
                             </span>
-                            <h3 className={`text-3xl font-black mt-4 tracking-tight ${isPremium ? "text-white" : "text-slate-900"}`}>
-                              {plan.planName}
-                            </h3>
                           </div>
-                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
-                            isPremium ? "bg-orange-50 text-orange-600" : "bg-slate-50 text-slate-400 border border-slate-100"
-                          }`}>
-                            {isFree ? <Layers3 size={24} /> : isPremium ? <Crown size={24} /> : <Shield size={24} />}
+
+                          {/* TÊN GÓI */}
+                          <h3
+                            className="text-[30px] font-black tracking-tight leading-none mb-2.5 relative z-10"
+                            style={{ color: isPremium ? "#ffffff" : "#0f172a" }}
+                          >
+                            {plan.planName}
+                          </h3>
+
+                          {/* Mô tả ngắn */}
+                          <p
+                            className="text-[13.5px] leading-relaxed font-semibold mb-8 relative z-10 min-h-[40px]"
+                            style={{ color: isPremium ? "#94a3b8" : "#64748b" }}
+                          >
+                            {plan.description || "Giải pháp toàn diện giúp bứt phá giới hạn tư duy học tập."}
+                          </p>
+
+                          {/* KHUNG GIÁ (CTA TIỀN TỆ QUAN TRỌNG) */}
+                          <div
+                            className="mb-8 rounded-[24px] p-6 relative z-10 transition-all duration-300"
+                            style={
+                              isPremium
+                                ? {
+                                    background: "linear-gradient(135deg, rgba(249,115,22,0.15) 0%, rgba(234,88,12,0.08) 100%)",
+                                    border: "1.5px solid rgba(249,115,22,0.35)",
+                                    boxShadow: "inset 0 1px 2px rgba(255,255,255,0.05)",
+                                  }
+                                : isMiddle
+                                ? {
+                                    background: "linear-gradient(135deg, rgba(255,247,237,0.9) 0%, rgba(255,237,213,0.5) 100%)",
+                                    border: "1.5px solid rgba(255,107,0,0.15)",
+                                  }
+                                : {
+                                    background: "linear-gradient(135deg, rgba(248,250,252,0.9) 0%, rgba(241,245,249,0.5) 100%)",
+                                    border: "1px solid rgba(226,232,240,0.8)",
+                                  }
+                            }
+                          >
+                            {isFree ? (
+                              <>
+                                <div className="flex items-baseline gap-1">
+                                  <span
+                                    className="text-4xl font-extrabold tracking-tight text-slate-800"
+                                  >
+                                    Miễn phí
+                                  </span>
+                                </div>
+                                <p className="text-[11px] font-extrabold text-emerald-600 mt-2 flex items-center gap-1">
+                                  <Zap size={11} className="fill-emerald-600" /> Không cần thẻ tín dụng
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <div className="flex items-baseline gap-1 flex-wrap">
+                                  <span
+                                    className="text-5xl font-black tracking-tight leading-none"
+                                    style={
+                                      isPremium
+                                        ? { color: "#f97316", textShadow: "0 4px 20px rgba(249,115,22,0.2)" }
+                                        : { color: "#ea580c" }
+                                    }
+                                  >
+                                    {formatPlanPrice(plan.monthlyPrice, "").replace(/[VNDvndđĐ\s]/g, "")}
+                                  </span>
+                                  <span
+                                    className="text-2xl font-black ml-1 relative -top-1"
+                                    style={{ color: isPremium ? "#f97316" : "#ea580c" }}
+                                  >
+                                    đ
+                                  </span>
+                                  <span className={`text-[13px] font-bold ml-2 ${isPremium ? "text-slate-400" : "text-slate-500"}`}>
+                                    / tháng
+                                  </span>
+                                </div>
+                                <p
+                                  className="text-[11px] font-bold mt-2"
+                                  style={{ color: isPremium ? "#64748b" : "#64748b" }}
+                                >
+                                  Gia hạn hàng tháng • Hủy bất cứ lúc nào
+                                </p>
+                              </>
+                            )}
                           </div>
-                        </div>
 
-                        <p className="text-xs leading-relaxed font-medium mb-8 text-slate-400">
-                          {plan.description || "Lựa chọn toàn diện giúp bứt phá hoàn toàn giới hạn tư duy học tập học thuật."}
-                        </p>
-
-                        {/* 💰 KHU VỰC HIỂN THỊ GIÁ (ĐÃ ĐƯỢC FIX LỖI XUỐNG DÒNG VÀ CHE CHỮ) */}
-                        <div className={`mb-8 p-5 rounded-2xl border flex flex-col justify-center relative overflow-visible ${
-                          isPremium ? "bg-slate-900/60 border-slate-800" : "bg-slate-50/70 border-slate-100"
-                        }`}>
-                          {isFree ? (
-                            <div className="flex items-baseline whitespace-nowrap">
-                              <span className={`text-3xl xl:text-4xl font-black tracking-tight ${isPremium ? "text-white" : "text-slate-900"}`}>
-                                Miễn phí
-                              </span>
+                          {/* DANH SÁCH ĐẶC QUYỀN */}
+                          <div className="flex-1 relative z-10 mb-8">
+                            <div
+                              className="text-[11px] font-black uppercase tracking-wider mb-5"
+                              style={{ color: isPremium ? "#ff914d" : "#ea580c" }}
+                            >
+                              Đặc quyền có trong gói:
                             </div>
-                          ) : (
-                            <div className="flex items-baseline flex-wrap gap-x-0.5 whitespace-nowrap overflow-visible">
-                              {/* Chỉ bóc tách lấy chữ số tinh khiết, loại bỏ hoàn toàn các ký tự gây xuống hàng tự động */}
-                              <span className={`text-3xl xl:text-4xl font-black tracking-tight ${isPremium ? "text-white" : "text-slate-900"}`}>
-                                {formatPlanPrice(displayPrice, "").replace(/[VNDvndđĐ\s]/g, "")}
-                              </span>
-                              {/* Đưa ký hiệu đ lên cùng hàng một cách cố định */}
-                              <span className={`text-base xl:text-lg font-black ml-0.5 relative -top-0.5 ${isPremium ? "text-orange-400" : "text-slate-900"}`}>
-                                đ
-                              </span>
-                              {/* Phần kỳ hạn luôn bám đuôi chuẩn xác mà không bị đẩy tràn viền */}
-                              <span className="text-xs font-bold text-slate-400 ml-1.5">
-                                / tháng
-                              </span>
-                            </div>
-                          )}
-                          
-                          {billingPeriod === "yearly" && !isFree && (
-                            <p className="text-[11px] font-semibold text-slate-500 mt-1 line-through">
-                              Gốc: {formatPlanPrice(originalPrice, "").replace(/[VNDvndđĐ\s]/g, "")}đ
-                            </p>
-                          )}
-
-                          {isFree && (
-                            <p className="text-[11px] font-black text-emerald-500 mt-1 flex items-center gap-1">
-                              ✦ Miễn phí hoàn toàn • Không cần điền thẻ
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Đặc quyền cấu hình hệ thống */}
-                        <div className="space-y-4 mb-8">
-                          <div className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isPremium ? "text-orange-400" : "text-slate-400"}`}>
-                            Đặc quyền cấu hình hệ thống:
+                            <ul className="space-y-4">
+                              {(() => {
+                                const resolved = resolvePlanFeatures(plan);
+                                const rawFeatures =
+                                  resolved && resolved.length > 0 ? resolved : plan.benefits || [];
+                                return rawFeatures.map((f: any, i: number) => {
+                                  const isString = typeof f === "string";
+                                  const featureName = isString ? f : f.featureName || f.name;
+                                  const enabled = isString ? true : f.enabled !== false;
+                                  return (
+                                    <li
+                                      key={i}
+                                      className="flex items-start gap-3 text-[13.5px] font-semibold"
+                                      style={{
+                                        color: enabled
+                                          ? isPremium
+                                            ? "#e2e8f0"
+                                            : "#334155"
+                                          : isPremium
+                                          ? "#475569"
+                                          : "#94a3b8",
+                                        textDecoration: enabled ? "none" : "line-through",
+                                      }}
+                                    >
+                                      {/* Icon checkmark hoặc tia chớp mới */}
+                                      <div
+                                        className="w-5.5 h-5.5 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                                        style={
+                                          enabled
+                                            ? isPremium
+                                              ? {
+                                                  background: "linear-gradient(135deg, #f97316, #ea580c)",
+                                                  boxShadow: "0 4px 10px rgba(249,115,22,0.35)",
+                                                  color: "#fff",
+                                                }
+                                              : {
+                                                  background: "rgba(255,107,0,0.1)",
+                                                  border: "1px solid rgba(255,107,0,0.2)",
+                                                  color: "#ea580c",
+                                                }
+                                            : {
+                                                background: "rgba(148,163,184,0.08)",
+                                                color: "#94a3b8",
+                                              }
+                                        }
+                                      >
+                                        {enabled ? (
+                                          <Zap size={11} className="fill-current" />
+                                        ) : (
+                                          <X size={10} />
+                                        )}
+                                      </div>
+                                      <span className="leading-snug pt-0.5 text-left">
+                                        {featureName}
+                                      </span>
+                                    </li>
+                                  );
+                                });
+                              })()}
+                            </ul>
                           </div>
-                          <ul className="space-y-3.5">
-                            {(() => {
-                              const resolved = resolvePlanFeatures(plan);
-                              const rawFeatures = (resolved && resolved.length > 0) ? resolved : (plan.benefits || []);
-                              return rawFeatures.map((f: any, i: number) => {
-                                const isString = typeof f === "string";
-                                const featureName = isString ? f : (f.featureName || f.name);
-                                const enabled = isString ? true : f.enabled !== false;
 
-                                return (
-                                  <li key={i} className={`flex items-start gap-3.5 text-[13px] font-semibold transition-colors ${
-                                    enabled 
-                                      ? isPremium ? "text-slate-200" : "text-slate-700" 
-                                      : isPremium ? "text-slate-600 line-through" : "text-slate-300 line-through"
-                                  }`}>
-                                    <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 mt-0.5 shadow-sm transition-all ${
-                                      enabled 
-                                        ? isPremium ? "bg-orange-500 text-white" : "bg-orange-50 text-orange-600 border border-orange-100"
-                                        : isPremium ? "bg-slate-900 text-slate-700" : "bg-slate-50 text-slate-300"
-                                    }`}>
-                                      {enabled ? <Check size={11} className="stroke-[3.5]" /> : <X size={10} />}
-                                    </div>
-                                    <span className="leading-tight text-left pt-0.5">{featureName}</span>
-                                  </li>
-                                );
-                              });
-                            })()}
-                          </ul>
+                          {/* CTA BUTTON */}
+                          <motion.button
+                            whileHover={{ scale: 1.025 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handlePlanCTA(plan)}
+                            className="relative z-10 w-full py-4.5 px-4 rounded-2xl font-black text-xs tracking-wider uppercase cursor-pointer flex items-center justify-center gap-2 group overflow-hidden transition-all duration-300"
+                            style={
+                              isPremium
+                                ? {
+                                    background:
+                                      "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #e65c00 100%)",
+                                    color: "#ffffff",
+                                    boxShadow:
+                                      "0 20px 35px rgba(249,115,22,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
+                                    border: "none",
+                                  }
+                                : isMiddle
+                                ? {
+                                    background: "#0f172a",
+                                    color: "#ffffff",
+                                    boxShadow: "0 10px 25px rgba(15,23,42,0.15)",
+                                    border: "none",
+                                  }
+                                : {
+                                    background: "rgba(255,255,255,0.8)",
+                                    color: "#1e293b",
+                                    border: "1.5px solid rgba(15,23,42,0.12)",
+                                    boxShadow: "0 4px 10px rgba(15,23,42,0.03)",
+                                  }
+                            }
+                          >
+                            {isPremium && (
+                              <motion.span
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-25deg]"
+                                initial={{ x: "-150%" }}
+                                whileHover={{ x: "200%" }}
+                                transition={{ duration: 0.8, ease: "easeInOut" }}
+                              />
+                            )}
+                            <span className="relative">
+                              {isFree ? "Trải nghiệm miễn phí" : `KÍCH HOẠT ${plan.planName.toUpperCase()}`}
+                            </span>
+                            <ArrowUpRight
+                              size={14}
+                              className="relative transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                            />
+                          </motion.button>
                         </div>
-                      </div>
-
-                      {/* CTA Button */}
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handlePlanCTA(plan)}
-                        className={`w-full py-4.5 px-4 rounded-2xl font-black text-xs tracking-widest uppercase transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 group relative overflow-hidden ${
-                          isPremium
-                            ? "bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 text-white shadow-[0_20px_40px_rgba(234,88,12,0.3)]"
-                            : "bg-slate-900 hover:bg-slate-800 text-white shadow-md shadow-slate-900/10"
-                        }`}
-                      >
-                        {isPremium && (
-                          <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" style={{ transform: 'skewX(-20deg)' }} />
-                        )}
-                        <span>{isFree ? "Trải nghiệm miễn phí" : `Kích hoạt ${plan.planName}`}</span>
-                        <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                      </motion.button>
+                      </TiltCard>
                     </motion.div>
                   );
                 })}
               </div>
             )}
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="text-center text-[12.5px] text-slate-400 font-semibold mt-12"
+            >
+              ✦ Giá đã bao gồm đầy đủ VAT · Hủy bất cứ khi nào · Tuyệt đối không chi phí ẩn
+            </motion.p>
           </section>
 
-          {/* ================= FAQ SECTION ================= */}
-          <section className="max-w-5xl mx-auto px-4 mt-44 relative z-10">
+          {/* ══════════════════════════════════════════
+              FAQ SECTION (Vẫn giữ nguyên, nâng cấp icon)
+              ══════════════════════════════════════════ */}
+          <section className="max-w-5xl mx-auto px-4 mt-40 relative z-10">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-1.5 bg-orange-50 border border-orange-100 px-3 py-1 rounded-full mb-3 shadow-sm">
+              <div
+                className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-full mb-4"
+                style={{
+                  background: "rgba(255,107,0,0.06)",
+                  border: "1px solid rgba(255,107,0,0.15)",
+                }}
+              >
                 <HelpCircle size={12} className="text-orange-500" />
-                <span className="text-[10px] text-orange-700 font-black uppercase tracking-wider">Hệ thống trợ giúp chuyên gia</span>
+                <span className="text-[10px] text-orange-700 font-black uppercase tracking-widest">
+                  GIẢI ĐÁP THẮC MẮC
+                </span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+              <h2 className="text-3xl md:text-[40px] font-black text-slate-900 tracking-tight leading-tight">
                 Giải đáp khúc mắc học tập.
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
-              <div className="md:col-span-4 bg-gradient-to-b from-white to-orange-50/20 border border-slate-200/80 rounded-[32px] p-6 md:p-8 flex flex-col justify-between shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-7 items-stretch">
+              <div
+                className="md:col-span-4 rounded-[32px] p-8 flex flex-col justify-between"
+                style={{
+                  background:
+                    "linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,247,237,0.7) 100%)",
+                  border: "1.5px solid rgba(255,107,0,0.15)",
+                  boxShadow: "0 20px 45px rgba(255,107,0,0.05), inset 0 1px 0 rgba(255,255,255,1)",
+                }}
+              >
                 <div>
-                  <h4 className="font-black text-slate-900 text-lg mb-2">Vẫn cần sự hỗ trợ?</h4>
-                  <p className="text-slate-400 text-xs leading-relaxed font-semibold">Đội ngũ kỹ sư giải pháp giáo dục của chúng tôi luôn trực tuyến để cấu hình hệ thống riêng cho bạn.</p>
+                  <h4 className="font-black text-slate-900 text-[19px] mb-3">Vẫn cần sự hỗ trợ?</h4>
+                  <p className="text-slate-500 text-xs leading-relaxed font-semibold">
+                    Đội ngũ hỗ trợ và cố vấn chuyên môn của chúng tôi luôn sẵn sàng đồng hành cùng bạn thiết lập hệ thống học tập tối ưu nhất.
+                  </p>
                 </div>
-                <Link to="/contact" className="mt-8">
-                  <button className="w-full py-3.5 bg-white border border-slate-200 hover:border-orange-500/30 hover:bg-orange-50/20 text-slate-800 hover:text-orange-600 font-black text-xs rounded-xl cursor-pointer transition-all duration-300 shadow-sm">
+                <Link to="/contact" className="mt-8 block">
+                  <button
+                    className="w-full py-4 font-black text-xs tracking-wider uppercase rounded-xl cursor-pointer transition-all duration-300"
+                    style={{
+                      background: "rgba(255,255,255,1)",
+                      border: "1px solid rgba(226,232,240,1)",
+                      color: "#1e293b",
+                      boxShadow: "0 4px 12px rgba(15,23,42,0.04)",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,107,0,0.4)";
+                      (e.currentTarget as HTMLButtonElement).style.color = "#ea580c";
+                      (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 16px rgba(255,107,0,0.08)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(226,232,240,1)";
+                      (e.currentTarget as HTMLButtonElement).style.color = "#1e293b";
+                      (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 12px rgba(15,23,42,0.04)";
+                    }}
+                  >
                     Gặp chuyên viên trực tiếp
                   </button>
                 </Link>
               </div>
 
-              <div className="md:col-span-8 bg-white border border-slate-200/80 rounded-[32px] p-5 md:p-7 shadow-[0_24px_60px_-20px_rgba(15,23,42,0.03)] space-y-3">
+              {/* FAQ Accordion */}
+              <div
+                className="md:col-span-8 rounded-[32px] p-6 md:p-8 space-y-3"
+                style={{
+                  background: "rgba(255,255,255,0.92)",
+                  border: "1px solid rgba(226,232,240,0.8)",
+                  boxShadow: "0 20px 50px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,1)",
+                  backdropFilter: "blur(12px)",
+                }}
+              >
                 {[
                   {
                     q: "Nếu Syllabus của trường tôi quá phức tạp thì AI có đọc được không?",
-                    a: "Mô hình lõi của SkillSprint tích hợp cơ chế bóc tách lớp sâu (Deep Parsing), có khả năng đọc và chuẩn hóa mọi sơ đồ phức tạp, bảng điểm hoặc biểu đồ học trình từ tệp ảnh/PDF đa ngôn ngữ lập tức."
+                    a: "Mô hình lõi của SkillSprint tích hợp cơ chế bóc tách lớp sâu (Deep Parsing), có khả năng đọc và chuẩn hóa mọi sơ đồ phức tạp, bảng điểm hoặc biểu đồ học trình từ tệp ảnh/PDF đa ngôn ngữ lập tức.",
                   },
                   {
                     q: "Nếu tôi bận rộn và trễ deadline, lộ trình có tự điều chỉnh không?",
-                    a: "Hoàn toàn tự động. Thuật toán thích ứng liên tục theo thời gian thực sẽ tự căn chỉnh lại khối lượng kiến thức còn tồn đọng và giãn cách lịch học một cách khoa học để loại bỏ áp lực tâm lý."
+                    a: "Hoàn toàn tự động. Thuật toán thích ứng liên tục theo thời gian thực sẽ tự căn chỉnh lại khối lượng kiến thức còn tồn đọng và giãn cách lịch học một cách khoa học để loại bỏ áp lực tâm lý.",
                   },
                   {
                     q: "Tôi có thể hủy gói Premium sau khi đã thi xong không?",
-                    a: "Tất nhiên. Việc quản lý gói hoàn toàn minh bạch ngay trong phần cài đặt tài khoản. Bạn có thể chấm dứt gia hạn bất cứ lúc nào và hệ thống vẫn duy trì quyền lợi cho tới ngày cuối chu kỳ."
-                  }
+                    a: "Tất nhiên. Việc quản lý gói hoàn toàn minh bạch ngay trong phần cài đặt tài khoản. Bạn có thể chấm dứt gia hạn bất cứ lúc nào và hệ thống vẫn duy trì quyền lợi cho tới ngày cuối chu kỳ.",
+                  },
                 ].map((item, idx) => {
                   const isOpen = activeFaq === idx;
                   return (
                     <div
                       key={idx}
-                      className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
-                        isOpen ? "border-orange-500/40 bg-orange-50/5 shadow-inner" : "border-slate-100 hover:border-slate-200"
-                      }`}
+                      className="rounded-2xl overflow-hidden transition-all duration-300"
+                      style={{
+                        border: isOpen
+                          ? "1.5px solid rgba(255,107,0,0.3)"
+                          : "1px solid rgba(226,232,240,0.7)",
+                        background: isOpen ? "rgba(255,247,237,0.35)" : "transparent",
+                      }}
                     >
                       <button
                         onClick={() => setActiveFaq(isOpen ? null : idx)}
-                        className="w-full flex justify-between items-center p-5 text-left border-none bg-transparent cursor-pointer select-none"
+                        className="w-full flex justify-between items-center p-5 text-[14.5px] text-left border-none bg-transparent cursor-pointer select-none"
                       >
-                        <span className={`font-black text-sm transition-colors ${isOpen ? "text-orange-600" : "text-slate-800"}`}>
+                        <span
+                          className="font-black transition-colors"
+                          style={{ color: isOpen ? "#ea580c" : "#0f172a" }}
+                        >
                           {item.q}
                         </span>
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-transform duration-300 ${isOpen ? "bg-orange-500 text-white rotate-45" : "bg-slate-100 text-slate-400"}`}>
-                          <Plus size={11} className="stroke-[3.5]" />
+                        <div
+                          className="w-6.5 h-6.5 rounded-full flex items-center justify-center shrink-0 transition-all duration-300"
+                          style={
+                            isOpen
+                              ? {
+                                  background: "linear-gradient(135deg, #f97316, #ea580c)",
+                                  color: "#fff",
+                                  transform: "rotate(45deg)",
+                                }
+                              : {
+                                  background: "rgba(241,245,249,0.9)",
+                                  color: "#94a3b8",
+                                }
+                          }
+                        >
+                          <Plus size={12} strokeWidth={3.5} />
                         </div>
                       </button>
                       <AnimatePresence initial={false}>
                         {isOpen && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                          >
-                            <div className="px-5 pb-5 text-xs text-slate-500 leading-relaxed border-t border-slate-100/50 pt-3 font-medium">
-                              {item.a}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+                           <motion.div
+                             initial={{ height: 0, opacity: 0 }}
+                             animate={{ height: "auto", opacity: 1 }}
+                             exit={{ height: 0, opacity: 0 }}
+                             transition={{ duration: 0.22, ease: "easeOut" }}
+                           >
+                             <div className="px-5 pb-5 text-[13.5px] text-slate-500 leading-relaxed border-t border-orange-100/50 pt-3 font-semibold">
+                               {item.a}
+                             </div>
+                           </motion.div>
+                         )}
+                       </AnimatePresence>
+                     </div>
                   );
                 })}
               </div>
@@ -359,7 +762,9 @@ export default function UltraPremiumPricingPage() {
         <PublicFooter />
       </div>
 
-      {/* ================= AUTH GATE MODAL ================= */}
+      {/* ══════════════════════════════════════════
+          AUTH GATE MODAL (Nâng cấp với icon Zap mới)
+          ══════════════════════════════════════════ */}
       <AnimatePresence>
         {authGateOpen && (
           <motion.div
@@ -367,32 +772,47 @@ export default function UltraPremiumPricingPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setAuthGateOpen(false)}
-            className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-md flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(15,23,42,0.65)", backdropFilter: "blur(14px)" }}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              initial={{ opacity: 0, scale: 0.94, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-2xl text-center relative border border-slate-100"
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-sm w-full rounded-[36px] p-8 text-center"
+              style={{
+                background: "linear-gradient(160deg, #ffffff 0%, #fffaf5 100%)",
+                border: "1.5px solid rgba(255,107,0,0.2)",
+                boxShadow: "0 40px 80px rgba(15,23,42,0.3), 0 20px 40px rgba(0,0,0,0.15)",
+              }}
             >
               <button
                 type="button"
                 onClick={() => setAuthGateOpen(false)}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center hover:bg-slate-100 transition-colors border-none cursor-pointer"
+                className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer border-none"
+                style={{ background: "rgba(241,245,249,0.9)" }}
               >
                 <X size={14} className="text-slate-400" />
               </button>
 
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center mx-auto mb-5 text-white">
-                <Sparkles size={24} className="animate-spin" style={{ animationDuration: '6s' }} />
+              {/* Thay Sparkles thành Zap */}
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6 text-white"
+                style={{
+                  background: "linear-gradient(135deg, #f97316, #ea580c)",
+                  boxShadow: "0 12px 28px rgba(249,115,22,0.4)",
+                }}
+              >
+                <Zap size={24} className="fill-white animate-pulse" />
               </div>
 
-              <h3 className="font-black text-lg text-slate-900 tracking-tight mb-2">
+              <h3 className="font-black text-xl text-slate-900 tracking-tight mb-2">
                 Bắt đầu hành trình của bạn
               </h3>
-              <p className="text-slate-400 text-xs leading-relaxed font-semibold mb-6 px-2">
-                Bạn cần đăng nhập hoặc tạo một tài khoản mới để kích hoạt và lưu trữ cấu hình hệ thống gói <span className="font-black text-orange-500">{pendingAuthPlan?.name}</span>.
+              <p className="text-slate-500 text-xs leading-relaxed font-bold mb-6 px-2">
+                Bạn cần đăng nhập để kích hoạt gói{" "}
+                <span className="font-black text-orange-600">{pendingAuthPlan?.name}</span>.
               </p>
 
               <div className="space-y-3">
@@ -401,7 +821,11 @@ export default function UltraPremiumPricingPage() {
                     if (pendingAuthPlan) sessionStorage.setItem("pendingPlan", pendingAuthPlan.id);
                     navigate("/login?mode=register");
                   }}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 border-none text-white font-black text-xs tracking-widest uppercase cursor-pointer"
+                  className="w-full py-4.5 rounded-xl text-white font-black text-xs tracking-wider uppercase cursor-pointer border-none transition-all duration-200"
+                  style={{
+                    background: "linear-gradient(135deg, #f97316, #ea580c)",
+                    boxShadow: "0 8px 20px rgba(249,115,22,0.35)",
+                  }}
                 >
                   Đăng ký tài khoản mới
                 </button>
@@ -410,7 +834,12 @@ export default function UltraPremiumPricingPage() {
                     if (pendingAuthPlan) sessionStorage.setItem("pendingPlan", pendingAuthPlan.id);
                     navigate("/login?mode=login");
                   }}
-                  className="w-full py-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-black text-xs tracking-widest uppercase cursor-pointer"
+                  className="w-full py-4.5 rounded-xl font-black text-xs tracking-wider uppercase cursor-pointer transition-all duration-200"
+                  style={{
+                    background: "rgba(248,250,252,0.95)",
+                    border: "1.5px solid rgba(226,232,240,1)",
+                    color: "#334155",
+                  }}
                 >
                   Đăng nhập hệ thống
                 </button>

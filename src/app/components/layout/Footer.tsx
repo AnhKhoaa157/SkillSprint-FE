@@ -1,4 +1,4 @@
-﻿import { Link } from "react-router";
+import { Link } from "react-router";
 import { ArrowRight, Facebook } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 
@@ -69,15 +69,18 @@ export function Footer() {
         </section>
 
         {/* Links Grid */}
-        <section className="grid grid-cols-1 gap-10 border-b border-orange-100/70 pb-10 lg:grid-cols-[1.35fr_0.75fr_0.75fr_0.85fr]">
-          <div className="max-w-sm">
+        <section className="grid grid-cols-1 gap-10 border-b border-orange-100/70 pb-10 lg:grid-cols-[1.5fr_0.7fr_0.7fr_0.7fr]">
+          <div className="max-w-sm flex flex-col gap-4">
+            {/* Phóng to Logo */}
             <Link to="/" className="inline-flex items-center no-underline">
-              <BrandLogo size={38} textColor="#0F172A" textSize="1rem" align="left" />
+              <BrandLogo size={68} textColor="#0F172A" textSize="1.2rem" align="left" />
             </Link>
-            <p className="mt-4 text-sm leading-relaxed text-slate-500">
+            <p className="text-sm leading-relaxed text-slate-500">
               Nền tảng học tập ứng dụng AI giúp sinh viên xây dựng lộ trình rõ ràng, duy trì nhịp học bền vững và tập trung vào kết quả.
             </p>
-            <div className="mt-5 flex flex-wrap gap-1.5 text-[10px] font-semibold tracking-wide">
+            
+            {/* Chips tags */}
+            <div className="flex flex-wrap gap-1.5 text-[9px] font-black tracking-wider uppercase">
               <span className="rounded-full bg-orange-50/80 px-2.5 py-0.5 text-orange-600 border border-orange-100/50">
                 AI Learning Flow
               </span>
@@ -88,14 +91,69 @@ export function Footer() {
                 Focused Results
               </span>
             </div>
+
+            {/* Redesign Facebook/TikTok logos under description text */}
+            <div className="mt-2">
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-450 mb-2.5">
+                Kết nối với chúng tôi tại:
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {/* Facebook Badge */}
+                <a
+                  href="https://www.facebook.com/profile.php?id=61590323403077"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white no-underline transition-all duration-300"
+                  style={{
+                    background: "linear-gradient(135deg, #1877F2 0%, #0052D4 100%)",
+                    boxShadow: "0 4px 12px rgba(24,119,242,0.25)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px) scale(1.025)";
+                    e.currentTarget.style.boxShadow = "0 8px 18px rgba(24,119,242,0.38)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0px) scale(1)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(24,119,242,0.25)";
+                  }}
+                >
+                  <Facebook size={13} className="fill-current" />
+                  Facebook Group
+                </a>
+
+                {/* TikTok Badge */}
+                <a
+                  href="https://www.tiktok.com/@skillsprint26"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white no-underline transition-all duration-300"
+                  style={{
+                    background: "linear-gradient(135deg, #16161a 0%, #000000 100%)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.25), 0 0 3px rgba(0,242,234,0.2), 0 0 3px rgba(254,44,85,0.2)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px) scale(1.025)";
+                    e.currentTarget.style.boxShadow = "0 8px 18px rgba(0,0,0,0.35), 0 0 7px rgba(0,242,234,0.5), 0 0 7px rgba(254,44,85,0.5)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0px) scale(1)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25), 0 0 3px rgba(0,242,234,0.2), 0 0 3px rgba(254,44,85,0.2)";
+                  }}
+                >
+                  <TikTokIcon className="w-3.5 h-3.5 fill-white" />
+                  TikTok Channel
+                </a>
+              </div>
+            </div>
           </div>
 
           {Object.entries(footerLinks).map(([section, links]) => (
             <div key={section}>
-              <h4 className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+              <h4 className="mb-4 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
                 {section}
               </h4>
-              <ul className="space-y-2.5">
+              <ul className="space-y-3">
                 {links.map(({ label, to }) => (
                   <li key={label}>
                     <Link
@@ -112,35 +170,13 @@ export function Footer() {
         </section>
 
         {/* Bottom bar */}
-        <section className="flex flex-col gap-5 pt-6 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 text-xs font-medium text-slate-400">
+        <section className="flex flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between border-t border-slate-100/50">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 text-xs font-semibold text-slate-400">
             <p>© 2026 SkillSprint. Đồng hành cùng sinh viên học đúng hướng.</p>
             <span className="hidden text-slate-300 sm:inline">•</span>
             <p>
-              Hỗ trợ: <span className="hover:text-orange-500 transition-colors cursor-pointer">skillsprint2026@gmail.com</span>
+              Hỗ trợ: <span className="text-slate-500 hover:text-orange-500 transition-colors cursor-pointer">skillsprint2026@gmail.com</span>
             </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <a
-              href="https://www.facebook.com/profile.php?id=61590323403077"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Facebook Group SkillSprint"
-              className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white/80 text-slate-500 shadow-[0_1px_3px_rgba(15,23,42,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-orange-200 hover:bg-orange-50/60 hover:text-orange-500 hover:shadow-[0_8px_20px_rgba(234,88,12,0.12)]"
-            >
-              <Facebook size={17} className="transition-transform duration-300 group-hover:scale-110" />
-            </a>
-
-            <a
-              href="https://www.tiktok.com/@skillsprint26"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="TikTok SkillSprint"
-              className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white/80 text-slate-500 shadow-[0_1px_3px_rgba(15,23,42,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-orange-200 hover:bg-orange-50/60 hover:text-orange-500 hover:shadow-[0_8px_20px_rgba(234,88,12,0.12)]"
-            >
-              <TikTokIcon className="w-[17px] h-[17px] transition-transform duration-300 group-hover:scale-110" />
-            </a>
           </div>
         </section>
       </div>
