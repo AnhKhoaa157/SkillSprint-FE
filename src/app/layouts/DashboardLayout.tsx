@@ -11,6 +11,7 @@ import { APP_NAV_SECTIONS } from "../config/nav";
 import { motion, AnimatePresence } from "motion/react";
 import { PricingModal } from "../components/modals/PricingModal";
 import { BrandLogo } from "../components/layout/BrandLogo";
+import { PointsPill } from "../components/layout/PointsPill";
 import meService from "../../api/meService";
 import workspaceService from "../../api/workspaceService";
 import { getStoredUserProfile } from "../../api/authService";
@@ -435,6 +436,9 @@ export default function DashboardLayout() {
             </nav>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+            {/* ── Live XP indicator — click jumps to the leaderboard ── */}
+            <PointsPill />
+
             {/* ── Subscription plan pill — pinned top-right; click opens pricing ── */}
             <PlanBadge tier={planTier} label={planName} onClick={() => setPricingOpen(true)} />
 

@@ -16,6 +16,7 @@ import {
   ControlPanel,
   SystemLogTimeline,
 } from "./components";
+import { PointAuditSection } from "./PointAuditSection";
 
 export default function AdminUserDetailPage() {
   const { id } = useParams();
@@ -50,6 +51,15 @@ export default function AdminUserDetailPage() {
                 planOptions={PLAN_TYPE_OPTIONS}
               />
             </div>
+
+            <PointAuditSection
+              userId={id!}
+              userName={user!.fullName || user!.email || id!}
+              initialBanned={Boolean(
+                (user! as { isBannedFromLeaderboard?: boolean; bannedFromLeaderboard?: boolean }).isBannedFromLeaderboard ??
+                  (user! as { isBannedFromLeaderboard?: boolean; bannedFromLeaderboard?: boolean }).bannedFromLeaderboard,
+              )}
+            />
 
             <SystemLogTimeline user={user!} />
           </div>

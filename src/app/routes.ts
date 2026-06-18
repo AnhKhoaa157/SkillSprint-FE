@@ -28,7 +28,7 @@ import RequireAdminAuth from "./components/auth/RequireAdminAuth";
 import Loading from "./pages/core/Loading";
 import StudyCalendar from "./pages/learning/StudyCalendar";
 import TaskMatrix from "./pages/workspace/TaskMatrix";
-import Leaderboard from "./pages/core/Leaderboard";
+import Leaderboard from "./pages/leaderboard";
 import CoursePlayer from "./pages/learning/CoursePlayer";
 import QuizPage from "./pages/learning/QuizPage";
 import Workspaces from "./pages/workspace/Workspaces";

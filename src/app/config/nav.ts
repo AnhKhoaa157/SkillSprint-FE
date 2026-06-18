@@ -53,7 +53,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
     label: "Hệ thống",
     items: [
-      { path: "/app/leaderboard", label: "Bảng xếp hạng", icon: Trophy, badge: "Đang phát triển" },
+      { path: "/app/leaderboard", label: "Bảng xếp hạng", icon: Trophy },
       { path: "/app/feedback", label: "Gửi phản hồi", icon: MessageSquare },
     ],
   },
