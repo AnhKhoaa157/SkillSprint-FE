@@ -12,7 +12,6 @@ export enum FeedbackType {
 export enum FeedbackStatus {
   OPEN = "OPEN",
   IN_PROGRESS = "IN_PROGRESS",
-  RESOLVED = "RESOLVED",
   CLOSED = "CLOSED",
 }
 
@@ -28,6 +27,8 @@ export interface FeedbackResponse {
   imageUrl: string | null;
   status: FeedbackStatus;
   adminNote: string | null;
+  adminReply?: string | null;
+  repliedAt?: string | null;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -68,7 +69,6 @@ function normalizeStatus(status: unknown): FeedbackStatus {
   if (
     value === FeedbackStatus.OPEN ||
     value === FeedbackStatus.IN_PROGRESS ||
-    value === FeedbackStatus.RESOLVED ||
     value === FeedbackStatus.CLOSED
   ) {
     return value;
@@ -100,6 +100,8 @@ function normalizeFeedback(raw: any): FeedbackResponse {
     imageUrl: raw?.imageUrl ?? null,
     status: normalizeStatus(raw?.status),
     adminNote: raw?.adminNote ?? null,
+    adminReply: raw?.adminReply ?? null,
+    repliedAt: raw?.repliedAt ?? null,
     createdAt: String(raw?.createdAt ?? ""),
     updatedAt: raw?.updatedAt ?? null,
   };
@@ -115,11 +117,13 @@ function normalizeAdminFeedback(raw: any): FeedbackAdminResponse {
 }
 
 function normalizePage<T>(raw: any, mapper: (item: any) => T): FeedbackPageResponse<T> {
-  const rawItems = Array.isArray(raw?.items)
-    ? raw.items
-    : Array.isArray(raw?.content)
-      ? raw.content
-      : [];
+  const rawItems = Array.isArray(raw) 
+    ? raw 
+    : Array.isArray(raw?.items)
+      ? raw.items
+      : Array.isArray(raw?.content)
+        ? raw.content
+        : [];
   const items = rawItems.map(mapper);
   const totalItems = Number(raw?.totalItems ?? raw?.totalElements ?? items.length);
   const page = Number(raw?.page ?? raw?.number ?? 0);
@@ -163,7 +167,7 @@ async function parseApiResponse<T>(response: Response): Promise<ApiResponse<T>> 
 
 export async function getMyFeedbacks(page = 0, size = 10): Promise<FeedbackPageResponse<FeedbackResponse>> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
-  const response = await fetch(`${API_BASE}/api/feedback/my?${params.toString()}`, {
+  const response = await fetch(`${API_BASE}/api/feedback?${params.toString()}`, {
     method: "GET",
     headers: getAuthHeaders(),
   });
@@ -236,13 +240,28 @@ export async function updateFeedbackStatus(
   feedbackId: string,
   status: FeedbackStatus | string,
   adminNote?: string,
+  adminReply?: string,
 ): Promise<FeedbackAdminResponse> {
-  const result = await requestJson<unknown>(`/api/admin/feedback/${encodeURIComponent(feedbackId)}/status`, {
+  const statusResult = await requestJson<unknown>(`/api/admin/feedback/${encodeURIComponent(feedbackId)}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status, adminNote: cleanText(adminNote) }),
   });
-  if (!result.data) throw new Error(result.message || "Could not update feedback");
-  return normalizeAdminFeedback(result.data);
+  
+  if (!statusResult.data) throw new Error(statusResult.message || "Could not update feedback status");
+  
+  let finalData = statusResult.data;
+  const cleanedReply = cleanText(adminReply);
+  
+  if (cleanedReply) {
+    const replyResult = await requestJson<unknown>(`/api/admin/feedback/${encodeURIComponent(feedbackId)}/reply`, {
+      method: "PATCH",
+      body: JSON.stringify({ message: cleanedReply }),
+    });
+    if (!replyResult.data) throw new Error(replyResult.message || "Could not save admin reply");
+    finalData = replyResult.data;
+  }
+  
+  return normalizeAdminFeedback(finalData);
 }
 
 export default {

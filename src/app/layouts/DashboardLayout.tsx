@@ -1,20 +1,23 @@
 import { useEffect, useState } from "react";
-import { Outlet, NavLink, useLocation, Link, useNavigate } from "react-router";
+import { Outlet, NavLink, useLocation, Link, useNavigate, useMatch } from "react-router";
 import {
   LayoutDashboard, Map, Mic,
-  Menu, X, Zap, Bell, ChevronRight, Crown, Gift, Sparkles,
+  Menu, X, Zap, Bell, ChevronRight, ChevronDown, Crown, Gift, Sparkles,
   AlertTriangle, CalendarClock, BookOpenCheck, CheckCircle2,
-  LoaderCircle, User, Calendar, CheckSquare,
+  LoaderCircle, User, Calendar, CheckSquare, Shield, Info
 } from "lucide-react";
 import { useNotificationSocket } from "../hooks/useNotificationSocket";
 import { APP_NAV_SECTIONS } from "../config/nav";
 import { motion, AnimatePresence } from "motion/react";
 import { PricingModal } from "../components/modals/PricingModal";
 import { BrandLogo } from "../components/layout/BrandLogo";
+import { PointsPill } from "../components/layout/PointsPill";
 import meService from "../../api/meService";
 import workspaceService from "../../api/workspaceService";
 import { getStoredUserProfile } from "../../api/authService";
 import { useSubscription } from "../../hooks/useSubscription";
+import { listSubscriptionPlans } from "../../api/adminSubscriptionPlansService";
+import { Sidebar } from "./Sidebar";
 
 /* ─── Sidebar Design Tokens ─── */
 const F      = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -36,7 +39,7 @@ const BDR    = "#E5E7EB";
 const CRUMBS: Record<string,string> = {
   "/app":"Trung tâm điều khiển",
   "/app/syllabus":"Nhập syllabus",
-  "/app/roadmap":"Lộ trình AI",
+  "/app/roadmap":"Roadmap",
   "/app/calendar":"Lịch học",
   "/app/matrix":"Ma trận công việc",
   "/app/leaderboard":"Bảng xếp hạng",
@@ -57,6 +60,7 @@ type RoadmapSidebarWorkspace = {
   status?: unknown;
   roadmapStatus?: unknown;
   roadmapId?: unknown;
+  progressPercent?: unknown;
   learningStructure?: {
     status?: unknown;
     roadmapStatus?: unknown;
@@ -70,10 +74,11 @@ type RoadmapSidebarWorkspace = {
   [key: string]: unknown;
 };
 
-type RoadmapSidebarItem = {
+export type RoadmapSidebarItem = {
   id: string;
   name: string;
   statusLabel: string;
+  progressPercent?: number;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -176,10 +181,14 @@ function normalizeRoadmapSidebarItem(workspace: RoadmapSidebarWorkspace, index: 
     return null;
   }
 
+  const progress = Number(workspace.progressPercent);
+  const safeProgress = isNaN(progress) ? 0 : progress;
+
   return {
     id,
     name,
     statusLabel: getRoadmapStatusLabel(workspace) || "READY",
+    progressPercent: safeProgress,
   };
 }
 
@@ -199,7 +208,7 @@ function toRelativeTime(dateStr: string): string {
   }
 }
 
-type NotifIconType = "check" | "alert" | "calendar" | "sparkles" | "bell";
+type NotifIconType = "check" | "alert" | "calendar" | "sparkles" | "bell" | "shield" | "info";
 type NotifMeta = {
   iconType: NotifIconType;
   iconBg: string; iconBorder: string; iconColor: string;
@@ -221,6 +230,10 @@ function getNotifMeta(type: string): NotifMeta {
       return { iconType:"alert", iconBg:"#FEF2F2", iconBorder:"#FECACA", iconColor:"#DC2626", label:"Quá hạn", labelColor:"#DC2626", itemBg:"#FFF5F5", leftBorderColor:"#EF4444" };
     case "AI_SCHEDULE_READY":
       return { iconType:"sparkles", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"AI Lịch học", labelColor:OG, itemBg:CARD };
+    case "SYSTEM_INFO":
+      return { iconType:"shield", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Hệ thống", labelColor:OG, itemBg:CARD, leftBorderColor:OG };
+    case "SYSTEM_WARNING":
+      return { iconType:"shield", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Hệ thống", labelColor:OG, itemBg:CARD, leftBorderColor:OG };
     default:
       return { iconType:"bell", iconBg:"#EFF6FF", iconBorder:"#BFDBFE", iconColor:"#2563EB", label:"Thông báo", labelColor:"#2563EB", itemBg:CARD };
   }
@@ -230,13 +243,13 @@ function getNotifMeta(type: string): NotifMeta {
 type PlanTier = "free" | "pro" | "premium";
 
 const PLAN_BADGE_THEME: Record<PlanTier, { label: string; cls: string; Icon: typeof Zap }> = {
-  free:    { label: "Free",    cls: "bg-orange-50 border-orange-300 text-orange-500",     Icon: Zap },
-  pro:     { label: "Pro",     cls: "bg-emerald-50 border-emerald-300 text-emerald-600",  Icon: Sparkles },
-  premium: { label: "Premium", cls: "bg-purple-50 border-purple-300 text-purple-600",     Icon: Crown },
+  free:    { label: "Free",    cls: "bg-slate-50 border-slate-200 text-slate-500",     Icon: Zap },
+  pro:     { label: "Skill Builder", cls: "bg-amber-50 border-amber-300 text-amber-600",  Icon: Sparkles },
+  premium: { label: "Premium", cls: "bg-orange-50 border-[#FF6B00]/40 text-[#FF6B00]",     Icon: Crown },
 };
 
 /** Self-contained plan pill. Click opens the pricing modal to drive conversion;
- *  palette switches with the active tier (free→orange, pro→green, premium→purple). */
+ *  palette switches with the active tier (free→slate, pro→amber, premium→orange). */
 function PlanBadge({ tier, label, onClick }: { tier: PlanTier; label?: string; onClick: () => void }) {
   const theme = PLAN_BADGE_THEME[tier];
   const Icon = theme.Icon;
@@ -260,6 +273,7 @@ export default function DashboardLayout() {
   const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(true);
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [roadmapWorkspaces, setRoadmapWorkspaces] = useState<RoadmapSidebarItem[]>([]);
+  const [dynamicNextPlan, setDynamicNextPlan] = useState<string>("");
   const { planId, planName, rawPlanId, planMeta, refresh: refreshSubscription } = useSubscription();
   const mappedPlanId = planId === "FREE" ? "starter" : planId === "SKILL_BUILDER" ? "skill_builder" : "career_premium";
   const planTier: PlanTier = planId === "FREE" ? "free" : planId === "SKILL_BUILDER" ? "pro" : "premium";
@@ -276,6 +290,10 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const loc   = useLocation();
   const pathname = loc.pathname.replace(/\/+$/, "") || "/";
+  const isRoadmapPage = pathname === "/app/roadmap" || pathname.match(/^\/app\/workspaces\/[^\/]+\/roadmap$/);
+  const workspaceIdMatch = pathname.match(/^\/app\/workspaces\/([^\/]+)\/roadmap$/);
+  const dropdownWorkspaceId = workspaceIdMatch ? workspaceIdMatch[1] : (roadmapWorkspaces.length > 0 ? roadmapWorkspaces[0].id : "");
+  
   const showAuthLoader = (loc.state as any)?.showLoadingFromAuth ?? false;
   let crumb = CRUMBS[loc.pathname] ?? "Trung tâm điều khiển";
   if (loc.pathname.startsWith("/app/workspaces")) {
@@ -283,19 +301,12 @@ export default function DashboardLayout() {
     else crumb = "Workspace";
   }
 
-  const isNavItemActive = (path: string, end?: boolean, match?: "exact" | "prefix") => {
-    const normalizedPath = path.replace(/\/+$/, "") || "/";
-
-    if (match === "prefix") {
-      return pathname === normalizedPath || pathname.startsWith(`${normalizedPath}/`);
-    }
-
-    if (end) {
-      return pathname === normalizedPath;
-    }
-
-    return pathname === normalizedPath || pathname.startsWith(`${normalizedPath}/`);
-  };
+  useEffect(() => {
+    listSubscriptionPlans().then(plans => {
+      const nextPlan = plans.find(p => p.monthlyPrice > 0);
+      if (nextPlan) setDynamicNextPlan(nextPlan.planName);
+    }).catch(() => {});
+  }, []);
 
   const refreshRoadmapWorkspaces = async () => {
     setRoadmapLoading(true);
@@ -391,210 +402,17 @@ export default function DashboardLayout() {
         .ss-referral:hover{background:rgba(251,191,36,0.18)}
       `}</style>
 
-      {/* Mobile overlay */}
-      <AnimatePresence>
-        {sideOpen && (
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
-            onClick={()=>setSideOpen(false)}
-            className="md:hidden"
-            style={{position:"fixed",inset:0,zIndex:40,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)"}}/>
-        )}
-      </AnimatePresence>
- 
-      <aside
-        className={`fixed top-0 left-0 z-50 h-full flex flex-col
-          md:relative md:translate-x-0 transition-transform duration-300
-          ${sideOpen?"translate-x-0":"-translate-x-full"} hidden md:flex`}
-        style={{
-          width:"228px", flexShrink:0,
-          background:"linear-gradient(180deg, #FFFDFB 0%, #FAF7F2 100%)",
-          borderRight:"1px solid rgba(255,107,0,0.08)",
-          boxShadow:"4px 0 24px rgba(255,107,0,0.02), 1px 0 5px rgba(0,0,0,0.01)",
-        }}
-      >
-        {/* Logo */}
-        <div style={{
-          display:"flex", alignItems:"center", justifyContent:"space-between",
-          padding:"16px",
-          borderBottom:"1px solid rgba(255,107,0,0.08)",
-        }}>
-          <div style={{display:"flex",alignItems:"center",gap:"24px"}}>
-            <BrandLogo size={65} align="left" />
-          </div>
-          <button className="md:hidden" onClick={()=>setSideOpen(false)}
-            style={{background:"none",border:"none",cursor:"pointer",color:STXT}}>
-            <X size={16}/>
-          </button>
-        </div>
-
-        {/* Navigation groups */}
-        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-          {APP_NAV_SECTIONS.map((section, idx) => (
-            <div key={section.label} className="space-y-1">
-              {idx > 0 && <div className="my-2 border-t border-orange-100/40" />}
-              {section.items
-                .filter(item => !(section.label === "Học tập & AI" && item.path === "/app/roadmap"))
-                .map(item => {
-                  const isActive = isNavItemActive(item.path, item.end, item.match);
-
-                  return (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      end={item.end}
-                      onClick={() => setSideOpen(false)}
-                      className={() => [
-                        "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition-all duration-200",
-                        "border-l-4 border-transparent",
-                        isActive
-                          ? "border-l-[#FF6B00] bg-gradient-to-r from-orange-500/8 to-amber-500/4 text-[#FF6B00] font-bold shadow-[0_4px_12px_rgba(255,107,0,0.03)]"
-                          : "text-slate-500 hover:bg-orange-500/4 hover:text-slate-800",
-                      ].join(" ")}
-                    >
-                      <>
-                        <item.icon
-                          size={18}
-                          strokeWidth={isActive ? 2.5 : 2}
-                          className={[
-                            "shrink-0 transition-transform duration-200 group-hover:scale-105",
-                            isActive ? "text-[#FF6B00]" : "text-slate-400 group-hover:text-slate-600",
-                          ].join(" ")}
-                        />
-                        <span className="flex-1 font-medium">{item.label}</span>
-                        {item.badge && (
-                          <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
-                            <span className="absolute inline-flex h-full w-full rounded-full bg-orange-500/35 animate-ping" />
-                            <span className="relative h-2 w-2 rounded-full bg-orange-500" />
-                          </span>
-                        )}
-                      </>
-                    </NavLink>
-                  );
-                })}
-
-              {section.label === "Học tập & AI" && (
-                <div className="mt-1 pl-4 border-l border-orange-100/80 ml-3 space-y-1 py-1">
-                  <button
-                    type="button"
-                    onClick={() => setRoadmapMenuOpen((value) => !value)}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold text-slate-500 hover:bg-orange-500/4 hover:text-[#FF6B00] transition"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Sparkles size={14} className="text-[#FF6B00]" />
-                      Lộ trình AI theo workspace
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="rounded-full bg-orange-500/10 px-1.5 py-0.2 text-[9px] font-bold text-[#FF6B00]">
-                        {roadmapLoading ? "..." : roadmapWorkspaces.length}
-                      </span>
-                      <ChevronRight
-                        size={12}
-                        className={`text-slate-400 transition-transform ${roadmapMenuOpen ? "rotate-90" : ""}`}
-                      />
-                    </span>
-                  </button>
-
-                  <AnimatePresence initial={false}>
-                    {roadmapMenuOpen ? (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="space-y-1 py-1">
-                          {roadmapLoading ? (
-                            Array.from({ length: 2 }).map((_, index) => (
-                              <div key={index} className="h-7 w-full animate-pulse rounded-md bg-slate-100/60" />
-                            ))
-                          ) : roadmapWorkspaces.length > 0 ? (
-                            roadmapWorkspaces.map((workspace) => {
-                              const roadmapPath = `/app/workspaces/${workspace.id}/roadmap`;
-                              const isActive = pathname === roadmapPath || pathname.startsWith(`${roadmapPath}/`);
-
-                              return (
-                                <NavLink
-                                  key={workspace.id}
-                                  to={roadmapPath}
-                                  onClick={() => setSideOpen(false)}
-                                  className={() => [
-                                    "group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] transition-colors duration-200",
-                                    isActive
-                                      ? "bg-orange-500/8 text-[#FF6B00] font-bold"
-                                      : "text-slate-400 hover:bg-orange-500/4 hover:text-slate-700",
-                                  ].join(" ")}
-                                >
-                                  <div className="min-w-0 flex-1">
-                                    <div className="truncate font-medium">{workspace.name}</div>
-                                    <div className="mt-0.5 flex items-center gap-1 text-[9px] text-green-600/80">
-                                      <span className="h-1 w-1 rounded-full bg-green-500" />
-                                      <span className="uppercase tracking-wider">{workspace.statusLabel || "READY"}</span>
-                                    </div>
-                                  </div>
-                                  <ChevronRight size={12} className="shrink-0 opacity-50 transition-transform group-hover:translate-x-0.5" />
-                                </NavLink>
-                              );
-                            })
-                          ) : (
-                            <div className="rounded-lg border border-dashed border-orange-100/40 bg-orange-50/10 px-2.5 py-2 text-[10px] leading-relaxed text-slate-400">
-                              Chưa có workspace nào có roadmap đã xác nhận.
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
-
-        {/* Bottom */}
-        <div className="px-3 pb-4 pt-2">
-          <div className="ss-upgrade mb-2" onClick={()=>setPricingOpen(true)}
-            style={{
-              padding:"12px",borderRadius:"10px",cursor:"pointer",
-              background:"rgba(255,107,0,0.08)",
-              border:"1px solid rgba(255,107,0,0.18)",
-              transition:"all 0.15s ease",
-            }}
-            onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.background="rgba(255,107,0,0.14)";}}
-            onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.background="rgba(255,107,0,0.08)";}}
-          >
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2px"}}>
-              <span style={{fontSize:"8.5px",fontWeight:700,color:OG,letterSpacing:"0.08em",textTransform:"uppercase"}}>
-                GÓI {planName ? planName.toUpperCase() : "STARTER"}
-              </span>
-              <Crown size={12} color="#F59E0B"/>
-            </div>
-            <p style={{fontWeight:700,fontSize:"0.8rem",color:"#0F172A",marginBottom:"1px"}}>
-              {planMeta?.upgradeLabel || "Nâng cấp lên Pro"}
-            </p>
-            <p style={{color:"#64748B",fontSize:"0.7rem"}}>
-              {planMeta?.upgradeSubtext || "Mở khóa tính năng AI và nhiều hơn"}
-            </p>
-          </div>
-
-
-
-          <div className="border-t border-slate-100 pt-3">
-            <Link to="/app/profile" className="block rounded-xl transition hover:bg-slate-100" style={{ textDecoration: "none" }}>
-              <div className="flex items-center gap-3 px-3 py-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-sm font-bold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)] overflow-hidden">
-                  {profile.avatarUrl
-                    ? <img src={profile.avatarUrl} alt={profile.fullName} className="w-full h-full object-cover" />
-                    : profile.avatarLetter}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-800">{profile.fullName}</p>
-                  <p className="text-xs text-slate-500">{profile.roleLabel}</p>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
-      </aside>
+      <Sidebar
+        sideOpen={sideOpen}
+        setSideOpen={setSideOpen}
+        setPricingOpen={setPricingOpen}
+        navWorkspaces={roadmapWorkspaces}
+        planId={planId}
+        planName={planName}
+        dynamicNextPlan={dynamicNextPlan}
+        planMeta={planMeta}
+        profile={profile}
+      />
 
       {/* ════════════════ MAIN AREA ════════════════ */}
       <main style={{flex:1,display:"flex",flexDirection:"column",height:"100%",overflow:"hidden",minWidth:0}}>
@@ -618,6 +436,9 @@ export default function DashboardLayout() {
             </nav>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+            {/* ── Live XP indicator — click jumps to the leaderboard ── */}
+            <PointsPill />
+
             {/* ── Subscription plan pill — pinned top-right; click opens pricing ── */}
             <PlanBadge tier={planTier} label={planName} onClick={() => setPricingOpen(true)} />
 
@@ -705,6 +526,8 @@ export default function DashboardLayout() {
                           meta.iconType === "alert"    ? <AlertTriangle  size={15} color={meta.iconColor}/> :
                           meta.iconType === "calendar" ? <CalendarClock  size={15} color={meta.iconColor}/> :
                           meta.iconType === "sparkles" ? <Sparkles        size={15} color={meta.iconColor}/> :
+                          meta.iconType === "shield"   ? <Shield          size={15} color={meta.iconColor}/> :
+                          meta.iconType === "info"     ? <Info            size={15} color={meta.iconColor}/> :
                                                          <Bell            size={15} color={meta.iconColor}/>;
                         return (
                           <div
@@ -730,15 +553,22 @@ export default function DashboardLayout() {
                             </div>
                             <div style={{ flex:1, minWidth:0 }}>
                               <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
-                                <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:meta.labelColor }}>
+                                <span style={{ fontFamily:F, fontSize:"0.60rem", fontWeight:700, color:meta.labelColor, textTransform:"uppercase" }}>
                                   {meta.label}
                                 </span>
-                                <span style={{ fontFamily:F, fontSize:"0.60rem", color:T3 }}>{relTime}</span>
+                                <span style={{ fontFamily:F, fontSize:"0.60rem", color:T3 }}>• {relTime}</span>
                                 {!notif.read && (
                                   <span style={{ marginLeft:"auto", width:6, height:6, borderRadius:"50%", background:OG, display:"inline-block", flexShrink:0 }}/>
                                 )}
                               </div>
+                              {notif.type === "SYSTEM_INFO" && (
+                                <div style={{ fontFamily:F, fontSize:"0.65rem", fontWeight: 600, color: "#2563EB", marginBottom: 2 }}>Thông tin</div>
+                              )}
+                              {notif.type === "SYSTEM_WARNING" && (
+                                <div style={{ fontFamily:F, fontSize:"0.65rem", fontWeight: 600, color: "#DC2626", marginBottom: 2 }}>Cảnh báo</div>
+                              )}
                               <p style={{ fontFamily:F, fontSize:"0.75rem", color: notif.read ? T2 : T1, lineHeight:1.5, wordBreak:"break-word" }}>
+                                {(notif as any).title ? <strong style={{display:"block", marginBottom:2}}>{(notif as any).title}</strong> : null}
                                 {notif.message}
                               </p>
                             </div>

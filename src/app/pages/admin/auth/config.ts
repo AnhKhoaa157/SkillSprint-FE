@@ -28,11 +28,12 @@ export const SLIDE = {
 
 // ─── Shared input class ──────────────────────────────────────────────────────
 export const fieldCls =
-  "w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg " +
-  "focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition-all";
+  "w-full bg-slate-50/50 border border-slate-200 text-slate-900 text-sm rounded-xl " +
+  "focus:bg-white focus:outline-none focus:border-orange-500 focus:ring-[3px] focus:ring-orange-500/20 transition-all placeholder:text-slate-400";
 
 // ─── Shared button class ─────────────────────────────────────────────────────
 export const primaryBtnCls =
-  "w-full py-3 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 active:scale-[0.98] " +
-  "disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-sm " +
-  "transition-all duration-150 shadow-sm shadow-orange-200 inline-flex items-center justify-center gap-2";
+  "w-full py-3.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-500 hover:to-orange-500 " +
+  "active:scale-[0.98] hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed text-white font-extrabold rounded-xl text-sm " +
+  "transition-all duration-300 shadow-lg shadow-orange-500/30 " +
+  "ring-1 ring-orange-500/50 inline-flex items-center justify-center gap-2";

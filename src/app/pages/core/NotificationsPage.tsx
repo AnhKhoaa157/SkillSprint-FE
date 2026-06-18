@@ -11,7 +11,10 @@ import {
   Sparkles,
   ArrowRight,
   LoaderCircle,
-  Inbox
+  Inbox,
+  MessageSquare,
+  Info,
+  Shield
 } from "lucide-react";
 import { useNotificationSocket } from "../../hooks/useNotificationSocket";
 
@@ -49,6 +52,10 @@ export default function NotificationsPage() {
     }
 
     // Interactive routing based on type
+    if (notif.type === "FEEDBACK_REPLIED") {
+      navigate("/app/profile?tab=feedback");
+      return;
+    }
     if (notif.workspaceId) {
       if (notif.type === "ROADMAP_READY") {
         navigate(`/app/workspaces/${notif.workspaceId}/roadmap`);
@@ -97,6 +104,26 @@ export default function NotificationsPage() {
           bg: "bg-blue-50 text-blue-600 border-blue-100",
           icon: <Sparkles size={18} className="stroke-[2.2]" />,
           label: "Lịch học AI"
+        };
+      case "FEEDBACK_REPLIED":
+        return {
+          bg: "bg-violet-50 text-violet-600 border-violet-100",
+          icon: <MessageSquare size={18} className="stroke-[2.2]" />,
+          label: "Phản hồi"
+        };
+      case "SYSTEM_INFO":
+        return {
+          bg: "bg-orange-50 text-orange-600 border-orange-100",
+          icon: <Shield size={18} className="stroke-[2.2]" />,
+          label: "Hệ thống",
+          labelColor: "text-orange-600"
+        };
+      case "SYSTEM_WARNING":
+        return {
+          bg: "bg-orange-50 text-orange-600 border-orange-100",
+          icon: <Shield size={18} className="stroke-[2.2]" />,
+          label: "Hệ thống",
+          labelColor: "text-orange-600"
         };
       default:
         return {
@@ -224,7 +251,7 @@ export default function NotificationsPage() {
                     exit={{ opacity: 0 }}
                     className={`flex items-start gap-4 p-5 transition-all relative ${
                       !notif.read
-                        ? "bg-orange-50/20 hover:bg-orange-50/20 bg-[#FFF7ED]/40"
+                        ? "bg-[#FFF7ED] hover:bg-[#FFF7ED]/80"
                         : "hover:bg-slate-50/50"
                     }`}
                   >
@@ -241,7 +268,7 @@ export default function NotificationsPage() {
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                        <span className={`text-xs font-extrabold uppercase tracking-wider ${visuals.labelColor || 'text-slate-400'}`}>
                           {visuals.label}
                         </span>
                         <span className="text-slate-300 text-xs">•</span>
@@ -249,6 +276,12 @@ export default function NotificationsPage() {
                           {formatDate(notif.createdAt)}
                         </span>
                       </div>
+                      {notif.type === "SYSTEM_INFO" && (
+                        <div className="text-[11px] font-bold text-blue-600 mb-1">Thông tin</div>
+                      )}
+                      {notif.type === "SYSTEM_WARNING" && (
+                        <div className="text-[11px] font-bold text-red-600 mb-1">Cảnh báo</div>
+                      )}
                       <h4 className={`text-sm font-extrabold leading-snug tracking-tight text-slate-800 ${!notif.read ? 'text-slate-900' : ''}`}>
                         {notif.title}
                       </h4>
@@ -269,7 +302,7 @@ export default function NotificationsPage() {
                         </button>
                       )}
                       
-                      {notif.workspaceId ? (
+                      {notif.workspaceId && !notif.type.startsWith("SYSTEM_") ? (
                         <button
                           onClick={() => handleNotificationClick(notif)}
                           className="p-2 rounded-lg border border-slate-250 bg-white hover:border-[#FF7E21] hover:bg-orange-50/20 hover:text-[#E05E00] text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold"
@@ -282,6 +315,13 @@ export default function NotificationsPage() {
                           className="p-2 rounded-lg border border-slate-250 bg-white hover:border-[#FF7E21] hover:bg-orange-50/20 hover:text-[#E05E00] text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold"
                         >
                           Lịch học <ArrowRight size={13} />
+                        </button>
+                      ) : (notif.type === "FEEDBACK_REPLIED") ? (
+                        <button
+                          onClick={() => handleNotificationClick(notif)}
+                          className="p-2 rounded-lg border border-slate-250 bg-white hover:border-violet-400 hover:bg-violet-50/40 hover:text-violet-700 text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+                        >
+                          Xem phản hồi <ArrowRight size={13} />
                         </button>
                       ) : null}
                     </div>

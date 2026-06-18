@@ -71,7 +71,12 @@ export default function WorkspaceCard({
         if (progressResult.status === "fulfilled") {
           const dashboard = progressResult.value;
           setTaskCount(dashboard?.totalTasks ?? null);
-          setProgressPercent(dashboard?.progressPercent ?? null);
+          if (dashboard) {
+            const rp = dashboard.progressPercent;
+            setProgressPercent((typeof rp === 'number' && !isNaN(rp)) ? rp : 0);
+          } else {
+            setProgressPercent(null);
+          }
         } else {
           setTaskCount(null);
           setProgressPercent(null);

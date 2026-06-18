@@ -4,18 +4,21 @@ import {
   User, Award, Crown, Bell, Shield, Zap, LogOut,
   ChevronDown, AlertTriangle, Check, Trash2, CalendarClock, Loader2, MailCheck, BadgeCheck,
   Copy, Eye, EyeOff, HardDrive, Layers, Upload,
-  Gem, Sparkles, RefreshCw, AlertCircle, ArrowUp, ArrowDown, X,
+  Gem, Sparkles, RefreshCw, AlertCircle, ArrowUp, ArrowDown, X, MessageSquare,
+  CheckCircle2, Brain, FileText, Clock, ArrowRight, LoaderCircle, Inbox, Info,
 } from "lucide-react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { clearAuthTokens, getStoredUserProfile, type StoredUserProfile } from "../../../api/authService";
 import meService, { type MeResponse } from "../../../api/meService";
+import { getMyFeedbacks, FeedbackStatus, FeedbackType, type FeedbackResponse } from "../../../api/feedbackService";
 import { getCurrentSubscription, getQuotaStatus, cancelSubscription } from "../../../api/subscriptionsService";
 import { listSubscriptionPlans, formatPlanPrice, isFeatureEnabled, resolvePlanFeatures, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/adminSubscriptionPlansService";
 import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
 import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse, CurrentSubscriptionResponse, QuotaStatusResponse, ServicePlanType } from "../../../api/skillSprintModels";
 import { PlanTypeBadge, PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
 import { normalizePlanType } from "../../../utils/adminStatusHelpers";
+import { useNotificationSocket } from "../../hooks/useNotificationSocket";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -35,6 +38,7 @@ const TABS = [
   { id:"achievements",  label:"Thành tựu",            icon:Award,  danger:false },
   { id:"subscription",  label:"Quản lý gói",          icon:Crown,  danger:false },
   { id:"notifications", label:"Thông báo",            icon:Bell,   danger:false },
+  { id:"feedback",      label:"Lịch sử phản hồi",     icon:MessageSquare, danger:false },
   { id:"privacy",       label:"Bảo mật",              icon:Shield, danger:false },
   { id:"integrations",  label:"Tiện ích tích hợp",    icon:Zap,    danger:false },
 ];
@@ -1238,11 +1242,385 @@ function DevPlaceholderTab({ label, icon, description }: { label: string; icon: 
 }
 
 /* ═══════════════════════════════════════════════
+   FEEDBACK HISTORY TAB (Learner)
+═══════════════════════════════════════════════ */
+const FB_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  [FeedbackStatus.OPEN]:        { label: "Chờ xử lý",  cls: "bg-amber-50 text-amber-700 border-amber-200" },
+  [FeedbackStatus.IN_PROGRESS]: { label: "Đang xử lý", cls: "bg-blue-50 text-blue-700 border-blue-200" },
+  [FeedbackStatus.CLOSED]:      { label: "Đã đóng",    cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+};
+
+const FB_TYPE_LABEL: Record<string, string> = {
+  [FeedbackType.BUG]:         "Lỗi",
+  [FeedbackType.IMPROVEMENT]: "Cải tiến",
+  [FeedbackType.QUESTION]:    "Câu hỏi",
+  [FeedbackType.OTHER]:       "Khác",
+};
+
+function formatFbDate(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" });
+}
+
+/* ═══════════════════════════════════════════════
+   NOTIFICATIONS TAB
+═══════════════════════════════════════════════ */
+function NotificationsTab() {
+  const navigate = useNavigate();
+  const { notifications, unreadCount, markAsRead } = useNotificationSocket();
+  const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [isClearingAll, setIsClearingAll] = useState(false);
+
+  const filteredNotifications = notifications.filter((notif) => {
+    if (filter === "unread") return !notif.read;
+    return true;
+  });
+
+  const handleMarkAllRead = async () => {
+    const unreadOnes = notifications.filter((n) => !n.read);
+    if (unreadOnes.length === 0) return;
+    setIsClearingAll(true);
+    try {
+      for (const notif of unreadOnes) {
+        await markAsRead(notif.notificationId);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsClearingAll(false);
+    }
+  };
+
+  const handleNotificationClick = async (notif: typeof notifications[0]) => {
+    if (!notif.read) {
+      await markAsRead(notif.notificationId);
+    }
+    if (notif.type === "FEEDBACK_REPLIED") {
+      navigate("/app/profile?tab=feedback");
+      return;
+    }
+    if (notif.workspaceId) {
+      if (notif.type === "ROADMAP_READY") {
+        navigate(`/app/workspaces/${notif.workspaceId}/roadmap`);
+      } else {
+        navigate(`/app/workspaces/${notif.workspaceId}`);
+      }
+    } else if (notif.type === "TASK_REMINDER" || notif.type === "TASK_OVERDUE") {
+      navigate("/app/calendar");
+    }
+  };
+
+  function getNotifVisuals(type: string) {
+    switch (type) {
+      case "MATERIAL_ANALYSIS_DONE":
+        return { bg: "bg-emerald-50 text-emerald-600 border-emerald-100", icon: <FileText size={18} className="stroke-[2.2]" />, label: "Tài liệu học tập" };
+      case "MATERIAL_PROCESSING_FAILED":
+        return { bg: "bg-rose-50 text-rose-600 border-rose-100", icon: <AlertTriangle size={18} className="stroke-[2.2]" />, label: "Xử lý lỗi" };
+      case "ROADMAP_READY":
+        return { bg: "bg-indigo-50 text-indigo-650 border-indigo-100", icon: <Brain size={18} className="stroke-[2.5]" />, label: "Lộ trình AI" };
+      case "TASK_REMINDER":
+        return { bg: "bg-amber-50 text-amber-600 border-amber-100", icon: <Clock size={18} className="stroke-[2.2]" />, label: "Nhắc nhở học tập" };
+      case "TASK_OVERDUE":
+        return { bg: "bg-red-50 text-red-650 border-red-100", icon: <AlertTriangle size={18} className="stroke-[2.2]" />, label: "Quá hạn bài tập" };
+      case "AI_SCHEDULE_READY":
+        return { bg: "bg-blue-50 text-blue-600 border-blue-100", icon: <Sparkles size={18} className="stroke-[2.2]" />, label: "Lịch học AI" };
+      case "FEEDBACK_REPLIED":
+        return { bg: "bg-violet-50 text-violet-600 border-violet-100", icon: <MessageSquare size={18} className="stroke-[2.2]" />, label: "Phản hồi" };
+      case "SYSTEM_INFO":
+        return { bg: "bg-orange-50 text-orange-600 border-orange-100", icon: <Shield size={18} className="stroke-[2.2]" />, label: "Hệ thống", labelColor: "text-orange-600" };
+      case "SYSTEM_WARNING":
+        return { bg: "bg-orange-50 text-orange-600 border-orange-100", icon: <Shield size={18} className="stroke-[2.2]" />, label: "Hệ thống", labelColor: "text-orange-600" };
+      default:
+        return { bg: "bg-slate-50 text-slate-600 border-slate-100", icon: <Bell size={18} className="stroke-[2.2]" />, label: "Thông báo" };
+    }
+  }
+
+  function formatDate(isoString: string) {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "Vừa xong";
+    return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(d);
+  }
+
+  return (
+    <div className="w-full">
+      <SectionHeading title="Trung tâm thông báo" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 mb-6 gap-4">
+        <div className="flex bg-slate-100 p-1 rounded-xl">
+          <button onClick={() => setFilter("all")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${filter === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>Tất cả ({notifications.length})</button>
+          <button onClick={() => setFilter("unread")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${filter === "unread" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>Chưa đọc ({unreadCount})</button>
+        </div>
+        <div className="flex items-center gap-3">
+          {unreadCount > 0 && <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-full border border-orange-100/50">{unreadCount} chưa đọc</span>}
+          {unreadCount > 0 && (
+            <button onClick={handleMarkAllRead} disabled={isClearingAll} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-350 active:scale-[0.98] disabled:opacity-50 cursor-pointer">
+              {isClearingAll ? <LoaderCircle size={14} className="animate-spin text-slate-500" /> : <CheckCircle2 size={14} className="text-emerald-600" />} Đánh dấu tất cả đã đọc
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6">
+        <AnimatePresence mode="popLayout">
+          {filteredNotifications.length === 0 ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="py-12 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 border border-slate-100 mb-4 shadow-sm"><Inbox size={24} className="stroke-[1.8]" /></div>
+              <h3 className="text-base font-extrabold text-slate-800">Không có thông báo nào</h3>
+              <p className="mt-1.5 text-xs text-slate-500 max-w-sm mx-auto">{filter === "unread" ? "Bạn đã đọc hết toàn bộ các thông báo. Tuyệt vời!" : "Chưa có thông báo hoặc lời nhắc nhở nào từ hệ thống."}</p>
+            </motion.div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {filteredNotifications.map((notif) => {
+                const visuals = getNotifVisuals(notif.type);
+                return (
+                  <motion.div key={notif.notificationId} layoutId={notif.notificationId} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`flex items-start gap-4 p-5 transition-all relative ${!notif.read ? "bg-[#FFF7ED] hover:bg-[#FFF7ED]/80" : "hover:bg-slate-50/50"}`}>
+                    {!notif.read && <div className="absolute top-0 left-0 w-1 h-full bg-[#FF7E21]" />}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${visuals.bg}`}>{visuals.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-xs font-extrabold uppercase tracking-wider ${visuals.labelColor || 'text-slate-400'}`}>{visuals.label}</span>
+                        <span className="text-slate-300 text-xs">•</span>
+                        <span className="text-[11px] text-slate-400 font-semibold">{formatDate(notif.createdAt)}</span>
+                      </div>
+                      {notif.type === "SYSTEM_INFO" && <div className="text-[11px] font-bold text-blue-600 mb-1">Thông tin</div>}
+                      {notif.type === "SYSTEM_WARNING" && <div className="text-[11px] font-bold text-red-600 mb-1">Cảnh báo</div>}
+                      <h4 className={`text-sm font-extrabold leading-snug tracking-tight text-slate-800 ${!notif.read ? 'text-slate-900' : ''}`}>{notif.title}</h4>
+                      <p className="mt-1.5 text-xs leading-relaxed text-slate-500 font-medium">{notif.message}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {!notif.read && <button onClick={() => markAsRead(notif.notificationId)} className="p-2 rounded-lg border border-slate-200 bg-white hover:border-[#FF7E21] hover:text-[#FF7E21] text-slate-500 transition-colors shadow-sm cursor-pointer" title="Đánh dấu đã đọc"><CheckCircle2 size={14} /></button>}
+                      {notif.workspaceId && !notif.type.startsWith("SYSTEM_") ? (
+                        <button onClick={() => handleNotificationClick(notif)} className="p-2 rounded-lg border border-slate-250 bg-white hover:border-[#FF7E21] hover:bg-orange-50/20 hover:text-[#E05E00] text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold">Truy cập <ArrowRight size={13} /></button>
+                      ) : (notif.type === "TASK_REMINDER" || notif.type === "TASK_OVERDUE") ? (
+                        <button onClick={() => handleNotificationClick(notif)} className="p-2 rounded-lg border border-slate-250 bg-white hover:border-[#FF7E21] hover:bg-orange-50/20 hover:text-[#E05E00] text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold">Lịch học <ArrowRight size={13} /></button>
+                      ) : (notif.type === "FEEDBACK_REPLIED") ? (
+                        <button onClick={() => handleNotificationClick(notif)} className="p-2 rounded-lg border border-slate-250 bg-white hover:border-violet-400 hover:bg-violet-50/40 hover:text-violet-700 text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold">Xem phản hồi <ArrowRight size={13} /></button>
+                      ) : null}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+function FeedbackHistoryTab() {
+  const [items, setItems]           = useState<FeedbackResponse[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState<string | null>(null);
+  const [page, setPage]             = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [selected, setSelected]     = useState<FeedbackResponse | null>(null);
+  const SIZE = 10;
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError(null);
+    getMyFeedbacks(page, SIZE)
+      .then(res => {
+        if (!mounted) return;
+        setItems(res.content ?? res.items ?? []);
+        setTotalPages(res.totalPages ?? 0);
+        setTotalItems(res.totalElements ?? res.totalItems ?? 0);
+      })
+      .catch((err: unknown) => {
+        if (!mounted) return;
+        setError(err instanceof Error ? err.message : "Không thể tải lịch sử phản hồi");
+      })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, [page]);
+
+  const statusBadge = (status: string) => FB_STATUS_BADGE[status] ?? FB_STATUS_BADGE[FeedbackStatus.OPEN];
+
+  return (
+    <div>
+      <SectionHeading title="Lịch sử phản hồi" />
+
+      {loading ? (
+        <div className="divide-y divide-slate-100" aria-busy="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 py-3.5 animate-pulse">
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-2/3 rounded-full bg-slate-200/80" />
+                <div className="h-2.5 w-1/3 rounded-full bg-slate-100" />
+              </div>
+              <div className="h-6 w-20 rounded-full bg-slate-100" />
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="py-12 text-center">
+          <AlertCircle size={26} className="mx-auto mb-3 text-rose-300" />
+          <p className="text-sm text-slate-500 mb-3">{error}</p>
+          <button
+            type="button"
+            onClick={() => setPage(p => p)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
+          >
+            <RefreshCw size={13} /> Thử lại
+          </button>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="py-14 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 text-slate-300">
+            <MessageSquare size={24} />
+          </div>
+          <h3 className="text-base font-extrabold text-slate-800">Chưa có phản hồi nào</h3>
+          <p className="mx-auto mt-1.5 max-w-sm text-xs text-slate-500">
+            Các phản hồi bạn gửi cho đội ngũ SkillSprint sẽ xuất hiện ở đây cùng với câu trả lời từ quản trị viên.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="divide-y divide-slate-100 rounded-2xl border border-slate-100 overflow-hidden">
+            {items.map(fb => {
+              const badge = statusBadge(fb.status);
+              return (
+                <button
+                  key={fb.feedbackId}
+                  type="button"
+                  onClick={() => setSelected(fb)}
+                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50/70"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-100/60 bg-orange-50 text-[#FF6B00]">
+                    <MessageSquare size={16} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-bold text-slate-800">{fb.title || "(Không có tiêu đề)"}</p>
+                      {fb.adminReply && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-600 ring-1 ring-violet-100">
+                          <MessageSquare size={9} /> Đã trả lời
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-[11px] font-semibold text-slate-400">
+                      {FB_TYPE_LABEL[fb.type] ?? "Khác"} · {formatFbDate(fb.createdAt)}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${badge.cls}`}>
+                    {badge.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400">Trang {page + 1} · {totalItems} phản hồi</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ← Trước
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage(p => p + 1)}
+                disabled={page + 1 >= totalPages}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Tiếp →
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Detail modal */}
+      <AnimatePresence>
+        {selected && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
+            onClick={() => setSelected(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 8 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 8 }}
+              transition={{ duration: 0.16 }}
+              className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
+              {/* Modal header */}
+              <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
+                <div className="min-w-0">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
+                      {FB_TYPE_LABEL[selected.type] ?? "Khác"}
+                    </span>
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusBadge(selected.status).cls}`}>
+                      {statusBadge(selected.status).label}
+                    </span>
+                  </div>
+                  <h3 className="truncate text-base font-extrabold text-slate-900">{selected.title || "(Không có tiêu đề)"}</h3>
+                  <p className="mt-0.5 text-[11px] font-semibold text-slate-400">Gửi lúc {formatFbDate(selected.createdAt)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal body */}
+              <div className="space-y-4 p-5">
+                <div>
+                  <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Nội dung</p>
+                  <p className="whitespace-pre-wrap rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3 text-sm leading-relaxed text-slate-700">
+                    {selected.content || "—"}
+                  </p>
+                </div>
+
+                {selected.adminReply ? (
+                  <div className="rounded-xl border border-[#FFEDD5] bg-[#FFF7ED] px-3.5 py-3">
+                    <div className="mb-1 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#C2410C]">
+                      <MessageSquare size={12} /> Admin phản hồi
+                      {selected.repliedAt && <span className="font-semibold normal-case tracking-normal text-[#EA580C]">· {formatFbDate(selected.repliedAt)}</span>}
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{selected.adminReply}</p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3 text-center text-xs font-semibold text-slate-400">
+                    Quản trị viên chưa phản hồi phản hồi này.
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    PROFILE PAGE
 ═══════════════════════════════════════════════ */
 export default function Profile() {
   const navigate  = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("account");
+
+  // Deep-link support (e.g. the FEEDBACK_REPLIED notification routes to ?tab=feedback)
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && TABS.some(t => t.id === tab)) setActiveTab(tab);
+  }, [searchParams]);
   const [profile, setProfile] = useState<UserProfileViewModel>(() => {
     const storedProfile = getStoredUserProfile();
     return storedProfile ? mapStoredProfile(storedProfile) : emptyProfile();
@@ -1467,7 +1845,8 @@ export default function Profile() {
                 getCurrentSubscription().then(sub => setSubData(sub)).catch(() => {});
               }}/>}
               {activeTab === "achievements"  && <DevPlaceholderTab label="Thành tựu" icon="🏆" description="Hệ thống huy hiệu và thành tựu học tập đang được xây dựng. Sẽ ra mắt trong phiên bản tới."/>}
-              {activeTab === "notifications" && <DevPlaceholderTab label="Cài đặt thông báo" icon="🔔" description="Tính năng tùy chỉnh thông báo đang phát triển. API backend chưa sẵn sàng."/>}
+              {activeTab === "notifications" && <NotificationsTab />}
+              {activeTab === "feedback"      && <FeedbackHistoryTab />}
               {activeTab === "privacy"       && <DevPlaceholderTab label="Bảo mật & Quyền riêng tư" icon="🔒" description="Tính năng bảo mật nâng cao (2FA, nhật ký đăng nhập) đang được tích hợp."/>}
               {activeTab === "integrations"  && <DevPlaceholderTab label="Tiện ích tích hợp" icon="⚡" description="Tích hợp lịch, ứng dụng bên thứ ba sẽ được bổ sung sau khi backend hoàn thiện."/>}
             </motion.div>

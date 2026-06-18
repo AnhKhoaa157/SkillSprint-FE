@@ -8,6 +8,8 @@ import {
   Users,
   TrendingUp,
   MessageSquare,
+  Zap,
+  BarChart3,
 } from "lucide-react";
 
 export type NavIcon = typeof LayoutDashboard;
@@ -17,8 +19,9 @@ export type AppNavItem = {
   label: string;
   icon: NavIcon;
   end?: boolean;
-  badge?: boolean;
+  badge?: boolean | string;
   match?: "exact" | "prefix";
+  dynamicChildren?: "workspaces";
 };
 
 export type AppNavSection = {
@@ -35,8 +38,9 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
     label: "Học tập & AI",
     items: [
-      { path: "/app/roadmap", label: "Lộ trình AI", icon: Sparkles },
       { path: "/app/workspaces", label: "Workspaces", icon: Map, badge: true, match: "prefix" },
+      { path: "/app/roadmap", label: "Roadmap", icon: Zap, dynamicChildren: "workspaces" },
+      { path: "/app/progress", label: "Tiến độ", icon: BarChart3 },
     ],
   },
   {

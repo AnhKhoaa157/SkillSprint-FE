@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, LoaderCircle, RefreshCw, Sparkles, Check, PlayCircle, CalendarClock, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, LoaderCircle, RefreshCw, Sparkles, Check, PlayCircle, CalendarClock, X, BookOpen, Clock3, Search, CalendarPlus, Layers3 } from "lucide-react";
 import AIScheduleModal from "../../components/modals/AIScheduleModal";
 import useOnboardingProfile from "../../hooks/useOnboardingProfile";
 import workspaceService, { type WorkspaceResponse } from "../../../api/workspaceService";
 import calendarService, { type CalendarTaskResponse, type GenerateCalendarRequest, type WeekDay } from "../../../api/calendarService";
 import { useRoadmap } from "../../hooks/useRoadmap";
 import { useNavigate } from "react-router";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "../../components/ui/dialog";
+import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 
 type CalendarTaskMap = Record<string, CalendarTaskResponse[]>;
 
@@ -384,16 +387,29 @@ export default function StudyCalendar() {
         </div>
 
         <div className="relative flex flex-wrap items-center gap-3">
-          <select
+          <Select
             value={selectedWorkspaceId}
-            onChange={e => setSelectedWorkspaceId(e.target.value)}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[#FF7E21]/60 focus:ring-4 focus:ring-[#FF7E21]/5 min-w-[220px] shadow-sm cursor-pointer"
+            onValueChange={value => setSelectedWorkspaceId(value)}
           >
-            {workspaces.length === 0 && <option value="">Chưa có workspace</option>}
-            {workspaces.map(workspace => (
-              <option key={workspace.workspaceId} value={workspace.workspaceId}>{workspace.name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="rounded-2xl border-slate-200 bg-white px-4 h-[46px] text-sm font-bold text-slate-700 outline-none transition hover:bg-slate-50 focus:border-[#FF7E21]/60 focus:ring-4 focus:ring-[#FF7E21]/15 min-w-[220px] shadow-sm cursor-pointer data-[state=open]:border-[#FF7E21]/60 data-[state=open]:ring-4 data-[state=open]:ring-[#FF7E21]/15">
+              <SelectValue placeholder="Chọn workspace..." />
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl border border-slate-100 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.08)] py-1.5 px-1 min-w-[220px]">
+              {workspaces.length === 0 ? (
+                <div className="py-3 text-center text-sm font-medium text-slate-400 italic">Chưa có workspace</div>
+              ) : (
+                workspaces.map(workspace => (
+                  <SelectItem 
+                    key={workspace.workspaceId} 
+                    value={workspace.workspaceId}
+                    className="rounded-xl py-2.5 px-3 text-sm font-bold text-slate-700 focus:bg-orange-50 focus:text-[#FF7E21] cursor-pointer transition-colors"
+                  >
+                    {workspace.name}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
 
           <button
             type="button"

@@ -28,11 +28,12 @@ import RequireAdminAuth from "./components/auth/RequireAdminAuth";
 import Loading from "./pages/core/Loading";
 import StudyCalendar from "./pages/learning/StudyCalendar";
 import TaskMatrix from "./pages/workspace/TaskMatrix";
-import Leaderboard from "./pages/core/Leaderboard";
+import Leaderboard from "./pages/leaderboard";
 import CoursePlayer from "./pages/learning/CoursePlayer";
 import QuizPage from "./pages/learning/QuizPage";
 import Workspaces from "./pages/workspace/Workspaces";
 import WorkspaceDetail from "./pages/workspace/WorkspaceDetail";
+import ProgressPage from "./pages/workspace/ProgressPage";
 import WorkspacesNew from "./pages/deprecated/WorkspacesNew";
 import NotificationsPage from "./pages/core/NotificationsPage";
 import FeedbackPage from "./pages/core/FeedbackPage";
@@ -76,7 +77,9 @@ export const routeRegistry = {
       new: "workspaces/new",
       detail: "workspaces/:id",
       roadmap: "workspaces/:workspaceId/roadmap",
+      progress: "workspaces/:workspaceId/progress",
     },
+    progress: "progress",
     profile: "profile",
     leaderboard: "leaderboard",
     notifications: "notifications",
@@ -143,6 +146,9 @@ export const router = createBrowserRouter([
           { path: appRoutes.workspaces.new, Component: WorkspacesNew },
           { path: appRoutes.workspaces.detail, Component: WorkspaceDetail },
           { path: appRoutes.workspaces.roadmap, Component: Roadmap },
+          { path: appRoutes.workspaces.progress, Component: ProgressPage },
+          { path: "roadmap", Component: Roadmap },
+          { path: appRoutes.progress, Component: ProgressPage },
           { path: appRoutes.profile, Component: Profile },
           { path: appRoutes.leaderboard, Component: Leaderboard },
           { path: appRoutes.notifications, Component: NotificationsPage },

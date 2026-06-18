@@ -5,8 +5,7 @@ import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
-import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
-import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, Radar, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Zap, LoaderCircle, SlidersHorizontal, Check, Calendar, RefreshCw, type LucideIcon } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Trash2, AlertTriangle, LoaderCircle, SlidersHorizontal, Settings, Check, Calendar, RefreshCw, type LucideIcon } from "lucide-react";
 import EmptyState from "../../components/ui/EmptyState";
 import { getStoredAuthSession } from "../../../api/authService";
 import AiTutorChat from "./AiTutorChat";
@@ -48,7 +47,7 @@ type LearningStructureResponse = {
 
 type ApiResponse<T> = { data?: T; [key: string]: unknown; };
 type StepStatus = 'completed' | 'active' | 'pending';
-type WorkspaceDetailTab = "files" | "roadmap" | "progress" | "config";
+type WorkspaceDetailTab = "files" | "roadmap" | "config";
 
 function buildAuthHeaders(token: string | null, includeJsonContentType = true) {
   const headers: Record<string, string> = includeJsonContentType ? { "Content-Type": "application/json" } : {};
@@ -239,33 +238,54 @@ export default function WorkspaceDetail() {
     processingIntervals.current[materialId] = iv;
   }
 
-  async function cancelFile(file: UploadFile) {
-    if (file.materialId) {
-      const intervalId = processingIntervals.current[file.materialId];
-      if (intervalId) { clearInterval(intervalId); delete processingIntervals.current[file.materialId]; }
-    }
+  // In-flight uploads are aborted immediately; persisted materials require an explicit confirmation
+  // because deleting one wipes its extracted content + generated exercises (single-material constraint).
+  function handleDeleteClick(file: UploadFile) {
     const request = uploadRequests.current[file.id];
     if (request && file.status === 'processing' && file.progress < 100) {
       request.abort();
       delete uploadRequests.current[file.id];
+      if (file.materialId) {
+        const intervalId = processingIntervals.current[file.materialId];
+        if (intervalId) { clearInterval(intervalId); delete processingIntervals.current[file.materialId]; }
+      }
       setFiles(prev => prev.filter(item => item.id !== file.id));
       toast.info('Đã hủy upload file');
       return;
     }
+    setDeleteTarget(file);
+  }
+
+  async function confirmDeleteMaterial() {
+    const file = deleteTarget;
+    if (!file) return;
+
+    if (file.materialId) {
+      const intervalId = processingIntervals.current[file.materialId];
+      if (intervalId) { clearInterval(intervalId); delete processingIntervals.current[file.materialId]; }
+    }
+
     if (file.materialId && id) {
       try {
-        const headers = buildAuthHeaders(token, false);
-        const resp = await fetch(`${API_BASE}/api/workspaces/${id}/materials/${file.materialId}`, { method: 'DELETE', headers });
-        if (!resp.ok) throw new Error(`Delete failed: ${resp.status}`);
+        setDeletingMaterial(true);
+        await materialService.deleteMaterial(id, file.materialId);
         setFiles(prev => prev.filter(item => item.materialId !== file.materialId));
-        toast.success('Đã xóa file khỏi backend');
-        return;
+        // The extracted content + structure no longer reflect any material — reset them.
+        setResults(null);
+        setStructureGenerationRequested(false);
+        stopStructurePolling();
+        toast.success('Đã xóa tài liệu — nội dung và bài tập liên quan đã được gỡ bỏ');
       } catch {
-        toast.error('Không thể xóa file trên backend');
-        return;
+        toast.error('Không thể xóa tài liệu');
+      } finally {
+        setDeletingMaterial(false);
+        setDeleteTarget(null);
       }
+      return;
     }
+
     setFiles(prev => prev.filter(item => item.id !== file.id));
+    setDeleteTarget(null);
     toast.info('Đã ẩn file khỏi danh sách');
   }
 
@@ -290,14 +310,18 @@ export default function WorkspaceDetail() {
   const [structureGenerationRequested, setStructureGenerationRequested] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [workspaceTutorOpen, setWorkspaceTutorOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UploadFile | null>(null);
+  const [deletingMaterial, setDeletingMaterial] = useState(false);
+
+  // Each workspace holds a single main material — block new uploads while one exists.
+  const hasMaterial = files.length > 0;
 
   const generating = isGeneratingStructure || generateLoading;
 
   const workspaceTabs: Array<{ id: WorkspaceDetailTab; label: string; icon: LucideIcon }> = [
     { id: "files", label: "Tài liệu", icon: FileText },
-    { id: "roadmap", label: "Roadmap", icon: Layers3 },
-    { id: "progress", label: "Tiến độ", icon: Radar },
-    { id: "config", label: "Cấu hình", icon: SlidersHorizontal },
+    { id: "roadmap", label: "Lộ trình", icon: Layers3 },
+    { id: "config", label: "Cài đặt", icon: Settings },
   ];
 
   async function reloadWorkspaceMaterials() {
@@ -459,17 +483,27 @@ export default function WorkspaceDetail() {
                 </div>
               </div>
               <div className="p-4 sm:p-6 lg:p-8">
-                <label onDragEnter={() => setDragActive(true)} onDragOver={(e) => { e.preventDefault(); setDragActive(true); }} onDragLeave={() => setDragActive(false)} onDrop={onDrop} className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-8 sm:py-10 cursor-pointer transition-all duration-200 ${dragActive ? 'border-[#FF6B00]/50 bg-[#FFF7ED]/50' : 'border-slate-200 hover:border-[#FF6B00]/30 hover:bg-slate-50/80'}`}>
-                  <input ref={fileRef} type="file" multiple className="hidden" onChange={onFiles} />
-                  <div className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl ${dragActive ? 'bg-[#FF6B00] text-white shadow-lg' : 'bg-slate-100 text-slate-400'}`}><MoveDown className="h-5 w-5 sm:h-6 sm:w-6" /></div>
-                  <div className="text-center px-4">
-                    <div className="text-xs sm:text-sm font-semibold text-slate-700">Kéo &amp; thả tài liệu vào đây</div>
-                    <div className="text-[11px] sm:text-xs text-slate-400 mt-1">hoặc nhấn để chọn file từ máy tính</div>
+                {hasMaterial ? (
+                  <div title="Vui lòng xóa tài liệu hiện tại trước khi tải lên tài liệu mới." className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 py-8 sm:py-10 text-center">
+                    <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"><ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" /></div>
+                    <div className="px-4 max-w-xs">
+                      <div className="text-xs sm:text-sm font-semibold text-slate-700">Mỗi không gian chỉ chứa 1 tài liệu chính</div>
+                      <div className="text-[11px] sm:text-xs text-slate-400 mt-1">Vui lòng xóa tài liệu hiện tại trước khi tải lên tài liệu mới.</div>
+                    </div>
                   </div>
-                  <button type="button" onClick={() => fileRef.current?.click()} className="mt-1 inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-4 sm:px-5 py-2 sm:py-2.5 min-h-[44px] text-xs font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] transition">
-                    <FileUp className="h-4 w-4" /> Chọn file
-                  </button>
-                </label>
+                ) : (
+                  <label onDragEnter={() => setDragActive(true)} onDragOver={(e) => { e.preventDefault(); setDragActive(true); }} onDragLeave={() => setDragActive(false)} onDrop={onDrop} className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-8 sm:py-10 cursor-pointer transition-all duration-200 ${dragActive ? 'border-[#FF6B00]/50 bg-[#FFF7ED]/50' : 'border-slate-200 hover:border-[#FF6B00]/30 hover:bg-slate-50/80'}`}>
+                    <input ref={fileRef} type="file" multiple className="hidden" onChange={onFiles} />
+                    <div className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl ${dragActive ? 'bg-[#FF6B00] text-white shadow-lg' : 'bg-slate-100 text-slate-400'}`}><MoveDown className="h-5 w-5 sm:h-6 sm:w-6" /></div>
+                    <div className="text-center px-4">
+                      <div className="text-xs sm:text-sm font-semibold text-slate-700">Kéo &amp; thả tài liệu vào đây</div>
+                      <div className="text-[11px] sm:text-xs text-slate-400 mt-1">hoặc nhấn để chọn file từ máy tính</div>
+                    </div>
+                    <button type="button" onClick={() => fileRef.current?.click()} className="mt-1 inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-4 sm:px-5 py-2 sm:py-2.5 min-h-[44px] text-xs font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] transition">
+                      <FileUp className="h-4 w-4" /> Chọn file
+                    </button>
+                  </label>
+                )}
               </div>
             </div>
 
@@ -529,7 +563,7 @@ export default function WorkspaceDetail() {
                           {f.jobStatus === 'COMPLETED' || f.status === 'done' ? 'Hoàn thành' : 'Đang xử lý'}
                         </span>
                       </div>
-                      <button type="button" onClick={() => cancelFile(f)} className="shrink-0 opacity-0 group-hover:opacity-100 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition"><Zap className="h-3 w-3" /></button>
+                      <button type="button" onClick={() => handleDeleteClick(f)} title="Xóa tài liệu" aria-label="Xóa tài liệu" className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50 transition"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   ))}
                 </div>
@@ -695,11 +729,6 @@ export default function WorkspaceDetail() {
             </div>
           </div>
         </div>
-
-        {/* PROGRESS TAB */}
-        <div className={`${activeTab === "progress" ? "" : "hidden"}`}>
-          {activeTab === "progress" && <WorkspaceProgress workspaceId={workspaceId} />}
-        </div>
       </div>
 
       {/* ==================== WORKSPACE AI TUTOR FLOATING BUTTON ==================== */}
@@ -724,10 +753,54 @@ export default function WorkspaceDetail() {
       <OnboardingModal
         open={isOnboardingOpen}
         onClose={() => setIsOnboardingOpen(false)}
+        onSuccess={() => void onboarding.fetchOnboardingProfile()}
         workspaceId={workspaceId}
         initialValues={onboarding.profile}
         mode={shouldOpenOnboarding ? "onboarding" : "edit"}
       />
+
+      {/* Delete Material Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[330] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-md">
+          <div className="w-full max-w-xl overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.25)]">
+            <div className="flex items-center gap-3 border-b border-slate-200 p-5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900">Xóa tài liệu</h3>
+                <p className="mt-1 text-sm text-slate-500">Hành động này không thể hoàn tác.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-5">
+              <p className="text-sm font-bold text-slate-900 truncate">“{deleteTarget.name}”</p>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Việc xóa tài liệu này sẽ gỡ bỏ toàn bộ nội dung đã trích xuất và các bài tập liên quan. Bạn có chắc chắn muốn tiếp tục?
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void confirmDeleteMaterial()}
+                  disabled={deletingMaterial}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {deletingMaterial ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  {deletingMaterial ? "Đang xóa..." : "Xóa tài liệu"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deletingMaterial}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                >
+                  Hủy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

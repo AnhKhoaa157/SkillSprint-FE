@@ -443,6 +443,7 @@ export function FeedbackDetailPanel({ fb }: { fb: FeedbackManager }) {
   const {
     selected, detailLoading, detailError, fetchDetail,
     statusDraft, setStatusDraft, adminNote, setAdminNote,
+    adminReply, setAdminReply,
     updating, handleUpdate, accent, setConfirmAction,
   } = fb;
 
@@ -562,18 +563,37 @@ export function FeedbackDetailPanel({ fb }: { fb: FeedbackManager }) {
             </select>
           </div>
 
-          {/* Admin note */}
+          {/* Admin note (internal) */}
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
-              Ghi chú Admin
+              Ghi chú Admin (nội bộ)
             </label>
             <textarea
               value={adminNote}
               onChange={e => setAdminNote(e.target.value)}
-              rows={4}
-              placeholder="Thêm ghi chú phản hồi cho người dùng..."
+              rows={3}
+              placeholder="Ghi chú nội bộ cho đội ngũ quản trị..."
               className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-700 bg-white resize-none outline-none focus:border-violet-400 transition"
             />
+          </div>
+
+          {/* Admin reply (sent to the user) */}
+          <div className="rounded-xl border border-violet-100 bg-violet-50/40 p-3.5">
+            <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: "#7C3AED" }}>
+              <MessageSquare size={13} /> Gửi phản hồi cho người dùng
+            </label>
+            <textarea
+              value={adminReply}
+              onChange={e => setAdminReply(e.target.value)}
+              rows={4}
+              placeholder="Nội dung phản hồi sẽ được gửi tới người dùng và hiển thị trong lịch sử phản hồi của họ..."
+              className="w-full rounded-xl border border-violet-200 px-3.5 py-2.5 text-sm text-slate-700 bg-white resize-none outline-none focus:border-violet-400 transition"
+            />
+            {selected.repliedAt && (
+              <p className="mt-1.5 text-[11px] font-semibold text-violet-500">
+                Đã phản hồi lúc {formatDate(selected.repliedAt)}
+              </p>
+            )}
           </div>
 
           {/* Save */}

@@ -9,11 +9,19 @@ import {
   CheckCircle2,
   Clock,
   Clock3,
+  Coffee,
+  Dices,
   ExternalLink,
   FileText,
+  Gamepad2,
+  Leaf,
+  Lightbulb,
   LoaderCircle,
+  Lock,
   PlayCircle,
   RefreshCw,
+  Rocket,
+  Save,
   Sparkles,
   Target,
   Timer,
@@ -124,11 +132,12 @@ export default function CoursePlayer() {
   const [isFinishing, setIsFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [toastNotification, setToastNotification] = useState<{ type: "success" | "warning"; message: string } | null>(null);
-
   const showToast = useCallback((type: "success" | "warning", message: string) => {
-    setToastNotification({ type, message });
-    setTimeout(() => setToastNotification(null), 5000);
+    if (type === "success") {
+      toast.success(message);
+    } else {
+      toast.warning(message);
+    }
   }, []);
 
   const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
@@ -165,7 +174,7 @@ export default function CoursePlayer() {
 
   const [isSubActionLoading, setIsSubActionLoading] = useState(false);
   const [sideTab, setSideTab] = useState<"pomodoro" | "quiz">("pomodoro");
-  const { planId, refresh: refreshSubscription } = useSubscription();
+  const { planId, rawPlanId, refresh: refreshSubscription } = useSubscription();
   const isPremiumMember = planId === "PREMIUM";
   // PricingModal speaks plan *slugs*; map our NormalizedPlanId to its vocabulary.
   const pricingCurrentPlan =
@@ -202,7 +211,7 @@ export default function CoursePlayer() {
   scheduledDate.setHours(0, 0, 0, 0);
   const canStartByDate = Number.isNaN(scheduledDate.getTime()) ? true : today.getTime() >= scheduledDate.getTime();
 
-  const canStart = canStartByDate && Boolean(taskId) && (actions?.canStart ?? true) && !hasStartedSession && !isStarting && !isFinishing;
+  const canStart = canStartByDate && Boolean(taskId) && !hasStartedSession && !isStarting && !isFinishing && !isSessionCompleted;
   const canFinish = Boolean(activeSessionId) && !isSessionCompleted && !isStarting && !isFinishing;
 
   const taskDuration = task?.durationMinutes ?? 0;
@@ -344,8 +353,13 @@ export default function CoursePlayer() {
     try {
       const quiz = await quizService.generate(stepId);
       setHasQuizCreated(true); // Đổi state lạc quan để khóa UI
-      setShowQuiz(true);
-      setQuizStatus("idle");
+      
+      if (isSessionCompleted || hasMetMinimum) {
+        setShowQuiz(true);
+        setQuizStatus("idle");
+      } else {
+        showToast("success", "Đã thiết kế đề thành công! Hãy tiếp tục học để mở khóa bài kiểm tra.");
+      }
     } catch (err: any) {
       showToast("warning", err?.message || "Không thể tạo đề kiểm tra AI.");
     } finally {
@@ -354,6 +368,11 @@ export default function CoursePlayer() {
   };
 
   const handleRegenerateQuiz = async () => {
+    if (!isSessionCompleted && !hasMetMinimum) {
+      showToast("warning", `Vui lòng tập trung học tối thiểu ${minimumRequiredMinutes} phút trước khi đổi đề!`);
+      return;
+    }
+
     const stepId = roadmapStep?.stepId;
     if (!stepId || isGeneratingQuiz) return;
     setIsGeneratingQuiz(true);
@@ -538,22 +557,7 @@ export default function CoursePlayer() {
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute top-[20%] left-0 w-[300px] h-[300px] bg-orange-500/5 rounded-full blur-[60px] pointer-events-none" />
 
-      {toastNotification && (
-        <div
-          className={`fixed top-4 right-4 z-50 max-w-sm rounded-2xl border px-5 py-4 shadow-2xl transition-all duration-300 ${
-            toastNotification.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border-amber-200 bg-amber-50 text-amber-900"
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-lg">
-              {toastNotification.type === "success" ? "✅" : "⚠️"}
-            </span>
-            <p className="text-sm font-semibold">{toastNotification.message}</p>
-          </div>
-        </div>
-      )}
+
 
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur-xl shadow-sm shadow-slate-100/40">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
@@ -828,30 +832,40 @@ export default function CoursePlayer() {
                     </div>
                     <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                       {resources.length > 0 ? (
-                        resources.map((resource, index) => (
-                          <a
-                            key={`${resource.resourceId ?? resource.title ?? index}`}
-                            href={resource.url ?? "#"}
-                            target={resource.url ? "_blank" : undefined}
-                            rel={resource.url ? "noreferrer" : undefined}
-                            className="group relative rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all duration-300 hover:-translate-y-1 hover:border-orange-200 hover:bg-orange-50/20 hover:shadow-lg hover:shadow-orange-500/5"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="truncate text-xs font-extrabold text-slate-800 group-hover:text-orange-600 transition-colors">{resource.title ?? "Untitled resource"}</p>
-                                <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                                  {resource.platform ?? resource.resourceType ?? "Resource"}
-                                </span>
+                        resources.map((resource, index) => {
+                          const isQuizResource = resource.platform === "SKILLSPRINT" && resource.title?.includes("Bài tập thực hành");
+                          return (
+                            <a
+                              key={`${resource.resourceId ?? resource.title ?? index}`}
+                              href={isQuizResource ? undefined : (resource.url ?? "#")}
+                              target={isQuizResource ? undefined : (resource.url ? "_blank" : undefined)}
+                              rel={isQuizResource ? undefined : (resource.url ? "noreferrer" : undefined)}
+                              onClick={(e) => {
+                                if (isQuizResource) {
+                                  e.preventDefault();
+                                  setSideTab("quiz");
+                                  window.scrollTo({ top: 0, behavior: "smooth" });
+                                }
+                              }}
+                              className={`group relative rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all duration-300 hover:-translate-y-1 hover:border-orange-200 hover:bg-orange-50/20 hover:shadow-lg hover:shadow-orange-500/5 ${isQuizResource ? "cursor-pointer" : ""}`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="truncate text-xs font-extrabold text-slate-800 group-hover:text-orange-600 transition-colors">{resource.title ?? "Untitled resource"}</p>
+                                  <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                                    {resource.platform ?? resource.resourceType ?? "Resource"}
+                                  </span>
+                                </div>
+                                {resource.aiRecommended ? (
+                                  <span className="flex h-5 items-center gap-0.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-[8px] font-black text-orange-600 uppercase tracking-widest animate-pulse">
+                                    <Sparkles size={8} /> AI
+                                  </span>
+                                ) : null}
                               </div>
-                              {resource.aiRecommended ? (
-                                <span className="flex h-5 items-center gap-0.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-[8px] font-black text-orange-600 uppercase tracking-widest animate-pulse">
-                                  <Sparkles size={8} /> AI
-                                </span>
-                              ) : null}
-                            </div>
-                            <p className="mt-3 text-[11px] leading-5 text-slate-500 font-medium line-clamp-2">{resource.reason ?? resource.content ?? "Tài liệu học tập bổ trợ."}</p>
-                          </a>
-                        ))
+                              <p className="mt-3 text-[11px] leading-5 text-slate-500 font-medium line-clamp-2">{resource.reason ?? resource.content ?? "Tài liệu học tập bổ trợ."}</p>
+                            </a>
+                          );
+                        })
                       ) : (
                         <div className="rounded-xl border border-slate-100 bg-slate-50/40 p-4 text-xs text-slate-400 italic md:col-span-2 xl:col-span-3">
                           Chưa có tài nguyên bổ trợ cho phiên học này.
@@ -919,11 +933,13 @@ export default function CoursePlayer() {
                     <p className={`text-[9px] font-black uppercase tracking-[0.25em] ${
                       pomodoroPhase !== "FOCUS" ? "text-emerald-600" : "text-orange-600"
                     }`}>
-                      {pomodoroPhase === "SHORT_BREAK"
-                        ? "☕ Nghỉ giải lao (5 phút)"
-                        : pomodoroPhase === "LONG_BREAK"
-                        ? "🌿 Nghỉ dài (15 phút)"
-                        : "🎯 Thời gian tập trung"}
+                      {pomodoroPhase === "SHORT_BREAK" ? (
+                        <span className="inline-flex items-center gap-1.5"><Coffee size={14} className="mb-0.5" /> Nghỉ giải lao (5 phút)</span>
+                      ) : pomodoroPhase === "LONG_BREAK" ? (
+                        <span className="inline-flex items-center gap-1.5"><Leaf size={14} className="mb-0.5" /> Nghỉ dài (15 phút)</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5"><Target size={14} className="mb-0.5" /> Thời gian tập trung</span>
+                      )}
                     </p>
 
                     <p className="mt-1 text-[8px] font-extrabold uppercase tracking-widest text-slate-400">
@@ -1019,7 +1035,7 @@ export default function CoursePlayer() {
                 <div className="mt-4 rounded-[20px] border border-slate-100 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-indigo-100/60 bg-indigo-50 text-indigo-600">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-orange-100/60 bg-orange-50 text-orange-600 shadow-sm shadow-orange-50/50">
                         <Brain size={14} className="stroke-[2.5]" />
                       </div>
                       <div>
@@ -1034,7 +1050,7 @@ export default function CoursePlayer() {
 
                   {/* FIX TRIỆT ĐỂ BUG QUAY LẠI NÚT TẠO ĐỀ: Chốt chặn State A dựa trên biến hasQuizCreated */}
                   {!hasQuizCreated && !loadingQuizMeta && (
-                    <div className="rounded-xl border border-dashed border-indigo-200/80 bg-indigo-50/30 p-3.5">
+                    <div className="rounded-xl border border-dashed border-orange-200/80 bg-orange-50/30 p-3.5">
                       <p className="text-[11px] leading-[1.6] font-medium text-slate-500">
                         Bài kiểm tra chưa được kích hoạt. Hãy để AI quét nội dung bài học và thiết kế đề bài cho riêng bạn.
                       </p>
@@ -1042,16 +1058,16 @@ export default function CoursePlayer() {
                         type="button"
                         onClick={handleGenerateAndOpenQuiz}
                         disabled={isGeneratingQuiz}
-                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
                         style={{
                           background: "linear-gradient(135deg, #FF6B00, #EA580C)",
                           boxShadow: "0 10px 24px rgba(255, 107, 0, 0.22)",
                         }}
                       >
                         {isGeneratingQuiz ? (
-                          <><LoaderCircle size={13} className="animate-spin" /> Đang thiết kế đề...</>
+                          <><LoaderCircle size={16} className="animate-spin" /> Đang thiết kế đề...</>
                         ) : (
-                          <><Sparkles size={13} /> ✨ Thiết kế bài kiểm tra bằng AI</>
+                          <><WandSparkles size={16} /> Thiết kế bài kiểm tra bằng AI</>
                         )}
                       </button>
                     </div>
@@ -1060,6 +1076,15 @@ export default function CoursePlayer() {
                   {/* State B: ĐÃ CÓ ĐỀ TRÊN DB */}
                   {hasQuizCreated && !loadingQuizMeta && (
                     <div className="space-y-3">
+                      {!isSessionCompleted && !hasMetMinimum && (
+                        <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-3.5 flex items-start gap-2.5">
+                          <Lock size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                          <p className="text-[11px] leading-[1.6] text-amber-700 font-medium">
+                            Bài kiểm tra đang bị khóa. Bạn cần tập trung học thêm <strong className="font-extrabold">{minimumRequiredMinutes - elapsedStudyMinutes} phút</strong> để mở khóa!
+                          </p>
+                        </div>
+                      )}
+
                       {latestAttempt ? (
                         <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
                           <div className="flex items-start justify-between gap-2">
@@ -1083,21 +1108,26 @@ export default function CoursePlayer() {
                           </div>
                         </div>
                       ) : (
-                        <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 text-[11px] text-slate-500 font-semibold leading-relaxed">
-                          🎯 Đề kiểm tra AI đã sẵn sàng! Vào làm ngay để kiểm tra mức độ hiểu bài của bạn.
+                        <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 text-[11px] text-slate-500 font-semibold leading-relaxed flex items-start gap-2">
+                          <Target size={14} className="text-[#FF6B00] shrink-0 mt-0.5" />
+                          <span>Đề kiểm tra AI đã sẵn sàng! Vào làm ngay để kiểm tra mức độ hiểu bài của bạn.</span>
                         </div>
                       )}
 
                       <button
                         type="button"
                         onClick={() => {
+                          if (!isSessionCompleted && !hasMetMinimum) {
+                            showToast("warning", `Vui lòng tập trung học tối thiểu ${minimumRequiredMinutes} phút trước khi làm bài kiểm tra!`);
+                            return;
+                          }
                           setShowQuiz(true);
                           setQuizStatus("idle");
                         }}
-                        disabled={isGeneratingQuiz}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-3 text-xs font-extrabold text-white shadow-md shadow-indigo-500/20 transition hover:from-indigo-600 hover:to-violet-600 active:scale-[0.98] cursor-pointer"
+                        disabled={isGeneratingQuiz || (!isSessionCompleted && !hasMetMinimum)}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-[#FF6B00] px-4 py-3 text-xs font-extrabold text-white shadow-md shadow-orange-500/20 transition hover:from-amber-600 hover:to-[#E05E00] active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <ExternalLink size={13} /> ✍️ Vào làm bài kiểm tra
+                        <Gamepad2 size={16} /> Vào làm bài kiểm tra
                       </button>
 
                       {latestAttempt && (
@@ -1108,9 +1138,9 @@ export default function CoursePlayer() {
                           className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
                         >
                           {isGeneratingQuiz ? (
-                            <><LoaderCircle size={13} className="animate-spin" /> Đang đổi đề...</>
+                            <><LoaderCircle size={16} className="animate-spin" /> Đang đổi đề...</>
                           ) : (
-                            <><RefreshCw size={13} /> 🔄 Đổi bộ câu hỏi mới</>
+                            <><Dices size={16} /> Đổi bộ câu hỏi mới</>
                           )}
                         </button>
                       )}
@@ -1146,10 +1176,10 @@ export default function CoursePlayer() {
                     type="button"
                     onClick={handleStartSession}
                     disabled={!canStart}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {isStarting ? <LoaderCircle size={15} className="animate-spin" /> : <PlayCircle size={15} />}
-                    {canStartByDate ? "🚀 Bắt đầu tập trung (Pomodoro)" : "⏳ Vẫn mở học trước hạn"}
+                    {isStarting ? <LoaderCircle size={18} className="animate-spin" /> : <Rocket size={18} />}
+                    {canStartByDate ? "Bắt đầu tập trung (Pomodoro)" : "Vẫn mở học trước hạn"}
                   </button>
                 </div>
               ) : (
@@ -1158,10 +1188,10 @@ export default function CoursePlayer() {
                     type="button"
                     onClick={handleTriggerReviewModal}
                     disabled={isFinishing}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] disabled:opacity-50"
                   >
-                    {isFinishing ? <LoaderCircle size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                    🏆 Kết thúc phiên học
+                    {isFinishing ? <LoaderCircle size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                    Kết thúc phiên học
                   </button>
                 </div>
               )}
@@ -1227,8 +1257,11 @@ export default function CoursePlayer() {
                 />
               </div>
 
-              <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 text-[11px] text-slate-400 leading-relaxed font-semibold">
-                💡 <strong className="text-slate-600">Quy chế tính tiến độ:</strong> Thời gian học thực tế hiện tại là <span className="font-extrabold text-slate-700">{elapsedStudyMinutes} phút</span>. Bạn cần học đủ <span className="font-extrabold text-orange-600">{minimumRequiredMinutes} phút</span> để hệ thống chuyển trạng thái sang <strong className="text-emerald-600">COMPLETED</strong>.
+              <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 text-[11px] text-slate-400 leading-relaxed font-semibold flex items-start gap-2.5">
+                <Lightbulb size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                <p>
+                  <strong className="text-slate-600">Quy chế tính tiến độ:</strong> Thời gian học thực tế hiện tại là <span className="font-extrabold text-slate-700">{elapsedStudyMinutes} phút</span>. Bạn cần học đủ <span className="font-extrabold text-orange-600">{minimumRequiredMinutes} phút</span> để hệ thống chuyển trạng thái sang <strong className="text-emerald-600">COMPLETED</strong>.
+                </p>
               </div>
             </div>
 
@@ -1249,8 +1282,8 @@ export default function CoursePlayer() {
                 disabled={isFinishing}
                 className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-500/10 transition active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                {isFinishing && <LoaderCircle size={13} className="animate-spin" />}
-                💾 Xác nhận đóng
+                {isFinishing ? <LoaderCircle size={14} className="animate-spin" /> : <Save size={14} />}
+                Xác nhận đóng
               </button>
             </div>
           </div>
@@ -1265,6 +1298,7 @@ export default function CoursePlayer() {
         }}
         initialPlan="premium"
         currentPlan={pricingCurrentPlan}
+        currentPlanId={rawPlanId}
       />
 
       {isNavigationBlocked && (
@@ -1283,13 +1317,17 @@ export default function CoursePlayer() {
               <button
                 type="button"
                 onClick={resetNavigation}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-xs font-bold text-white shadow-md shadow-orange-500/10 transition active:scale-95"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-xs font-bold text-white shadow-md shadow-orange-500/10 transition active:scale-95 flex items-center justify-center gap-1.5"
               >
-                🎯 Tiếp tục học tập (Giữ kỉ luật)
+                <Target size={16} /> Tiếp tục học tập (Giữ kỉ luật)
               </button>
               <button
                 type="button"
-                onClick={proceedNavigation}
+                onClick={() => {
+                  if (taskId) clearStoredSessionId(taskId);
+                  setActiveSessionId(null);
+                  proceedNavigation();
+                }}
                 className="w-full py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-400 hover:bg-slate-50 hover:text-red-500 transition active:scale-95"
               >
                 Hủy phiên & Rời đi

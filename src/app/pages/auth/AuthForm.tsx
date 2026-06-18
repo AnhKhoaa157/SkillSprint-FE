@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, User, Wrench } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { getEmailError, F, InputField } from "./components/AuthShared";
+import { getEmailError, F, InputField, isMaintenanceError } from "./components/AuthShared";
 import { login, register, isAdminRole } from "../../../api/authService";
 
 function GoogleIcon() {
@@ -93,7 +93,7 @@ function LoginForm({ props }: { props: CommonFormProps }) {
         props.onRequireNewPassword(normalizedEmail, result.session, result.role);
       }
     } catch (e: any) {
-      if (e?.message?.toLowerCase().includes("503") || e?.message?.toLowerCase().includes("maintenance")) {
+      if (isMaintenanceError(e) || e?.message?.toLowerCase().includes("bảo trì")) {
         props.onError("maintenance");
       } else {
         setAuthError(e instanceof Error ? e.message : "Đăng nhập thất bại.");
@@ -196,7 +196,7 @@ function RegisterForm({ props }: { props: CommonFormProps }) {
       await register(name.trim(), normalizedEmail, password);
       props.onRequireConfirmation(normalizedEmail, password);
     } catch (e: any) {
-      if (e?.message?.toLowerCase().includes("503") || e?.message?.toLowerCase().includes("maintenance")) {
+      if (isMaintenanceError(e) || e?.message?.toLowerCase().includes("bảo trì")) {
         props.onError("maintenance");
       } else {
         setAuthError(e instanceof Error ? e.message : "Không thể tạo tài khoản.");

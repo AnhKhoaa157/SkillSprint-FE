@@ -436,60 +436,66 @@ export default function QuizContainer({
 
   if (phase === "start") {
     return (
-      <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-sm">
+      <div className="relative rounded-3xl border border-orange-100 bg-white overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        {/* Background blobs */}
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-32 w-32 rounded-full bg-orange-400/10 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-32 w-32 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
+        
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-orange-50/80 to-amber-50/30 border-b border-slate-100">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FF6B00] to-orange-500 text-white shadow-md shadow-orange-500/25">
-            <Sparkles size={17} />
+        <div className="relative flex items-center gap-4 px-6 py-5 bg-gradient-to-br from-orange-50/80 via-white to-amber-50/30 border-b border-orange-100/50">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6B00] to-orange-500 text-white shadow-lg shadow-orange-500/25 ring-4 ring-orange-50">
+            <Sparkles size={20} />
           </div>
-          <div className="min-w-0">
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#FF6B00]">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FF6B00] mb-0.5">
               Kiểm tra kiến thức
             </p>
-            <h3 className="text-sm font-extrabold text-slate-800 truncate">{quiz.title}</h3>
+            <h3 className="text-base font-extrabold text-slate-800 truncate">{quiz.title}</h3>
           </div>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="relative p-6 space-y-6">
           {quiz.description && (
-            <p className="text-xs leading-5 text-slate-500 font-medium bg-slate-50 rounded-xl px-3.5 py-3 border border-slate-100">
+            <p className="text-xs leading-5 text-slate-600 font-medium bg-slate-50/80 rounded-2xl px-4 py-3.5 border border-slate-100">
               {quiz.description}
             </p>
           )}
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-3">
             <StatPill label="Số câu" value={`${quiz.questionCount}`} unit="câu" accent="orange" />
             <StatPill
               label="Thời gian"
               value={quiz.durationSeconds ? `${Math.round(quiz.durationSeconds / 60)}` : "∞"}
               unit={quiz.durationSeconds ? "phút" : ""}
               accent="amber"
-              // Dùng tạm type map trong StatPill
             />
             <StatPill label="Ngưỡng pass" value={`${quiz.passingScore}`} unit="%" accent="emerald" />
           </div>
 
-          <div className="flex items-start gap-2 rounded-xl border border-orange-100/60 bg-orange-50/40 p-3.5">
-            <span className="text-base leading-none mt-0.5">💡</span>
-            <p className="text-[11px] leading-5 text-slate-600 font-medium">
+          <div className="flex items-start gap-3 rounded-2xl border border-orange-200/60 bg-gradient-to-br from-orange-50/80 to-amber-50/40 p-4 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-400/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm border border-orange-100 text-[#FF6B00] relative z-10">
+              <Sparkles size={16} />
+            </div>
+            <p className="text-xs leading-5 text-slate-600 font-medium relative z-10 pt-1.5">
               Trả lời lần lượt từng câu, chọn một đáp án đúng nhất. Bạn cần đạt{" "}
-              <strong className="text-orange-700">≥ {quiz.passingScore}%</strong> để pass bước này.
+              <strong className="text-[#FF6B00] font-extrabold">≥ {quiz.passingScore}%</strong> để pass bước này.
             </p>
           </div>
 
-          <div className="flex gap-2.5">
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={handleGenerate}
               disabled={isGenerating}
               title="Tạo bộ câu hỏi mới bằng AI"
-              className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs font-bold text-slate-500 transition hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-4 py-3.5 text-sm font-bold text-slate-600 shadow-sm transition-all duration-200 hover:border-orange-200 hover:bg-orange-50 hover:text-[#FF6B00] active:scale-[0.98] disabled:opacity-50"
             >
               {isGenerating ? (
-                <LoaderCircle size={13} className="animate-spin" />
+                <LoaderCircle size={16} className="animate-spin" />
               ) : (
-                <WandSparkles size={13} />
+                <RotateCcw size={16} />
               )}
               Tạo lại
             </button>
@@ -497,9 +503,9 @@ export default function QuizContainer({
               type="button"
               onClick={() => setPhase("active")}
               disabled={totalQuestions === 0}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-orange-500 px-5 py-3 text-sm font-extrabold text-white shadow-md shadow-orange-500/20 transition hover:from-orange-600 hover:to-orange-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex flex-1 items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#FF6B00] to-orange-500 px-6 py-3.5 text-base font-black text-white shadow-lg shadow-orange-500/25 ring-2 ring-orange-500/20 ring-offset-2 transition-all duration-200 hover:scale-[1.01] hover:shadow-orange-500/40 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Sparkles size={14} /> Bắt đầu Quiz
+              <WandSparkles size={18} /> Bắt đầu Quiz
             </button>
           </div>
         </div>
@@ -522,50 +528,54 @@ export default function QuizContainer({
     const optionLetters = ["A", "B", "C", "D", "E"];
 
     return (
-      <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-sm">
+      <div className="relative rounded-3xl border border-orange-100 bg-white overflow-hidden shadow-[0_12px_40px_rgb(0,0,0,0.06)]">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 h-64 w-64 rounded-full bg-orange-400/5 blur-3xl pointer-events-none" />
+        
         {/* Progress header */}
-        <div className="px-5 pt-4 pb-3.5 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#FF6B00] to-orange-500 text-white text-[11px] font-black shadow-md shadow-orange-500/30">
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100 bg-gradient-to-b from-slate-50/80 to-white relative z-10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FF6B00] to-orange-500 text-white text-sm font-black shadow-lg shadow-orange-500/30 ring-2 ring-orange-50">
                 {safeIndex + 1}
               </div>
               <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400 leading-none">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none mb-1">
                   Câu hỏi
                 </p>
-                <p className="text-xs font-extrabold text-slate-700 leading-tight mt-0.5">
-                  {safeIndex + 1} / {totalQuestions}
+                <p className="text-sm font-extrabold text-slate-800 leading-tight">
+                  {safeIndex + 1} <span className="text-slate-400 font-medium">/ {totalQuestions}</span>
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-bold text-slate-400">
-                Đã trả lời: {answeredCount}/{totalQuestions}
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
+                Đã trả lời: <span className="text-slate-700">{answeredCount}/{totalQuestions}</span>
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-orange-100 bg-orange-50 px-2 py-0.5 text-[9px] font-bold text-orange-600">
-                <Sparkles size={8} /> AI Quiz
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-bold text-[#FF6B00] shadow-sm">
+                <Sparkles size={12} /> AI Quiz
               </span>
             </div>
           </div>
           {/* Progress bar */}
-          <div className="w-full overflow-hidden rounded-full bg-slate-200/80" style={{ height: 5 }}>
+          <div className="w-full overflow-hidden rounded-full bg-slate-100" style={{ height: 6 }}>
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#FF6B00] to-orange-400 transition-all duration-500 ease-out"
+              className="h-full rounded-full bg-gradient-to-r from-amber-400 via-[#FF6B00] to-orange-500 transition-all duration-700 ease-out relative"
               style={{ width: `${progressPercent}%` }}
-            />
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%,transparent_100%)] bg-[length:20px_20px] animate-[shimmer_1s_infinite_linear]" />
+            </div>
           </div>
         </div>
 
         {/* Question */}
-        <div className="px-5 pt-4 pb-3">
-          <p className="text-sm font-bold leading-6 text-slate-800">
+        <div className="px-6 pt-6 pb-4 relative z-10">
+          <h2 className="text-base sm:text-lg font-bold leading-relaxed text-slate-800">
             {currentQuestion.question}
-          </p>
+          </h2>
         </div>
 
         {/* Options */}
-        <div className="px-5 pb-4 space-y-2">
+        <div className="px-6 pb-6 space-y-3 relative z-10">
           {currentOptions.length > 0 ? (
             currentOptions.map((opt, optIdx) => {
               const isSelected = selectedOptionId === opt.optionId;
@@ -574,25 +584,29 @@ export default function QuizContainer({
                   key={opt.optionId}
                   type="button"
                   onClick={() => handleSelectOption(opt.optionId)}
-                  className={`group w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold transition-all duration-150 active:scale-[0.99] ${
+                  className={`group w-full flex items-center gap-4 rounded-2xl border-2 px-5 py-4 text-left transition-all duration-200 ${
                     isSelected
-                      ? "border-orange-300 bg-orange-50 text-orange-800 shadow-sm shadow-orange-500/10"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-orange-200 hover:bg-orange-50/40"
+                      ? "border-[#FF6B00] bg-orange-50/50 shadow-md shadow-orange-500/10 scale-[1.01]"
+                      : "border-slate-100 bg-white hover:border-orange-200 hover:bg-orange-50/30 hover:shadow-sm"
                   }`}
                 >
                   <span
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-black transition-colors ${
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-black transition-all duration-300 ${
                       isSelected
-                        ? "bg-[#FF6B00] text-white"
+                        ? "bg-[#FF6B00] text-white shadow-sm"
                         : "bg-slate-100 text-slate-500 group-hover:bg-orange-100 group-hover:text-[#FF6B00]"
                     }`}
                   >
                     {optionLetters[optIdx] ?? optIdx + 1}
                   </span>
-                  <span className="flex-1 leading-snug">{opt.text}</span>
-                  {isSelected && (
-                    <CheckCircle2 size={14} className="shrink-0 text-[#FF6B00]" />
-                  )}
+                  <span className={`flex-1 text-sm font-semibold leading-relaxed ${isSelected ? "text-orange-900" : "text-slate-700"}`}>
+                    {opt.text}
+                  </span>
+                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+                    isSelected ? "border-[#FF6B00] bg-[#FF6B00] text-white" : "border-slate-200 bg-white group-hover:border-orange-300"
+                  }`}>
+                    {isSelected && <CheckCircle2 size={12} strokeWidth={4} />}
+                  </div>
                 </button>
               );
             })
@@ -603,24 +617,24 @@ export default function QuizContainer({
 
         {/* Submit error */}
         {error && (
-          <div className="mx-5 mb-3 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+          <div className="mx-6 mb-4 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700 relative z-10">
             {error}
           </div>
         )}
 
         {/* Navigation footer */}
-        <div className="px-5 pb-5 pt-3 border-t border-slate-100 bg-slate-50/40">
+        <div className="px-6 pb-6 pt-5 border-t border-slate-100 bg-slate-50/50 relative z-10">
           {isLastQuestion ? (
             <button
               type="button"
               onClick={handleSubmit}
               disabled={!selectedOptionId || isSubmitting}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-md shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 text-base font-black text-white shadow-lg shadow-emerald-500/20 transition hover:from-emerald-600 hover:to-teal-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting ? (
-                <LoaderCircle size={14} className="animate-spin" />
+                <LoaderCircle size={18} className="animate-spin" />
               ) : (
-                <CheckCircle2 size={14} />
+                <CheckCircle2 size={18} />
               )}
               {isSubmitting ? "Đang nộp bài..." : "Nộp bài"}
             </button>
@@ -629,13 +643,13 @@ export default function QuizContainer({
               type="button"
               onClick={handleNext}
               disabled={!selectedOptionId}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-orange-500 px-6 py-3.5 text-sm font-extrabold text-white shadow-md shadow-orange-500/20 transition hover:from-orange-600 hover:to-orange-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF6B00] to-orange-500 px-6 py-4 text-base font-black text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-orange-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Câu tiếp theo <ChevronRight size={14} />
+              Câu tiếp theo <ChevronRight size={18} />
             </button>
           )}
           {!selectedOptionId && (
-            <p className="mt-2 text-center text-[10px] text-slate-400">
+            <p className="mt-3 text-center text-xs font-medium text-slate-400">
               Chọn một đáp án để tiếp tục
             </p>
           )}
@@ -654,23 +668,28 @@ export default function QuizContainer({
     const quizQuestions = safeArray(quiz?.questions);
 
     return (
-      <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-sm">
+      <div className="relative rounded-3xl border border-slate-100 bg-white overflow-hidden shadow-[0_12px_40px_rgb(0,0,0,0.06)]">
+        {/* Background glow */}
+        <div className={`absolute top-0 right-0 -mt-16 -mr-16 h-48 w-48 rounded-full blur-3xl pointer-events-none ${
+          passed ? "bg-emerald-400/10" : "bg-rose-400/10"
+        }`} />
+        
         {/* Hero score */}
         <div
-          className={`px-5 py-6 text-center border-b border-slate-100 ${
+          className={`relative px-6 py-8 text-center border-b border-slate-100 z-10 ${
             passed
-              ? "bg-gradient-to-b from-emerald-50/80 to-transparent"
-              : "bg-gradient-to-b from-rose-50/60 to-transparent"
+              ? "bg-gradient-to-b from-emerald-50/90 to-transparent"
+              : "bg-gradient-to-b from-rose-50/80 to-transparent"
           }`}
         >
           <div
-            className={`mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm ${
+            className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg ring-4 ${
               passed
-                ? "bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-emerald-500/25"
-                : "bg-gradient-to-br from-[#FF6B00] to-orange-400 text-white shadow-orange-400/25"
+                ? "bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-emerald-500/30 ring-emerald-50"
+                : "bg-gradient-to-br from-[#FF6B00] to-orange-500 text-white shadow-orange-500/30 ring-rose-50"
             }`}
           >
-            {passed ? <Trophy size={24} /> : <XCircle size={24} />}
+            {passed ? <Trophy size={28} /> : <XCircle size={28} />}
           </div>
           <p
             className={`text-[10px] font-black uppercase tracking-[0.2em] ${
@@ -679,46 +698,48 @@ export default function QuizContainer({
           >
             {passed ? "Xuất sắc! Đã pass ✓" : "Chưa đạt yêu cầu"}
           </p>
-          <p className="mt-2 text-5xl font-black tracking-tight text-slate-900">{score}%</p>
-          <p className="mt-1 text-xs font-semibold text-slate-500">
+          <p className="mt-3 text-6xl font-black tracking-tight text-slate-900 drop-shadow-sm">{score}%</p>
+          <p className="mt-2 text-xs font-semibold text-slate-500">
             Đúng {result.correctAnswers}/{result.totalQuestions} câu
           </p>
 
-          <div className="mt-4 w-full overflow-hidden rounded-full bg-slate-200" style={{ height: 7 }}>
+          <div className="mx-auto mt-5 max-w-[200px] w-full overflow-hidden rounded-full bg-slate-200/80 shadow-inner" style={{ height: 8 }}>
             <div
-              className={`h-full rounded-full transition-all duration-700 ${
+              className={`h-full rounded-full transition-all duration-1000 ease-out relative ${
                 passed
-                  ? "bg-gradient-to-r from-emerald-500 to-teal-400"
-                  : "bg-gradient-to-r from-[#FF6B00] to-orange-400"
+                  ? "bg-gradient-to-r from-emerald-400 to-teal-500"
+                  : "bg-gradient-to-r from-amber-400 via-[#FF6B00] to-orange-500"
               }`}
               style={{ width: `${score}%` }}
-            />
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%,transparent_100%)] bg-[length:20px_20px] animate-[shimmer_1s_infinite_linear]" />
+            </div>
           </div>
-          <p className="mt-1.5 text-[10px] font-semibold text-slate-400">
+          <p className="mt-2 text-[10px] font-bold text-slate-400">
             Ngưỡng pass: {quiz?.passingScore ?? "—"}%
           </p>
 
           {result.feedback && (
-            <p className="mt-3 text-[11px] leading-5 text-slate-500 font-medium italic max-w-xs mx-auto">
+            <p className="mt-4 text-xs leading-relaxed text-slate-600 font-medium italic max-w-sm mx-auto bg-white/60 p-3 rounded-xl border border-slate-100/50 backdrop-blur-sm">
               "{result.feedback}"
             </p>
           )}
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="relative p-6 space-y-6 z-10">
           {/* Stats grid */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-3">
             <ResultStat label="Tổng câu" value={String(result.totalQuestions)} accent="slate" />
             <ResultStat label="Đúng" value={String(result.correctAnswers)} accent="emerald" />
             <ResultStat label="Sai" value={String(incorrectAnswers)} accent="rose" />
           </div>
 
           {/* Per-question breakdown */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
               Chi tiết từng câu
             </p>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {finalResults.length > 0 ? (
                 finalResults.map((item, idx) => {
                   const question = quizQuestions.find(
@@ -729,34 +750,46 @@ export default function QuizContainer({
                   return (
                     <div
                       key={item.questionId}
-                      className={`rounded-xl border p-3.5 text-xs ${
+                      className={`relative overflow-hidden rounded-2xl border-2 p-4 text-sm transition-all duration-200 hover:shadow-sm ${
                         item.correct
-                          ? "border-emerald-100 bg-emerald-50/50"
-                          : "border-rose-100 bg-rose-50/50"
+                          ? "border-emerald-100 bg-emerald-50/40"
+                          : "border-rose-100 bg-rose-50/40"
                       }`}
                     >
-                      <div className="flex items-start gap-2">
-                        {item.correct ? (
-                          <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-500" />
-                        ) : (
-                          <XCircle size={13} className="mt-0.5 shrink-0 text-rose-400" />
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-bold text-slate-700">
-                            Câu {idx + 1}: {question?.question ?? "—"}
+                      <div className="flex items-start gap-3">
+                        <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                          item.correct ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-500"
+                        }`}>
+                          {item.correct ? (
+                            <CheckCircle2 size={14} strokeWidth={3} />
+                          ) : (
+                            <XCircle size={14} strokeWidth={3} />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-slate-800 leading-snug">
+                            <span className="text-slate-400 mr-1 font-extrabold">Q{idx + 1}.</span> {question?.question ?? "—"}
                           </p>
                           {!item.correct && (
-                            <p className="mt-1 text-slate-500">
-                              Bạn chọn:{" "}
-                              <span className="font-semibold text-rose-600">
-                                {selectedOpt?.text ?? "—"}
-                              </span>
-                            </p>
+                            <div className="mt-2.5 rounded-xl bg-white/60 p-2.5 border border-rose-100">
+                              <p className="text-xs text-slate-500 font-medium">
+                                Bạn chọn:{" "}
+                                <span className="font-semibold text-rose-600">
+                                  {selectedOpt?.text ?? "—"}
+                                </span>
+                              </p>
+                            </div>
                           )}
                           {item.explanation && (
-                            <p className="mt-1.5 italic leading-4 text-slate-400">
-                              {item.explanation}
-                            </p>
+                            <div className={`mt-2.5 rounded-xl p-3 border ${
+                              item.correct ? "bg-emerald-50/80 border-emerald-100" : "bg-white/60 border-rose-100"
+                            }`}>
+                              <p className={`text-xs leading-5 font-medium italic ${
+                                item.correct ? "text-emerald-700" : "text-slate-600"
+                              }`}>
+                                💡 {item.explanation}
+                              </p>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -772,20 +805,20 @@ export default function QuizContainer({
           </div>
 
           {/* Action buttons */}
-          <div className="grid grid-cols-2 gap-2.5 pt-1">
+          <div className="grid grid-cols-2 gap-3 pt-2">
             <button
               type="button"
               onClick={handleRetry}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98]"
             >
-              <RotateCcw size={14} /> Làm lại
+              <RotateCcw size={16} /> Làm lại
             </button>
             <button
               type="button"
               onClick={handleFinishQuiz}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-extrabold text-white shadow-md shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-4 text-base font-black text-white shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-500/20 ring-offset-2 transition-all hover:scale-[1.01] hover:shadow-emerald-500/40 active:scale-95"
             >
-              <CheckCircle2 size={14} /> Hoàn thành
+              <CheckCircle2 size={18} /> Hoàn thành
             </button>
           </div>
         </div>
@@ -809,18 +842,20 @@ function StatPill({
   unit: string;
   accent: "orange" | "amber" | "emerald";
 }) {
-  const accentMap: Record<typeof accent, string> = {
-    orange: "text-orange-600",
-    amber: "text-amber-600",
-    emerald: "text-emerald-700",
+  const accentMap: Record<typeof accent, { text: string, bg: string, border: string, glow: string }> = {
+    orange: { text: "text-orange-600", bg: "bg-orange-50/80", border: "border-orange-200/60", glow: "via-orange-400" },
+    amber: { text: "text-amber-600", bg: "bg-amber-50/80", border: "border-amber-200/60", glow: "via-amber-400" },
+    emerald: { text: "text-emerald-700", bg: "bg-emerald-50/80", border: "border-emerald-200/60", glow: "via-emerald-400" },
   };
+  const theme = accentMap[accent];
   return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-center">
-      <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+    <div className={`rounded-2xl border ${theme.border} ${theme.bg} p-3.5 text-center shadow-sm relative overflow-hidden transition-all duration-300 hover:scale-[1.03] hover:shadow-md group`}>
+      <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent ${theme.glow} to-transparent opacity-40 group-hover:opacity-100 transition-opacity`} />
+      <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">
         {label}
       </p>
-      <p className={`mt-1 text-lg font-extrabold ${accentMap[accent]}`}>
-        {value}<span className="text-xs font-semibold text-slate-400 ml-0.5">{unit}</span>
+      <p className={`mt-1.5 text-xl font-black ${theme.text}`}>
+        {value}<span className="text-xs font-semibold opacity-70 ml-1">{unit}</span>
       </p>
     </div>
   );
@@ -836,17 +871,19 @@ function ResultStat({
   value: string;
   accent: "slate" | "emerald" | "rose";
 }) {
-  const colorMap: Record<typeof accent, string> = {
-    slate: "text-slate-700",
-    emerald: "text-emerald-600",
-    rose: "text-rose-500",
+  const colorMap: Record<typeof accent, { text: string, bg: string, border: string, glow: string }> = {
+    slate: { text: "text-slate-700", bg: "bg-slate-50/80", border: "border-slate-200/60", glow: "via-slate-400" },
+    emerald: { text: "text-emerald-600", bg: "bg-emerald-50/80", border: "border-emerald-200/60", glow: "via-emerald-400" },
+    rose: { text: "text-rose-600", bg: "bg-rose-50/80", border: "border-rose-200/60", glow: "via-rose-400" },
   };
+  const theme = colorMap[accent];
   return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 text-center">
-      <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
+    <div className={`rounded-2xl border ${theme.border} ${theme.bg} p-4 text-center shadow-sm relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-md group`}>
+      <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent ${theme.glow} to-transparent opacity-50 group-hover:opacity-100 transition-opacity`} />
+      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">
         {label}
       </p>
-      <p className={`mt-1 text-xl font-black ${colorMap[accent]}`}>{value}</p>
+      <p className={`mt-2 text-2xl font-black ${theme.text}`}>{value}</p>
     </div>
   );
 }
