@@ -14,6 +14,7 @@ import {
   FileText,
   Gamepad2,
   LoaderCircle,
+  Lock,
   PlayCircle,
   RefreshCw,
   Rocket,
@@ -1107,6 +1108,15 @@ export default function CoursePlayer() {
                   {/* State B: ĐÃ CÓ ĐỀ TRÊN DB */}
                   {hasQuizCreated && !loadingQuizMeta && (
                     <div className="space-y-3">
+                      {!isSessionCompleted && !hasMetMinimum && (
+                        <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-3.5 flex items-start gap-2.5">
+                          <Lock size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                          <p className="text-[11px] leading-[1.6] text-amber-700 font-medium">
+                            Bài kiểm tra đang bị khóa. Bạn cần tập trung học thêm <strong className="font-extrabold">{minimumRequiredMinutes - elapsedStudyMinutes} phút</strong> để mở khóa!
+                          </p>
+                        </div>
+                      )}
+
                       {latestAttempt ? (
                         <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
                           <div className="flex items-start justify-between gap-2">
