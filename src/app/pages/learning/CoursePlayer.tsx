@@ -550,17 +550,39 @@ export default function CoursePlayer() {
 
       {toastNotification && (
         <div
-          className={`fixed top-4 right-4 z-50 max-w-sm rounded-2xl border px-5 py-4 shadow-2xl transition-all duration-300 ${
+          className={`fixed top-4 right-4 z-50 w-[380px] max-w-[calc(100vw-32px)] rounded-2xl border p-4 shadow-2xl transition-all duration-300 animate-in slide-in-from-top-8 fade-in ${
             toastNotification.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border-amber-200 bg-amber-50 text-amber-900"
+              ? "border-emerald-200/60 bg-emerald-50/90 backdrop-blur-xl text-emerald-900 shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)]"
+              : "border-amber-200/60 bg-amber-50/90 backdrop-blur-xl text-amber-900 shadow-[0_10px_40px_-10px_rgba(245,158,11,0.2)]"
           }`}
         >
-          <div className="flex items-center gap-3">
-            <span className="text-lg">
-              {toastNotification.type === "success" ? "✅" : "⚠️"}
-            </span>
-            <p className="text-sm font-semibold">{toastNotification.message}</p>
+          <div className="flex items-start gap-3.5">
+            <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border shadow-sm ${
+              toastNotification.type === "success"
+                ? "border-emerald-200/80 bg-emerald-100 text-emerald-600"
+                : "border-amber-200/80 bg-amber-100 text-amber-600"
+            }`}>
+              {toastNotification.type === "success" ? (
+                <CheckCircle2 size={16} className="stroke-[2.5]" />
+              ) : (
+                <AlertTriangle size={16} className="stroke-[2.5]" />
+              )}
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-extrabold tracking-tight">
+                {toastNotification.type === "success" ? "Thành công" : "Chú ý"}
+              </h4>
+              <p className="mt-1 text-[13px] leading-relaxed font-medium opacity-90">
+                {toastNotification.message}
+              </p>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => setToastNotification(null)}
+              className="mt-0.5 shrink-0 rounded-full p-1 opacity-50 transition-opacity hover:bg-black/5 hover:opacity-100"
+            >
+              <X size={14} className="stroke-[2.5]" />
+            </button>
           </div>
         </div>
       )}
