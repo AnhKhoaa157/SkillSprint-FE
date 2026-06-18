@@ -9,35 +9,19 @@ export default function AdminAuth() {
   const auth = useAdminAuth();
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden"
-      style={{ background: "#F8FAFC", fontFamily: "'Inter', sans-serif" }}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-slate-50 font-['Inter']">
       {/* Background glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          style={{
-            position: "absolute", width: "900px", height: "900px",
-            background: "radial-gradient(circle, rgba(255,107,0,0.10) 0%, transparent 60%)",
-            top: "-260px", right: "-160px", filter: "blur(40px)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute", width: "600px", height: "600px",
-            background: "radial-gradient(circle, rgba(255,107,0,0.05) 0%, transparent 60%)",
-            bottom: "-100px", left: "-100px", filter: "blur(40px)",
-          }}
-        />
+        <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] rounded-full bg-orange-400/10 blur-[80px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-orange-500/5 blur-[80px]" />
       </div>
 
       {/* Back to student login */}
       <button
         onClick={() => navigate("/login")}
-        className="absolute z-10 top-5 left-5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-slate-100"
-        style={{ color: "#475569", border: "1px solid #E2E8F0", background: "#FFFFFF" }}
+        className="absolute z-20 top-5 left-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 hover:shadow active:scale-95"
       >
-        <ArrowLeft className="w-3.5 h-3.5" />
+        <ArrowLeft className="w-4 h-4 text-slate-400" />
         Quay lại đăng nhập sinh viên
       </button>
 
@@ -45,15 +29,15 @@ export default function AdminAuth() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-4xl"
+        className="relative z-10 w-full max-w-[900px]"
       >
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-[1fr_1.1fr]">
+        <div className="bg-white rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.04)] ring-1 ring-slate-100 overflow-hidden grid grid-cols-1 md:grid-cols-[1.1fr_1fr]">
 
           {/* ── Left — static branding ── */}
           <BrandPanel />
 
           {/* ── Right — animated content ── */}
-          <div className="p-8 md:p-10 min-h-[480px] flex flex-col justify-center">
+          <div className="p-8 sm:p-10 md:p-12 min-h-[500px] flex flex-col justify-center bg-white">
             <AnimatePresence mode="wait">
               {auth.view === "login" && <LoginView auth={auth} />}
               {auth.view === "fp-step1" && <ForgotStep1View auth={auth} />}

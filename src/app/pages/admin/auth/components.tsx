@@ -28,54 +28,49 @@ export function ErrBanner({ msg }: { msg: string }) {
 
 export function BrandPanel() {
   return (
-    <div
-      className="relative p-8 md:p-10 flex flex-col justify-between gap-8 overflow-hidden"
-      style={{
-        background: "linear-gradient(145deg, #fff8f3 0%, #fff3ea 60%, #ffeadb 100%)",
-        borderRight: "1px solid rgba(255,107,0,0.08)",
-      }}
-    >
-      {/* Decorative circle */}
-      <div
-        className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(255,107,0,0.10) 0%, transparent 70%)" }}
-      />
+    <div className="relative p-8 md:p-12 flex flex-col justify-between gap-10 overflow-hidden bg-gradient-to-br from-[#FF6B00] via-orange-500 to-orange-400">
+      {/* Decorative blobs */}
+      <div className="absolute top-[-20%] right-[-20%] w-[350px] h-[350px] rounded-full bg-white/10 blur-[60px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-20%] w-[300px] h-[300px] rounded-full bg-yellow-300/10 blur-[50px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
 
       {/* Brand Logo Header */}
       <div className="flex items-center relative z-10">
-        <img
-          src="/logo.png"
-          alt="SkillSprint Logo"
-          className="h-20 w-20 object-cover rounded-xl flex-shrink-0 shadow-sm"
-        />
+        <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl shadow-lg ring-1 ring-white/20">
+          <img
+            src="/logo.png"
+            alt="SkillSprint Logo"
+            className="h-14 w-14 object-contain"
+          />
+        </div>
       </div>
 
       {/* Brand copy */}
-      <div className="relative z-10 space-y-3">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-orange-500/10 text-orange-700">
+      <div className="relative z-10 space-y-4">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-bold bg-white/20 text-white backdrop-blur-sm border border-white/20 shadow-sm uppercase tracking-wider">
           <ShieldCheck className="w-3.5 h-3.5" />
-          Cổng Quản Trị Bảo Mật
+          Cổng Quản Trị
         </div>
-        <h2 className="text-2xl md:text-[1.75rem] font-extrabold text-slate-900 leading-snug">
+        <h2 className="text-3xl md:text-4xl font-black text-white leading-[1.15] drop-shadow-sm">
           Quản lý hệ thống<br />
-          <span className="text-orange-600">SkillSprint</span>
+          <span className="text-yellow-100">SkillSprint</span>
         </h2>
-        <p className="text-sm text-slate-500 leading-relaxed max-w-xs">
-          Phê duyệt đối tác, giám sát hoạt động và điều phối nền tảng từ một nơi duy nhất.
+        <p className="text-sm text-orange-50/90 leading-relaxed max-w-xs font-medium">
+          Phê duyệt đối tác, giám sát hoạt động và điều phối toàn bộ nền tảng từ một nơi duy nhất.
         </p>
       </div>
 
       {/* Feature list */}
-      <ul className="relative z-10 space-y-3 text-sm text-slate-600">
-        <li className="flex items-center gap-3">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white shadow-sm flex-shrink-0">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+      <ul className="relative z-10 space-y-4 text-sm text-white/90 font-medium">
+        <li className="flex items-center gap-3.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm shadow-sm ring-1 ring-white/30 flex-shrink-0">
+            <ShieldCheck className="w-4 h-4 text-white" />
           </span>
           Xác thực & bảo mật tập trung
         </li>
-        <li className="flex items-center gap-3">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white shadow-sm flex-shrink-0">
-            <BarChart3 className="w-3.5 h-3.5 text-orange-500" />
+        <li className="flex items-center gap-3.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm shadow-sm ring-1 ring-white/30 flex-shrink-0">
+            <BarChart3 className="w-4 h-4 text-white" />
           </span>
           Báo cáo & phân tích thời gian thực
         </li>
@@ -95,9 +90,9 @@ export function LoginView({ auth }: { auth: AdminAuthState }) {
 
   return (
     <motion.div key="login" {...SLIDE}>
-      <div className="mb-7">
-        <h3 className="text-xl font-bold text-slate-900">Đăng nhập Admin</h3>
-        <p className="mt-1 text-sm text-slate-500">
+      <div className="mb-8">
+        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Đăng nhập Admin</h3>
+        <p className="mt-1.5 text-sm text-slate-500 font-medium">
           Chỉ tài khoản có quyền quản trị mới được phép truy cập.
         </p>
       </div>
@@ -149,11 +144,11 @@ export function LoginView({ auth }: { auth: AdminAuthState }) {
 
         {/* Remember / Forgot */}
         <div className="flex items-center justify-between text-sm">
-          <label className="flex items-center gap-2 text-slate-600 cursor-pointer select-none">
+          <label className="flex items-center gap-2.5 text-slate-600 cursor-pointer select-none font-medium hover:text-slate-800 transition-colors">
             <input
               type="checkbox" checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
-              className="accent-orange-500 rounded"
+              className="accent-[#FF6B00] w-4 h-4 rounded cursor-pointer"
             />
             Ghi nhớ đăng nhập
           </label>
@@ -193,13 +188,13 @@ export function ForgotStep1View({ auth }: { auth: AdminAuthState }) {
         Quay lại đăng nhập
       </button>
 
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-5 ring-1 ring-orange-100 flex-shrink-0">
-          <KeyRound className="w-5 h-5 text-orange-600" />
+      <div className="flex items-center gap-4 mb-8">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 ring-2 ring-orange-100 flex-shrink-0 shadow-sm">
+          <KeyRound className="w-6 h-6 text-[#FF6B00]" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-slate-900">Quên mật khẩu</h3>
-          <p className="text-xs text-slate-500">Nhập email để nhận mã xác minh.</p>
+          <h3 className="text-2xl font-black text-slate-900 tracking-tight">Quên mật khẩu</h3>
+          <p className="text-sm font-medium text-slate-500 mt-1">Nhập email để nhận mã xác minh.</p>
         </div>
       </div>
 
@@ -254,11 +249,11 @@ export function ForgotStep2View({ auth }: { auth: AdminAuthState }) {
         Quay lại
       </button>
 
-      <div className="mb-5">
-        <h3 className="text-base font-bold text-slate-900">Đặt lại mật khẩu</h3>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Mã xác minh đã gửi đến{" "}
-          <span className="font-semibold text-slate-700">{recoveryEmail}</span>
+      <div className="mb-7">
+        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Đặt lại mật khẩu</h3>
+        <p className="text-sm font-medium text-slate-500 mt-1.5 leading-relaxed">
+          Mã xác minh đã được gửi đến{" "}
+          <span className="font-bold text-slate-800">{recoveryEmail}</span>
         </p>
       </div>
 
