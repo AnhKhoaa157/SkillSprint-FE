@@ -23,12 +23,26 @@ export function normalizePlanType(type?: string | null, nameFallback?: string | 
   if (!t || t === "LEARNER_DEFAULT" || t === "FREE" || t === "UNDEFINED" || t === "NULL") {
      const n = String(nameFallback || "").toUpperCase().trim();
      if (n.includes("ADMIN")) t = "ADMIN_DEFAULT";
-     else if (n.includes("SKILLBUILDER") || n.includes("SKILL_BUILDER")) t = "SKILL_BUILDER";
+     else if (
+       n.includes("SKILLBUILDER") ||
+       n.includes("SKILL_BUILDER") ||
+       n.includes("SKILL BUILDER") ||
+       n.includes("BASIC")
+     ) {
+       t = "SKILL_BUILDER";
+     }
      else if (n.includes("PREMIUM")) t = "PREMIUM";
   }
 
   if (t === "ADMIN" || t === "ADMIN_DEFAULT") return "ADMIN_DEFAULT";
-  if (t === "SKILLBUILDER" || t === "SKILL_BUILDER") return "SKILL_BUILDER";
+  if (
+    t === "SKILLBUILDER" ||
+    t === "SKILL_BUILDER" ||
+    t === "SKILL BUILDER" ||
+    t === "BASIC"
+  ) {
+    return "SKILL_BUILDER";
+  }
   if (t === "PREMIUM") return "PREMIUM";
   return "FREE";
 }

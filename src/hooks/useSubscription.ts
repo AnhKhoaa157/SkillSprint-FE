@@ -34,7 +34,7 @@ const PLAN_META: Record<NormalizedPlanId, PlanMeta> = {
 
 function normalizePlan(raw: string | undefined | null, price?: number | null): NormalizedPlanId {
   const u = raw?.toUpperCase();
-  if (u === "SKILL_BUILDER" || u === "BUILDER") return "SKILL_BUILDER";
+  if (u === "SKILL_BUILDER" || u === "BUILDER" || u === "BASIC" || u === "SKILL BUILDER") return "SKILL_BUILDER";
   if (u === "PREMIUM" || u === "CAREER_PREMIUM" || u === "ADMIN" || u === "ADMIN_DEFAULT") return "PREMIUM";
   if (u === "FREE" || u === "STARTER") return "FREE";
   
