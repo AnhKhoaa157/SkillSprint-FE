@@ -110,9 +110,17 @@ function formatTimer(seconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+// Backend CalendarService gates the ROADMAP_STEP_COMPLETED point event behind a
+// hardcoded MIN_STEP_POINT_STUDY_MINUTES = 20 studied-minutes threshold. If the FE
+// requires anything less, the user can hit 100% / trigger the celebration modal
+// while the backend silently refuses to award points. Clamp the requirement so the
+// UI never promises completion the backend won't reward.
+const MIN_STEP_POINT_STUDY_MINUTES = 20;
+
 function computeMinimumRequiredMinutes(taskDurationMinutes: number | null | undefined): number {
-  if (!taskDurationMinutes || taskDurationMinutes <= 0) return 0;
-  return Math.min(15, Math.ceil(taskDurationMinutes * 0.3));
+  if (!taskDurationMinutes || taskDurationMinutes <= 0) return MIN_STEP_POINT_STUDY_MINUTES;
+  const calculated = Math.ceil(taskDurationMinutes * 0.3);
+  return Math.max(calculated, MIN_STEP_POINT_STUDY_MINUTES);
 }
 
 function normalizeList(values: string[] | null | undefined): string[] {
