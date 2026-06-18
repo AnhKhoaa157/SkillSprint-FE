@@ -428,8 +428,8 @@ export default function Roadmap() {
 
     return (
       <div className={isMobileView 
-        ? "flex flex-col bg-white w-full" 
-        : "h-full flex flex-col bg-white border-l border-slate-100 shadow-[0_-8px_24px_rgba(15,23,42,0.03)] z-20 relative"
+        ? "flex flex-col bg-white w-full overflow-hidden" 
+        : "h-full flex flex-col bg-white border-l border-slate-100 shadow-[0_-8px_24px_rgba(15,23,42,0.03)] z-20 relative overflow-hidden"
       }>
         <div className={`px-6 pt-5 bg-white shrink-0 ${isMobileView ? "px-0" : ""}`}>
           <div className="flex items-start justify-between">
@@ -735,7 +735,7 @@ export default function Roadmap() {
         </svg>
       </div>
 
-      <div className={`h-[calc(100vh-120px)] flex flex-col md:flex-row items-start overflow-hidden px-1 sm:px-4 transition-all duration-700 ease-in-out ${selectedStep && !isMobile ? 'justify-start gap-0 lg:gap-8' : 'justify-center'}`}>
+      <div className={`h-[calc(100vh-120px)] flex flex-col md:flex-row items-stretch overflow-hidden px-1 sm:px-4 transition-all duration-700 ease-in-out ${selectedStep && !isMobile ? 'justify-start gap-0 lg:gap-8' : 'justify-center'}`}>
         {/* LEFT COLUMN: ROADMAP PATH WITH SCROLL CONTEXT */}
         <div className={`h-full overflow-y-auto custom-scrollbar px-1 sm:px-2 transition-all duration-700 ease-in-out flex-shrink-0 relative z-10 ${selectedStep && !isMobile ? "w-full lg:w-[55%]" : "w-full max-w-3xl"}`}>
           
