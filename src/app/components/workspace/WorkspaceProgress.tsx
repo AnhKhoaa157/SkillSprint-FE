@@ -166,17 +166,30 @@ function TaskCard({ task, onOpenTask, isOverdue }: { task: ProgressCalendarTaskR
   const done = isTaskDone(task);
   const priority = getPriorityLabel(task.priority);
 
+  const isOverdueRealtime = useMemo(() => {
+    if (isOverdue) return true;
+    if (done) return false;
+    if (task.taskDate && task.endTime) {
+      const now = new Date();
+      const taskEnd = new Date(task.taskDate);
+      const [hh, mm] = task.endTime.split(":");
+      taskEnd.setHours(Number(hh), Number(mm), 0, 0);
+      return now > taskEnd;
+    }
+    return false;
+  }, [isOverdue, done, task.taskDate, task.endTime]);
+
   return (
     <article className={`rounded-xl border-y border-r p-4 transition-all duration-150 ${
       done 
         ? "border-l-4 border-l-emerald-500 border-emerald-100 bg-emerald-50/10" 
-        : isOverdue 
+        : isOverdueRealtime 
           ? "border-l-4 border-l-rose-500 border-rose-100 bg-rose-50/10 hover:bg-rose-50/20" 
           : "border-l-4 border-l-[#FF6B00] border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
     }`}>
       <div className="flex items-start gap-3">
         {/* Status icon */}
-        <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${done ? "bg-emerald-50 text-emerald-600" : isOverdue ? "bg-rose-50 text-rose-500" : "bg-orange-50 text-[#FF6B00]"}`}>
+        <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${done ? "bg-emerald-50 text-emerald-600" : isOverdueRealtime ? "bg-rose-50 text-rose-500" : "bg-orange-50 text-[#FF6B00]"}`}>
           {done ? <CheckCircle2 className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
         </div>
 
