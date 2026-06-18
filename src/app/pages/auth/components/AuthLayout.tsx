@@ -12,15 +12,18 @@ function LeftPanel() {
   );
 }
 
-/** ISO-8601 → separate { date, time } parts so they can be rendered on distinct lines. */
-function splitDateTime(value: string | null | undefined): { date: string; time: string } | null {
+/**
+ * ISO-8601 → "dd/MM/yyyy lúc HH:mm" as ONE atomic string. Rendered inside a
+ * `whitespace-nowrap` wrapper so the date/time never fractures across lines
+ * (e.g. the hour splitting away from the minutes).
+ */
+function formatDateTime(value: string | null | undefined): string | null {
   if (!value) return null;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
-  return {
-    date: d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }),
-    time: d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-  };
+  const date = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const time = d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  return `${date} lúc ${time}`;
 }
 
 function MaintenanceBannerPill() {
@@ -31,50 +34,54 @@ function MaintenanceBannerPill() {
 
   if (status && status.isActive) {
     hasUpcoming = true;
-    const end = splitDateTime(status.endAt);
-    // Date and time are broken onto two lines so the timestamp never crowds the
-    // surrounding copy or merges into an unreadable string.
+    const end = formatDateTime(status.endAt);
     scheduleContent = (
-      <>
-        Hệ thống đang được bảo trì
-        {end ? (
-          <>
-            , dự kiến hoàn thành vào ngày <span className="font-bold">{end.date}</span>
-            <br />
-            lúc <span className="font-bold">{end.time}</span>.
-          </>
-        ) : (
-          "."
-        )}{" "}
-        Vui lòng quay lại sau.
-      </>
+      <div className="space-y-1">
+        <p className="font-bold">Hệ thống đang được bảo trì</p>
+        {end && (
+          <ul className="space-y-0.5">
+            <li className="flex gap-1.5">
+              <span aria-hidden="true">•</span>
+              <span>
+                Dự kiến hoàn thành:{" "}
+                <strong className="whitespace-nowrap font-bold">{end}</strong>
+              </span>
+            </li>
+          </ul>
+        )}
+        <p>Vui lòng quay lại sau.</p>
+      </div>
     );
   } else if (status && !status.isActive && status.startAt) {
     const start = new Date(status.startAt);
     const msUntilStart = start.getTime() - Date.now();
     if (msUntilStart > 0) {
       hasUpcoming = true;
-      const startParts = splitDateTime(status.startAt);
-      const endParts = splitDateTime(status.endAt);
+      const startLabel = formatDateTime(status.startAt);
+      const endLabel = formatDateTime(status.endAt);
       scheduleContent = (
-        <>
-          Cảnh báo: Hệ thống sẽ bảo trì
-          {startParts && (
-            <>
-              {" "}từ ngày <span className="font-bold">{startParts.date}</span>
-              <br />
-              lúc <span className="font-bold">{startParts.time}</span>
-            </>
-          )}
-          {endParts && (
-            <>
-              {" "}đến ngày <span className="font-bold">{endParts.date}</span>
-              <br />
-              lúc <span className="font-bold">{endParts.time}</span>
-            </>
-          )}
-          . Vui lòng sắp xếp thời gian lưu dữ liệu của bạn.
-        </>
+        <div className="space-y-1">
+          <p className="font-bold">Hệ thống sẽ bảo trì:</p>
+          <ul className="space-y-0.5">
+            {startLabel && (
+              <li className="flex gap-1.5">
+                <span aria-hidden="true">•</span>
+                <span>
+                  Từ ngày: <strong className="whitespace-nowrap font-bold">{startLabel}</strong>
+                </span>
+              </li>
+            )}
+            {endLabel && (
+              <li className="flex gap-1.5">
+                <span aria-hidden="true">•</span>
+                <span>
+                  Đến ngày: <strong className="whitespace-nowrap font-bold">{endLabel}</strong>
+                </span>
+              </li>
+            )}
+          </ul>
+          <p>Vui lòng sắp xếp thời gian lưu dữ liệu của bạn!</p>
+        </div>
       );
     }
   }
@@ -86,40 +93,14 @@ function MaintenanceBannerPill() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-[340px] flex items-center gap-3 p-3 bg-white rounded-2xl border border-orange-100 shadow-xl shadow-orange-900/5 overflow-hidden"
+        className="w-[340px] flex items-start gap-3 py-3 px-4 bg-white rounded-2xl border border-orange-100 shadow-xl shadow-orange-900/5"
       >
         <div className="flex items-center justify-center shrink-0 w-9 h-9 rounded-full bg-amber-100 text-amber-600">
            <AlertTriangle className="w-4 h-4" />
         </div>
 
-        <div className="flex-1 overflow-hidden relative">
-          <div
-            className="whitespace-nowrap flex w-fit"
-            style={{ animation: "marquee 15s linear infinite" }}
-          >
-            <span className="pr-8 text-amber-900 text-[12px] font-medium leading-snug tracking-tight">{scheduleContent}</span>
-            <span className="pr-8 text-amber-900 text-[12px] font-medium leading-snug tracking-tight" aria-hidden="true">{scheduleContent}</span>
-          </div>
-          <style>{`
-            @keyframes marquee {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-50%); }
-            }
-            @media (prefers-reduced-motion: reduce) {
-              .whitespace-nowrap.flex.w-fit {
-                animation: none !important;
-                transform: none !important;
-                flex-wrap: wrap !important;
-              }
-              .pr-8:nth-child(2) {
-                display: none;
-              }
-              .pr-8 {
-                white-space: normal;
-                padding-right: 0 !important;
-              }
-            }
-          `}</style>
+        <div className="flex-1 min-w-0 text-amber-900 text-[12px] font-medium leading-relaxed tracking-tight">
+          {scheduleContent}
         </div>
       </motion.div>
     </div>

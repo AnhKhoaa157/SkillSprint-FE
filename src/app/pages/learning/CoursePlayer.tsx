@@ -1318,7 +1318,7 @@ export default function CoursePlayer() {
                     <button
                       type="button"
                       onClick={() => fastForwardTime(Math.max(15, minimumRequiredMinutes) * 60)}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-bold text-violet-600 transition hover:bg-violet-100 active:scale-[0.98]"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 text-[#FF6B00] px-5 py-3 text-sm font-bold transition hover:bg-orange-100 active:scale-[0.98] cursor-pointer"
                     >
                       <WandSparkles size={16} />
                       [DEV] Tua nhanh đủ điều kiện
