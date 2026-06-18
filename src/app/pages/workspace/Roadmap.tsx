@@ -27,6 +27,7 @@ import {
 import AiTutorChat from "./AiTutorChat";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { RoadmapRewardModal } from "../../components/modals/RoadmapRewardModal";
 
 type StepTone = {
   label: string;
@@ -232,6 +233,7 @@ export default function Roadmap() {
   const [isPremium, setIsPremium] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSchedulePrompt, setShowSchedulePrompt] = useState(false);
+  const [showRewardModal, setShowRewardModal] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceResponse[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
@@ -284,6 +286,21 @@ export default function Roadmap() {
     }).length;
     return Math.round((completedCount / steps.length) * 100);
   }, [roadmapData, steps, tasks]);
+
+  // Fire the reward chest the moment the roadmap reaches 100% (final milestone
+  // completed). Guarded by a per-roadmap localStorage flag so it celebrates once
+  // and never re-rewards on later visits — `tasks` reloads on every mount, which
+  // would otherwise re-trigger the 0 -> 100 transition. Deps are stable derived
+  // values (no `showRewardModal`), so this cannot create a render loop.
+  useEffect(() => {
+    if (steps.length === 0 || progressPercent < 100) return;
+    const roadmapKey = toText(roadmapData?.id) || activeWorkspaceId;
+    if (!roadmapKey) return;
+    const storageKey = `roadmap-reward-claimed:${roadmapKey}`;
+    if (localStorage.getItem(storageKey) === "1") return;
+    localStorage.setItem(storageKey, "1");
+    setShowRewardModal(true);
+  }, [progressPercent, steps.length, roadmapData?.id, activeWorkspaceId]);
 
   const roadmapTitle = toText(roadmapData?.title) || "Roadmap học tập";
   const roadmapDescription = toText(roadmapData?.description) || "Lộ trình học tập theo workspace đã xác nhận.";
@@ -926,6 +943,9 @@ export default function Roadmap() {
           </div>
         </div>
       )}
+
+      {/* ROADMAP COMPLETION REWARD */}
+      <RoadmapRewardModal open={showRewardModal} onClose={() => setShowRewardModal(false)} />
 
       {/* Mobile Step Detail Sheet Modal */}
       {selectedStep && isMobile && (
