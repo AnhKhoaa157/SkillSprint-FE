@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, AlertTriangle, BookOpenCheck, Clock3, MoreHorizontal, PencilLine, Trash2, FileText, ListTodo } from "lucide-react";
-import materialService from "../../../api/materialService";
-import progressService, { type ProgressDashboardResponse } from "../../../api/progressService";
+import materialService from "../../../api/learning/materialService";
+import progressService, { type ProgressDashboardResponse } from "../../../api/learning/progressService";
 
 export type WorkspaceCardProps = {
   workspaceId: string;

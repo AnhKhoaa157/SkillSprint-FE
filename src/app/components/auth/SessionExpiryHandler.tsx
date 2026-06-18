@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
-import { SESSION_EXPIRED_EVENT, markRedirectHandled } from "../../../api/sessionExpiry";
+import { SESSION_EXPIRED_EVENT, markRedirectHandled } from "../../../api/auth/sessionExpiry";
 
 /**
  * Global listener for session-expiry events raised by the HTTP clients.

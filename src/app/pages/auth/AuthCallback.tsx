@@ -5,7 +5,7 @@ import {
   clearAuthTokens,
   completeCognitoOAuthLogin,
   getPostLoginPath,
-} from "../../../api/authService";
+} from "../../../api/auth/authService";
 import { useAuth } from "../../contexts/AuthContext";
 
 const F = "'Plus Jakarta Sans', 'Inter', sans-serif";

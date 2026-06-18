@@ -1,7 +1,7 @@
 import { Navigate, useLocation, useNavigate, useParams } from "react-router";
 import QuizContainer from "../../components/tools/QuizContainer";
 import { useSubscription } from "../../../hooks/useSubscription";
-import type { QuizAttemptResponse } from "../../../api/quizService";
+import type { QuizAttemptResponse } from "../../../api/learning/quizService";
 
 export default function QuizPage() {
   const { quizId: _quizId } = useParams<{ quizId: string }>();

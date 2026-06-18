@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, Check, Lock, Mail, Loader2, ArrowRight } from "lucide-react";
 import { F, InputField } from "./AuthShared";
 import { Button } from "../../../components/ui/button";
-import { forgotPassword, confirmForgotPassword } from "../../../../api/authService";
+import { forgotPassword, confirmForgotPassword } from "../../../../api/auth/authService";
 
 export function ResetPassword({ onBack }: { onBack: () => void }) {
   const [email, setEmail] = useState("");

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, User, Wrench } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { getEmailError, F, InputField, isMaintenanceError } from "./components/AuthShared";
-import { login, register, isAdminRole } from "../../../api/authService";
+import { login, register, isAdminRole } from "../../../api/auth/authService";
 
 function GoogleIcon() {
   return (

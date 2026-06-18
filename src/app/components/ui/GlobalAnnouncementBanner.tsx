@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Info, AlertTriangle, X, type LucideIcon } from "lucide-react";
-import { getActivePublicAnnouncement, type AnnouncementType, type AnnouncementResponse } from "../../../api/systemAnnouncementService";
+import { getActivePublicAnnouncement, type AnnouncementType, type AnnouncementResponse } from "../../../api/system/systemAnnouncementService";
 
 const STORAGE_KEY = "dismissed_announcement_id";
 

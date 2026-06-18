@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
-import { getSystemStatus, type MaintenanceStatusResponse } from "../../api/systemMaintenanceService";
-import { enforceMaintenanceLogout } from "../../api/authService";
+import { getSystemStatus, type MaintenanceStatusResponse } from "../../api/system/systemMaintenanceService";
+import { enforceMaintenanceLogout } from "../../api/auth/authService";
 import { MaintenanceScreen } from "./MaintenanceScreen";
 
 const POLL_MS = 30_000; // re-check every 30s + on window focus

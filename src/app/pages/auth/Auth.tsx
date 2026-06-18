@@ -9,9 +9,9 @@ import { ResetPassword } from "./components/ResetPassword";
 import { NewPasswordRequiredModal } from "./components/NewPasswordRequired";
 import { ConfirmRegisterModal } from "./components/ConfirmRegister";
 import { isMaintenanceError } from "./components/AuthShared";
-import { storeAuthTokens, getPostLoginPath, redirectToCognitoGoogleSignIn, login, isAdminRole } from "../../../api/authService";
+import { storeAuthTokens, getPostLoginPath, redirectToCognitoGoogleSignIn, login, isAdminRole } from "../../../api/auth/authService";
 import { useMaintenance } from "../../../components/system/MaintenanceGate";
-import { getSystemStatus } from "../../../api/systemMaintenanceService";
+import { getSystemStatus } from "../../../api/system/systemMaintenanceService";
 
 export default function Auth() {
   const navigate = useNavigate();

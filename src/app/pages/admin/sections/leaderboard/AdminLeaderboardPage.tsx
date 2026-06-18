@@ -8,7 +8,7 @@ import {
   type AdminLeaderboardEntry,
   type AdminLeaderboardPeriod,
   type AdminLeaderboardResponse,
-} from "../../../../../api/adminPointService";
+} from "../../../../../api/admin/adminPointService";
 import {
   Table,
   TableBody,

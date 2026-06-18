@@ -12,11 +12,11 @@ import { motion, AnimatePresence } from "motion/react";
 import { PricingModal } from "../components/modals/PricingModal";
 import { BrandLogo } from "../components/layout/BrandLogo";
 import { PointsPill } from "../components/layout/PointsPill";
-import meService from "../../api/meService";
-import workspaceService from "../../api/workspaceService";
-import { getStoredUserProfile } from "../../api/authService";
+import meService from "../../api/utilities/meService";
+import workspaceService from "../../api/utilities/workspaceService";
+import { getStoredUserProfile } from "../../api/auth/authService";
 import { useSubscription } from "../../hooks/useSubscription";
-import { listSubscriptionPlans } from "../../api/adminSubscriptionPlansService";
+import { listSubscriptionPlans } from "../../api/admin/adminSubscriptionPlansService";
 import { Sidebar } from "./Sidebar";
 
 /* ─── Sidebar Design Tokens ─── */

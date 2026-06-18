@@ -7,7 +7,7 @@ import {
   formatPlanPrice,
   type AdminAuditLogResponse,
   type ServicePlanResponse,
-} from "../../../../../api/adminSubscriptionPlansService";
+} from "../../../../../api/admin/adminSubscriptionPlansService";
 import { PlanTypeBadge } from "../../../../../components/admin/PlanTypeBadge";
 import { Badge } from "../../_shared/primitives";
 import {

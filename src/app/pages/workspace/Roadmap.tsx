@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
-import roadmapService, { RoadmapResponse, RoadmapResource, RoadmapStep } from "../../../api/roadmapService";
-import calendarService, { type CalendarTaskResponse } from "../../../api/calendarService";
-import { getCurrentSubscription } from "../../../api/subscriptionsService";
-import workspaceService, { WorkspaceResponse } from "../../../api/workspaceService";
+import roadmapService, { RoadmapResponse, RoadmapResource, RoadmapStep } from "../../../api/learning/roadmapService";
+import calendarService, { type CalendarTaskResponse } from "../../../api/utilities/calendarService";
+import { getCurrentSubscription } from "../../../api/billing/subscriptionsService";
+import workspaceService, { WorkspaceResponse } from "../../../api/utilities/workspaceService";
 import {
   ArrowLeft,
   BookOpenCheck,

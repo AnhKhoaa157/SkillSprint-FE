@@ -13,7 +13,7 @@ import {
   type AdminPointEventResponse,
   type AdminPointEventType,
   type PageResponse,
-} from "../../../../../api/adminPointService";
+} from "../../../../../api/admin/adminPointService";
 import {
   Table,
   TableBody,

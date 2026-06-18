@@ -12,8 +12,8 @@ import {
   clearAuthTokens,
   isValidAuthSession,
   type AuthSession,
-} from "../../api/authService";
-import { resetSessionExpiry } from "../../api/sessionExpiry";
+} from "../../api/auth/authService";
+import { resetSessionExpiry } from "../../api/auth/sessionExpiry";
 
 const AUTH_STORAGE_KEY = "skillSprint.auth.tokens";
 const SESSION_HYDRATED_KEY = "skillSprint.auth.hydrated";

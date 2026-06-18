@@ -19,7 +19,7 @@ import quizService, {
   type QuizAttemptResponse,
   type QuizQuestionResponse,
   type QuizResponse,
-} from "../../../api/quizService";
+} from "../../../api/learning/quizService";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

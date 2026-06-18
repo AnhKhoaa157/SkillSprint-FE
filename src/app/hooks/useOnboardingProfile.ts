@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import onboardingService, { OnboardingProfileResponse, UpsertOnboardingProfileRequest } from "../../api/onboardingService";
+import onboardingService, { OnboardingProfileResponse, UpsertOnboardingProfileRequest } from "../../api/auth/onboardingService";
 
 export function useOnboardingProfile(workspaceId?: string) {
   const [profile, setProfile] = useState<OnboardingProfileResponse | null>(null);

@@ -8,8 +8,8 @@ import {
   getPointHistory,
   adjustUserPoints,
   toggleLeaderboardBan,
-} from "../../../../api/pointService";
-import type { PointHistoryLog } from "../../../../api/skillSprintModels";
+} from "../../../../api/learning/pointService";
+import type { PointHistoryLog } from "../../../../api/core/skillSprintModels";
 import { AdjustPointsModal } from "../../../components/modals/AdjustPointsModal";
 import { LeaderboardBanModal } from "../../../components/modals/LeaderboardBanModal";
 

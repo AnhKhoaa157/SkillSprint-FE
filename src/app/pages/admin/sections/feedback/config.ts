@@ -1,4 +1,4 @@
-import type { FeedbackStatus } from "../../../../../api/feedbackService";
+import type { FeedbackStatus } from "../../../../../api/utilities/feedbackService";
 
 export interface AdminFeedbackProps {
   isDashboard?: boolean;

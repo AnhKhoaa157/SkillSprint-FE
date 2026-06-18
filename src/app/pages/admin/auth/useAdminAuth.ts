@@ -8,7 +8,7 @@ import {
   storeAuthTokens,
   verifyPasswordResetCode,
   completePasswordReset,
-} from "../../../../api/authService";
+} from "../../../../api/auth/authService";
 import { PW_RULES, scorePassword, type View } from "./config";
 
 /**

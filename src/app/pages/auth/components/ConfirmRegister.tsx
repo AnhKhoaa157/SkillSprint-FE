@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Check, Loader2, ArrowRight } from "lucide-react";
 import { F, InputField } from "./AuthShared";
 import { Button } from "../../../components/ui/button";
-import { resendConfirmationCode, confirmRegister } from "../../../../api/authService";
+import { resendConfirmationCode, confirmRegister } from "../../../../api/auth/authService";
 
 export function ConfirmRegisterModal({ email, onClose, onConfirmed }: { email: string; onClose: () => void; onConfirmed: () => void; }) {
   const [code, setCode] = useState("");

@@ -4,7 +4,7 @@ import {
   MessageSquare, Search, RefreshCw, LoaderCircle,
   Link as LinkIcon, Trash2, Archive, AlertCircle,
 } from "lucide-react";
-import type { FeedbackStatus } from "../../../../../api/feedbackService";
+import type { FeedbackStatus } from "../../../../../api/utilities/feedbackService";
 import {
   FEEDBACK_TYPE_LABEL,
   FEEDBACK_STATUS_LABEL,

@@ -7,11 +7,11 @@ import { useParams, useNavigate, useLocation } from "react-router";
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
 import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Trash2, AlertTriangle, LoaderCircle, SlidersHorizontal, Settings, Check, Calendar, RefreshCw, type LucideIcon } from "lucide-react";
 import EmptyState from "../../components/ui/EmptyState";
-import { getStoredAuthSession } from "../../../api/authService";
+import { getStoredAuthSession } from "../../../api/auth/authService";
 import AiTutorChat from "./AiTutorChat";
-import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/materialService.ts";
-import workspaceService from "../../../api/workspaceService";
-import { API_BASE } from "../../../api/config";
+import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/learning/materialService.ts";
+import workspaceService from "../../../api/utilities/workspaceService";
+import { API_BASE } from "../../../api/core/config";
 
 const PROCESSING_JOB_ACTIVE_STATES = new Set(["PENDING", "RUNNING", "REVIEW_REQUIRED", "EXTRACTING", "CLEANING", "CHUNKING", "ANALYZING"]);
 const PROCESSING_JOB_TERMINAL_STATES = new Set(["COMPLETED", "FAILED"]);

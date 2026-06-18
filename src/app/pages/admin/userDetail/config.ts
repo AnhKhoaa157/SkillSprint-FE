@@ -1,5 +1,5 @@
-import type { AdminUserDetail, SubscriptionAdminResponse } from "../../../../api/adminUserService";
-import type { ServicePlanType } from "../../../../api/adminSubscriptionPlansService";
+import type { AdminUserDetail, SubscriptionAdminResponse } from "../../../../api/admin/adminUserService";
+import type { ServicePlanType } from "../../../../api/admin/adminSubscriptionPlansService";
 import {
   getStatusBadge,
   safeFormatDate as formatDate,

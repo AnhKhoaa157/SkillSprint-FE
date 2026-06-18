@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getCurrentDateFromServer } from "../../api/dateService";
+import { getCurrentDateFromServer } from "../../api/utilities/dateService";
 
 /**
  * Hook để lấy ngày từ server

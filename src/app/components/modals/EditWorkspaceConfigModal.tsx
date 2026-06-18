@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import onboardingService, {
   type OnboardingProfileResponse,
   type UpsertOnboardingProfileRequest,
-} from "../../../api/onboardingService";
+} from "../../../api/auth/onboardingService";
 
 const dayOptions = [
   { label: "T2", value: "MONDAY" },

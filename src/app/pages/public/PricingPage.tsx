@@ -15,7 +15,7 @@ import {
   formatPlanPrice,
   resolvePlanFeatures,
   type PublicPlanResponse
-} from "../../../api/adminSubscriptionPlansService";
+} from "../../../api/admin/adminSubscriptionPlansService";
 import { useEffect } from "react";
 
 /* ──────────────────────────────────────────────────────────────

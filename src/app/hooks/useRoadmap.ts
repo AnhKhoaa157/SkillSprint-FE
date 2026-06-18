@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getAuthHeaders } from '../../api/apiClient';
-import { API_BASE } from '../../api/config';
+import { getAuthHeaders } from '../../api/core/apiClient';
+import { API_BASE } from '../../api/core/config';
 
 export type RoadmapResponse = {
   id: string;

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   getSubscriptionPlanDetail,
   type ServicePlanResponse,
-} from "../../../../../api/adminSubscriptionPlansService";
+} from "../../../../../api/admin/adminSubscriptionPlansService";
 import { PlanBadgeStyles } from "../../../../../components/admin/PlanTypeBadge";
 import { usePlans, useAuditLogs, useModal } from "./usePlanManager";
 import { StatCards, PlansTable, AuditLogList } from "./components";

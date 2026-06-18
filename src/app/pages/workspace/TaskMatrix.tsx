@@ -12,8 +12,8 @@ import {
   getEisenhowerTasks,
   createCalendarTask,
   updateCalendarTaskStatus,
-} from "../../../api/calendarService";
-import { getMyWorkspaces, type WorkspaceResponse } from "../../../api/workspaceService";
+} from "../../../api/utilities/calendarService";
+import { getMyWorkspaces, type WorkspaceResponse } from "../../../api/utilities/workspaceService";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

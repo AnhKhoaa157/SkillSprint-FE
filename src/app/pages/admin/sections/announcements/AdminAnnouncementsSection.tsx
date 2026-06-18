@@ -24,7 +24,7 @@ import {
   type AnnouncementType,
   type AnnouncementResponse,
   type UpdateAnnouncementRequest,
-} from "../../../../../api/systemAnnouncementService";
+} from "../../../../../api/system/systemAnnouncementService";
 
 /* ── datetime-local <-> ISO helpers (mirrors systemMaintenanceService) ── */
 function isoToLocalInput(iso: string | null): string {

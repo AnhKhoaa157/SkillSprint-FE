@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import healthService from "../../../../../api/healthService";
+import healthService from "../../../../../api/system/healthService";
 import { BrandLogo } from "../../../../components/layout/BrandLogo";
 
 type HistoryItem = { ts: string; payload: any; status: 'up' | 'down' | 'unknown' };
