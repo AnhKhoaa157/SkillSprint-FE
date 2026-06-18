@@ -413,11 +413,17 @@ export default function Roadmap() {
     const matchedTaskDate = matchedTask?.taskDate ? formatTaskDate(matchedTask.taskDate) : "";
     const canStart = Boolean(matchedTask);
     let stepCompletionPercent = 0;
+    let stepStatusText = "Chưa mở khóa";
+
     if (step.status === "COMPLETED" || matchedTask?.status === "COMPLETED" || matchedTask?.status === "DONE") {
       stepCompletionPercent = 100;
-    } else if (step.status === "CURRENT" || matchedTask?.status === "IN_PROGRESS" || matchedTask?.status === "TODO") {
-      // Show some progress to indicate it's currently active
-      stepCompletionPercent = 15;
+      stepStatusText = "Hoàn thành";
+    } else if (step.status === "CURRENT" || matchedTask?.status === "IN_PROGRESS") {
+      stepCompletionPercent = 50;
+      stepStatusText = "Đang học";
+    } else if (matchedTask?.status === "TODO") {
+      stepCompletionPercent = 0;
+      stepStatusText = "Chưa bắt đầu";
     }
 
     return (
@@ -554,12 +560,12 @@ export default function Roadmap() {
               </div>
               <div className="border-b border-slate-100 pb-5 space-y-2">
                 <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  <span>Tiến độ module</span>
-                  <span className="text-[#FF7E21]">{stepCompletionPercent}%</span>
+                  <span>Trạng thái module</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] ${stepCompletionPercent === 100 ? 'bg-emerald-50 text-emerald-600' : stepCompletionPercent > 0 ? 'bg-orange-50 text-[#FF7E21]' : 'bg-slate-100 text-slate-500'}`}>{stepStatusText}</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-slate-100 border border-slate-200/40 shadow-inner">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-amber-400 to-[#FF7E21] transition-all duration-500 shadow-[0_0_8px_rgba(255,126,33,0.2)]"
+                    className={`h-full rounded-full transition-all duration-500 ${stepCompletionPercent === 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : stepCompletionPercent > 0 ? 'bg-gradient-to-r from-amber-400 to-[#FF7E21] shadow-[0_0_8px_rgba(255,126,33,0.2)]' : 'bg-transparent'}`}
                     style={{ width: `${stepCompletionPercent}%` }}
                   />
                 </div>
