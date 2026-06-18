@@ -1105,7 +1105,7 @@ export default function CoursePlayer() {
                           setQuizStatus("idle");
                         }}
                         disabled={isGeneratingQuiz}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-3 text-xs font-extrabold text-white shadow-md shadow-indigo-500/20 transition hover:from-indigo-600 hover:to-violet-600 active:scale-[0.98] cursor-pointer"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-[#FF6B00] px-4 py-3 text-xs font-extrabold text-white shadow-md shadow-orange-500/20 transition hover:from-amber-600 hover:to-[#E05E00] active:scale-[0.98] cursor-pointer"
                       >
                         <ExternalLink size={13} /> ✍️ Vào làm bài kiểm tra
                       </button>
