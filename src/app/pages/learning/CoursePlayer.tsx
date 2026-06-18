@@ -828,40 +828,30 @@ export default function CoursePlayer() {
                     </div>
                     <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                       {resources.length > 0 ? (
-                        resources.map((resource, index) => {
-                          const isQuizResource = resource.platform === "SKILLSPRINT" && resource.title?.includes("Bài tập thực hành");
-                          return (
-                            <a
-                              key={`${resource.resourceId ?? resource.title ?? index}`}
-                              href={isQuizResource ? undefined : (resource.url ?? "#")}
-                              target={isQuizResource ? undefined : (resource.url ? "_blank" : undefined)}
-                              rel={isQuizResource ? undefined : (resource.url ? "noreferrer" : undefined)}
-                              onClick={(e) => {
-                                if (isQuizResource) {
-                                  e.preventDefault();
-                                  setSideTab("quiz");
-                                  window.scrollTo({ top: 0, behavior: "smooth" });
-                                }
-                              }}
-                              className={`group relative rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all duration-300 hover:-translate-y-1 hover:border-orange-200 hover:bg-orange-50/20 hover:shadow-lg hover:shadow-orange-500/5 ${isQuizResource ? "cursor-pointer" : ""}`}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="truncate text-xs font-extrabold text-slate-800 group-hover:text-orange-600 transition-colors">{resource.title ?? "Untitled resource"}</p>
-                                  <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                                    {resource.platform ?? resource.resourceType ?? "Resource"}
-                                  </span>
-                                </div>
-                                {resource.aiRecommended ? (
-                                  <span className="flex h-5 items-center gap-0.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-[8px] font-black text-orange-600 uppercase tracking-widest animate-pulse">
-                                    <Sparkles size={8} /> AI
-                                  </span>
-                                ) : null}
+                        resources.map((resource, index) => (
+                          <a
+                            key={`${resource.resourceId ?? resource.title ?? index}`}
+                            href={resource.url ?? "#"}
+                            target={resource.url ? "_blank" : undefined}
+                            rel={resource.url ? "noreferrer" : undefined}
+                            className="group relative rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all duration-300 hover:-translate-y-1 hover:border-orange-200 hover:bg-orange-50/20 hover:shadow-lg hover:shadow-orange-500/5"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-extrabold text-slate-800 group-hover:text-orange-600 transition-colors">{resource.title ?? "Untitled resource"}</p>
+                                <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                                  {resource.platform ?? resource.resourceType ?? "Resource"}
+                                </span>
                               </div>
-                              <p className="mt-3 text-[11px] leading-5 text-slate-500 font-medium line-clamp-2">{resource.reason ?? resource.content ?? "Tài liệu học tập bổ trợ."}</p>
-                            </a>
-                          );
-                        })
+                              {resource.aiRecommended ? (
+                                <span className="flex h-5 items-center gap-0.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-[8px] font-black text-orange-600 uppercase tracking-widest animate-pulse">
+                                  <Sparkles size={8} /> AI
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="mt-3 text-[11px] leading-5 text-slate-500 font-medium line-clamp-2">{resource.reason ?? resource.content ?? "Tài liệu học tập bổ trợ."}</p>
+                          </a>
+                        ))
                       ) : (
                         <div className="rounded-xl border border-slate-100 bg-slate-50/40 p-4 text-xs text-slate-400 italic md:col-span-2 xl:col-span-3">
                           Chưa có tài nguyên bổ trợ cho phiên học này.
@@ -1029,7 +1019,7 @@ export default function CoursePlayer() {
                 <div className="mt-4 rounded-[20px] border border-slate-100 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-orange-100/60 bg-orange-50 text-orange-600 shadow-sm shadow-orange-50/50">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-indigo-100/60 bg-indigo-50 text-indigo-600">
                         <Brain size={14} className="stroke-[2.5]" />
                       </div>
                       <div>
@@ -1044,7 +1034,7 @@ export default function CoursePlayer() {
 
                   {/* FIX TRIỆT ĐỂ BUG QUAY LẠI NÚT TẠO ĐỀ: Chốt chặn State A dựa trên biến hasQuizCreated */}
                   {!hasQuizCreated && !loadingQuizMeta && (
-                    <div className="rounded-xl border border-dashed border-orange-200/80 bg-orange-50/30 p-3.5">
+                    <div className="rounded-xl border border-dashed border-indigo-200/80 bg-indigo-50/30 p-3.5">
                       <p className="text-[11px] leading-[1.6] font-medium text-slate-500">
                         Bài kiểm tra chưa được kích hoạt. Hãy để AI quét nội dung bài học và thiết kế đề bài cho riêng bạn.
                       </p>
