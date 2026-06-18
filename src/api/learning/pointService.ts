@@ -3,6 +3,7 @@ import type {
   AdjustUserPointsRequest,
   LeaderboardPeriod,
   LeaderboardResponse,
+  MyPointEvent,
   PointHistoryLog,
   UserPointSummary,
 } from "../core/skillSprintModels";
@@ -32,6 +33,16 @@ export async function getMeSummary(): Promise<UserPointSummary> {
   const res = await requestJson<UserPointSummary>("/api/leaderboard/me", { method: "GET" });
   if (!res.data) throw new Error(res.message || "Không thể tải điểm của bạn");
   return res.data;
+}
+
+/**
+ * Fetch the logged-in user's own point ledger, newest first.
+ * GET /api/leaderboard/me/events → flat (non-paginated) list of PointEventResponse.
+ * Used to verify a real award exists before celebrating (e.g. ROADMAP_COMPLETED).
+ */
+export async function getMyPointEvents(): Promise<MyPointEvent[]> {
+  const res = await requestJson<MyPointEvent[]>("/api/leaderboard/me/events", { method: "GET" });
+  return res.data ?? [];
 }
 
 /** Fetch the top users for a scope. The BE aggregates ranking server-side. */
@@ -83,6 +94,7 @@ export async function toggleLeaderboardBan(userId: string, isBanned: boolean): P
 
 export default {
   getMeSummary,
+  getMyPointEvents,
   getLeaderboard,
   getPointHistory,
   adjustUserPoints,
