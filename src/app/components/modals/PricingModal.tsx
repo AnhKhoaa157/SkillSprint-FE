@@ -110,7 +110,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
   const getNormalizedPlan = (planStr: string): PlanId => {
     if (!planStr) return "FREE";
     const upper = planStr.toUpperCase();
-    if (upper === "BUILDER" || upper === "SKILL_BUILDER") return "SKILL_BUILDER";
+    if (upper === "BUILDER" || upper === "SKILL_BUILDER" || upper === "BASIC" || upper === "SKILL BUILDER") return "SKILL_BUILDER";
     if (upper === "PREMIUM" || upper === "CAREER_PREMIUM") return "PREMIUM";
     return "FREE";
   };
