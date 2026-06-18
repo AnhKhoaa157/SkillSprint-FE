@@ -196,6 +196,20 @@ export async function getStudySession(sessionId: string): Promise<StudySessionDe
   return unwrapData<StudySessionDetailResponse>(res);
 }
 
+/**
+ * GET /api/study-sessions/{sessionId}
+ * Returns the live session state — including the authoritative `pomodoro`
+ * snapshot (remainingSeconds, currentPhase, phaseEndAt, status). Used to
+ * re-hydrate the timer after an F5 refresh without resetting the BE session.
+ */
+export async function getStudySessionState(sessionId: string): Promise<StudySessionResponse> {
+  const res = await requestJson<StudySessionResponse>(`/api/study-sessions/${sessionId}`, {
+    method: "GET",
+  });
+
+  return unwrapData<StudySessionResponse>(res);
+}
+
 // ==================================================================
 // POMODORO ENDPOINTS (with safe unwrap)
 // ==================================================================
@@ -310,6 +324,7 @@ export async function completeStudySession(
 export default {
   getStudySessionDetail,
   getStudySession,
+  getStudySessionState,
   startStudySession,
   startRoadmapStudySession,
   completeStudySession,

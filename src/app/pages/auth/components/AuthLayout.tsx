@@ -12,26 +12,70 @@ function LeftPanel() {
   );
 }
 
+/** ISO-8601 → separate { date, time } parts so they can be rendered on distinct lines. */
+function splitDateTime(value: string | null | undefined): { date: string; time: string } | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return {
+    date: d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }),
+    time: d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+  };
+}
+
 function MaintenanceBannerPill() {
   const { status } = useMaintenance();
 
   let hasUpcoming = false;
-  let scheduleText = "Hệ thống hoạt động bình thường. Hiện tại không có lịch bảo trì nào được lên kế hoạch.";
-  
+  let scheduleContent: React.ReactNode = null;
+
   if (status && status.isActive) {
     hasUpcoming = true;
-    const end = status.endAt ? new Date(status.endAt) : null;
-    const endLabel = end && !Number.isNaN(end.getTime()) ? end.toLocaleString("vi-VN") : null;
-    scheduleText = `Hệ thống đang được bảo trì${endLabel ? `, dự kiến hoàn thành lúc ${endLabel}` : ""}. Vui lòng quay lại sau.`;
+    const end = splitDateTime(status.endAt);
+    // Date and time are broken onto two lines so the timestamp never crowds the
+    // surrounding copy or merges into an unreadable string.
+    scheduleContent = (
+      <>
+        Hệ thống đang được bảo trì
+        {end ? (
+          <>
+            , dự kiến hoàn thành vào ngày <span className="font-bold">{end.date}</span>
+            <br />
+            lúc <span className="font-bold">{end.time}</span>.
+          </>
+        ) : (
+          "."
+        )}{" "}
+        Vui lòng quay lại sau.
+      </>
+    );
   } else if (status && !status.isActive && status.startAt) {
     const start = new Date(status.startAt);
     const msUntilStart = start.getTime() - Date.now();
     if (msUntilStart > 0) {
       hasUpcoming = true;
-      const startLabel = start.toLocaleString("vi-VN");
-      const end = status.endAt ? new Date(status.endAt) : null;
-      const endLabel = end && !Number.isNaN(end.getTime()) ? end.toLocaleString("vi-VN") : null;
-      scheduleText = `Cảnh báo: Hệ thống sẽ bảo trì từ ${startLabel}${endLabel ? ` đến ${endLabel}` : ""}. Vui lòng sắp xếp thời gian lưu dữ liệu của bạn.`;
+      const startParts = splitDateTime(status.startAt);
+      const endParts = splitDateTime(status.endAt);
+      scheduleContent = (
+        <>
+          Cảnh báo: Hệ thống sẽ bảo trì
+          {startParts && (
+            <>
+              {" "}từ ngày <span className="font-bold">{startParts.date}</span>
+              <br />
+              lúc <span className="font-bold">{startParts.time}</span>
+            </>
+          )}
+          {endParts && (
+            <>
+              {" "}đến ngày <span className="font-bold">{endParts.date}</span>
+              <br />
+              lúc <span className="font-bold">{endParts.time}</span>
+            </>
+          )}
+          . Vui lòng sắp xếp thời gian lưu dữ liệu của bạn.
+        </>
+      );
     }
   }
 
@@ -47,14 +91,14 @@ function MaintenanceBannerPill() {
         <div className="flex items-center justify-center shrink-0 w-9 h-9 rounded-full bg-amber-100 text-amber-600">
            <AlertTriangle className="w-4 h-4" />
         </div>
-        
+
         <div className="flex-1 overflow-hidden relative">
-          <div 
-            className="whitespace-nowrap flex w-fit" 
+          <div
+            className="whitespace-nowrap flex w-fit"
             style={{ animation: "marquee 15s linear infinite" }}
           >
-            <span className="pr-8 text-amber-900 text-[12px] font-medium leading-tight tracking-tight">{scheduleText}</span>
-            <span className="pr-8 text-amber-900 text-[12px] font-medium leading-tight tracking-tight" aria-hidden="true">{scheduleText}</span>
+            <span className="pr-8 text-amber-900 text-[12px] font-medium leading-snug tracking-tight">{scheduleContent}</span>
+            <span className="pr-8 text-amber-900 text-[12px] font-medium leading-snug tracking-tight" aria-hidden="true">{scheduleContent}</span>
           </div>
           <style>{`
             @keyframes marquee {

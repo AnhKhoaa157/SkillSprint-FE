@@ -38,7 +38,7 @@ import studySessionService from "../../../api/studySessionService";
 import type { StudySessionDetailResponse } from "../../../api/studySessionService";
 import quizService from "../../../api/quizService";
 import type { QuizAttemptResponse } from "../../../api/quizService";
-import { usePomodoro } from "../../contexts/PomodoroContext";
+import { usePomodoro, type PomodoroPhase } from "../../contexts/PomodoroContext";
 import { toast } from "sonner";
 import { useSubscription } from "../../../hooks/useSubscription";
 import { PricingModal } from "../../components/modals/PricingModal";
@@ -134,11 +134,26 @@ export default function CoursePlayer() {
   const [isFinishing, setIsFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const showToast = useCallback((type: "success" | "warning", message: string) => {
+  // Tracks the last time each (type + message) toast fired so the same event
+  // trigger can never stack duplicate notifications inside the player view.
+  const recentToastRef = useRef<Map<string, number>>(new Map());
+  const showToast = useCallback((type: "success" | "warning" | "error", message: string) => {
+    const key = `${type}:${message}`;
+    const now = Date.now();
+    const last = recentToastRef.current.get(key) ?? 0;
+    // Collapse identical notifications fired within a short window (re-renders,
+    // double event handlers, rapid retries) into a single toast.
+    if (now - last < 4000) return;
+    recentToastRef.current.set(key, now);
+    // Reuse a stable sonner id keyed by content: even if two calls slip through
+    // concurrently, sonner replaces the existing toast instead of stacking.
+    const options = { id: key };
     if (type === "success") {
-      toast.success(message);
+      toast.success(message, options);
+    } else if (type === "error") {
+      toast.error(message, options);
     } else {
-      toast.warning(message);
+      toast.warning(message, options);
     }
   }, []);
 
@@ -156,6 +171,7 @@ export default function CoursePlayer() {
     pauseTimer,
     skipToNextPhase,
     clearTimerContext,
+    hydrateTimer,
     isNavigationBlocked,
     proceedNavigation,
     resetNavigation,
@@ -254,6 +270,78 @@ export default function CoursePlayer() {
     };
   }, [taskId]);
 
+  // ── F5 RESILIENCY: re-hydrate the live Pomodoro from the backend on mount ──
+  // A hard refresh wipes the in-memory PomodoroContext (timer resets to 25:00),
+  // but the BE session keeps ticking. On a cold load we fetch the authoritative
+  // session state and recompute the TRUE remaining time against the backend
+  // timestamp, then re-seed the timer so the countdown UI continues seamlessly.
+  const didHydrateRef = useRef(false);
+  useEffect(() => {
+    if (didHydrateRef.current) return;
+    if (!activeSessionId) return;
+    // If the in-memory timer is already tracking a step, this is a normal
+    // navigation (not a cold reload) — never clobber a running session.
+    if (activeStepId) return;
+
+    let cancelled = false;
+    didHydrateRef.current = true;
+
+    studySessionService
+      .getStudySessionState(activeSessionId)
+      .then((session) => {
+        if (cancelled) return;
+        const pomodoro = session?.pomodoro;
+        if (!pomodoro) return;
+
+        const status = String(pomodoro.status ?? "").toUpperCase();
+        // A finished/closed session must never resurrect a timer — clean up the
+        // stale pointer instead so the page falls back to its "start" state.
+        if (status === "COMPLETED") {
+          if (taskId) clearStoredSessionId(taskId);
+          setActiveSessionId(null);
+          return;
+        }
+
+        const isRunning = status === "IN_PROGRESS";
+        const phase = (String(pomodoro.currentPhase ?? "FOCUS").toUpperCase() as PomodoroPhase);
+        const stepId =
+          session.roadmapStepId ?? roadmapStep?.stepId ?? taskId ?? activeSessionId;
+
+        // True remaining seconds: while running, derive from phaseEndAt vs. the
+        // wall clock so the F5 doesn't rewind time; otherwise (paused) trust the
+        // stored remainingSeconds snapshot.
+        let remaining = Math.max(0, Math.floor(pomodoro.remainingSeconds ?? 0));
+        if (isRunning && pomodoro.phaseEndAt) {
+          const endMs = new Date(pomodoro.phaseEndAt).getTime();
+          if (!Number.isNaN(endMs)) {
+            remaining = Math.max(0, Math.round((endMs - Date.now()) / 1000));
+          }
+        }
+
+        // Re-derive accumulated study time: completed focus minutes + the time
+        // already elapsed inside the current focus phase (only while ticking).
+        let studySeconds = Math.max(0, Math.floor((pomodoro.completedFocusMinutes ?? 0) * 60));
+        if (phase === "FOCUS" && isRunning && pomodoro.phaseStartedAt) {
+          const startedMs = new Date(pomodoro.phaseStartedAt).getTime();
+          if (!Number.isNaN(startedMs)) {
+            studySeconds += Math.max(0, Math.round((Date.now() - startedMs) / 1000));
+          }
+        }
+
+        hydrateTimer({ stepId, phase, timeLeft: remaining, isRunning, studySeconds });
+      })
+      .catch((err: unknown) => {
+        // Soft-fail: a rehydration miss must never brick the page. Allow a retry
+        // on a later mount by releasing the guard.
+        console.error("Failed to rehydrate Pomodoro session", err);
+        didHydrateRef.current = false;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSessionId, activeStepId, hydrateTimer, roadmapStep?.stepId, taskId]);
+
   const fetchUpdatedDetail = async () => {
     if (!taskId) return;
     try {
@@ -313,7 +401,7 @@ export default function CoursePlayer() {
     setShowQuiz(false);
     if (result.isPassed) {
       setQuizStatus("passed");
-      toast.success("Chúc mừng! Bạn đã PASS bài quiz.");
+      // Single source of truth for the toast — showToast dedupes internally.
       showToast("success", "Chúc mừng! Bạn đã PASS bài quiz.");
       if (taskId) {
         try {
@@ -325,8 +413,8 @@ export default function CoursePlayer() {
       }
     } else {
       setQuizStatus("failed");
-      toast.error("Rất tiếc! Bạn NOT PASS bài quiz, hãy thử lại.");
-      showToast("warning", "Rất tiếc! Bạn NOT PASS bài quiz, hãy thử lại.");
+      // Single source of truth for the toast — showToast dedupes internally.
+      showToast("error", "Rất tiếc! Bạn NOT PASS bài quiz, hãy thử lại.");
     }
 
     await fetchUpdatedDetail();
