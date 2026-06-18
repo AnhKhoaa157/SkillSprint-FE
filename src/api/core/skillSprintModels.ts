@@ -178,6 +178,22 @@ export type PointHistoryLog = {
   createdAt: string;
 };
 
+/**
+ * One row of the logged-in user's own point ledger (GET /api/leaderboard/me/events).
+ * `eventType` is the backend `PointEventType` enum name (e.g. "ROADMAP_COMPLETED",
+ * "QUIZ_EXCELLENT") and `sourceId` is the originating entity id — the roadmap UUID
+ * for ROADMAP_COMPLETED, the step UUID for ROADMAP_STEP_COMPLETED, etc.
+ */
+export type MyPointEvent = {
+  eventType: string;
+  sourceType: string;
+  sourceId: string;
+  points: number;
+  description: string;
+  eventDate: string | null;
+  createdAt: string;
+};
+
 /** PATCH /api/admin/users/{id}/adjust-score body. `scoreDelta` may be negative. */
 export type AdjustUserPointsRequest = {
   scoreDelta: number;

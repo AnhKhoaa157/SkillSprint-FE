@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import roadmapService, { RoadmapResponse, RoadmapResource, RoadmapStep } from "../../../api/learning/roadmapService";
+import { getMyPointEvents } from "../../../api/learning/pointService";
 import calendarService, { type CalendarTaskResponse } from "../../../api/utilities/calendarService";
 import { getCurrentSubscription } from "../../../api/billing/subscriptionsService";
 import workspaceService, { WorkspaceResponse } from "../../../api/utilities/workspaceService";
@@ -287,20 +288,57 @@ export default function Roadmap() {
     return Math.round((completedCount / steps.length) * 100);
   }, [roadmapData, steps, tasks]);
 
-  // Fire the reward chest the moment the roadmap reaches 100% (final milestone
-  // completed). Guarded by a per-roadmap localStorage flag so it celebrates once
-  // and never re-rewards on later visits — `tasks` reloads on every mount, which
-  // would otherwise re-trigger the 0 -> 100 transition. Deps are stable derived
-  // values (no `showRewardModal`), so this cannot create a render loop.
+  // Fire the reward chest once the roadmap hits 100% — but ONLY after confirming
+  // the backend actually awarded the ROADMAP_COMPLETED points. The client's 100%
+  // is purely task-status derived, whereas the backend enforces a per-step study
+  // gate (≥20 min) before writing the point event, so the two can legitimately
+  // disagree. Celebrating off client progress alone would promise XP that was
+  // never granted.
+  //
+  // Guarded by a per-roadmap localStorage flag so it celebrates once and never
+  // re-rewards on later visits (`tasks` reloads on every mount, which would
+  // otherwise re-trigger the 0 -> 100 transition). The flag is checked BEFORE the
+  // API call — already-claimed roadmaps skip verification entirely — and is only
+  // written after a verified award, so an as-yet-ungranted completion can retry
+  // on a later visit. Deps are stable derived values (no `showRewardModal`), so
+  // this cannot create a render loop.
   useEffect(() => {
     if (steps.length === 0 || progressPercent < 100) return;
-    const roadmapKey = toText(roadmapData?.id) || activeWorkspaceId;
+
+    // The canonical roadmap UUID is what the backend stamps as the
+    // ROADMAP_COMPLETED event's sourceId; fall back to id/workspace only for keying.
+    const roadmapId = toText(roadmapData?.roadmapId) || toText(roadmapData?.id);
+    const roadmapKey = roadmapId || activeWorkspaceId;
     if (!roadmapKey) return;
+
     const storageKey = `roadmap-reward-claimed:${roadmapKey}`;
     if (localStorage.getItem(storageKey) === "1") return;
-    localStorage.setItem(storageKey, "1");
-    setShowRewardModal(true);
-  }, [progressPercent, steps.length, roadmapData?.id, activeWorkspaceId]);
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const events = await getMyPointEvents();
+        // Match on sourceId when the UUID is known; otherwise accept any
+        // ROADMAP_COMPLETED as a best-effort fallback.
+        const awarded = events.some(
+          (event) =>
+            event.eventType === "ROADMAP_COMPLETED" &&
+            (!roadmapId || event.sourceId === roadmapId),
+        );
+        if (cancelled || !awarded) return;
+        localStorage.setItem(storageKey, "1");
+        setShowRewardModal(true);
+      } catch (err) {
+        // Verification failed (network/auth) — leave the flag unset so a later
+        // visit retries. Never celebrate on an unverified completion.
+        console.warn("Roadmap reward verification failed", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [progressPercent, steps.length, roadmapData?.roadmapId, roadmapData?.id, activeWorkspaceId]);
 
   const roadmapTitle = toText(roadmapData?.title) || "Roadmap học tập";
   const roadmapDescription = toText(roadmapData?.description) || "Lộ trình học tập theo workspace đã xác nhận.";

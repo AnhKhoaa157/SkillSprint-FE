@@ -20,14 +20,17 @@ interface RoadmapRewardModalProps {
   open: boolean;
   /** Invoked when the user dismisses the modal (backdrop, CTA after reward, or Escape). */
   onClose: () => void;
-  /** Optional amount of XP shown in the payout badge. Defaults to 500. */
+  /**
+   * Optional amount of XP shown in the payout badge. Defaults to 700 to mirror
+   * `PointService.ROADMAP_COMPLETED_POINTS` on the backend — keep these in sync.
+   */
   xpAmount?: number;
 }
 
 export function RoadmapRewardModal({
   open,
   onClose,
-  xpAmount = 500,
+  xpAmount = 700,
 }: RoadmapRewardModalProps) {
   const [isOpened, setIsOpened] = useState<boolean>(false);
   /** Holds the active confetti rAF id so we can cancel it on unmount/close. */
