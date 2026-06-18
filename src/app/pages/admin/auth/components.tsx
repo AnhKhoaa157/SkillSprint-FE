@@ -28,10 +28,8 @@ export function ErrBanner({ msg }: { msg: string }) {
 
 export function BrandPanel() {
   return (
-    <div className="relative p-8 md:p-12 flex flex-col justify-between gap-10 overflow-hidden bg-slate-900">
-      {/* Decorative blobs */}
-      <div className="absolute top-[-20%] right-[-10%] w-[450px] h-[450px] rounded-full bg-[#FF6B00]/20 blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-20%] w-[350px] h-[350px] rounded-full bg-orange-500/10 blur-[80px] pointer-events-none" />
+    <div className="relative p-8 md:p-12 flex flex-col justify-between gap-10 overflow-hidden bg-slate-950">
+      {/* Decorative noise */}
       <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
 
       {/* Brand Logo Header */}
@@ -89,7 +87,7 @@ export function LoginView({ auth }: { auth: AdminAuthState }) {
   return (
     <motion.div key="login" {...SLIDE}>
       <div className="mb-8">
-        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Đăng nhập Admin</h3>
+        <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Đăng nhập Admin</h3>
         <p className="mt-1.5 text-sm text-slate-500 font-medium">
           Chỉ tài khoản có quyền quản trị mới được phép truy cập.
         </p>
@@ -141,7 +139,7 @@ export function LoginView({ auth }: { auth: AdminAuthState }) {
         </div>
 
         {/* Remember / Forgot */}
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between text-sm pt-2">
           <label className="flex items-center gap-2.5 text-slate-600 cursor-pointer select-none font-medium hover:text-slate-800 transition-colors">
             <input
               type="checkbox" checked={remember}
@@ -191,7 +189,7 @@ export function ForgotStep1View({ auth }: { auth: AdminAuthState }) {
           <KeyRound className="w-6 h-6 text-[#FF6B00]" />
         </div>
         <div>
-          <h3 className="text-2xl font-black text-slate-900 tracking-tight">Quên mật khẩu</h3>
+          <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Quên mật khẩu</h3>
           <p className="text-sm font-medium text-slate-500 mt-1">Nhập email để nhận mã xác minh.</p>
         </div>
       </div>
@@ -248,7 +246,7 @@ export function ForgotStep2View({ auth }: { auth: AdminAuthState }) {
       </button>
 
       <div className="mb-7">
-        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Đặt lại mật khẩu</h3>
+        <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Đặt lại mật khẩu</h3>
         <p className="text-sm font-medium text-slate-500 mt-1.5 leading-relaxed">
           Mã xác minh đã được gửi đến{" "}
           <span className="font-bold text-slate-800">{recoveryEmail}</span>
