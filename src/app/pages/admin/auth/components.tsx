@@ -28,19 +28,19 @@ export function ErrBanner({ msg }: { msg: string }) {
 
 export function BrandPanel() {
   return (
-    <div className="relative p-8 md:p-12 flex flex-col justify-between gap-10 overflow-hidden bg-gradient-to-br from-[#FF6B00] via-orange-500 to-orange-400">
+    <div className="relative p-8 md:p-12 flex flex-col justify-between gap-10 overflow-hidden bg-gradient-to-br from-[#FF6B00] via-[#F97316] to-[#EA580C]">
       {/* Decorative blobs */}
-      <div className="absolute top-[-20%] right-[-20%] w-[350px] h-[350px] rounded-full bg-white/10 blur-[60px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-20%] w-[300px] h-[300px] rounded-full bg-yellow-300/10 blur-[50px] pointer-events-none" />
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
+      <div className="absolute top-[-20%] right-[-20%] w-[450px] h-[450px] rounded-full bg-white/10 blur-[80px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-20%] w-[350px] h-[350px] rounded-full bg-[#FFD29D]/15 blur-[60px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
 
       {/* Brand Logo Header */}
       <div className="flex items-center relative z-10">
-        <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl shadow-lg ring-1 ring-white/20">
+        <div className="p-1.5 bg-white rounded-[1.25rem] shadow-[0_12px_30px_-4px_rgba(0,0,0,0.15)] ring-1 ring-black/5">
           <img
             src="/logo.png"
             alt="SkillSprint Logo"
-            className="h-14 w-14 object-contain"
+            className="h-14 w-14 object-contain rounded-xl"
           />
         </div>
       </div>

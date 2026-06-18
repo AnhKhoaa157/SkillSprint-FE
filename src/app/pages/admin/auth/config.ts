@@ -33,7 +33,7 @@ export const fieldCls =
 
 // ─── Shared button class ─────────────────────────────────────────────────────
 export const primaryBtnCls =
-  "w-full py-3.5 bg-gradient-to-r from-[#FF6B00] to-orange-500 hover:from-orange-600 hover:to-[#FF6B00] " +
+  "w-full py-3.5 bg-gradient-to-r from-[#FF6B00] to-[#EA580C] hover:from-[#F97316] hover:to-[#FF6B00] " +
   "active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed text-white font-extrabold rounded-xl text-sm " +
-  "transition-all duration-200 shadow-[0_8px_16px_rgba(255,107,0,0.25)] hover:shadow-[0_12px_20px_rgba(255,107,0,0.3)] " +
+  "transition-all duration-200 shadow-md shadow-[#FF6B00]/25 hover:shadow-lg hover:shadow-[#FF6B00]/30 " +
   "ring-1 ring-orange-500/50 inline-flex items-center justify-center gap-2";
