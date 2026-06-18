@@ -9,11 +9,14 @@ import {
   CheckCircle2,
   Clock,
   Clock3,
+  Dices,
   ExternalLink,
   FileText,
+  Gamepad2,
   LoaderCircle,
   PlayCircle,
   RefreshCw,
+  Rocket,
   Sparkles,
   Target,
   Timer,
@@ -1091,11 +1094,11 @@ export default function CoursePlayer() {
                         }}
                       >
                         {isGeneratingQuiz ? (
-                          <><LoaderCircle size={13} className="animate-spin" /> Đang thiết kế đề...</>
+                          <><LoaderCircle size={16} className="animate-spin" /> Đang thiết kế đề...</>
                         ) : !isSessionCompleted && !hasMetMinimum ? (
-                          <><Clock size={13} /> Học thêm {minimumRequiredMinutes - elapsedStudyMinutes}p để mở khóa</>
+                          <><Clock size={16} /> Học thêm {minimumRequiredMinutes - elapsedStudyMinutes}p để mở khóa</>
                         ) : (
-                          <><Sparkles size={13} /> ✨ Thiết kế bài kiểm tra bằng AI</>
+                          <><WandSparkles size={16} /> Thiết kế bài kiểm tra bằng AI</>
                         )}
                       </button>
                     </div>
@@ -1145,7 +1148,7 @@ export default function CoursePlayer() {
                         disabled={isGeneratingQuiz || (!isSessionCompleted && !hasMetMinimum)}
                         className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-[#FF6B00] px-4 py-3 text-xs font-extrabold text-white shadow-md shadow-orange-500/20 transition hover:from-amber-600 hover:to-[#E05E00] active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <ExternalLink size={13} /> ✍️ Vào làm bài kiểm tra
+                        <Gamepad2 size={16} /> Vào làm bài kiểm tra
                       </button>
 
                       {latestAttempt && (
@@ -1156,9 +1159,9 @@ export default function CoursePlayer() {
                           className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
                         >
                           {isGeneratingQuiz ? (
-                            <><LoaderCircle size={13} className="animate-spin" /> Đang đổi đề...</>
+                            <><LoaderCircle size={16} className="animate-spin" /> Đang đổi đề...</>
                           ) : (
-                            <><RefreshCw size={13} /> 🔄 Đổi bộ câu hỏi mới</>
+                            <><Dices size={16} /> Đổi bộ câu hỏi mới</>
                           )}
                         </button>
                       )}
@@ -1194,10 +1197,10 @@ export default function CoursePlayer() {
                     type="button"
                     onClick={handleStartSession}
                     disabled={!canStart}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {isStarting ? <LoaderCircle size={15} className="animate-spin" /> : <PlayCircle size={15} />}
-                    {canStartByDate ? "🚀 Bắt đầu tập trung (Pomodoro)" : "⏳ Vẫn mở học trước hạn"}
+                    {isStarting ? <LoaderCircle size={18} className="animate-spin" /> : <Rocket size={18} />}
+                    {canStartByDate ? "Bắt đầu tập trung (Pomodoro)" : "Vẫn mở học trước hạn"}
                   </button>
                 </div>
               ) : (
@@ -1206,10 +1209,10 @@ export default function CoursePlayer() {
                     type="button"
                     onClick={handleTriggerReviewModal}
                     disabled={isFinishing}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] disabled:opacity-50"
                   >
-                    {isFinishing ? <LoaderCircle size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                    🏆 Kết thúc phiên học
+                    {isFinishing ? <LoaderCircle size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                    Kết thúc phiên học
                   </button>
                 </div>
               )}
