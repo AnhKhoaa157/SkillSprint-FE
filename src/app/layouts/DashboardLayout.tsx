@@ -181,12 +181,13 @@ function normalizeRoadmapSidebarItem(workspace: RoadmapSidebarWorkspace, index: 
   }
 
   const progress = Number(workspace.progressPercent);
+  const safeProgress = isNaN(progress) ? 0 : progress;
 
   return {
     id,
     name,
     statusLabel: getRoadmapStatusLabel(workspace) || "READY",
-    progressPercent: progress,
+    progressPercent: safeProgress,
   };
 }
 

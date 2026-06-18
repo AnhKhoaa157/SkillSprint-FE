@@ -315,7 +315,8 @@ export default function WorkspaceProgress({ workspaceId, className }: WorkspaceP
   }, [selectedWorkspaceId, refreshToken]);
 
   const roadmapStatus = dashboard?.roadmapStatus ?? "DRAFT";
-  const progressPercent = dashboard?.progressPercent ?? 0;
+  const rawProgress = dashboard?.progressPercent;
+  const progressPercent = (typeof rawProgress === 'number' && !isNaN(rawProgress)) ? rawProgress : 0;
   const currentStep = dashboard?.currentStep ?? null;
   const isRoadmapMissing = Boolean(error && /roadmap/i.test(error));
   const roadmapTarget = selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/roadmap` : "/app/workspaces";
