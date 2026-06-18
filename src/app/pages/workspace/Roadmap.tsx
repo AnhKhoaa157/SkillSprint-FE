@@ -500,8 +500,8 @@ export default function Roadmap() {
           </div>
         </div>
 
-        <div className={`flex-1 bg-white ${
-          detailTab === "tutor" ? "overflow-hidden flex flex-col min-h-0 px-4 pt-3 pb-4" : "overflow-y-auto custom-scrollbar px-6 pt-5 pb-6"
+        <div className={`flex-1 min-h-0 bg-white ${
+          detailTab === "tutor" ? "overflow-hidden flex flex-col px-4 pt-3 pb-4" : "overflow-y-auto custom-scrollbar px-6 pt-5 pb-6"
         } ${isMobileView ? "px-0" : ""}`}>
           {detailTab === "tutor" ? (
             <AiTutorChat
