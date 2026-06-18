@@ -55,7 +55,8 @@ const DIFFICULTY_COLOR: Record<Difficulty, string> = {
 
 function hasPremiumAccess(plan: string | null | undefined): boolean {
   if (!plan) return false;
-  return plan === "PREMIUM" || plan.includes("PREMIUM");
+  const upper = plan.toUpperCase();
+  return upper === "PREMIUM" || upper.includes("PREMIUM") || upper === "ADMIN" || upper === "ADMIN_DEFAULT";
 }
 
 function safeArray<T>(value: T[] | null | undefined): T[] {
@@ -202,6 +203,7 @@ export default function QuizContainer({
       const attempt = await quizService.submit(quiz.quizId, { answers: payload });
       setResult(attempt);
       setPhase("result");
+      window.dispatchEvent(new Event("skillSprint:points-updated"));
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : "Nộp quiz thất bại. Vui lòng thử lại.",

@@ -30,6 +30,8 @@ import {
   Play,
   SkipForward,
   Star,
+  Trophy,
+  PartyPopper,
   X,
 } from "lucide-react";
 import studySessionService from "../../../api/studySessionService";
@@ -158,6 +160,7 @@ export default function CoursePlayer() {
     proceedNavigation,
     resetNavigation,
     formattedStudyTime,
+    fastForwardTime,
   } = usePomodoro();
 
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -174,7 +177,7 @@ export default function CoursePlayer() {
 
   const [isSubActionLoading, setIsSubActionLoading] = useState(false);
   const [sideTab, setSideTab] = useState<"pomodoro" | "quiz">("pomodoro");
-  const { planId, rawPlanId, refresh: refreshSubscription } = useSubscription();
+  const { planId, rawPlanType, refresh: refreshSubscription } = useSubscription();
   const isPremiumMember = planId === "PREMIUM";
   // PricingModal speaks plan *slugs*; map our NormalizedPlanId to its vocabulary.
   const pricingCurrentPlan =
@@ -315,6 +318,7 @@ export default function CoursePlayer() {
       if (taskId) {
         try {
           await calendarService.completeCalendarTask(taskId);
+          window.dispatchEvent(new Event("skillSprint:points-updated"));
         } catch (err) {
           console.error("Failed to mark task as complete on backend", err);
         }
@@ -348,7 +352,13 @@ export default function CoursePlayer() {
     }
 
     const stepId = roadmapStep?.stepId;
-    if (!stepId || isGeneratingQuiz) return;
+    if (isGeneratingQuiz) return;
+    
+    if (!stepId) {
+      showToast("warning", "Tính năng tạo đề kiểm tra AI hiện chỉ hỗ trợ cho các bài học thuộc lộ trình (Roadmap).");
+      return;
+    }
+
     setIsGeneratingQuiz(true);
     try {
       const quiz = await quizService.generate(stepId);
@@ -1051,25 +1061,47 @@ export default function CoursePlayer() {
                   {/* FIX TRIỆT ĐỂ BUG QUAY LẠI NÚT TẠO ĐỀ: Chốt chặn State A dựa trên biến hasQuizCreated */}
                   {!hasQuizCreated && !loadingQuizMeta && (
                     <div className="rounded-xl border border-dashed border-orange-200/80 bg-orange-50/30 p-3.5">
-                      <p className="text-[11px] leading-[1.6] font-medium text-slate-500">
-                        Bài kiểm tra chưa được kích hoạt. Hãy để AI quét nội dung bài học và thiết kế đề bài cho riêng bạn.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleGenerateAndOpenQuiz}
-                        disabled={isGeneratingQuiz}
-                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
-                        style={{
-                          background: "linear-gradient(135deg, #FF6B00, #EA580C)",
-                          boxShadow: "0 10px 24px rgba(255, 107, 0, 0.22)",
-                        }}
-                      >
-                        {isGeneratingQuiz ? (
-                          <><LoaderCircle size={16} className="animate-spin" /> Đang thiết kế đề...</>
-                        ) : (
-                          <><WandSparkles size={16} /> Thiết kế bài kiểm tra bằng AI</>
-                        )}
-                      </button>
+                      {!isPremiumMember ? (
+                        <>
+                          <div className="flex items-start gap-2.5 mb-2">
+                            <Lock size={16} className="text-orange-500 mt-0.5 shrink-0" />
+                            <p className="text-[11px] leading-[1.6] font-medium text-orange-700">
+                              Tính năng thiết kế đề kiểm tra AI là tính năng độc quyền của gói Premium.
+                            </p>
+                          </div>
+                          <Link
+                            to="/app/pricing"
+                            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white transition-all hover:opacity-95 active:scale-[0.98]"
+                            style={{
+                              background: "linear-gradient(135deg, #FF6B00, #EA580C)",
+                            }}
+                          >
+                            <Sparkles size={14} /> Nâng cấp Premium
+                          </Link>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-[11px] leading-[1.6] font-medium text-slate-500">
+                            Bài kiểm tra chưa được kích hoạt. Hãy để AI quét nội dung bài học và thiết kế đề bài cho riêng bạn.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleGenerateAndOpenQuiz}
+                            disabled={isGeneratingQuiz}
+                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+                            style={{
+                              background: "linear-gradient(135deg, #FF6B00, #EA580C)",
+                              boxShadow: "0 10px 24px rgba(255, 107, 0, 0.22)",
+                            }}
+                          >
+                            {isGeneratingQuiz ? (
+                              <><LoaderCircle size={16} className="animate-spin" /> Đang thiết kế đề...</>
+                            ) : (
+                              <><WandSparkles size={16} /> Thiết kế bài kiểm tra bằng AI</>
+                            )}
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -1160,7 +1192,7 @@ export default function CoursePlayer() {
               {isSessionCompleted ? (
                 <div className="mt-5 rounded-2xl border border-emerald-100/60 bg-emerald-50/40 p-5 text-center shadow-sm">
                   <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm shadow-emerald-100/20 mb-3">
-                    <CheckCircle2 size={20} className="stroke-[2.5]" />
+                    <PartyPopper size={20} className="stroke-[2.5]" />
                   </div>
                   <h4 className="text-sm font-extrabold text-slate-800">🎉 Đã hoàn thành mục học</h4>
                   <p className="mt-1 text-[11px] leading-5 text-slate-500">Tiến độ đã được đồng bộ lên lộ trình cá nhân của bạn.</p>
@@ -1193,6 +1225,17 @@ export default function CoursePlayer() {
                     {isFinishing ? <LoaderCircle size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
                     Kết thúc phiên học
                   </button>
+                  
+                  {rawPlanType === "ADMIN_DEFAULT" && (
+                    <button
+                      type="button"
+                      onClick={() => fastForwardTime(Math.max(15, minimumRequiredMinutes) * 60)}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-bold text-violet-600 transition hover:bg-violet-100 active:scale-[0.98]"
+                    >
+                      <WandSparkles size={16} />
+                      [DEV] Tua nhanh đủ điều kiện
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1298,7 +1341,7 @@ export default function CoursePlayer() {
         }}
         initialPlan="premium"
         currentPlan={pricingCurrentPlan}
-        currentPlanId={rawPlanId}
+        currentPlanId={rawPlanType}
       />
 
       {isNavigationBlocked && (

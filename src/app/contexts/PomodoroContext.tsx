@@ -63,6 +63,7 @@ interface PomodoroContextValue {
   resetTimer: () => void;
   skipToNextPhase: () => void;
   clearTimerContext: () => void;
+  fastForwardTime: (seconds: number) => void;
 
   // Navigation guard — exposes blocker state so consumers can render a modal
   isNavigationBlocked: boolean;
@@ -189,6 +190,10 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
     setActiveStepId(null);
   }, []);
 
+  const fastForwardTime = useCallback((seconds: number) => {
+    setActualStudySeconds((prev) => prev + seconds);
+  }, []);
+
   // ── Compose value ─────────────────────────────────────────────────────────────
 
   const value: PomodoroContextValue = {
@@ -203,6 +208,7 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
     resetTimer,
     skipToNextPhase,
     clearTimerContext,
+    fastForwardTime,
     isNavigationBlocked: blocker.state === "blocked",
     proceedNavigation: () => {
       if (blocker.state === "blocked") {

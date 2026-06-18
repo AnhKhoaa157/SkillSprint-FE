@@ -15,6 +15,7 @@ import AdminHealth from "./pages/admin/sections/health";
 import AdminAuth from "./pages/admin/auth";
 import AdminUsers from "./pages/admin/sections/users";
 import AdminUserDetail from "./pages/admin/userDetail";
+import AdminUserPointHistory from "./pages/admin/sections/leaderboard/AdminUserPointHistoryPage";
 import AdminProfile from "./pages/admin/profile";
 import AdminFeedback from "./pages/admin/sections/feedback";
 import PostUpgradeDashboard from "./pages/core/PostUpgrade";
@@ -64,6 +65,7 @@ export const routeRegistry = {
     profile: "profile",
     users: "users",
     userDetail: "users/:id",
+    userPoints: "users/:id/points",
     health: "health",
     feedback: "feedback",
   },
@@ -127,6 +129,7 @@ export const router = createBrowserRouter([
           { path: adminRoutes.profile, Component: AdminProfile },
           { path: adminRoutes.users, Component: AdminUsers },
           { path: adminRoutes.userDetail, Component: AdminUserDetail },
+          { path: adminRoutes.userPoints, Component: AdminUserPointHistory },
           { path: adminRoutes.health, Component: AdminHealth },
           { path: adminRoutes.feedback, Component: AdminFeedback },
         ],

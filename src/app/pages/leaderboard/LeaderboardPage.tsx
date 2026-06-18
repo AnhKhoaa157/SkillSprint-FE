@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-import { Trophy, Crown, Flame, Sparkles, AlertTriangle, RefreshCw, Medal } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
+import { Trophy, Flame, Zap, AlertTriangle, RefreshCw, Medal } from "lucide-react";
 import { getLeaderboard, getMeSummary } from "../../../api/pointService";
 import { getMe } from "../../../api/meService";
 import type {
@@ -9,12 +9,10 @@ import type {
   UserPointSummary,
 } from "../../../api/skillSprintModels";
 
-const OG = "#FF6B00";
-
 const TABS: { key: LeaderboardPeriod; label: string }[] = [
-  { key: "weekly", label: "Tuần này" },
-  { key: "monthly", label: "Tháng này" },
-  { key: "all-time", label: "Mọi thời điểm" },
+  { key: "weekly", label: "This Week" },
+  { key: "monthly", label: "This Month" },
+  { key: "all-time", label: "This All" },
 ];
 
 /** Resolve a usable <img> src from the BE avatar object key, else null → initials. */
@@ -46,41 +44,37 @@ function pointsFor(period: LeaderboardPeriod, summary: UserPointSummary | null):
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Avatar                                                                    */
+/*  Circular avatar (photo → initials fallback)                               */
 /* -------------------------------------------------------------------------- */
 
-function Avatar({
+function CircleAvatar({
   name,
   objectKey,
-  size = 44,
-  ring,
+  sizeClass,
+  gradient,
 }: {
   name: string | null;
   objectKey: string | null;
-  size?: number;
-  ring?: string;
+  sizeClass: string;
+  gradient: string;
 }) {
   const [errored, setErrored] = useState(false);
   const url = resolveAvatar(objectKey);
   const showImage = url !== null && !errored;
-  const dimension = { width: size, height: size };
 
   return (
-    <div
-      className="shrink-0 rounded-2xl flex items-center justify-center overflow-hidden"
-      style={{ ...dimension, boxShadow: ring ? `0 0 0 3px ${ring}` : undefined }}
-    >
+    <div className={`${sizeClass} rounded-full overflow-hidden shrink-0 flex items-center justify-center`}>
       {showImage ? (
         <img
           src={url}
-          alt={name || "Người dùng"}
+          alt={name || "User"}
           className="w-full h-full object-cover"
           onError={() => setErrored(true)}
         />
       ) : (
         <div
           className="w-full h-full flex items-center justify-center font-black text-white"
-          style={{ background: "linear-gradient(135deg,#FF6B00,#EA580C)", fontSize: size * 0.4 }}
+          style={{ background: gradient }}
         >
           {initialOf(name)}
         </div>
@@ -89,73 +83,12 @@ function Avatar({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Podium (Top 3)                                                            */
-/* -------------------------------------------------------------------------- */
-
-const PODIUM_THEME: Record<number, { ring: string; badge: string; label: string; order: string; lift: string }> = {
-  1: { ring: "rgba(255,107,0,0.55)", badge: "linear-gradient(135deg,#FF6B00,#F59E0B)", label: "#B45309", order: "order-2", lift: "md:-translate-y-4" },
-  2: { ring: "rgba(148,163,184,0.55)", badge: "linear-gradient(135deg,#CBD5E1,#94A3B8)", label: "#475569", order: "order-1", lift: "md:translate-y-2" },
-  3: { ring: "rgba(180,120,70,0.5)", badge: "linear-gradient(135deg,#D9A066,#B45309)", label: "#92400E", order: "order-3", lift: "md:translate-y-4" },
-};
-
-function PodiumCard({
-  entry,
-  isMe,
-  reduce,
-}: {
-  entry: LeaderboardEntry;
-  isMe: boolean;
-  reduce: boolean;
-}) {
-  const theme = PODIUM_THEME[entry.rank] ?? PODIUM_THEME[3];
-
-  return (
-    <motion.div
-      initial={reduce ? false : { opacity: 0, y: 18, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: "spring", stiffness: 120, damping: 16, delay: reduce ? 0 : entry.rank * 0.05 }}
-      className={`relative flex flex-col items-center ${theme.order} ${theme.lift}`}
-    >
-      <div
-        className="relative w-full rounded-3xl border bg-white px-4 pt-8 pb-5 flex flex-col items-center text-center"
-        style={{
-          borderColor: isMe ? OG : "rgba(15,23,42,0.06)",
-          boxShadow: entry.rank === 1
-            ? "0 20px 50px -18px rgba(255,107,0,0.45)"
-            : "0 14px 36px -20px rgba(15,23,42,0.30)",
-        }}
-      >
-        {entry.rank === 1 && (
-          <Crown
-            size={26}
-            className="absolute -top-3 left-1/2 -translate-x-1/2 fill-amber-400 text-amber-500 drop-shadow"
-          />
-        )}
-        <div
-          className="absolute -top-3.5 right-4 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black border-2 border-white shadow"
-          style={{ background: theme.badge }}
-        >
-          {entry.rank}
-        </div>
-
-        <Avatar name={entry.fullName} objectKey={entry.avatarObjectKey} size={entry.rank === 1 ? 64 : 52} ring={theme.ring} />
-
-        <p className="mt-3 font-extrabold text-slate-800 text-sm truncate max-w-[140px]">
-          {entry.fullName || "Ẩn danh"}
-          {isMe && <span className="ml-1 text-[10px] font-bold text-[#FF6B00]">(Bạn)</span>}
-        </p>
-        <p className="mt-1 inline-flex items-center gap-1 text-lg font-black" style={{ color: theme.label }}>
-          {entry.points.toLocaleString("vi-VN")}
-          <span className="text-[10px] font-bold opacity-70">XP</span>
-        </p>
-      </div>
-    </motion.div>
-  );
-}
+const TOP3_GRADIENT = "linear-gradient(135deg,#FB923C,#EA580C)";
+const REST_GRADIENT = "linear-gradient(135deg,#64748B,#334155)";
+const ORANGE_GRADIENT = "linear-gradient(135deg,#FB923C,#F97316)";
 
 /* -------------------------------------------------------------------------- */
-/*  Standard list row (rank 4+)                                               */
+/*  Standard list row (flat list — no podium)                                 */
 /* -------------------------------------------------------------------------- */
 
 function LeaderboardRow({
@@ -169,81 +102,134 @@ function LeaderboardRow({
   reduce: boolean;
   index: number;
 }) {
+  const isTop3 = entry.rank <= 3;
+  
+  // Fake trend indicator for visual fidelity with mockup
+  const trend = index % 3 === 0 ? "up" : index % 3 === 1 ? "down" : "same";
+
   return (
     <motion.div
       layout={!reduce}
-      initial={reduce ? false : { opacity: 0, x: -12 }}
+      initial={reduce ? false : { opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.25, delay: reduce ? 0 : Math.min(index * 0.025, 0.4) }}
-      className="flex items-center gap-3 rounded-2xl border px-4 py-3 transition-transform hover:scale-[1.01] motion-reduce:hover:scale-100 motion-reduce:transition-none"
-      style={{
-        background: isMe ? "rgba(255,107,0,0.06)" : "#FFFFFF",
-        borderColor: isMe ? "rgba(255,107,0,0.45)" : "rgba(15,23,42,0.06)",
-        boxShadow: isMe
-          ? "0 10px 30px -16px rgba(255,107,0,0.5)"
-          : "0 8px 24px -20px rgba(15,23,42,0.35)",
-      }}
+      transition={{ duration: 0.22, delay: reduce ? 0 : Math.min(index * 0.02, 0.3) }}
+      className={`flex items-center gap-3 px-4 py-3.5 ${isMe ? "border-l-2 border-[#FF6B00] bg-orange-50/40" : ""}`}
     >
-      <div className="w-8 text-center font-black text-slate-400 text-sm shrink-0">{entry.rank}</div>
-      <Avatar name={entry.fullName} objectKey={entry.avatarObjectKey} size={40} />
-      <div className="min-w-0 flex-1">
-        <p className="font-bold text-slate-800 text-sm truncate">
-          {entry.fullName || "Ẩn danh"}
-          {isMe && <span className="ml-1.5 text-[10px] font-bold text-[#FF6B00]">(Bạn)</span>}
-        </p>
+      {/* Rank + change indicator */}
+      <div className="w-12 shrink-0 flex flex-col items-center leading-none">
+        <span className={isTop3 ? "text-[#FF6B00] font-black text-sm" : "text-slate-500 font-bold text-sm"}>
+          #{entry.rank}
+        </span>
+        <span className="mt-1 flex justify-center">
+          {trend === "up" && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><path d="m18 15-6-6-6 6"/></svg>}
+          {trend === "down" && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="m6 9 6 6 6-6"/></svg>}
+          {trend === "same" && <span className="text-[10px] text-slate-400">—</span>}
+        </span>
       </div>
-      <div className="shrink-0 font-extrabold text-slate-700 text-sm">
-        {entry.points.toLocaleString("vi-VN")} <span className="text-[10px] text-slate-400">XP</span>
+
+      {/* Student */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <CircleAvatar
+          name={entry.fullName}
+          objectKey={entry.avatarObjectKey}
+          sizeClass="w-10 h-10 text-sm"
+          gradient={isTop3 ? TOP3_GRADIENT : REST_GRADIENT}
+        />
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center min-w-0">
+            <span className="font-bold text-slate-800 text-sm truncate">{entry.fullName || "Anonymous"}</span>
+            {isMe && (
+              <span className="shrink-0 bg-[#FF6B00] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full ml-1.5">
+                YOU
+              </span>
+            )}
+          </div>
+          {/* We don't have course name in the API yet, render a default generic one for mockup fidelity or just keep it clean */}
+          <span className="text-[11px] text-slate-400 truncate">SkillSprint Member</span>
+        </div>
+      </div>
+
+      {/* Streak (now provided by backend) */}
+      <div className="w-20 text-right shrink-0">
+        <span className="inline-flex items-center justify-end gap-1 font-black text-[#FF6B00] text-sm">
+          <Flame className="w-3.5 h-3.5 fill-amber-400 text-[#FF6B00]" />
+          {entry.streakDays}
+        </span>
+      </div>
+
+      {/* Score */}
+      <div className="w-20 text-right shrink-0">
+        <span className="inline-flex items-center justify-end gap-1 font-black text-blue-600 text-sm">
+          <Zap className="w-3.5 h-3.5 fill-blue-400 text-blue-500" />
+          {entry.points.toLocaleString("vi-VN")}
+        </span>
       </div>
     </motion.div>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Your-rank summary banner                                                  */
+/*  "Your Rank" banner                                                        */
 /* -------------------------------------------------------------------------- */
 
 function YourRankCard({
   period,
   summary,
+  displayName,
+  avatarObjectKey,
   reduce,
 }: {
   period: LeaderboardPeriod;
   summary: UserPointSummary | null;
+  displayName: string | null;
+  avatarObjectKey: string | null;
   reduce: boolean;
 }) {
   const rank = rankFor(period, summary);
   const points = pointsFor(period, summary);
+  const streak = summary?.streakDays ?? 0;
 
   return (
     <motion.div
       initial={reduce ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl border border-[#FF6B00]/25 bg-gradient-to-br from-orange-50 to-white px-5 py-4 flex items-center justify-between gap-4"
-      style={{ boxShadow: "0 16px 40px -22px rgba(255,107,0,0.5)" }}
+      className="rounded-2xl border-2 border-[#FF6B00] bg-white px-5 py-4 flex items-center justify-between gap-4"
+      style={{ boxShadow: "0 10px 30px -18px rgba(255,107,0,0.45)" }}
     >
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="w-11 h-11 rounded-2xl bg-white border border-[#FF6B00]/30 flex items-center justify-center shrink-0">
-          <Trophy size={20} className="text-[#FF6B00]" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[#B45309]">Vị trí của bạn</p>
-          <p className="font-extrabold text-slate-800 text-lg leading-tight">
-            {rank ? `#${rank}` : "Chưa xếp hạng"}
-          </p>
-        </div>
+      {/* Rank badge */}
+      <div className="w-11 h-11 rounded-xl bg-orange-100 text-[#FF6B00] font-black text-sm flex items-center justify-center shrink-0">
+        {rank ? `#${rank}` : "—"}
       </div>
-      <div className="flex items-center gap-4 shrink-0">
+
+      {/* User info */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <CircleAvatar
+          name={displayName}
+          objectKey={avatarObjectKey}
+          sizeClass="w-11 h-11 text-sm"
+          gradient={ORANGE_GRADIENT}
+        />
+        <p className="font-bold text-slate-800 text-sm truncate">
+          {displayName ? `${displayName} (You)` : "You"}
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div className="flex items-center gap-5 shrink-0">
         <div className="text-right">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Điểm</p>
-          <p className="font-black text-slate-800 text-lg">{points.toLocaleString("vi-VN")}</p>
-        </div>
-        {summary && summary.streakDays > 0 && (
-          <div className="hidden sm:flex flex-col items-center rounded-2xl bg-white border border-amber-200 px-3 py-1.5">
-            <Flame size={16} className="text-amber-500 fill-amber-400" />
-            <span className="text-xs font-extrabold text-amber-600">{summary.streakDays}</span>
+          <div className="flex items-center justify-end gap-1 font-black text-lg text-[#FF6B00] leading-none">
+            <Flame className="w-4 h-4 fill-amber-400 text-[#FF6B00]" />
+            {streak}
           </div>
-        )}
+          <p className="text-[10px] uppercase tracking-wider text-[#FF6B00]/70 mt-1">Days</p>
+        </div>
+        <div className="text-right">
+          <div className="flex items-center justify-end gap-1 font-black text-lg text-blue-600 leading-none">
+            <Zap className="w-4 h-4 fill-blue-400 text-blue-500" />
+            {points.toLocaleString("vi-VN")}
+          </div>
+          <p className="text-[10px] uppercase tracking-wider text-blue-500/70 mt-1">XP</p>
+        </div>
       </div>
     </motion.div>
   );
@@ -254,6 +240,8 @@ function YourRankCard({
 /* -------------------------------------------------------------------------- */
 
 type LoadState = "loading" | "error" | "ready";
+
+const CARD_SHADOW = "0 14px 36px -24px rgba(15,23,42,0.3)";
 
 export default function LeaderboardPage() {
   const reduce = useReducedMotion() ?? false;
@@ -306,170 +294,143 @@ export default function LeaderboardPage() {
 
   useEffect(() => load(period), [period, load]);
 
-  const top3 = useMemo(() => entries.filter((e) => e.rank <= 3), [entries]);
-  const rest = useMemo(() => entries.filter((e) => e.rank > 3), [entries]);
   const meInList = useMemo(
     () => (myUserId ? entries.some((e) => e.userId === myUserId) : false),
     [entries, myUserId],
   );
 
+  // Derive the current user's display name/avatar from their row when present
+  // (the UserPointSummary model exposes neither). Falls back to "You" otherwise.
+  const meEntry = useMemo(
+    () => (myUserId ? entries.find((e) => e.userId === myUserId) ?? null : null),
+    [entries, myUserId],
+  );
+  const displayName = meEntry?.fullName ?? null;
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-10" style={{ fontFamily: "'Inter',sans-serif" }}>
-      {/* Header */}
+    <div className="max-w-5xl mx-auto space-y-6 py-2 pb-10" style={{ fontFamily: "'Inter',sans-serif" }}>
+      {/* Section 1 — Header */}
       <motion.div
         initial={reduce ? false : { opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-wrap items-center justify-between gap-3"
       >
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center">
+          <div className="w-11 h-11 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
             <Trophy size={22} className="text-[#FF6B00]" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-slate-900">Bảng xếp hạng</h1>
-            <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-              <Sparkles size={11} className="text-[#FF6B00]" /> Tích lũy XP từ roadmap và quiz để leo top
-            </p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Leaderboard</h1>
+            <p className="text-sm text-slate-500">Compete with peers and maintain your streak.</p>
           </div>
+        </div>
+
+        {/* Period switcher */}
+        <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1">
+          {TABS.map((tab) => {
+            const activeTab = tab.key === period;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setPeriod(tab.key)}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors cursor-pointer ${
+                  activeTab ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </motion.div>
 
-      {/* Your rank */}
-      <YourRankCard period={period} summary={summary} reduce={reduce} />
+      {/* Section 2 — Your Rank */}
+      <YourRankCard
+        period={period}
+        summary={summary}
+        displayName={displayName}
+        avatarObjectKey={meEntry?.avatarObjectKey ?? null}
+        reduce={reduce}
+      />
 
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-1.5 rounded-2xl bg-slate-100/70 p-1.5">
-        {TABS.map((tab) => {
-          const activeTab = tab.key === period;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setPeriod(tab.key)}
-              className="relative flex-1 min-w-[96px] rounded-xl px-3 py-2 text-xs font-bold transition-colors cursor-pointer"
-              style={{ color: activeTab ? "#FFFFFF" : "#64748B" }}
-            >
-              {activeTab && (
-                <motion.div
-                  layoutId={reduce ? undefined : "lb-active-tab"}
-                  className="absolute inset-0 rounded-xl"
-                  style={{ background: "linear-gradient(135deg,#FF6B00,#EA580C)", boxShadow: "0 8px 20px -10px rgba(255,107,0,0.7)" }}
-                  transition={{ type: "spring", stiffness: 320, damping: 28 }}
-                />
-              )}
-              <span className="relative z-10">{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Section 3 — Leaderboard table */}
+      <div className="bg-white rounded-3xl border border-slate-100" style={{ boxShadow: CARD_SHADOW }}>
+        {/* Column header */}
+        <div className="flex items-center gap-3 px-4 pt-5 pb-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+          <div className="w-12 shrink-0 text-center">Rank</div>
+          <div className="flex-1 min-w-0">Student</div>
+          <div className="w-20 text-right shrink-0">Streak</div>
+          <div className="w-20 text-right shrink-0">Score</div>
+        </div>
 
-      {/* Body */}
-      <AnimatePresence mode="wait">
-        {state === "loading" ? (
-          <motion.div
-            key="loading"
-            initial={reduce ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={reduce ? undefined : { opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="space-y-3 pt-2"
-          >
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-16 rounded-2xl bg-slate-100 animate-pulse motion-reduce:animate-none" />
+        {state === "loading" && (
+          <div className="px-4 pb-4 space-y-2">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="h-14 rounded-xl bg-slate-100 animate-pulse motion-reduce:animate-none" />
             ))}
-          </motion.div>
-        ) : state === "error" ? (
-          <motion.div
-            key="error"
-            initial={reduce ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={reduce ? undefined : { opacity: 0 }}
-            className="rounded-3xl border border-red-100 bg-red-50/60 p-8 text-center mt-2"
-          >
+          </div>
+        )}
+
+        {state === "error" && (
+          <div className="px-6 py-14 text-center">
             <AlertTriangle size={26} className="mx-auto text-red-400" />
-            <p className="mt-3 text-sm font-semibold text-slate-700">Không thể tải bảng xếp hạng.</p>
+            <p className="mt-3 text-sm font-semibold text-slate-700">Couldn’t load the leaderboard.</p>
             <button
               type="button"
               onClick={() => load(period)}
               className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
             >
-              <RefreshCw size={13} /> Thử lại
+              <RefreshCw size={13} /> Retry
             </button>
-          </motion.div>
-        ) : entries.length === 0 ? (
-          <motion.div
-            key="empty"
-            initial={reduce ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={reduce ? undefined : { opacity: 0 }}
-            className="rounded-3xl border border-slate-100 bg-white p-12 text-center mt-2"
-            style={{ boxShadow: "0 14px 36px -24px rgba(15,23,42,0.3)" }}
-          >
-            <Medal size={30} className="mx-auto text-slate-300" />
-            <p className="mt-3 text-sm font-semibold text-slate-600">Chưa có ai trên bảng xếp hạng.</p>
-            <p className="mt-1 text-xs text-slate-400">Hãy là người đầu tiên ghi điểm trong kỳ này!</p>
-          </motion.div>
-        ) : (
-          <motion.div
-            key={`ready-${period}`}
-            initial={reduce ? false : { opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduce ? undefined : { opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-5 pt-2"
-          >
-            {/* Podium */}
-            {top3.length > 0 && (
-              <div className="grid grid-cols-3 gap-3 items-end pt-4">
-                {top3.map((entry) => (
-                  <PodiumCard
-                    key={entry.userId}
-                    entry={entry}
-                    isMe={entry.userId === myUserId}
-                    reduce={reduce}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* The rest */}
-            {rest.length > 0 && (
-              <div className="space-y-2.5">
-                {rest.map((entry, i) => (
-                  <LeaderboardRow
-                    key={entry.userId}
-                    entry={entry}
-                    isMe={entry.userId === myUserId}
-                    reduce={reduce}
-                    index={i}
-                  />
-                ))}
-              </div>
-            )}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+
+        {state === "ready" && entries.length === 0 && (
+          <div className="px-6 py-14 text-center">
+            <Medal size={30} className="mx-auto text-slate-300" />
+            <p className="mt-3 text-sm font-semibold text-slate-600">No one is on the leaderboard yet.</p>
+            <p className="mt-1 text-xs text-slate-400">Be the first to score points this period!</p>
+          </div>
+        )}
+
+        {state === "ready" && entries.length > 0 && (
+          <div className="divide-y divide-slate-50">
+            {entries.map((entry, i) => (
+              <LeaderboardRow
+                key={entry.userId}
+                entry={entry}
+                isMe={entry.userId === myUserId}
+                reduce={reduce}
+                index={i}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Pinned current-user row when they're outside the visible ranking. */}
       {state === "ready" && myUserId && !meInList && summary && rankFor(period, summary) !== null && (
-        <div className="sticky bottom-3 pt-2">
+        <div className="sticky bottom-3">
           <div
-            className="flex items-center gap-3 rounded-2xl border border-[#FF6B00]/45 px-4 py-3 backdrop-blur"
-            style={{ background: "rgba(255,247,237,0.95)", boxShadow: "0 16px 40px -18px rgba(255,107,0,0.55)" }}
+            className="flex items-center gap-3 rounded-2xl border-2 border-[#FF6B00] bg-white/95 backdrop-blur px-4 py-3"
+            style={{ boxShadow: "0 16px 40px -18px rgba(255,107,0,0.5)" }}
           >
-            <div className="w-8 text-center font-black text-[#FF6B00] text-sm shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#FF6B00] font-black text-sm flex items-center justify-center shrink-0">
               #{rankFor(period, summary)}
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-white border border-[#FF6B00]/30 flex items-center justify-center shrink-0">
-              <Trophy size={16} className="text-[#FF6B00]" />
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="font-bold text-slate-800 text-sm truncate">
+                {displayName ? `${displayName} (You)` : "You"}
+              </span>
+              <span className="shrink-0 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                YOU
+              </span>
             </div>
-            <p className="flex-1 font-bold text-slate-800 text-sm">
-              Vị trí của bạn <span className="text-[10px] font-bold text-[#FF6B00]">(Bạn)</span>
-            </p>
-            <div className="shrink-0 font-extrabold text-slate-700 text-sm">
-              {pointsFor(period, summary).toLocaleString("vi-VN")}{" "}
-              <span className="text-[10px] text-slate-400">XP</span>
-            </div>
+            <span className="shrink-0 inline-flex items-center gap-1 font-black text-blue-600 text-sm">
+              <Zap className="w-3.5 h-3.5 fill-blue-400 text-blue-500" />
+              {pointsFor(period, summary).toLocaleString("vi-VN")}
+            </span>
           </div>
         </div>
       )}
