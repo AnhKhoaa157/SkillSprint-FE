@@ -1,6 +1,5 @@
 import {
   LayoutDashboard,
-  Sparkles,
   Map,
   Calendar,
   CheckSquare,

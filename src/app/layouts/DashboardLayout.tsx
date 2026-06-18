@@ -207,7 +207,7 @@ function toRelativeTime(dateStr: string): string {
   }
 }
 
-type NotifIconType = "check" | "alert" | "calendar" | "sparkles" | "bell" | "shield" | "info";
+type NotifIconType = "check" | "alert" | "calendar" | "zap" | "bell" | "shield" | "info";
 type NotifMeta = {
   iconType: NotifIconType;
   iconBg: string; iconBorder: string; iconColor: string;
@@ -228,7 +228,7 @@ function getNotifMeta(type: string): NotifMeta {
     case "TASK_OVERDUE":
       return { iconType:"alert", iconBg:"#FEF2F2", iconBorder:"#FECACA", iconColor:"#DC2626", label:"Quá hạn", labelColor:"#DC2626", itemBg:"#FFF5F5", leftBorderColor:"#EF4444" };
     case "AI_SCHEDULE_READY":
-      return { iconType:"sparkles", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"AI Lịch học", labelColor:OG, itemBg:CARD };
+      return { iconType:"zap", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"AI Lịch học", labelColor:OG, itemBg:CARD };
     case "SYSTEM_INFO":
       return { iconType:"shield", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Hệ thống", labelColor:OG, itemBg:CARD, leftBorderColor:OG };
     case "SYSTEM_WARNING":
@@ -243,7 +243,7 @@ type PlanTier = "free" | "pro" | "premium";
 
 const PLAN_BADGE_THEME: Record<PlanTier, { label: string; cls: string; Icon: typeof Zap }> = {
   free:    { label: "Free",    cls: "bg-slate-50 border-slate-200 text-slate-500",     Icon: Zap },
-  pro:     { label: "Skill Builder", cls: "bg-amber-50 border-amber-300 text-amber-600",  Icon: Sparkles },
+  pro:     { label: "Skill Builder", cls: "bg-amber-50 border-amber-300 text-amber-600",  Icon: Zap },
   premium: { label: "Premium", cls: "bg-orange-50 border-[#FF6B00]/40 text-[#FF6B00]",     Icon: Crown },
 };
 
@@ -521,7 +521,7 @@ export default function DashboardLayout() {
                           meta.iconType === "check"    ? <BookOpenCheck size={15} color={meta.iconColor}/> :
                           meta.iconType === "alert"    ? <AlertTriangle  size={15} color={meta.iconColor}/> :
                           meta.iconType === "calendar" ? <CalendarClock  size={15} color={meta.iconColor}/> :
-                          meta.iconType === "sparkles" ? <Sparkles        size={15} color={meta.iconColor}/> :
+                          meta.iconType === "zap"      ? <Zap             size={15} color={meta.iconColor}/> :
                           meta.iconType === "shield"   ? <Shield          size={15} color={meta.iconColor}/> :
                           meta.iconType === "info"     ? <Info            size={15} color={meta.iconColor}/> :
                                                          <Bell            size={15} color={meta.iconColor}/>;
@@ -632,7 +632,7 @@ export default function DashboardLayout() {
               }`
             }
           >
-            <Sparkles size={20} className="shrink-0" />
+            <Zap size={20} className="shrink-0" />
             <span className="text-[10px] mt-1 font-semibold">Roadmap</span>
           </NavLink>
 
