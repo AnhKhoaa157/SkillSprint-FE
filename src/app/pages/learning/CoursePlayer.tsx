@@ -333,6 +333,11 @@ export default function CoursePlayer() {
   };
 
   const handleGenerateAndOpenQuiz = async () => {
+    if (!isSessionCompleted && !hasMetMinimum) {
+      showToast("warning", `Vui lòng tập trung học tối thiểu ${minimumRequiredMinutes} phút trước khi làm bài kiểm tra!`);
+      return;
+    }
+
     if (!isPremiumMember) {
       showPremiumQuizToast();
       return;
@@ -354,6 +359,11 @@ export default function CoursePlayer() {
   };
 
   const handleRegenerateQuiz = async () => {
+    if (!isSessionCompleted && !hasMetMinimum) {
+      showToast("warning", `Vui lòng tập trung học tối thiểu ${minimumRequiredMinutes} phút trước khi đổi đề!`);
+      return;
+    }
+
     const stepId = roadmapStep?.stepId;
     if (!stepId || isGeneratingQuiz) return;
     setIsGeneratingQuiz(true);
@@ -1051,8 +1061,8 @@ export default function CoursePlayer() {
                       <button
                         type="button"
                         onClick={handleGenerateAndOpenQuiz}
-                        disabled={isGeneratingQuiz}
-                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                        disabled={isGeneratingQuiz || (!isSessionCompleted && !hasMetMinimum)}
+                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
                         style={{
                           background: "linear-gradient(135deg, #FF6B00, #EA580C)",
                           boxShadow: "0 10px 24px rgba(255, 107, 0, 0.22)",
@@ -1060,6 +1070,8 @@ export default function CoursePlayer() {
                       >
                         {isGeneratingQuiz ? (
                           <><LoaderCircle size={13} className="animate-spin" /> Đang thiết kế đề...</>
+                        ) : !isSessionCompleted && !hasMetMinimum ? (
+                          <><Clock size={13} /> Học thêm {minimumRequiredMinutes - elapsedStudyMinutes}p để mở khóa</>
                         ) : (
                           <><Sparkles size={13} /> ✨ Thiết kế bài kiểm tra bằng AI</>
                         )}
@@ -1101,11 +1113,15 @@ export default function CoursePlayer() {
                       <button
                         type="button"
                         onClick={() => {
+                          if (!isSessionCompleted && !hasMetMinimum) {
+                            showToast("warning", `Vui lòng tập trung học tối thiểu ${minimumRequiredMinutes} phút trước khi làm bài kiểm tra!`);
+                            return;
+                          }
                           setShowQuiz(true);
                           setQuizStatus("idle");
                         }}
-                        disabled={isGeneratingQuiz}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-[#FF6B00] px-4 py-3 text-xs font-extrabold text-white shadow-md shadow-orange-500/20 transition hover:from-amber-600 hover:to-[#E05E00] active:scale-[0.98] cursor-pointer"
+                        disabled={isGeneratingQuiz || (!isSessionCompleted && !hasMetMinimum)}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-[#FF6B00] px-4 py-3 text-xs font-extrabold text-white shadow-md shadow-orange-500/20 transition hover:from-amber-600 hover:to-[#E05E00] active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <ExternalLink size={13} /> ✍️ Vào làm bài kiểm tra
                       </button>
