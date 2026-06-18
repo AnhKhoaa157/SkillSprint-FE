@@ -500,9 +500,10 @@ export default function Roadmap() {
           </div>
         </div>
 
-        <div className={`flex-1 min-h-0 bg-white ${
-          detailTab === "tutor" ? "overflow-hidden flex flex-col px-4 pt-3 pb-4" : "overflow-y-auto custom-scrollbar px-6 pt-5 pb-6"
-        } ${isMobileView ? "px-0" : ""}`}>
+        <div className="flex-1 min-h-0 relative bg-white">
+          <div className={`absolute inset-0 ${
+            detailTab === "tutor" ? "overflow-hidden flex flex-col px-4 pt-3 pb-4" : "overflow-y-auto custom-scrollbar px-6 pt-5 pb-6"
+          } ${isMobileView ? "px-0" : ""}`}>
           {detailTab === "tutor" ? (
             <AiTutorChat
               key={getStepKey(step) ?? ""}
@@ -632,6 +633,7 @@ export default function Roadmap() {
               )}
             </div>
           )}
+          </div>
         </div>
 
         <div className={`border-t border-slate-100 p-4 bg-white shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.015)] ${isMobileView ? "px-0 pb-0" : ""}`}>
