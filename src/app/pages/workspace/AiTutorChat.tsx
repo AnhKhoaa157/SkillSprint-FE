@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Bot, ChevronRight, Send, Sparkles } from "lucide-react";
-import tutorService, { type TutorContextResponse } from "../../../api/tutorService";
+import tutorService, { type TutorContextResponse } from "../../../api/utilities/tutorService";
 
 interface TutorMessage {
   id: string;

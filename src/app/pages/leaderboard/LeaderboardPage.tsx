@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Trophy, Flame, Zap, AlertTriangle, RefreshCw, Medal } from "lucide-react";
-import { getLeaderboard, getMeSummary } from "../../../api/pointService";
-import { getMe } from "../../../api/meService";
+import { getLeaderboard, getMeSummary } from "../../../api/learning/pointService";
+import { getMe } from "../../../api/utilities/meService";
 import type {
   LeaderboardEntry,
   LeaderboardPeriod,
   UserPointSummary,
-} from "../../../api/skillSprintModels";
+} from "../../../api/core/skillSprintModels";
 
 const TABS: { key: LeaderboardPeriod; label: string }[] = [
   { key: "weekly", label: "Tuần này" },

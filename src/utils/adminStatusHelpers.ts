@@ -1,4 +1,4 @@
-import type { ServicePlanType } from "../api/adminSubscriptionPlansService";
+import type { ServicePlanType } from "../api/admin/adminSubscriptionPlansService";
 
 export type StatusBadge = { bg: string; text: string; border: string; label: string };
 

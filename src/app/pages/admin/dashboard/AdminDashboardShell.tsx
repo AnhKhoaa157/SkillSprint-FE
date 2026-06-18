@@ -12,7 +12,7 @@ import PaymentsView from "../sections/payments";
 import SubscriptionPlansView from "../sections/subscriptionPlans";
 import AdminSystemSection from "../sections/system/AdminSystemSection";
 import AdminLeaderboard from "../sections/leaderboard";
-import healthService from "../../../../api/healthService";
+import healthService from "../../../../api/system/healthService";
 
 function toCsv(rows: Record<string, string | number>[]) {
   if (!rows.length) return "";
@@ -121,7 +121,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let mounted = true;
-    import('../../../../api/meService').then(mod => mod.getMe().then((me: any) => {
+    import('../../../../api/utilities/meService').then(mod => mod.getMe().then((me: any) => {
       if (!mounted) return;
       setCurrentUser(me);
     }).catch(() => { }));

@@ -2,10 +2,10 @@ import { useEffect, useState, useRef } from "react";
 import { motion } from "motion/react";
 import { Search, Users, ShieldCheck, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
-import adminUserService, { type AdminUserSummary, type AdminUserDetail } from "../../../../../api/adminUserService";
+import adminUserService, { type AdminUserSummary, type AdminUserDetail } from "../../../../../api/admin/adminUserService";
 import { PlanTypeBadge, PlanBadgeStyles } from "../../../../../components/admin/PlanTypeBadge";
-import type { ServicePlanType } from "../../../../../api/adminSubscriptionPlansService";
-import { getSubscriptionPlans } from "../../../../../api/adminSubscriptionPlansService";
+import type { ServicePlanType } from "../../../../../api/admin/adminSubscriptionPlansService";
+import { getSubscriptionPlans } from "../../../../../api/admin/adminSubscriptionPlansService";
 import {
   getStatusBadge,
   safeFormatDate,

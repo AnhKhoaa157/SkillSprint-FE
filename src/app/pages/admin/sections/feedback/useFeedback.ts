@@ -7,7 +7,7 @@ import {
   getFeedbackDetail,
   updateFeedbackStatus,
   type FeedbackAdminResponse,
-} from "../../../../../api/feedbackService";
+} from "../../../../../api/utilities/feedbackService";
 import { sanitizeFeedbackStatus, type ConfirmAction } from "./config";
 
 /**

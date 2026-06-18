@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, Lock, Loader2, ArrowRight } from "lucide-react";
 import { F, InputField } from "./AuthShared";
 import { Button } from "../../../components/ui/button";
-import { completeNewPassword, storeAuthTokens, isAdminRole } from "../../../../api/authService";
+import { completeNewPassword, storeAuthTokens, isAdminRole } from "../../../../api/auth/authService";
 
 export function NewPasswordRequiredModal({
   email, session, onBack, onSuccess,

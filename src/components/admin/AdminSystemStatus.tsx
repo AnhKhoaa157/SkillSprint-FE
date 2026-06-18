@@ -21,8 +21,8 @@ import {
   localInputToIso,
   type MaintenanceResponse,
   type UpdateMaintenanceRequest,
-} from "../../api/systemMaintenanceService";
-import { setCachedMaintenance } from "../../api/maintenanceState";
+} from "../../api/system/systemMaintenanceService";
+import { setCachedMaintenance } from "../../api/system/maintenanceState";
 
 const inputCls =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 disabled:bg-slate-50 disabled:text-slate-400";

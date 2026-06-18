@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, BarChart3, LoaderCircle, Map, Plus } from "lucide-react";
-import workspaceService, { type WorkspaceResponse } from "../../../api/workspaceService";
+import workspaceService, { type WorkspaceResponse } from "../../../api/utilities/workspaceService";
 import WorkspaceProgress from "../../components/workspace/WorkspaceProgress";
 import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";

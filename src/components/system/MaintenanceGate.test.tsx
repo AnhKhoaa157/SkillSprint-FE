@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MaintenanceGate } from "./MaintenanceGate";
-import { getSystemStatus } from "../../api/systemMaintenanceService";
+import { getSystemStatus } from "../../api/system/systemMaintenanceService";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
 // Public status endpoint — tests drive this to flip maintenance on/off.
-vi.mock("../../api/systemMaintenanceService", () => ({
+vi.mock("../../api/system/systemMaintenanceService", () => ({
   __esModule: true,
   getSystemStatus: vi.fn(),
 }));

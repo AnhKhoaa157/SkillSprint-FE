@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Zap } from "lucide-react";
-import { getMeSummary } from "../../../api/pointService";
+import { getMeSummary } from "../../../api/learning/pointService";
 
 /**
  * Compact XP indicator pinned to the dashboard header. Clicking it jumps to the

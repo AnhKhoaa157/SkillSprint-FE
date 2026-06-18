@@ -1,4 +1,4 @@
-import type { AdminLeaderboardPeriod } from "../../../../../api/adminPointService";
+import type { AdminLeaderboardPeriod } from "../../../../../api/admin/adminPointService";
 
 /** Visual metadata per point event type — colored badge classes + a VN label. */
 type EventMeta = { label: string; className: string };

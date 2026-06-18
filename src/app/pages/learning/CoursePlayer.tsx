@@ -34,15 +34,15 @@ import {
   PartyPopper,
   X,
 } from "lucide-react";
-import studySessionService from "../../../api/studySessionService";
-import type { StudySessionDetailResponse } from "../../../api/studySessionService";
-import quizService from "../../../api/quizService";
-import type { QuizAttemptResponse } from "../../../api/quizService";
+import studySessionService from "../../../api/learning/studySessionService";
+import type { StudySessionDetailResponse } from "../../../api/learning/studySessionService";
+import quizService from "../../../api/learning/quizService";
+import type { QuizAttemptResponse } from "../../../api/learning/quizService";
 import { usePomodoro, type PomodoroPhase } from "../../contexts/PomodoroContext";
 import { toast } from "sonner";
 import { useSubscription } from "../../../hooks/useSubscription";
 import { PricingModal } from "../../components/modals/PricingModal";
-import calendarService from "../../../api/calendarService";
+import calendarService from "../../../api/utilities/calendarService";
 import QuizContainer from "../../components/tools/QuizContainer";
 
 type StudySessionRouteState = {

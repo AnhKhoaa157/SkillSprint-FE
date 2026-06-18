@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import Auth from "./Auth";
-import { login, clearAuthTokens, storeAuthTokens } from "../../../api/authService";
+import { login, clearAuthTokens, storeAuthTokens } from "../../../api/auth/authService";
 
 // ─── Hoisted spies (referenced inside vi.mock factories) ───────────────────────
 
@@ -66,7 +66,7 @@ vi.mock("motion/react", async () => {
 });
 
 // Auth service: spy on storage sanitation + token persistence; keep role helpers realistic.
-vi.mock("../../../api/authService", () => ({
+vi.mock("../../../api/auth/authService", () => ({
   __esModule: true,
   login: vi.fn(),
   clearAuthTokens: vi.fn(),

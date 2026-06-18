@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import adminUserService, {
   type AdminUserDetail,
   type SubscriptionAdminResponse,
-} from "../../../../api/adminUserService";
-import { getSubscriptionPlans } from "../../../../api/adminSubscriptionPlansService";
+} from "../../../../api/admin/adminUserService";
+import { getSubscriptionPlans } from "../../../../api/admin/adminSubscriptionPlansService";
 
 /* -------------------------------------------------------------------------- */
 /*  Form model.                                                               */

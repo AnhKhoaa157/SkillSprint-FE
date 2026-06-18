@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import * as LucideIcons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { ServicePlanType } from "../../api/adminSubscriptionPlansService";
+import type { ServicePlanType } from "../../api/admin/adminSubscriptionPlansService";
 import { normalizePlanType } from "../../utils/adminStatusHelpers";
 
 export type PlanBadgeAnimation = "shimmer" | "pulse" | "none";

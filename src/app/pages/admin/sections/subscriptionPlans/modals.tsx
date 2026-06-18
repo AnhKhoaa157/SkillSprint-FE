@@ -14,7 +14,7 @@ import {
   type FeatureCatalogResponse,
   type FeatureToggle,
   type ServicePlanResponse,
-} from "../../../../../api/adminSubscriptionPlansService";
+} from "../../../../../api/admin/adminSubscriptionPlansService";
 import { PlanTypeBadge } from "../../../../../components/admin/PlanTypeBadge";
 import { Badge, Field, Modal, ToggleSwitch } from "../../_shared/primitives";
 import {

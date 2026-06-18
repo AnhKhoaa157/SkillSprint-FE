@@ -5,7 +5,7 @@ import {
   pausePomodoro,
   resumePomodoro,
   nextPomodoroPhase,
-} from "../../../api/studySessionService";
+} from "../../../api/learning/studySessionService";
 
 const F = "'Plus Jakarta Sans', Inter, sans-serif";
 const OG = "#FF6B00";

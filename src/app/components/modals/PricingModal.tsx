@@ -3,10 +3,10 @@ import { useNavigate } from "react-router";
 import { X, Check, ShieldCheck, ChevronRight, Zap, Star, Loader2, AlertCircle, Copy, RefreshCw, ArrowUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { createSepayPayment, getPaymentDetail } from "../../../api/sepayPaymentService";
-import { getMe } from "../../../api/meService";
-import type { SepayPaymentCreateResponse, CreateSepayPaymentRequest } from "../../../api/skillSprintModels";
-import { listSubscriptionPlans, STATIC_FALLBACK_PLANS, formatPlanPrice, isFeatureEnabled, resolvePlanFeatures, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/adminSubscriptionPlansService";
+import { createSepayPayment, getPaymentDetail } from "../../../api/billing/sepayPaymentService";
+import { getMe } from "../../../api/utilities/meService";
+import type { SepayPaymentCreateResponse, CreateSepayPaymentRequest } from "../../../api/core/skillSprintModels";
+import { listSubscriptionPlans, STATIC_FALLBACK_PLANS, formatPlanPrice, isFeatureEnabled, resolvePlanFeatures, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/admin/adminSubscriptionPlansService";
 
 const F = "'Plus Jakarta Sans','Inter',sans-serif";
 const OG = "#FF6B00";

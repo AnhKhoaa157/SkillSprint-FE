@@ -5,7 +5,7 @@ import {
   Settings, FileText, CheckCircle2, UserPlus, AlertTriangle, SearchX,
 } from "lucide-react";
 import { PlanTypeBadge } from "../../../../components/admin/PlanTypeBadge";
-import type { AdminUserDetail, SubscriptionAdminResponse } from "../../../../api/adminUserService";
+import type { AdminUserDetail, SubscriptionAdminResponse } from "../../../../api/admin/adminUserService";
 import { SUB_TEXTS, resolveLivePlan, safeFormatDate, normalizePlanType } from "../../../../utils/adminStatusHelpers";
 import SubscriptionStatusBadge from "../../../../components/admin/SubscriptionStatusBadge";
 import type { ActionKey } from "./useUserDetail";

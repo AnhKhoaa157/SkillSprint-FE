@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Client, type IMessage } from "@stomp/stompjs";
 import { toast } from "sonner";
-import { getAuthToken } from "../../api/apiClient";
-import { API_BASE } from "../../api/config";
-import { getNotifications, markNotificationRead } from "../../api/notificationsService";
-import type { NotificationResponse } from "../../api/skillSprintModels";
-import { getActivePublicAnnouncement } from "../../api/systemAnnouncementService";
+import { getAuthToken } from "../../api/core/apiClient";
+import { API_BASE } from "../../api/core/config";
+import { getNotifications, markNotificationRead } from "../../api/utilities/notificationsService";
+import type { NotificationResponse } from "../../api/core/skillSprintModels";
+import { getActivePublicAnnouncement } from "../../api/system/systemAnnouncementService";
 
 const WS_BASE = API_BASE.replace(/^https/, "wss").replace(/^http/, "ws");
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import workspaceService from "../../../api/workspaceService";
+import workspaceService from "../../../api/utilities/workspaceService";
 import {
   AlertTriangle,
   ArrowRight,

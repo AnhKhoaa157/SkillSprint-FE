@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { getCurrentSubscription } from "../api/subscriptionsService";
+import { getCurrentSubscription } from "../api/billing/subscriptionsService";
 import { useAuth } from "../app/contexts/AuthContext";
 
 export type NormalizedPlanId = "FREE" | "SKILL_BUILDER" | "PREMIUM";

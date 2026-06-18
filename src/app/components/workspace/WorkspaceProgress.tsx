@@ -17,14 +17,14 @@ import {
   PlayCircle,
   BarChart3,
 } from "lucide-react";
-import workspaceService, { type WorkspaceResponse } from "../../../api/workspaceService";
+import workspaceService, { type WorkspaceResponse } from "../../../api/utilities/workspaceService";
 import progressService, {
   type ProgressCalendarTaskResponse,
   type ProgressCurrentStepResponse,
   type ProgressDashboardResponse,
   type RoadmapStatus,
   type RoadmapStepStatus,
-} from "../../../api/progressService";
+} from "../../../api/learning/progressService";
 
 type WorkspaceProgressProps = {
   workspaceId?: string;

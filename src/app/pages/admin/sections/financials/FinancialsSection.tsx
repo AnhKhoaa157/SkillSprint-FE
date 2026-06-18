@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { Activity, ArrowUpRight, DollarSign, Repeat, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
-import { getAdminDashboardAnalytics, type AdminDashboardResponse } from "../../../../../api/adminDashboardService";
+import { getAdminDashboardAnalytics, type AdminDashboardResponse } from "../../../../../api/admin/adminDashboardService";
 
 const ACCENT = "#FF6B00";
 
