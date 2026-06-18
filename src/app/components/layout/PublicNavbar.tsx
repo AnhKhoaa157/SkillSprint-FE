@@ -3,10 +3,6 @@ import { Menu, X, Zap } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { BrandLogo } from "./BrandLogo";
 
-/* Requirement 1:
-   - Remove "Cộng đồng"
-   - Re-align remaining links for a balanced premium layout
-*/
 interface NavLink {
   to: string;
   label: string;
@@ -50,8 +46,8 @@ export function PublicNavbar() {
         const parentRect = parent.getBoundingClientRect();
         const elRect = el.getBoundingClientRect();
         setActiveStyle({
-          left: elRect.left - parentRect.left + (elRect.width - 26) / 2,
-          width: 26,
+          left: elRect.left - parentRect.left + (elRect.width - 24) / 2,
+          width: 24,
           opacity: 1,
         });
         return;
@@ -88,12 +84,6 @@ export function PublicNavbar() {
     setPillStyle((prev) => ({ ...prev, opacity: 0 }));
   };
 
-  const getLinkColor = (to: string, idx: number) => {
-    if (isActive(to)) return "#FF6B00";
-    if (hoveredIdx === idx) return "#FF6B00";
-    return "#475569";
-  };
-
   return (
     <>
       <style>{`
@@ -110,113 +100,67 @@ export function PublicNavbar() {
           to { opacity: 1; transform: translateY(0); }
         }
         @keyframes mobileMenuIn {
-          from { opacity: 0; transform: translateY(-6px) scale(0.99); }
+          from { opacity: 0; transform: translateY(-8px) scale(0.98); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
 
       <nav
+        className="absolute top-0 left-0 right-0 z-[1000] h-[76px] transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] animate-[navSlideDown_0.45s_cubic-bezier(0.16,1,0.3,1)_both]"
         style={{
           position: "absolute",
           top: 0,
           left: 0,
           right: 0,
-          zIndex: 1000,
-          height: "76px",
-          background: scrolled ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.68)",
+          background: scrolled ? "rgba(255,255,255,0.78)" : "rgba(255,255,255,0.62)",
           backdropFilter: "blur(20px) saturate(180%)",
           WebkitBackdropFilter: "blur(20px) saturate(180%)",
-          borderBottom: "1px solid rgba(226, 232, 240, 0.55)",
-          boxShadow: scrolled ? "0 12px 32px rgba(15,23,42,0.05)" : "none",
-          transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-          animation: "navSlideDown 0.45s cubic-bezier(0.16, 1, 0.3, 1) both",
+          borderBottom: scrolled ? "1px solid rgba(226, 232, 240, 0.65)" : "1px solid rgba(226, 232, 240, 0.4)",
+          boxShadow: scrolled ? "0 10px 30px rgba(15,23,42,0.03)" : "none",
         }}
       >
-        <div
-          style={{
-            maxWidth: "1280px",
-            height: "100%",
-            margin: "0 auto",
-            padding: "0 24px",
-            display: "grid",
-            gridTemplateColumns: "1fr auto 1fr",
-            alignItems: "center",
-            gap: "20px",
-          }}
-        >
+        <div className="max-w-[1280px] h-full mx-auto px-6 grid grid-cols-[1fr_auto_1fr] items-center gap-5">
+          
           {/* Left: Logo */}
-          <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "center" }}>
+          <div className="flex justify-start items-center">
             <Link
               to="/"
-              className="flex items-center"
-              style={{ textDecoration: "none", transition: "opacity 0.2s ease" }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = "0.85";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = "1";
-              }}
+              className="flex items-center no-underline transition-opacity duration-200 hover:opacity-85"
             >
-              <div className="h-12 flex items-center overflow-visible">
-                <BrandLogo size={60} align="left" />
+              <div className="h-16 flex items-center overflow-visible">
+                <BrandLogo size={72} align="left" />
               </div>
             </Link>
           </div>
 
           {/* Center: Desktop nav */}
           <div
-            className="nav-desktop"
-            style={{
-              position: "relative",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "6px",
-              padding: "5px",
-              borderRadius: "999px",
-              background: scrolled ? "rgba(248,250,252,0.76)" : "rgba(248,250,252,0.9)",
-              border: "1px solid rgba(226,232,240,0.95)",
-              boxShadow: "0 6px 18px rgba(15,23,42,0.04)",
-              minWidth: "fit-content",
-            }}
+            className={`nav-desktop relative items-center justify-center gap-1 p-1 rounded-full border transition-all duration-300 min-w-fit ${
+              scrolled
+                ? "bg-slate-50/80 border-slate-200/80 shadow-[0_6px_20px_rgba(15,23,42,0.03)]"
+                : "bg-slate-50/95 border-slate-200/90 shadow-[0_6px_18px_rgba(15,23,42,0.04)]"
+            }`}
             onMouseLeave={handleMouseLeave}
           >
             {/* Hover pill */}
             <span
+              className="absolute top-1 bottom-1 rounded-full bg-gradient-to-r from-orange-500/8 to-orange-400/4 border border-orange-500/12 shadow-[0_4px_12px_rgba(255,107,0,0.04)] pointer-events-none z-0"
               style={{
-                position: "absolute",
-                top: 5,
-                bottom: 5,
                 left: pillStyle.left,
                 width: pillStyle.width,
                 opacity: pillStyle.opacity,
-                borderRadius: "999px",
-                background:
-                  "linear-gradient(135deg, rgba(255,107,0,0.08) 0%, rgba(255,140,66,0.04) 100%)",
-                border: "1px solid rgba(255,107,0,0.14)",
-                boxShadow: "0 4px 12px rgba(255,107,0,0.05)",
-                transition:
-                  "left 0.24s cubic-bezier(0.25, 1, 0.5, 1), width 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.15s ease",
-                pointerEvents: "none",
-                zIndex: 0,
+                transition: "left 0.24s cubic-bezier(0.25, 1, 0.5, 1), width 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.15s ease",
               }}
             />
 
             {/* Active underline */}
             <span
+              className="absolute bottom-1 h-0.5 rounded-full bg-orange-500 shadow-[0_2px_8px_rgba(255,107,0,0.35)] pointer-events-none z-0"
               style={{
-                position: "absolute",
-                bottom: 3,
                 left: activeStyle.left,
                 width: activeStyle.width,
-                height: 3,
-                borderRadius: "999px",
-                background: "#FF6B00",
-                boxShadow: "0 2px 8px rgba(255,107,0,0.35)",
                 opacity: activeStyle.opacity,
-                transition:
-                  "left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                pointerEvents: "none",
-                zIndex: 0,
+                transition: "left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
               }}
             />
 
@@ -229,19 +173,14 @@ export function PublicNavbar() {
                   ref={(el) => {
                     linkRefs.current[idx] = el;
                   }}
-                  style={{
-                    position: "relative",
-                    zIndex: 1,
-                    padding: "9px 18px",
-                    fontSize: "0.875rem",
-                    fontWeight: active ? 700 : 500,
-                    fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                    letterSpacing: "-0.01em",
-                    color: getLinkColor(link.to, idx),
-                    textDecoration: "none",
-                    whiteSpace: "nowrap",
-                    transition: "color 0.2s ease",
-                  }}
+                  className={`relative z-10 px-4.5 py-2 text-[13px] whitespace-nowrap transition-colors duration-200 no-underline ${
+                    active
+                      ? "text-orange-500 font-bold"
+                      : hoveredIdx === idx
+                        ? "text-orange-500 font-semibold"
+                        : "text-slate-650 font-semibold hover:text-orange-500"
+                  }`}
+                  style={{ fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}
                   onMouseEnter={(e) => handleMouseEnter(idx, e.currentTarget)}
                 >
                   {link.label}
@@ -251,82 +190,30 @@ export function PublicNavbar() {
           </div>
 
           {/* Right: CTA */}
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "10px" }}>
-            <div className="nav-desktop" style={{ alignItems: "center", gap: "8px" }}>
+          <div className="flex justify-end items-center gap-2.5">
+            <div className="nav-desktop items-center gap-2">
               <Link
                 to="/login?mode=login"
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "999px",
-                  fontSize: "0.85rem",
-                  fontWeight: 500,
-                  fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                  color: "#475569",
-                  textDecoration: "none",
-                  transition: "all 0.2s ease",
-                  border: "1px solid transparent",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "#111827";
-                  e.currentTarget.style.background = "rgba(15,23,42,0.04)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "#475569";
-                  e.currentTarget.style.background = "transparent";
-                }}
+                className="px-4.5 py-2.5 rounded-full text-[13px] font-bold text-slate-650 hover:text-slate-900 hover:bg-slate-100/80 transition-all duration-205 no-underline"
+                style={{ fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}
               >
                 Đăng nhập
               </Link>
 
+              {/* Nút bấm vật lý lún xuống khi click */}
               <Link
                 to="/login?mode=register"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "8px 18px",
-                  borderRadius: "999px",
-                  fontSize: "0.85rem",
-                  fontWeight: 700,
-                  fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                  color: "#FFFFFF",
-                  textDecoration: "none",
-                  background: "linear-gradient(135deg, #FF6B00 0%, #FF8C42 100%)",
-                  boxShadow: "0 4px 14px rgba(255, 107, 0, 0.25)",
-                  transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                  e.currentTarget.style.boxShadow = "0 6px 20px rgba(255, 107, 0, 0.38)";
-                  e.currentTarget.style.filter = "brightness(1.04)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 4px 14px rgba(255, 107, 0, 0.25)";
-                  e.currentTarget.style.filter = "brightness(1)";
-                }}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold text-white whitespace-nowrap bg-orange-500 shadow-[0_4px_0_#EA580C] hover:translate-y-[1px] hover:shadow-[0_3px_0_#EA580C] active:translate-y-[4px] active:shadow-none transition-all duration-100 no-underline"
+                style={{ fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}
               >
-                <Zap size={13} fill="currentColor" strokeWidth={0} />
+                <Zap size={12} className="fill-current" strokeWidth={0} />
                 Bắt đầu miễn phí
               </Link>
             </div>
 
             {/* Mobile menu button */}
             <button
-              className="nav-mobile-btn"
-              style={{
-                alignItems: "center",
-                justifyContent: "center",
-                width: "36px",
-                height: "36px",
-                borderRadius: "10px",
-                border: "1px solid rgba(255, 107, 0, 0.3)",
-                background: "rgba(255, 107, 0, 0.05)",
-                color: "#FF6B00",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
+              className="nav-mobile-btn items-center justify-center w-9 h-9 rounded-xl border border-orange-500/25 bg-orange-500/5 text-orange-500 cursor-pointer transition-all duration-200 hover:bg-orange-500/10 active:scale-95"
               onClick={() => setIsMenuOpen((v) => !v)}
               aria-label="Toggle menu"
             >
@@ -335,25 +222,10 @@ export function PublicNavbar() {
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu - Floating bubble design */}
         {isMenuOpen && (
           <div
-            style={{
-              position: "absolute",
-              top: "76px",
-              left: 0,
-              right: 0,
-              padding: "10px 16px 16px",
-              background: "rgba(255,255,255,0.97)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              borderBottom: "1px solid rgba(229,231,235,0.8)",
-              boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
-              animation: "mobileMenuIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both",
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-            }}
+            className="absolute top-[78px] left-4 right-4 p-4 bg-white/95 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-[0_20px_40px_rgba(15,23,42,0.08)] animate-[mobileMenuIn_0.25s_cubic-bezier(0.16,1,0.3,1)_both] flex flex-col gap-2 z-50"
           >
             {NAV_LINKS.map((link) => {
               const active = isActive(link.to);
@@ -361,17 +233,12 @@ export function PublicNavbar() {
                 <Link
                   key={link.to}
                   to={link.to}
-                  style={{
-                    display: "block",
-                    padding: "12px 16px",
-                    borderRadius: "10px",
-                    fontSize: "0.9rem",
-                    fontWeight: active ? 700 : 500,
-                    fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                    color: active ? "#FF6B00" : "#374151",
-                    background: active ? "rgba(255, 107, 0, 0.06)" : "transparent",
-                    textDecoration: "none",
-                  }}
+                  className={`block px-4 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-205 no-underline ${
+                    active
+                      ? "bg-orange-500/8 text-orange-500"
+                      : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                  style={{ fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {link.label}
@@ -379,20 +246,12 @@ export function PublicNavbar() {
               );
             })}
 
-            <div style={{ height: 1, background: "rgba(229,231,235,0.8)", margin: "4px 0" }} />
+            <div className="h-px bg-slate-100 my-1.5" />
 
             <Link
               to="/login?mode=login"
-              style={{
-                display: "block",
-                padding: "12px 16px",
-                borderRadius: "10px",
-                fontSize: "0.9rem",
-                fontWeight: 500,
-                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                color: "#374151",
-                textDecoration: "none",
-              }}
+              className="block px-4 py-2.5 rounded-xl text-[13px] font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all duration-205 no-underline"
+              style={{ fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}
               onClick={() => setIsMenuOpen(false)}
             >
               Đăng nhập
@@ -400,31 +259,18 @@ export function PublicNavbar() {
 
             <Link
               to="/login?mode=register"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                padding: "12px 16px",
-                borderRadius: "10px",
-                fontSize: "0.9rem",
-                fontWeight: 700,
-                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                color: "#FFFFFF",
-                textDecoration: "none",
-                background: "linear-gradient(135deg, #FF6B00 0%, #FF8C42 100%)",
-                boxShadow: "0 4px 12px rgba(255, 107, 0, 0.2)",
-              }}
+              className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl text-[13px] font-bold text-white bg-orange-500 shadow-[0_3px_0_#EA580C] hover:translate-y-[1px] hover:shadow-[0_2px_0_#EA580C] active:translate-y-[3px] active:shadow-none transition-all duration-100 no-underline"
+              style={{ fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}
               onClick={() => setIsMenuOpen(false)}
             >
-              <Zap size={14} fill="currentColor" strokeWidth={0} />
+              <Zap size={13} className="fill-current" strokeWidth={0} />
               Bắt đầu miễn phí
             </Link>
           </div>
         )}
       </nav>
 
-      <div style={{ height: "76px" }} />
+      <div className="h-[76px]" />
     </>
   );
 }

@@ -1,319 +1,425 @@
-import { motion } from "motion/react";
+import { useState, useRef } from "react";
+import { motion, useMotionValue, useTransform, useSpring } from "motion/react";
 import { Link } from "react-router";
-import { ArrowRight, Target, LineChart, Clock, ShieldCheck, Sparkles, Zap, Map } from "lucide-react";
+import { ArrowRight, Target, LineChart, Clock, ShieldCheck, Zap, Map } from "lucide-react";
 import { PublicNavbar } from "../components/PublicNavbar";
 import { Footer as PublicFooter } from "../components/Footer";
 
-/* ─── Design Tokens ─── */
-const F    = "'Plus Jakarta Sans', Inter, sans-serif";
-const BG   = "#F9FAFB";
-const CARD = "#FFFFFF";
-const T1   = "#1F2937";
-const T2   = "#6B7280";
-const T3   = "#9CA3AF";
-const OG   = "#FF6B00";
-const OGL  = "#FFF7ED";
-const OGLT = "#FFEDD5";
-const BDR  = "#E5E7EB";
-const SH   = "0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.04)";
-const SHM  = "0 4px 16px rgba(0,0,0,0.08),0 1px 4px rgba(0,0,0,0.04)";
-const SHL  = "0 8px 40px rgba(0,0,0,0.10),0 2px 8px rgba(0,0,0,0.05)";
+/* ──────────────────────────────────────────────────────────────
+   🎴 Tilt3D Card — Wrapper tạo hiệu ứng nghiêng 3D khi hover
+ ────────────────────────────────────────────────────────────── */
+function Tilt3D({
+  children,
+  className,
+  intensity = 8,
+  style,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  intensity?: number;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+
+  const sx = useSpring(mx, { stiffness: 180, damping: 22 });
+  const sy = useSpring(my, { stiffness: 180, damping: 22 });
+
+  const rotateY = useTransform(sx, [-0.5, 0.5], [-intensity, intensity]);
+  const rotateX = useTransform(sy, [-0.5, 0.5], [intensity, -intensity]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    mx.set((e.clientX - rect.left) / rect.width - 0.5);
+    my.set((e.clientY - rect.top) / rect.height - 0.5);
+  };
+
+  const handleMouseLeave = () => {
+    mx.set(0);
+    my.set(0);
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      style={{ rotateX, rotateY, transformPerspective: 1200, transformStyle: "preserve-3d", ...style }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      whileHover={{ y: -8, scale: 1.025 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 export default function About() {
   return (
-    <div style={{ background:BG, minHeight:"100vh", fontFamily:F }}>
-      <PublicNavbar />
+    <div 
+      className="min-h-screen relative overflow-x-hidden antialiased selection:bg-orange-500/20 selection:text-orange-650 text-slate-800"
+      style={{
+        fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+        background: "linear-gradient(180deg, #ffffff 0%, #fffbf7 30%, #fff7ef 60%, #faf6f0 100%)",
+      }}
+    >
+      {/* ── Lưới nền trang trí tinh xảo ── */}
+      <div
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, rgba(255,107,0,0.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,107,0,0.02) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+          maskImage: "radial-gradient(ellipse at 50% 30%, black 70%, transparent 100%)",
+          WebkitMaskImage: "radial-gradient(ellipse at 50% 30%, black 70%, transparent 100%)",
+        }}
+      />
 
-      <main style={{ paddingTop:"140px", paddingBottom:"80px", overflow:"hidden" }}>
-        {/* Hero Section - Đã cập nhật theo thiết kế image_eb3924.jpg */}
-        <section style={{ textAlign:"center", padding:"0 16px", marginBottom:"100px", position:"relative" }}>
-          <div style={{
-            position:"absolute", top:"-50%", left:"50%", transform:"translateX(-50%)",
-            width:"600px", height:"600px", background:"radial-gradient(ellipse, rgba(255,107,0,0.08) 0%, transparent 60%)",
-            pointerEvents:"none", zIndex:0
-          }}/>
+      {/* ── Hệ thống hào quang ambient 3 lớp ── */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] pointer-events-none z-0 opacity-80"
+        style={{
+          background: "radial-gradient(ellipse at center, rgba(255,107,0,0.08) 0%, rgba(251,146,60,0.02) 50%, transparent 70%)",
+          filter: "blur(60px)",
+        }}
+      />
+      <div
+        className="absolute top-[300px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none z-0 opacity-40"
+        style={{
+          background: "radial-gradient(circle, rgba(124,58,237,0.06) 0%, transparent 70%)",
+          filter: "blur(70px)",
+        }}
+      />
+      <div
+        className="absolute top-[600px] left-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none z-0 opacity-40"
+        style={{
+          background: "radial-gradient(circle, rgba(14,165,233,0.06) 0%, transparent 70%)",
+          filter: "blur(70px)",
+        }}
+      />
+
+      <div className="relative z-10">
+        <PublicNavbar />
+
+        <main className="pt-36 pb-32">
           
-          <div className="max-w-4xl mx-auto" style={{ position:"relative", zIndex:1 }}>
-            {/* Cập nhật giao diện Badge giống ảnh 2 */}
-            <motion.div initial={{ opacity:0, y:-8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
-              style={{
-                display:"inline-flex", alignItems:"center", gap:"6px",
-                padding:"6px 16px", borderRadius:"99px", marginBottom:"28px",
-                background: CARD, 
-                border: `1px solid ${OG}`,
-                boxShadow: "0 2px 8px rgba(255,107,0,0.04)"
-              }}>
-              <Sparkles size={12} color={OG}/>
-              <span style={{ 
-                fontFamily:F, 
-                fontSize:"0.72rem", 
-                color:OG, 
-                fontWeight:800, 
-                letterSpacing:"0.1em",
-                textTransform: "uppercase" 
-              }}>
-                Câu chuyện của SkillSprint
-              </span>
-            </motion.div>
-
-            {/* Cập nhật Title gạch chân giống ảnh 2 */}
-            <motion.h1 initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:0.2 }}
-              style={{
-                fontFamily:F, fontWeight:900, fontSize:"clamp(2.5rem,5vw,4.5rem)",
-                letterSpacing:"-0.04em", lineHeight:1.2, color:T1, marginBottom:"24px",
-              }}>
-              Kiến tạo thế hệ <br />
-              <span style={{ 
-                color: OG, 
-                position: "relative", 
-                display: "inline-block",
-                paddingBottom: "4px"
-              }}>
-                học tập chủ động.
-                {/* Đường gạch chân mảnh tinh tế phía dưới chữ */}
-                <span style={{
-                  position: "absolute",
-                  left: 0,
-                  bottom: "-4px",
-                  width: "100%",
-                  height: "2px",
-                  backgroundColor: OG,
-                }} />
-              </span>
-            </motion.h1>
-
-            <motion.p initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:0.3 }}
-              style={{
-                fontFamily:F, fontSize:"1.15rem", color:T2, lineHeight:1.75,
-                maxWidth:"680px", margin:"0 auto",
-              }}>
-              Không "học thay" bạn. SkillSprint trang bị lộ trình và công cụ để biến bạn thành người tự học xuất sắc, tự tin đáp ứng mọi yêu cầu khắt khe của ngành IT.
-            </motion.p>
-          </div>
-        </section>
-
-        {/* ─── THE PROBLEM & MISSION ─── */}
-        <section style={{ padding:"0 16px", marginBottom:"120px" }}>
-          <div className="max-w-6xl mx-auto">
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))", gap:"40px", alignItems:"center" }}>
-              <motion.div initial={{ opacity:0, x:-20 }} whileInView={{ opacity:1, x:0 }} viewport={{ once:true }} transition={{ duration:0.6 }}>
-                <span style={{ display:"block", fontFamily:F, fontSize:"0.75rem", fontWeight:700, color:OG, textTransform:"uppercase", letterSpacing:"0.2em", marginBottom:"12px" }}>
-                  Thực trạng ngành IT
-                </span>
-                <h2 style={{ fontFamily:F, fontWeight:900, fontSize:"clamp(1.8rem,3vw,2.5rem)", color:T1, letterSpacing:"-0.03em", lineHeight:1.2, marginBottom:"20px" }}>
-                  Giáo trình đồ sộ, <br/>thời gian có hạn.
-                </h2>
-                <p style={{ fontFamily:F, fontSize:"1rem", color:T2, lineHeight:1.7, marginBottom:"16px" }}>
-                  Tài liệu khổng lồ nhưng thiếu định hướng khiến sinh viên IT dễ "bơi" trong kiến thức, học dàn trải và nhanh chóng rơi vào trạng thái quá tải (burnout).
-                </p>
-                <p style={{ fontFamily:F, fontSize:"1rem", color:T2, lineHeight:1.7 }}>
-                  <strong style={{ color:T1 }}>Giải pháp:</strong> Số hóa toàn bộ giáo trình thành lộ trình cá nhân hóa. Chia nhỏ kiến thức thành các mục tiêu đo lường được qua từng Sprint ngắn.
-                </p>
-              </motion.div>
-              
-              <motion.div initial={{ opacity:0, scale:0.95 }} whileInView={{ opacity:1, scale:1 }} viewport={{ once:true }} transition={{ duration:0.6 }}
+          {/* ══════════════════════════════════
+              HERO SECTION
+              ══════════════════════════════════ */}
+          <section className="px-4 pb-20 text-center relative z-10">
+            <div className="mx-auto max-w-4xl">
+              {/* Badge tia chớp mới */}
+              <motion.div
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="mb-6 inline-flex items-center gap-2 rounded-full px-5 py-2.5"
                 style={{
-                  background:CARD, borderRadius:"24px", padding:"40px",
-                  boxShadow:SHL, border:`1px solid ${BDR}`,
-                  backgroundImage:`linear-gradient(135deg, ${OGL} 0%, transparent 100%)`,
-                }}>
-                <div style={{ display:"grid", gap:"24px" }}>
+                  background: "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,247,237,0.95))",
+                  border: "1.5px solid rgba(255,107,0,0.25)",
+                  boxShadow: "0 10px 30px -5px rgba(255,107,0,0.1), inset 0 1.5px 0 rgba(255,255,255,1)",
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                <Zap size={13} className="text-orange-500 fill-orange-500 animate-pulse" />
+                <span className="text-[11px] font-black uppercase tracking-wider text-orange-600">
+                  Câu chuyện của SkillSprint
+                </span>
+              </motion.div>
+
+              {/* H1 */}
+              <motion.h1
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.65, delay: 0.08 }}
+                className="text-4xl sm:text-5xl md:text-[62px] font-black leading-[1.08] tracking-tight text-slate-900 mb-6"
+              >
+                Kiến tạo thế hệ <br />
+                <span className="relative inline-block mt-1">
+                  <span
+                    className="bg-clip-text text-transparent"
+                    style={{
+                      backgroundImage: "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #e65c00 100%)",
+                    }}
+                  >
+                    học tập chủ động.
+                  </span>
+                  <span
+                    className="absolute -bottom-2.5 left-0 w-full h-[5px] rounded-full"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, rgba(255,107,0,0.45) 0%, rgba(251,146,60,0.05) 100%)",
+                    }}
+                  />
+                </span>
+              </motion.h1>
+
+              {/* Hướng dẫn phụ */}
+              <motion.p
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.18 }}
+                className="mx-auto max-w-2xl text-[15.5px] leading-relaxed text-slate-500 font-semibold"
+              >
+                Không "học thay" bạn. SkillSprint trang bị lộ trình và công cụ để biến bạn thành người tự học xuất sắc, tự tin đáp ứng mọi yêu cầu khắt khe của ngành IT.
+              </motion.p>
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════
+              THE PROBLEM & MISSION
+              ══════════════════════════════════ */}
+          <section className="px-4 pb-24 relative z-10">
+            <div className="max-w-6xl mx-auto">
+              <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 items-center">
+                {/* Cột trái: Text mô tả */}
+                <motion.div 
+                  initial={{ opacity: 0, x: -28 }} 
+                  whileInView={{ opacity: 1, x: 0 }} 
+                  viewport={{ once: true }} 
+                  transition={{ duration: 0.6 }}
+                >
+                  <span className="block text-[11px] font-black text-orange-600 uppercase tracking-widest mb-3.5">
+                    Thực trạng ngành IT
+                  </span>
+                  <h2 className="text-3xl md:text-[40px] font-black text-slate-900 tracking-tight leading-tight mb-5">
+                    Giáo trình đồ sộ, <br />thời gian có hạn.
+                  </h2>
+                  <p className="text-[14px] leading-relaxed text-slate-400 font-semibold mb-4.5">
+                    Tài liệu khổng lồ nhưng thiếu định hướng khiến sinh viên IT dễ "bơi" trong kiến thức, học dàn trải và nhanh chóng rơi vào trạng thái quá tải (burnout).
+                  </p>
+                  <p className="text-[14px] leading-relaxed text-slate-500 font-semibold">
+                    <strong className="text-orange-600 font-black">Giải pháp:</strong> Số hóa toàn bộ giáo trình thành lộ trình cá nhân hóa. Chia nhỏ kiến thức thành các mục tiêu đo lường được qua từng Sprint ngắn.
+                  </p>
+                </motion.div>
+                
+                {/* Cột phải: Card giải pháp 3D */}
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.96 }} 
+                  whileInView={{ opacity: 1, scale: 1 }} 
+                  viewport={{ once: true }} 
+                  transition={{ duration: 0.6 }}
+                  className="rounded-[36px] p-8 md:p-10 relative overflow-hidden"
+                  style={{
+                    background: "linear-gradient(145deg, rgba(255,255,255,0.99) 0%, rgba(255,247,237,0.7) 100%)",
+                    border: "1.5px solid rgba(255,107,0,0.18)",
+                    boxShadow: "0 30px 70px -15px rgba(255,107,0,0.08), 0 10px 20px -8px rgba(15,23,42,0.03), inset 0 1.5px 0 rgba(255,255,255,1)",
+                  }}
+                >
+                  <div className="grid gap-6 relative z-10">
+                    {[
+                      { icon: Map, title: "Định hướng rõ ràng", desc: "Chỉ học những gì cần thiết nhất cho mục tiêu hiện tại của bạn." },
+                      { icon: Target, title: "Lộ trình cá nhân hóa", desc: "Thích ứng chính xác với năng lực tiếp thu và quỹ thời gian cá nhân." },
+                      { icon: Zap, title: "Tăng tốc tốc độ học", desc: "Tối đa hóa hiệu suất tự học thực chiến thay vì thụ động lắng nghe lý thuyết." },
+                    ].map((item, i) => (
+                      <div key={i} className="flex gap-4">
+                        <div 
+                          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                          style={{
+                            background: "#ffffff",
+                            border: "1.5px solid rgba(255,107,0,0.2)",
+                            boxShadow: "0 6px 18px rgba(255,107,0,0.06), inset 0 1px 0 rgba(255,255,255,1)",
+                          }}
+                        >
+                          <item.icon size={20} className="text-orange-500 fill-orange-500/10" />
+                        </div>
+                        <div>
+                          <h3 className="font-extrabold text-[15px] text-slate-900 mb-1">{item.title}</h3>
+                          <p className="text-[13px] text-slate-450 leading-relaxed font-semibold">{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════
+              CORE VALUES (3D TILT CARDS)
+              ══════════════════════════════════ */}
+          <section className="px-4 pb-24 relative z-10">
+            <div className="max-w-6xl mx-auto">
+              {/* Header */}
+              <motion.div 
+                initial={{ opacity: 0, y: 16 }} 
+                whileInView={{ opacity: 1, y: 0 }} 
+                viewport={{ once: true }} 
+                className="text-center mb-16"
+              >
+                <div
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full mb-3.5"
+                  style={{
+                    background: "rgba(255,107,0,0.06)",
+                    border: "1px solid rgba(255,107,0,0.15)",
+                  }}
+                >
+                  <span className="text-[10px] text-orange-700 font-black uppercase tracking-widest">
+                    TRIẾT LÝ CỐT LÕI
+                  </span>
+                </div>
+                <h2 className="text-3xl md:text-[40px] font-black text-slate-900 tracking-tight leading-none">
+                  Ba giá trị bền vững
+                </h2>
+              </motion.div>
+
+              <div className="relative">
+                {/* 3 cards grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {[
-                    { icon: Map, title:"Định hướng rõ ràng", desc:"Chỉ học những gì cần thiết nhất cho mục tiêu hiện tại." },
-                    { icon: Target, title:"Lộ trình cá nhân hóa", desc:"Thích ứng với năng lực tiếp thu và quỹ thời gian của riêng bạn." },
-                    { icon: Zap, title:"Tăng tốc tốc độ học", desc:"Tối đa hóa hiệu suất tự học thay vì thụ động lắng nghe." },
+                    { icon: Target, title: "Tính Thực Chiến", desc: "Học để dùng. Mọi kiến thức tiếp thu đều phục vụ trực tiếp cho mục tiêu vượt qua kỳ thi hoặc đáp ứng tiêu chí tuyển dụng.", color: "#FF6B00", shadow: "rgba(255,107,0,0.25)" },
+                    { icon: LineChart, title: "Dữ Liệu Hóa", desc: "Tiến bộ không đến từ cảm tính. Từ lỗ hổng kiến thức đến độ tự tin, mọi thứ đều được lượng hóa bằng chỉ số trực quan.", color: "#7C3AED", shadow: "rgba(124,90,237,0.25)" },
+                    { icon: Clock, title: "Tối Ưu Thời Gian", desc: "Ngừng bơi trong tài liệu rác. Hệ thống giúp bạn tập trung 100% năng lượng vào đúng kiến thức mà bạn đang thực sự thiếu sót.", color: "#0EA5E9", shadow: "rgba(14,165,233,0.25)" },
+                  ].map((val, i) => {
+                    const indexLabel = String(i + 1).padStart(2, "0");
+                    return (
+                      <Tilt3D 
+                        key={i} 
+                        intensity={6}
+                        className="flex flex-col h-full"
+                      >
+                        <div
+                          className="relative rounded-[28px] p-6 md:p-8 flex flex-col justify-between flex-1 overflow-hidden transition-all duration-300"
+                          style={{
+                            background: `linear-gradient(180deg, ${val.color}04 0%, rgba(255,255,255,0.99) 40%, #ffffff 100%)`,
+                            border: "1.5px solid rgba(226,232,240,0.85)",
+                            boxShadow: "0 10px 30px -10px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,1)",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = `${val.color}35`;
+                            e.currentTarget.style.boxShadow = `0 24px 50px -15px ${val.shadow}, inset 0 1px 0 rgba(255,255,255,1)`;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = "rgba(226,232,240,0.85)";
+                            e.currentTarget.style.boxShadow = "0 10px 30px -10px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,1)";
+                          }}
+                        >
+                          {/* Số outline nghệ thuật ở góc phải */}
+                          <div className="absolute right-6 top-6 select-none pointer-events-none opacity-20">
+                            <span 
+                              className="font-black text-6xl tracking-tighter leading-none"
+                              style={{
+                                color: "transparent",
+                                WebkitTextStroke: `1.5px ${val.color}`,
+                              }}
+                            >
+                              {indexLabel}
+                            </span>
+                          </div>
+
+                          <div className="relative z-10 flex flex-col h-full justify-between mt-8">
+                            <div>
+                              {/* Icon container nổi bật */}
+                              <div 
+                                className="w-12 h-12 rounded-xl flex items-center justify-center mb-6"
+                                style={{
+                                  background: `${val.color}08`,
+                                  border: `1.5px solid ${val.color}25`,
+                                  boxShadow: `0 6px 16px -4px ${val.color}20`,
+                                }}
+                              >
+                                <val.icon size={18} color={val.color} />
+                              </div>
+
+                              <h3 className="font-black text-[17px] text-slate-900 leading-none mb-3.5">
+                                {val.title}
+                              </h3>
+                              <p className="text-[13.5px] text-slate-450 leading-relaxed font-semibold">
+                                {val.desc}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </Tilt3D>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════
+              PRINCIPLES & TRUST (PRODUCT PROMISES)
+              ══════════════════════════════════ */}
+          <section className="px-4 pb-12 relative z-10">
+            <div className="max-w-6xl mx-auto">
+              <motion.div 
+                initial={{ opacity: 0, y: 16 }} 
+                whileInView={{ opacity: 1, y: 0 }} 
+                viewport={{ once: true }}
+                className="rounded-[40px] p-8 md:p-12 relative overflow-hidden"
+                style={{
+                  background: "linear-gradient(180deg, rgba(250,250,252,0.95) 0%, rgba(255,255,255,0.9) 50%)",
+                  border: "1.5px solid rgba(226,232,240,0.85)",
+                  boxShadow: "0 24px 60px -20px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,1)",
+                }}
+              >
+                {/* Tiêu đề phần cam kết */}
+                <div className="text-center mb-10">
+                  <span className="block text-[11px] font-black text-orange-600 uppercase tracking-widest mb-3">
+                    Sứ mệnh vững vàng
+                  </span>
+                  <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-none">
+                    Cam kết phát triển sản phẩm
+                  </h2>
+                </div>
+
+                {/* 2x2 grid của cam kết */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {[
+                    { text: "Dữ liệu học tập thực tế phải dẫn dắt kế hoạch.", accent: "#FFDCC5" },
+                    { text: "Lộ trình phải thực sự cá nhân hóa theo từng sinh viên.", accent: "#EEDDFF" },
+                    { text: "Theo dõi tiến độ phải trực quan, dễ hành động.", accent: "#DFF6FF" },
+                    { text: "Cam kết bảo mật tuyệt đối dữ liệu cá nhân của người dùng.", accent: "#E8F9EF" },
                   ].map((item, i) => (
-                    <div key={i} style={{ display:"flex", gap:"16px" }}>
-                      <div style={{
-                        width:"48px", height:"48px", borderRadius:"12px", flexShrink:0,
-                        background:CARD, border:`1px solid ${OGLT}`, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:SH
-                      }}>
-                        <item.icon size={20} color={OG} />
+                    <motion.div 
+                      key={i} 
+                      whileHover={{ y: -4, scale: 1.01 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex items-center gap-4.5 bg-white p-5 rounded-2xl transition-all duration-300 cursor-default"
+                      style={{
+                        border: "1.5px solid rgba(229,231,235,0.8)",
+                        boxShadow: "0 6px 20px rgba(15,23,42,0.02)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(249,115,22,0.25)";
+                        e.currentTarget.style.boxShadow = "0 15px 30px rgba(249,115,22,0.05)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(229,231,235,0.8)";
+                        e.currentTarget.style.boxShadow = "0 6px 20px rgba(15,23,42,0.02)";
+                      }}
+                    >
+                      {/* Vòng tròn check gradient đẹp mắt */}
+                      <div 
+                        className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                        style={{
+                          background: `linear-gradient(135deg, ${item.accent} 0%, rgba(255,255,255,0.6) 100%)`,
+                          border: "1px solid rgba(255,255,255,0.8)",
+                          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
+                        }}
+                      >
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white shadow-sm">
+                          <ShieldCheck size={16} className="text-orange-500" />
+                        </div>
                       </div>
-                      <div>
-                        <h3 style={{ fontFamily:F, fontWeight:800, fontSize:"1.05rem", color:T1, marginBottom:"6px" }}>{item.title}</h3>
-                        <p style={{ fontFamily:F, fontSize:"0.9rem", color:T2, lineHeight:1.6 }}>{item.desc}</p>
+
+                      <div className="flex-1">
+                        <span className="font-extrabold text-[14px] text-slate-800 leading-snug">{item.text}</span>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </motion.div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* ─── CORE VALUES ─── */}
-        <section style={{ padding:"0 16px", marginBottom:"120px" }}>
-          <div className="max-w-6xl mx-auto">
-            <motion.div initial={{ opacity:0, y:16 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} style={{ textAlign:"center", marginBottom:"56px" }}>
-              <span style={{ display:"block", fontFamily:F, fontSize:"0.75rem", fontWeight:700, color:OG, textTransform:"uppercase", letterSpacing:"0.2em", marginBottom:"12px" }}>
-                Triết lý cốt lõi
-              </span>
-              <h2 style={{ fontFamily:F, fontWeight:900, fontSize:"clamp(2rem,3vw,3.1rem)", color:T1, letterSpacing:"-0.05em", lineHeight:1.05 }}>
-                Ba giá trị bền vững
-              </h2>
-            </motion.div>
+        </main>
 
-            <div style={{ position:"relative" }}>
-              <div style={{
-                position:"absolute", inset:"-18px 0 auto", height:"30px", pointerEvents:"none", opacity:0.45,
-                background:"radial-gradient(circle at 10% 20%, rgba(255,107,0,0.14) 0 2px, transparent 2.5px), radial-gradient(circle at 32% 10%, rgba(124,58,237,0.14) 0 2px, transparent 2.5px), radial-gradient(circle at 56% 18%, rgba(14,165,233,0.14) 0 2px, transparent 2.5px), radial-gradient(circle at 79% 8%, rgba(16,185,129,0.14) 0 2px, transparent 2.5px)"
-              }}/>
-
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:"20px" }}>
-                {[
-                  { icon: Target, title: "Tính Thực Chiến", desc: "Học để dùng. Mọi kiến thức tiếp thu đều phục vụ trực tiếp cho mục tiêu vượt qua kỳ thi hoặc đáp ứng tiêu chí tuyển dụng.", color: "#FF6B00" },
-                  { icon: LineChart, title: "Dữ Liệu Hóa", desc: "Tiến bộ không đến từ cảm tính. Từ lỗ hổng kiến thức đến độ tự tin, mọi thứ đều được lượng hóa bằng chỉ số trực quan.", color: "#7C3AED" },
-                  { icon: Clock, title: "Tối Ưu Thời Gian", desc: "Ngừng bơi trong tài liệu rác. Hệ thống giúp bạn tập trung 100% năng lượng vào đúng kiến thức mà bạn đang thực sự thiếu sót.", color: "#0EA5E9" },
-                ].map((val, i) => {
-                  const indexLabel = String(i + 1).padStart(2, "0");
-                  return (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity:0, y:24 }}
-                      whileInView={{ opacity:1, y:0 }}
-                      viewport={{ once:true }}
-                      transition={{ duration:0.55, delay:i * 0.08 }}
-                      style={{
-                        position:"relative",
-                        minHeight:"260px",
-                        borderRadius:"14px",
-                        padding:"12px",
-                        overflow:"hidden",
-                        background:`linear-gradient(180deg, ${val.color}06 0%, rgba(255,255,255,0.99) 34%, #FFFFFF 100%)`,
-                        border:"1px solid rgba(229,231,235,0.88)",
-                        boxShadow:"0 4px 12px rgba(15,23,42,0.035), 0 1px 4px rgba(15,23,42,0.02)",
-                        transition:"transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease",
-                        cursor: 'default'
-                      }}
-                      onMouseEnter={e=>{
-                        const card = e.currentTarget as HTMLDivElement;
-                        card.style.transform = "translateY(-6px)";
-                        card.style.boxShadow = "0 18px 40px rgba(15,23,42,0.10), 0 4px 12px rgba(15,23,42,0.06)";
-                        card.style.borderColor = `${val.color}33`;
-                      }}
-                      onMouseLeave={e=>{
-                        const card = e.currentTarget as HTMLDivElement;
-                        card.style.transform = "translateY(0)";
-                        card.style.boxShadow = "0 10px 28px rgba(15,23,42,0.06), 0 2px 8px rgba(15,23,42,0.04)";
-                        card.style.borderColor = "rgba(229,231,235,0.95)";
-                      }}
-                    >
-                      <div style={{ position:"absolute", inset:"0 auto auto 0", pointerEvents:"none", opacity:0.55 }}>
-                        <span style={{
-                          display:"block",
-                          fontFamily:F,
-                          fontWeight:900,
-                          fontSize:"clamp(1.6rem,3.2vw,2.4rem)",
-                          lineHeight:1,
-                          letterSpacing:"-0.08em",
-                          color:`${val.color}22`,
-                          WebkitTextStroke:`1.4px ${val.color}44`,
-                          margin:"28px 0 0 18px",
-                          userSelect:"none",
-                        }}>
-                          {indexLabel}
-                        </span>
-                      </div>
-
-                      <div style={{ position:"relative", zIndex:1, display:"flex", flexDirection:"column", height:"100%" }}>
-                        <div style={{ marginTop:"64px", marginBottom:"18px" }}>
-                          <div style={{
-                            width:"40px", height:"40px", borderRadius:"10px",
-                            display:"flex", alignItems:"center", justifyContent:"center",
-                            background:`${val.color}08`, border:`1px solid ${val.color}18`,
-                            boxShadow:"0 3px 8px rgba(15,23,42,0.02)",
-                          }}>
-                            <val.icon size={16} color={val.color} />
-                          </div>
-                        </div>
-
-                        <h3 style={{ fontFamily:F, fontWeight:900, fontSize:"1.02rem", color:T1, letterSpacing:"-0.03em", lineHeight:1.06, marginBottom:"14px" }}>
-                          {val.title}
-                        </h3>
-                        <p className="text-slate-600" style={{ fontFamily:F, fontSize:"0.9rem", lineHeight:1.6, maxWidth:"100%" }}>
-                          {val.desc}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ─── PRINCIPLES & TRUST ─── */}
-        <section style={{ padding:"0 16px", marginBottom:"80px" }}>
-          <div className="max-w-6xl mx-auto">
-            <motion.div initial={{ opacity:0, y:6 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
-              style={{
-                background:`linear-gradient(180deg, rgba(250,250,252,1) 0%, rgba(255,255,255,1) 50%)`,
-                borderRadius:"18px", padding:"48px 48px 40px",
-                boxShadow:"0 18px 48px rgba(15,23,42,0.04)", border:`1px solid ${BDR}`
-              }}
-            >
-              <div style={{ textAlign:"center", marginBottom:"32px" }}>
-                <span style={{ display:"block", fontFamily:F, fontSize:"0.75rem", fontWeight:700, color:OG, textTransform:"uppercase", letterSpacing:"0.2em", marginBottom:"12px" }}>
-                  Sứ mệnh vững vàng
-                </span>
-                <h2 style={{ fontFamily:F, fontWeight:900, fontSize:"clamp(1.7rem,2.4vw,2.2rem)", color:T1, letterSpacing:"-0.03em" }}>
-                  Cam kết phát triển sản phẩm
-                </h2>
-              </div>
-
-              <div style={{ display:"grid", gap:"22px", gridTemplateColumns:"repeat(2, minmax(0, 1fr))" }}>
-                {[
-                  { text: "Dữ liệu học tập thực tế phải dẫn dắt kế hoạch.", accent: "#FFDCC5" },
-                  { text: "Lộ trình phải thực sự cá nhân hóa theo từng sinh viên.", accent: "#EEDDFF" },
-                  { text: "Theo dõi tiến độ phải trực quan, dễ hành động.", accent: "#DFF6FF" },
-                  { text: "Cam kết bảo mật tuyệt đối dữ liệu cá nhân của người dùng.", accent: "#E8F9EF" },
-                ].map((item, i) => (
-                  <div key={i} style={{
-                    display:"flex",
-                    alignItems:"center",
-                    gap:18,
-                    background:"#FFFFFF",
-                    padding:"18px 20px",
-                    borderRadius:12,
-                    border:`1px solid rgba(229,231,235,0.88)`,
-                    boxShadow:"0 8px 26px rgba(15,23,42,0.03)",
-                    minHeight:78,
-                    transition:"transform 0.16s ease, box-shadow 0.16s ease",
-                    cursor: 'default'
-                  }}
-                  onMouseEnter={(e)=>{const el=e.currentTarget as HTMLDivElement; el.style.transform='translateY(-6px)'; el.style.boxShadow='0 20px 40px rgba(15,23,42,0.06)';}}
-                  onMouseLeave={(e)=>{const el=e.currentTarget as HTMLDivElement; el.style.transform='translateY(0)'; el.style.boxShadow='0 8px 26px rgba(15,23,42,0.03)';}}
-                  >
-                    <div style={{
-                      width:52, height:52, borderRadius:26,
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      background:`linear-gradient(135deg, ${item.accent} 0%, rgba(255,255,255,0.6) 100%)`,
-                      border:`1px solid rgba(255,255,255,0.6)`,
-                      boxShadow:"inset 0 1px 0 rgba(255,255,255,0.6)"
-                    }}>
-                      <div style={{
-                        width:34, height:34, borderRadius:18, display:"flex", alignItems:"center", justifyContent:"center",
-                        background: "rgba(255,255,255,0.8)", boxShadow:"0 2px 8px rgba(15,23,42,0.06)"
-                      }}>
-                        <ShieldCheck size={16} color={OG} />
-                      </div>
-                    </div>
-
-                    <div style={{ flex:1 }}>
-                      <span style={{ fontFamily:F, fontSize:"1.01rem", color:T1, fontWeight:700, lineHeight:1.35 }}>{item.text}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-            </motion.div>
-          </div>
-        </section>
-
-      </main>
-
-      <PublicFooter />
+        <PublicFooter />
+      </div>
     </div>
   );
 }
