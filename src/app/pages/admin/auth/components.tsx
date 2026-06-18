@@ -28,47 +28,47 @@ export function ErrBanner({ msg }: { msg: string }) {
 
 export function BrandPanel() {
   return (
-    <div className="relative p-8 md:p-12 flex flex-col justify-between gap-10 overflow-hidden bg-gradient-to-br from-orange-500 to-orange-700">
+    <div className="relative p-8 md:p-12 flex flex-col justify-between gap-10 overflow-hidden bg-slate-900">
       {/* Decorative blobs */}
-      <div className="absolute top-[-20%] right-[-20%] w-[450px] h-[450px] rounded-full bg-white/10 blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-20%] w-[350px] h-[350px] rounded-full bg-[#FFD29D]/15 blur-[60px] pointer-events-none" />
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
+      <div className="absolute top-[-20%] right-[-10%] w-[450px] h-[450px] rounded-full bg-[#FF6B00]/20 blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-20%] w-[350px] h-[350px] rounded-full bg-orange-500/10 blur-[80px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
 
       {/* Brand Logo Header */}
       <div className="flex items-center relative z-10">
         <img
           src="/logo.png"
           alt="SkillSprint Logo"
-          className="h-14 w-auto object-contain drop-shadow-md brightness-0 invert"
+          className="h-14 w-auto object-contain brightness-0 invert"
         />
       </div>
 
       {/* Brand copy */}
       <div className="relative z-10 space-y-4">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-bold bg-white/20 text-white backdrop-blur-sm border border-white/20 shadow-sm uppercase tracking-wider">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-bold bg-[#FF6B00]/10 text-orange-400 border border-orange-500/20 shadow-sm uppercase tracking-wider">
           <ShieldCheck className="w-3.5 h-3.5" />
           Cổng Quản Trị
         </div>
         <h2 className="text-3xl md:text-4xl font-black text-white leading-[1.15] drop-shadow-sm">
           Quản lý hệ thống<br />
-          <span className="text-yellow-100">SkillSprint</span>
+          <span className="bg-gradient-to-r from-[#FF6B00] to-orange-400 bg-clip-text text-transparent">SkillSprint</span>
         </h2>
-        <p className="text-sm text-orange-50/90 leading-relaxed max-w-xs font-medium">
+        <p className="text-sm text-slate-400 leading-relaxed max-w-xs font-medium">
           Phê duyệt đối tác, giám sát hoạt động và điều phối toàn bộ nền tảng từ một nơi duy nhất.
         </p>
       </div>
 
       {/* Feature list */}
-      <ul className="relative z-10 space-y-4 text-sm text-white/90 font-medium">
+      <ul className="relative z-10 space-y-4 text-sm text-slate-300 font-medium">
         <li className="flex items-center gap-3.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm shadow-sm ring-1 ring-white/30 flex-shrink-0">
-            <ShieldCheck className="w-4 h-4 text-white" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-800/80 shadow-sm ring-1 ring-white/10 flex-shrink-0">
+            <ShieldCheck className="w-4 h-4 text-orange-400" />
           </span>
           Xác thực & bảo mật tập trung
         </li>
         <li className="flex items-center gap-3.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm shadow-sm ring-1 ring-white/30 flex-shrink-0">
-            <BarChart3 className="w-4 h-4 text-white" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-800/80 shadow-sm ring-1 ring-white/10 flex-shrink-0">
+            <BarChart3 className="w-4 h-4 text-orange-400" />
           </span>
           Báo cáo & phân tích thời gian thực
         </li>
