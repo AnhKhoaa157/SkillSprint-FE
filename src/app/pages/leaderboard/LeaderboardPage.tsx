@@ -10,9 +10,9 @@ import type {
 } from "../../../api/skillSprintModels";
 
 const TABS: { key: LeaderboardPeriod; label: string }[] = [
-  { key: "weekly", label: "This Week" },
-  { key: "monthly", label: "This Month" },
-  { key: "all-time", label: "This All" },
+  { key: "weekly", label: "Tuần này" },
+  { key: "monthly", label: "Tháng này" },
+  { key: "all-time", label: "Tất cả" },
 ];
 
 /** Resolve a usable <img> src from the BE avatar object key, else null → initials. */
@@ -140,12 +140,12 @@ function LeaderboardRow({
             <span className="font-bold text-slate-800 text-sm truncate">{entry.fullName || "Anonymous"}</span>
             {isMe && (
               <span className="shrink-0 bg-[#FF6B00] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full ml-1.5">
-                YOU
+                BẠN
               </span>
             )}
           </div>
           {/* We don't have course name in the API yet, render a default generic one for mockup fidelity or just keep it clean */}
-          <span className="text-[11px] text-slate-400 truncate">SkillSprint Member</span>
+          <span className="text-[11px] text-slate-400 truncate">Học viên SkillSprint</span>
         </div>
       </div>
 
@@ -210,7 +210,7 @@ function YourRankCard({
           gradient={ORANGE_GRADIENT}
         />
         <p className="font-bold text-slate-800 text-sm truncate">
-          {displayName ? `${displayName} (You)` : "You"}
+          {displayName ? `${displayName} (Bạn)` : "Bạn"}
         </p>
       </div>
 
@@ -221,7 +221,7 @@ function YourRankCard({
             <Flame className="w-4 h-4 fill-amber-400 text-[#FF6B00]" />
             {streak}
           </div>
-          <p className="text-[10px] uppercase tracking-wider text-[#FF6B00]/70 mt-1">Days</p>
+          <p className="text-[10px] uppercase tracking-wider text-[#FF6B00]/70 mt-1">NGÀY</p>
         </div>
         <div className="text-right">
           <div className="flex items-center justify-end gap-1 font-black text-lg text-blue-600 leading-none">
@@ -320,8 +320,8 @@ export default function LeaderboardPage() {
             <Trophy size={22} className="text-[#FF6B00]" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Leaderboard</h1>
-            <p className="text-sm text-slate-500">Compete with peers and maintain your streak.</p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Bảng xếp hạng</h1>
+            <p className="text-sm text-slate-500">Cạnh tranh cùng bạn bè và duy trì chuỗi học tập của bạn.</p>
           </div>
         </div>
 
@@ -358,10 +358,10 @@ export default function LeaderboardPage() {
       <div className="bg-white rounded-3xl border border-slate-100" style={{ boxShadow: CARD_SHADOW }}>
         {/* Column header */}
         <div className="flex items-center gap-3 px-4 pt-5 pb-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-          <div className="w-12 shrink-0 text-center">Rank</div>
-          <div className="flex-1 min-w-0">Student</div>
-          <div className="w-20 text-right shrink-0">Streak</div>
-          <div className="w-20 text-right shrink-0">Score</div>
+          <div className="w-12 shrink-0 text-center">Hạng</div>
+          <div className="flex-1 min-w-0">Học viên</div>
+          <div className="w-20 text-right shrink-0">Chuỗi</div>
+          <div className="w-20 text-right shrink-0">Điểm</div>
         </div>
 
         {state === "loading" && (
@@ -375,13 +375,13 @@ export default function LeaderboardPage() {
         {state === "error" && (
           <div className="px-6 py-14 text-center">
             <AlertTriangle size={26} className="mx-auto text-red-400" />
-            <p className="mt-3 text-sm font-semibold text-slate-700">Couldn’t load the leaderboard.</p>
+            <p className="mt-3 text-sm font-semibold text-slate-700">Không thể tải bảng xếp hạng.</p>
             <button
               type="button"
               onClick={() => load(period)}
               className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
             >
-              <RefreshCw size={13} /> Retry
+              <RefreshCw size={13} /> Thử lại
             </button>
           </div>
         )}
@@ -389,8 +389,8 @@ export default function LeaderboardPage() {
         {state === "ready" && entries.length === 0 && (
           <div className="px-6 py-14 text-center">
             <Medal size={30} className="mx-auto text-slate-300" />
-            <p className="mt-3 text-sm font-semibold text-slate-600">No one is on the leaderboard yet.</p>
-            <p className="mt-1 text-xs text-slate-400">Be the first to score points this period!</p>
+            <p className="mt-3 text-sm font-semibold text-slate-600">Chưa có ai trên bảng xếp hạng.</p>
+            <p className="mt-1 text-xs text-slate-400">Hãy là người đầu tiên tích điểm trong giai đoạn này!</p>
           </div>
         )}
 
@@ -421,10 +421,10 @@ export default function LeaderboardPage() {
             </div>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <span className="font-bold text-slate-800 text-sm truncate">
-                {displayName ? `${displayName} (You)` : "You"}
+                {displayName ? `${displayName} (Bạn)` : "Bạn"}
               </span>
               <span className="shrink-0 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                YOU
+                BẠN
               </span>
             </div>
             <span className="shrink-0 inline-flex items-center gap-1 font-black text-blue-600 text-sm">
