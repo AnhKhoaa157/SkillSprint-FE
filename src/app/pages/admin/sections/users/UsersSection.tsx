@@ -142,25 +142,41 @@ export default function AdminUsers() {
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [page, setPage] = useState(0);
   const [size] = useState(10);
-  const [users, setUsers] = useState<AdminUserDetail[]>([]);
+  const [allUsers, setAllUsers] = useState<AdminUserDetail[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState(searchParams.get("role") || "");
   const navigate = useNavigate();
 
   const isFirstRender = useRef(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Single source of truth for the indicator: derive total pages from the API's
-  // total count + page size, never from the length of the current page slice.
-  const totalPages = Math.max(1, Math.ceil(total / size));
+  // Derived state for filtering and stats
+  const stats = {
+    total: allUsers.length,
+    LEARNER: allUsers.filter(u => u.role === "LEARNER").length,
+    ADMIN: allUsers.filter(u => u.role === "ADMIN").length,
+  };
 
-  const load = async (p: number, s = search) => {
+  const filteredUsers = allUsers.filter(u => {
+    const matchesSearch = !search ||
+      (u.fullName || "").toLowerCase().includes(search.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
+      (u.id || "").toLowerCase().includes(search.toLowerCase());
+    const matchesRole = !selectedRole || u.role === selectedRole;
+    return matchesSearch && matchesRole;
+  });
+
+  const total = filteredUsers.length;
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const displayedUsers = filteredUsers.slice(page * size, (page + 1) * size);
+
+  const load = async () => {
     setLoading(true);
     try {
       // Cơ chế cách ly lỗi cô lập giúp bảo toàn dữ liệu bảng người dùng khi endpoint gói dịch vụ bị nghẽn 
       const [usersRes, plansRes] = await Promise.all([
-        adminUserService.getAdminUsers(s.trim() || undefined, p, size).catch(err => {
+        adminUserService.getAdminUsers(undefined, 0, 1000).catch(err => {
           console.error("Failed to fetch admin users:", err);
           return { content: [], totalElements: 0 };
         }),
@@ -170,8 +186,7 @@ export default function AdminUsers() {
         })
       ]);
 
-      setUsers(usersRes.content || []);
-      setTotal(usersRes.totalElements || 0);
+      setAllUsers(usersRes.content || []);
 
       const extractedPlans = Array.isArray((plansRes as any)?.data)
         ? (plansRes as any).data
@@ -181,7 +196,6 @@ export default function AdminUsers() {
             ? (plansRes as any).content
             : [];
       setPlans(extractedPlans);
-      setPage(p);
     } catch (err) {
       console.error("Global crash in user loading lifecycle:", err);
     } finally {
@@ -202,7 +216,6 @@ export default function AdminUsers() {
     if (trimmedSearch === "") {
       setSearch("");
       setPage(0);
-      load(0, "");
       return;
     }
 
@@ -215,7 +228,6 @@ export default function AdminUsers() {
     timerRef.current = setTimeout(() => {
       setSearch(trimmedSearch);
       setPage(0);
-      load(0, trimmedSearch);
     }, 400);
 
     // Cleanup phase: wipe out previous timers during rapid typing
@@ -229,7 +241,10 @@ export default function AdminUsers() {
   // parameter start in sync.
   useEffect(() => {
     const initialPage = Math.max(0, parseInt(searchParams.get("page") || "0", 10) || 0);
-    load(initialPage);
+    const initialRole = searchParams.get("role") || "";
+    setSelectedRole(initialRole);
+    setPage(initialPage);
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -243,21 +258,24 @@ export default function AdminUsers() {
       
       if (search) next.set("search", search);
       else next.delete("search");
+
+      if (selectedRole) next.set("role", selectedRole);
+      else next.delete("role");
       
       return next;
     }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search]);
+  }, [page, search, selectedRole]);
 
   useEffect(() => {
     const handlePlansUpdated = () => {
-      load(page, search);
+      load();
     };
     window.addEventListener("subscription-plans-updated", handlePlansUpdated);
     return () => {
       window.removeEventListener("subscription-plans-updated", handlePlansUpdated);
     };
-  }, [page, search]);
+  }, []);
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-6xl mx-auto space-y-6" style={{ fontFamily: "'Inter',sans-serif" }}>
@@ -276,9 +294,9 @@ export default function AdminUsers() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {[
-          { label: "Tổng tài khoản", value: total.toLocaleString(), icon: Users, color: "#FF6B00", bg: "rgba(255,107,0,0.06)" },
-          { label: "Đang hiển thị", value: String(users.length), icon: ShieldCheck, color: "#EA580C", bg: "rgba(234,88,12,0.06)" },
-          { label: "Tài khoản hoạt động", value: users.filter(u => normalizeStatus(u.status) === "ACTIVE").length.toString(), icon: RefreshCw, color: "#22c55e", bg: "rgba(34,197,94,0.06)" },
+          { label: "Tổng tài khoản", value: stats.total.toLocaleString(), icon: Users, color: "#FF6B00", bg: "rgba(255,107,0,0.06)" },
+          { label: "Đang hiển thị", value: String(displayedUsers.length), icon: ShieldCheck, color: "#EA580C", bg: "rgba(234,88,12,0.06)" },
+          { label: "Tài khoản hoạt động", value: filteredUsers.filter(u => normalizeStatus(u.status) === "ACTIVE").length.toString(), icon: RefreshCw, color: "#22c55e", bg: "rgba(34,197,94,0.06)" },
         ].map((c, i) => (
           <motion.div key={c.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
             className="rounded-2xl p-4 flex items-center gap-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
@@ -307,7 +325,6 @@ export default function AdminUsers() {
                   if (trimmed === "" || trimmed.length >= 2) {
                     setSearch(trimmed);
                     setPage(0);
-                    load(0, trimmed);
                   }
                 }
               }}
@@ -323,14 +340,19 @@ export default function AdminUsers() {
                 if (trimmed === "" || trimmed.length >= 2) {
                   setSearch(trimmed);
                   setPage(0);
-                  load(0, trimmed);
                 }
               }}
               className="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm active:scale-[0.98]"
               style={{ background: "linear-gradient(135deg,#FF6B00,#EA580C)" }}>
               Tìm kiếm
             </button>
-            <button onClick={() => { setLocalSearch(""); }}
+            <button onClick={() => {
+                if (timerRef.current) clearTimeout(timerRef.current);
+                setLocalSearch("");
+                setSearch("");
+                setSelectedRole("");
+                setPage(0);
+              }}
               className="px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
               style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#64748B" }}>
               Xóa lọc
@@ -339,6 +361,40 @@ export default function AdminUsers() {
           <div className="flex items-center gap-2 ml-auto">
             <span className="text-xs font-medium" style={{ color: "#94A3B8" }}>Trang {page + 1}</span>
           </div>
+        </div>
+
+        {/* Role Filter Tabs */}
+        <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid #F1F5F9" }}>
+          {[
+            { id: "", label: "Tất cả", count: stats.total },
+            { id: "LEARNER", label: "Learner", count: stats.LEARNER },
+            { id: "ADMIN", label: "Admin", count: stats.ADMIN },
+          ].map((tab) => {
+            const isActive = selectedRole === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setSelectedRole(tab.id);
+                  setPage(0);
+                }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 select-none active:scale-[0.98] ${
+                  isActive
+                    ? "bg-[#FF6B00] text-white shadow-sm shadow-[#FF6B00]/20"
+                    : "bg-slate-50 text-slate-600 hover:bg-[#F8FAFC] border border-slate-200"
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+                    isActive ? "bg-white/20 text-white" : "bg-slate-200/60 text-slate-600 font-extrabold"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="overflow-x-auto">
@@ -362,14 +418,14 @@ export default function AdminUsers() {
                   ))}
                 </tr>
               ))}
-              {!loading && users.length === 0 && (
+              {!loading && filteredUsers.length === 0 && (
                 <tr>
                   <td colSpan={6} style={{ padding: "32px 0", textAlign: "center", color: "#94A3B8", fontSize: "0.85rem" }}>
                     Không có người dùng phù hợp.
                   </td>
                 </tr>
               )}
-              {!loading && users.map((u) => {
+              {!loading && displayedUsers.map((u) => {
                 const badge = getStatusBadge(u.status);
 
                 return (
@@ -427,7 +483,7 @@ export default function AdminUsers() {
           </span>
           <div className="flex items-center gap-1.5">
             {/* All triggers disable while a fetch is in flight to prevent double-click races. */}
-            <button onClick={() => load(Math.max(0, page - 1))} disabled={page === 0 || loading}
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || loading}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">
               ← Trước
             </button>
@@ -437,7 +493,7 @@ export default function AdminUsers() {
               return (
                 <button
                   key={idx}
-                  onClick={() => load(idx)}
+                  onClick={() => setPage(idx)}
                   disabled={loading || isActive}
                   aria-current={isActive ? "page" : undefined}
                   className={`min-w-9 h-8 px-2.5 rounded-lg text-xs font-bold border transition inline-flex items-center justify-center gap-1 cursor-pointer disabled:cursor-not-allowed ${
@@ -452,7 +508,7 @@ export default function AdminUsers() {
               );
             })}
 
-            <button onClick={() => load(page + 1)} disabled={page + 1 >= totalPages || loading}
+            <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page + 1 >= totalPages || loading}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">
               Tiếp →
             </button>
