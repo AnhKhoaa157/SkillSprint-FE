@@ -55,12 +55,14 @@ export type RoadmapResponse = {
   steps: RoadmapStepResponse[];
   createdAt: string;
   updatedAt: string;
+  isRewardClaimed?: boolean | null;
   // Optional fields the UI reads defensively (backend may or may not send them).
   id?: string | null;
   title?: string | null;
   description?: string | null;
   resources?: RoadmapResource[];
 };
+
 
 export type GenerateRoadmapResponse = {
   roadmapId: string;
@@ -148,10 +150,21 @@ export async function updateRoadmap(workspaceId: string, body: { status: string 
   throw new Error((res as any)?.message || "Operation failed");
 }
 
+/**
+ * POST /api/workspaces/{workspaceId}/roadmaps/claim-reward
+ * Nhận phần thưởng khi hoàn thành toàn bộ roadmap.
+ */
+export async function claimRoadmapReward(workspaceId: string): Promise<void> {
+  await requestJson<void>(`/api/workspaces/${workspaceId}/roadmaps/claim-reward`, {
+    method: "POST",
+  });
+}
+
 export default {
   generateRoadmap,
   getRoadmap,
   getMyRoadmap,
   updateRoadmapStep,
   updateRoadmap,
+  claimRoadmapReward,
 };

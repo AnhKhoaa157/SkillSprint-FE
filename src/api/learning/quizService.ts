@@ -16,6 +16,9 @@ export interface SubmitQuizRequest {
 export interface QuizOptionResponse {
   optionId: string;
   text: string;
+  // Present ONLY for ADMIN_DEFAULT users (backend omits it for everyone else to
+  // prevent answer scraping). Powers the admin "auto-fill correct answers" tool.
+  correct?: boolean | null;
 }
 
 export interface QuizQuestionResponse {

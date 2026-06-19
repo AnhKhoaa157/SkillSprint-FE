@@ -59,6 +59,12 @@ function hasPremiumAccess(plan: string | null | undefined): boolean {
   return upper === "PREMIUM" || upper.includes("PREMIUM") || upper === "ADMIN" || upper === "ADMIN_DEFAULT";
 }
 
+function isAdminDefault(plan: string | null | undefined): boolean {
+  if (!plan) return false;
+  const upper = plan.toUpperCase().trim();
+  return upper === "ADMIN" || upper === "ADMIN_DEFAULT";
+}
+
 function safeArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
 }
@@ -112,6 +118,12 @@ export default function QuizContainer({
     totalQuestions > 0 ? ((safeIndex + 1) / totalQuestions) * 100 : 0;
   const isLastQuestion = totalQuestions > 0 && safeIndex === totalQuestions - 1;
   const answeredCount = Object.keys(answers).length;
+
+  // Admin fast-submit tool — same gate as the DEV "Tua nhanh" button: only check
+  // plan type client-side. When backend ships `correct` flags, it picks those;
+  // otherwise it pre-fills every question and jumps straight to submit so the
+  // admin can hit "Nộp bài" immediately without clicking through each question.
+  const adminCanAutofill = isAdminDefault(currentPlan) && phase === "active" && totalQuestions > 0;
 
   // ── Effects ──────────────────────────────────────────────────────────────────
 
@@ -184,6 +196,28 @@ export default function QuizContainer({
   function handleSelectOption(optionId: string) {
     if (!currentQuestion) return;
     setAnswers((prev) => ({ ...prev, [currentQuestion.questionId]: optionId }));
+  }
+
+  // [Admin tool] Pre-fill every question then jump to last question so the
+  // "Nộp bài" button is exposed. Picks the correct-flagged option when the
+  // backend exposes it (admin subscription active); if not available, still
+  // fills with opts[0] so the admin can at least fast-navigate and submit.
+  // Score accuracy depends on whether the backend shipped correct flags.
+  function handleAdminAutoFill() {
+    const qs = safeArray(quiz?.questions);
+    const hasCorrectFlags = qs.some((q) =>
+      safeArray(q.options).some((o) => o.correct === true)
+    );
+    const filled: Record<string, string> = {};
+    for (const q of qs) {
+      const opts = safeArray(q.options);
+      const pick = hasCorrectFlags
+        ? opts.find((o) => o.correct === true) ?? opts[0]
+        : opts[0];
+      if (pick) filled[q.questionId] = pick.optionId;
+    }
+    setAnswers(filled);
+    if (qs.length > 0) setCurrentIndex(qs.length - 1);
   }
 
   function handleNext() {
@@ -626,6 +660,24 @@ export default function QuizContainer({
 
         {/* Navigation footer */}
         <div className="px-6 pb-6 pt-5 border-t border-slate-100 bg-slate-50/50 relative z-10">
+          {adminCanAutofill && (
+            <button
+              type="button"
+              onClick={handleAdminAutoFill}
+              title={`Test tool: điền nhanh tất cả câu hỏi${
+                questions.some((q) => safeArray(q.options).some((o) => o.correct === true))
+                  ? " với đáp án đúng (backend đã xác thực)"
+                  : " với option đầu tiên (backend chưa trả correct flags)"
+              }`}
+              className="mb-3 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs font-bold text-[#FF6B00] transition hover:bg-orange-100 active:scale-[0.98]"
+            >
+              <Zap size={14} />
+              {questions.some((q) => safeArray(q.options).some((o) => o.correct === true))
+                ? "[Admin] Auto-Fill Correct Answers"
+                : "[Admin] Fast-Fill & Jump to Submit"}
+            </button>
+
+          )}
           {isLastQuestion ? (
             <button
               type="button"

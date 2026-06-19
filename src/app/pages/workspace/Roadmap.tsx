@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import roadmapService, { RoadmapResponse, RoadmapResource, RoadmapStep } from "../../../api/learning/roadmapService";
 import { getMyPointEvents } from "../../../api/learning/pointService";
@@ -232,14 +232,26 @@ export default function Roadmap() {
   const [isStarting, setIsStarting] = useState(false);
   const [detailTab, setDetailTab] = useState<"overview" | "resources" | "tutor">("overview");
   const [isPremium, setIsPremium] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSchedulePrompt, setShowSchedulePrompt] = useState(false);
   const [showRewardModal, setShowRewardModal] = useState<boolean>(false);
+  const [isClaiming, setIsClaiming] = useState<boolean>(false);
+  const [isClaimed, setIsClaimed] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceResponse[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
-  
   const activeWorkspaceId = workspaceId || selectedWorkspaceId;
+
+  useEffect(() => {
+    if (roadmapData) {
+      const roadmapId = toText(roadmapData.roadmapId) || toText(roadmapData.id);
+      const roadmapKey = roadmapId || activeWorkspaceId;
+      const storageKey = `roadmap-reward-claimed:${roadmapKey}`;
+      setIsClaimed(!!roadmapData.isRewardClaimed || localStorage.getItem(storageKey) === "1");
+    }
+  }, [roadmapData, activeWorkspaceId]);
+
 
   useEffect(() => {
     let mounted = true;
@@ -265,9 +277,16 @@ export default function Roadmap() {
 
   useEffect(() => {
     getCurrentSubscription()
-      .then(sub => { setIsPremium(sub.plan?.planType !== "FREE"); })
-      .catch(() => { setIsPremium(false); });
+      .then(sub => {
+        setIsPremium(sub.plan?.planType !== "FREE");
+        setIsAdmin(sub.plan?.planType === "ADMIN_DEFAULT");
+      })
+      .catch(() => {
+        setIsPremium(false);
+        setIsAdmin(false);
+      });
   }, []);
+
 
   useEffect(() => {
     setDetailTab("overview");
@@ -300,45 +319,57 @@ export default function Roadmap() {
   // otherwise re-trigger the 0 -> 100 transition). The flag is checked BEFORE the
   // API call — already-claimed roadmaps skip verification entirely — and is only
   // written after a verified award, so an as-yet-ungranted completion can retry
-  // on a later visit. Deps are stable derived values (no `showRewardModal`), so
-  // this cannot create a render loop.
-  useEffect(() => {
-    if (steps.length === 0 || progressPercent < 100) return;
+  // on a later visit.
 
-    // The canonical roadmap UUID is what the backend stamps as the
-    // ROADMAP_COMPLETED event's sourceId; fall back to id/workspace only for keying.
-    const roadmapId = toText(roadmapData?.roadmapId) || toText(roadmapData?.id);
-    const roadmapKey = roadmapId || activeWorkspaceId;
-    if (!roadmapKey) return;
+  // The canonical roadmap UUID is what the backend stamps as the ROADMAP_COMPLETED
+  // event's sourceId; fall back to id/workspace only for keying.
+  const roadmapId = toText(roadmapData?.roadmapId) || toText(roadmapData?.id);
+  const roadmapKey = roadmapId || activeWorkspaceId;
+
+  // Treat the roadmap as finished when EITHER the task-derived progress hits 100%
+  // OR the backend marks the roadmap itself COMPLETED. The task-derived figure can
+  // legitimately lag (step<->task key mismatch, study-gate), so relying on it alone
+  // is what leaves the chest dormant on an actually-finished roadmap.
+  const isRoadmapComplete =
+    steps.length > 0 &&
+    (progressPercent >= 100 || (toText(roadmapData?.status) || "").toUpperCase() === "COMPLETED");
+
+  // Clicking the treasure-chest end node claims the reward and unlocks +700 XP.
+  // Already-claimed roadmaps replay the celebration on demand without re-hitting the backend.
+  const handleChestClick = useCallback(async () => {
+    if (!isRoadmapComplete) {
+      toast.info("Hãy hoàn thành tất cả cột mốc để mở Kho báu lộ trình.");
+      return;
+    }
+    if (!roadmapKey || isClaiming) return;
 
     const storageKey = `roadmap-reward-claimed:${roadmapKey}`;
-    if (localStorage.getItem(storageKey) === "1") return;
+    if (isClaimed) {
+      setShowRewardModal(true);
+      return;
+    }
 
-    let cancelled = false;
-    void (async () => {
-      try {
-        const events = await getMyPointEvents();
-        // Match on sourceId when the UUID is known; otherwise accept any
-        // ROADMAP_COMPLETED as a best-effort fallback.
-        const awarded = events.some(
-          (event) =>
-            event.eventType === "ROADMAP_COMPLETED" &&
-            (!roadmapId || event.sourceId === roadmapId),
-        );
-        if (cancelled || !awarded) return;
-        localStorage.setItem(storageKey, "1");
-        setShowRewardModal(true);
-      } catch (err) {
-        // Verification failed (network/auth) — leave the flag unset so a later
-        // visit retries. Never celebrate on an unverified completion.
-        console.warn("Roadmap reward verification failed", err);
-      }
-    })();
+    setIsClaiming(true);
+    try {
+      // Call backend to claim the 700 XP reward
+      await roadmapService.claimRoadmapReward(activeWorkspaceId);
+      
+      // Mark as claimed locally
+      localStorage.setItem(storageKey, "1");
+      setIsClaimed(true);
+      setShowRewardModal(true);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [progressPercent, steps.length, roadmapData?.roadmapId, roadmapData?.id, activeWorkspaceId]);
+      // Dispatch global event to update XP in page header immediately
+      window.dispatchEvent(new CustomEvent("skillSprint:points-updated"));
+      toast.success("Nhận phần thưởng thành công! +700 XP");
+    } catch (err: any) {
+      console.error("Failed to claim roadmap reward:", err);
+      toast.error(err?.message || "Không thể nhận phần thưởng. Hãy đảm bảo bạn đã hoàn thành và tích luỹ đủ thời gian học.");
+    } finally {
+      setIsClaiming(false);
+    }
+  }, [isRoadmapComplete, roadmapKey, isClaiming, isClaimed, activeWorkspaceId]);
+
 
   const roadmapTitle = toText(roadmapData?.title) || "Roadmap học tập";
   const roadmapDescription = toText(roadmapData?.description) || "Lộ trình học tập theo workspace đã xác nhận.";
@@ -394,6 +425,26 @@ export default function Roadmap() {
 
     void loadRoadmapAndTasks();
     return () => { mounted = false; };
+  }, [activeWorkspaceId]);
+
+  // CoursePlayer dispatches `skillSprint:points-updated` the moment the final quiz
+  // is marked complete. If the learner is already sitting on the roadmap (page never
+  // remounted), re-pull tasks + roadmap status so the completion gate re-evaluates
+  // and the chest can fire without a manual refresh.
+  useEffect(() => {
+    if (!activeWorkspaceId) return;
+    const onPointsUpdated = () => {
+      calendarService
+        .getCalendarTasks(activeWorkspaceId)
+        .then((fresh) => setTasks(fresh || []))
+        .catch(() => {});
+      roadmapService
+        .getRoadmap(activeWorkspaceId)
+        .then((fresh) => { if (fresh) setRoadmapData(fresh); })
+        .catch(() => {});
+    };
+    window.addEventListener("skillSprint:points-updated", onPointsUpdated);
+    return () => window.removeEventListener("skillSprint:points-updated", onPointsUpdated);
   }, [activeWorkspaceId]);
 
   useEffect(() => {
@@ -888,19 +939,33 @@ export default function Roadmap() {
               })}
 
               <div className="relative flex flex-col items-center w-full mt-6">
-                <div className="relative z-10 flex flex-col items-center group">
-                  <div className="absolute -inset-2 bg-gradient-to-r from-amber-400 to-[#FF7E21] rounded-full blur opacity-20 group-hover:opacity-40 transition duration-300 pointer-events-none" />
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-500 bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-lg transition-transform duration-300 hover:rotate-6">
-                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 10h20M2 14h20 M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
-                      <path d="M10 6v4M14 6v4 M12 14v4" />
-                    </svg>
+                <button
+                  type="button"
+                  onClick={handleChestClick}
+                  disabled={isClaiming}
+                  aria-label={isClaimed ? "Kho báu lộ trình (đã nhận)" : isRoadmapComplete ? "Mở Kho báu lộ trình để nhận thưởng" : "Kho báu lộ trình (chưa mở khoá)"}
+                  className={`relative z-10 flex flex-col items-center group focus:outline-none ${isRoadmapComplete && !isClaiming ? "cursor-pointer" : isClaiming ? "cursor-wait" : "cursor-default"}`}
+                >
+                  <div className={`absolute -inset-2 bg-gradient-to-r ${isClaimed ? "from-emerald-400 to-emerald-500" : "from-amber-400 to-[#FF7E21]"} rounded-full blur transition duration-300 pointer-events-none ${isRoadmapComplete ? "opacity-30 group-hover:opacity-50" : "opacity-15"}`} />
+                  <div className={`flex h-16 w-16 items-center justify-center rounded-full border-2 ${isClaimed ? "border-emerald-500 bg-gradient-to-br from-emerald-400 to-emerald-600" : "border-amber-500 bg-gradient-to-br from-amber-400 to-amber-600"} text-white shadow-lg transition-transform duration-300 ${isRoadmapComplete && !isClaiming ? "group-hover:rotate-6 group-hover:scale-105" : ""}`}>
+                    {isClaiming ? (
+                      <LoaderCircle className="w-7 h-7 animate-spin" />
+                    ) : isClaimed ? (
+                      <Check className="w-8 h-8 stroke-[2.5]" />
+                    ) : (
+                      <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 10h20M2 14h20 M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
+                        <path d="M10 6v4M14 6v4 M12 14v4" />
+                      </svg>
+                    )}
                   </div>
-                  <div className="mt-2.5 bg-[#FFFDF9] px-4 py-1.5 rounded-xl border border-amber-300/80 w-32 sm:w-40 text-center shadow-md">
-                    <h3 className="text-[10px] font-extrabold tracking-wider text-amber-850 uppercase">Kho báu lộ trình</h3>
-                    <span className="text-[8px] font-semibold text-slate-400 block mt-0.5">Hoàn thành</span>
+                  <div className={`mt-2.5 bg-[#FFFDF9] px-4 py-1.5 rounded-xl border ${isClaimed ? "border-emerald-300" : "border-amber-300/80"} w-32 sm:w-40 text-center shadow-md`}>
+                    <h3 className={`text-[10px] font-extrabold tracking-wider ${isClaimed ? "text-emerald-800" : "text-amber-850"} uppercase`}>Kho báu lộ trình</h3>
+                    <span className={`text-[8px] font-semibold block mt-0.5 ${isClaimed ? "text-emerald-600" : isRoadmapComplete ? "text-[#FF7E21]" : "text-slate-400"}`}>
+                      {isClaiming ? "Đang xác nhận..." : isClaimed ? "Đã nhận" : isRoadmapComplete ? "Nhấn để nhận thưởng" : "Chưa hoàn thành"}
+                    </span>
                   </div>
-                </div>
+                </button>
               </div>
             </div>
           </div>
@@ -909,10 +974,13 @@ export default function Roadmap() {
             <button type="button" onClick={handleBackToDetail} className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer">
               <ArrowLeft size={15} /> <span className="hidden sm:inline">Quay lại</span> Workspace
             </button>
-            <button type="button" onClick={handleGenerate} className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 transition hover:bg-slate-200 cursor-pointer border border-slate-200 shadow-sm">
-              Làm mới lộ trình
-            </button>
+            {isAdmin && (
+              <button type="button" onClick={handleGenerate} className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 transition hover:bg-slate-200 cursor-pointer border border-slate-200 shadow-sm">
+                Làm mới lộ trình
+              </button>
+            )}
           </div>
+
         </div>
 
         {/* RIGHT COLUMN: LOCKED DETAIL PANEL */}
