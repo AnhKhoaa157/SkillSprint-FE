@@ -1270,6 +1270,33 @@ function normalizeFeedbackUrl(url: string | null | undefined): string | null {
   return trimmed.startsWith("ttps://") ? `h${trimmed}` : trimmed;
 }
 
+function isFeedbackImageUrl(url: string | null | undefined): boolean {
+  const normalized = normalizeFeedbackUrl(url);
+  if (!normalized) return false;
+  const clean = normalized.toLowerCase();
+  const isCdn =
+    clean.includes("bing.com/th/") ||
+    clean.includes("th.bing.com/th/") ||
+    clean.includes("image") ||
+    clean.includes("?w=");
+  const hasExt = /\.(png|jpg|jpeg|webp|gif|avif|bmp|svg)$/i.test(clean.split(/[?#]/)[0]);
+  return hasExt || isCdn;
+}
+
+function resolveFeedbackImageUrl(feedback: FeedbackResponse): string | null {
+  const imageUrl = normalizeFeedbackUrl(feedback.imageUrl);
+  if (imageUrl) return imageUrl;
+
+  const relatedUrl = normalizeFeedbackUrl(feedback.relatedUrl);
+  return isFeedbackImageUrl(relatedUrl) ? relatedUrl : null;
+}
+
+function resolveFeedbackRelatedUrl(feedback: FeedbackResponse): string | null {
+  const relatedUrl = normalizeFeedbackUrl(feedback.relatedUrl);
+  if (!relatedUrl || isFeedbackImageUrl(relatedUrl)) return null;
+  return relatedUrl;
+}
+
 /* ═══════════════════════════════════════════════
    NOTIFICATIONS TAB
 ═══════════════════════════════════════════════ */
@@ -1593,17 +1620,17 @@ function FeedbackHistoryTab() {
                   </p>
                 </div>
 
-                {normalizeFeedbackUrl(selected.imageUrl) && (
+                {resolveFeedbackImageUrl(selected) && (
                   <div>
                     <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Ảnh đính kèm</p>
                     <a
-                      href={normalizeFeedbackUrl(selected.imageUrl) ?? undefined}
+                      href={resolveFeedbackImageUrl(selected) ?? undefined}
                       target="_blank"
                       rel="noreferrer"
                       className="group block overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-1.5 shadow-sm transition hover:border-orange-200 hover:bg-orange-50/30"
                     >
                       <img
-                        src={normalizeFeedbackUrl(selected.imageUrl) ?? undefined}
+                        src={resolveFeedbackImageUrl(selected) ?? undefined}
                         alt="Ảnh đính kèm phản hồi"
                         className="max-h-72 w-full rounded-lg bg-white object-contain"
                         onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.display = "none"; }}
@@ -1615,11 +1642,11 @@ function FeedbackHistoryTab() {
                   </div>
                 )}
 
-                {normalizeFeedbackUrl(selected.relatedUrl) && (
+                {resolveFeedbackRelatedUrl(selected) && (
                   <div>
                     <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">URL liên quan</p>
                     <a
-                      href={normalizeFeedbackUrl(selected.relatedUrl) ?? undefined}
+                      href={resolveFeedbackRelatedUrl(selected) ?? undefined}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1 break-all rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-2 text-xs font-bold text-[#FF6B00] transition hover:border-orange-200 hover:bg-orange-50/50"
