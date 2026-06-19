@@ -142,7 +142,9 @@ export function useNotificationSocket(): UseNotificationSocketReturn {
 
               toast(incoming.title, {
                 description: incoming.message,
-                duration: 5000,
+                // 2s auto-dismiss; sonner owns the timer (with cleanup + pause-on-hover).
+                duration: 2000,
+                closeButton: true,
                 icon: toastIcon(incoming.type),
                 position: "top-right",
               });

@@ -17,6 +17,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-border": "var(--border)",
         } as React.CSSProperties
       }
+      toastOptions={{
+        classNames: {
+          closeButton:
+            "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors",
+        },
+      }}
       {...props}
     />
   );
