@@ -159,7 +159,8 @@ export default function NotificationsPage() {
 
   function getRelativeTime(isoString: string) {
     const d = new Date(isoString);
-    if (isNaN(d.getTime())) return "Vừa xong";
+    // Invalid, falsy, or pre-2020 (epoch/unparsed) values collapse to "just now".
+    if (!isoString || isNaN(d.getTime()) || d.getFullYear() < 2020) return "Vừa xong";
     const now = Date.now();
     const diffMs = now - d.getTime();
     const diffMins = Math.floor(diffMs / 60000);

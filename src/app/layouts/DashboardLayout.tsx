@@ -194,9 +194,16 @@ function normalizeRoadmapSidebarItem(workspace: RoadmapSidebarWorkspace, index: 
 
 /* ─── Notification helpers ─── */
 
+// Anything before this is treated as an unparsed/epoch (0/null) timestamp and
+// collapsed to "Vừa xong" instead of rendering a nonsensical "20623 ngày trước".
+const MIN_VALID_NOTIF_TIME = Date.UTC(2020, 0, 1);
+
 function toRelativeTime(dateStr: string): string {
   try {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    if (!dateStr) return "Vừa xong";
+    const time = new Date(dateStr).getTime();
+    if (Number.isNaN(time) || time < MIN_VALID_NOTIF_TIME) return "Vừa xong";
+    const diff = Date.now() - time;
     const mins = Math.floor(diff / 60_000);
     if (mins < 1) return "Vừa xong";
     if (mins < 60) return `${mins} phút trước`;
@@ -204,7 +211,7 @@ function toRelativeTime(dateStr: string): string {
     if (hrs < 24) return `${hrs} giờ trước`;
     return `${Math.floor(hrs / 24)} ngày trước`;
   } catch {
-    return "";
+    return "Vừa xong";
   }
 }
 
