@@ -53,14 +53,26 @@ export interface FeedbackPageResponse<T = FeedbackResponse> {
   last: boolean;
 }
 
-// Payload gửi lên loại bỏ hoàn toàn trường File máy "image"
+// Payload gửi lên: ảnh được upload trực tiếp lên S3, BE chỉ nhận imageObjectKey
 export interface CreateFeedbackPayload {
   type: FeedbackType;
   title: string;
   content: string;
   relatedUrl?: string | null;
-  imageUrl?: string | null;
+  imageObjectKey?: string | null;
 }
+
+// Phản hồi của BE khi xin presigned URL để upload ảnh feedback lên S3
+export interface FeedbackUploadUrlResponse {
+  uploadUrl: string;
+  fileUrl: string;
+  objectKey: string;
+  expiresAt: string;
+}
+
+// Loại file ảnh được phép upload (đồng bộ với allow-list ở BE)
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 function normalizeStatus(status: unknown): FeedbackStatus {
   const value = typeof status === "string" ? status.toUpperCase() : FeedbackStatus.OPEN;
@@ -180,23 +192,68 @@ export async function getMyFeedbacks(page = 0, size = 10): Promise<FeedbackPageR
   return normalizePage(payload.data, normalizeFeedback);
 }
 
-// Hàm gửi Feedback đã được xóa sạch FormData, chỉ gửi JSON thuần túy qua requestJson
+// Hàm gửi Feedback: chỉ gửi JSON thuần (ảnh đã nằm trên S3, tham chiếu qua imageObjectKey)
 export async function createFeedback(payload: CreateFeedbackPayload): Promise<FeedbackResponse> {
   const body = {
     type: payload.type,
     title: payload.title.trim(),
     content: payload.content.trim(),
     ...(cleanText(payload.relatedUrl) ? { relatedUrl: cleanText(payload.relatedUrl) } : {}),
-    ...(cleanText(payload.imageUrl) ? { imageUrl: cleanText(payload.imageUrl) } : {}),
+    ...(cleanText(payload.imageObjectKey) ? { imageObjectKey: cleanText(payload.imageObjectKey) } : {}),
   };
 
   const result = await requestJson<unknown>("/api/feedback", {
     method: "POST",
     body: JSON.stringify(body),
   });
-  
+
   if (!result.data) throw new Error(result.message || "Could not submit feedback");
   return normalizeFeedback(result.data);
+}
+
+/**
+ * Xin presigned PUT URL từ BE để upload 1 ảnh feedback lên S3.
+ */
+export async function getFeedbackImageUploadUrl(
+  fileName: string,
+  contentType: string,
+): Promise<FeedbackUploadUrlResponse> {
+  const result = await requestJson<FeedbackUploadUrlResponse>("/api/feedback/upload-url", {
+    method: "POST",
+    body: JSON.stringify({ fileName, contentType }),
+  });
+  if (!result.data) throw new Error(result.message || "Could not create upload URL");
+  return result.data;
+}
+
+/**
+ * Quy trình upload ảnh feedback 2 bước:
+ *  1. Xin presigned URL + objectKey từ BE.
+ *  2. PUT trực tiếp file bytes lên S3 (KHÔNG đi qua API server, KHÔNG gắn token).
+ * Trả về objectKey để đính kèm vào payload createFeedback.
+ */
+export async function uploadFeedbackImage(file: File): Promise<string> {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    throw new Error("Ảnh chỉ hỗ trợ định dạng JPG, PNG, WEBP hoặc GIF.");
+  }
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    throw new Error("Ảnh vượt quá dung lượng cho phép (tối đa 5MB).");
+  }
+
+  const { uploadUrl, objectKey } = await getFeedbackImageUploadUrl(file.name, file.type);
+
+  // PUT thẳng lên S3. Content-Type phải khớp với lúc ký presigned URL.
+  const uploadResponse = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Tải ảnh lên S3 thất bại (mã ${uploadResponse.status}). Vui lòng thử lại.`);
+  }
+
+  return objectKey;
 }
 
 export async function getAdminFeedbacks(
@@ -266,6 +323,8 @@ export async function updateFeedbackStatus(
 
 export default {
   createFeedback,
+  getFeedbackImageUploadUrl,
+  uploadFeedbackImage,
   getMyFeedbacks,
   getAdminFeedbacks,
   getFeedbackDetail,
