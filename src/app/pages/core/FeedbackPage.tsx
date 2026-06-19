@@ -1,19 +1,25 @@
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   Bug,
+  ImagePlus,
   Link as LinkIcon,
   LoaderCircle,
   MessageSquare,
   Send,
   CheckCircle2,
   PlusCircle,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   createFeedback,
+  uploadFeedbackImage,
   FeedbackType,
 } from "../../../api/utilities/feedbackService";
+
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 const FEEDBACK_TYPES: Array<{ value: FeedbackType; label: string; description: string; icon: React.ReactNode }> = [
   { value: FeedbackType.BUG,         label: "Lỗi kỹ thuật", description: "Hệ thống gặp sự cố, tính năng không hoạt động",    icon: <Bug size={16} /> },
@@ -22,38 +28,57 @@ const FEEDBACK_TYPES: Array<{ value: FeedbackType; label: string; description: s
   { value: FeedbackType.OTHER,       label: "Khác",          description: "Các ý kiến đóng góp khác",                       icon: <AlertCircle size={16} /> },
 ];
 
-// Hàm kiểm tra xem chuỗi có phải là link ảnh trực tiếp hay không
-function isImageLink(url: string): boolean {
-  const cleanUrl = url.trim().toLowerCase();
-  return (
-    cleanUrl.endsWith(".png") ||
-    cleanUrl.endsWith(".jpg") ||
-    cleanUrl.endsWith(".jpeg") ||
-    cleanUrl.endsWith(".webp") ||
-    cleanUrl.endsWith(".gif") ||
-    cleanUrl.includes("image") // Dự phòng trường hợp link dạng CDN chứa chữ image
-  );
-}
-
 export default function FeedbackPage() {
   const [type, setType] = useState<FeedbackType>(FeedbackType.IMPROVEMENT);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [combinedUrl, setCombinedUrl] = useState(""); // Ô input gộp duy nhất
-  const [submitting, setSubmitting] = useState(false);
+  const [relatedUrl, setRelatedUrl] = useState(""); // Link tham khảo (không bắt buộc)
+  const [imageFile, setImageFile] = useState<File | null>(null); // Ảnh chọn từ máy
+  const [imagePreview, setImagePreview] = useState<string | null>(null); // object URL để preview
+  const [uploading, setUploading] = useState(false); // Trạng thái đang PUT ảnh lên S3
+  const [submitting, setSubmitting] = useState(false); // Trạng thái đang gửi feedback
   const [isSuccess, setIsSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Tự động phân tích link nhập vào để làm nguồn Preview ảnh
-  const imagePreviewSrc = useMemo(() => {
-    if (!combinedUrl.trim()) return null;
-    return isImageLink(combinedUrl) ? combinedUrl.trim() : null;
-  }, [combinedUrl]);
+  // Tạo/thu hồi object URL preview khi đổi file để tránh rò rỉ bộ nhớ.
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(imageFile);
+    setImagePreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [imageFile]);
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error("Ảnh chỉ hỗ trợ định dạng JPG, PNG, WEBP hoặc GIF.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      toast.error("Ảnh vượt quá dung lượng cho phép (tối đa 5MB).");
+      event.target.value = "";
+      return;
+    }
+    setImageFile(file);
+  }
+
+  function clearImage() {
+    setImageFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   function resetForm() {
     setType(FeedbackType.IMPROVEMENT);
     setTitle("");
     setContent("");
-    setCombinedUrl("");
+    setRelatedUrl("");
+    clearImage();
   }
 
   function handleCreateNewFeedback() {
@@ -65,20 +90,31 @@ export default function FeedbackPage() {
     event.preventDefault();
     if (!title.trim() || !content.trim()) return;
 
-    const urlValue = combinedUrl.trim();
-    // Logic bóc tách: Nếu là link ảnh -> gán vào imageUrl, ngược lại gán vào relatedUrl
-    const isImg = isImageLink(urlValue);
-    const relatedUrlPayload = urlValue && !isImg ? urlValue : null;
-    const imageUrlPayload = urlValue && isImg ? urlValue : null;
-
     setSubmitting(true);
     try {
+      // Bước 1: nếu có ảnh, upload trực tiếp lên S3 và lấy về objectKey.
+      let imageObjectKey: string | null = null;
+      if (imageFile) {
+        setUploading(true);
+        try {
+          imageObjectKey = await uploadFeedbackImage(imageFile);
+        } catch (uploadError) {
+          toast.error(
+            uploadError instanceof Error ? uploadError.message : "Tải ảnh lên thất bại. Vui lòng thử lại.",
+          );
+          return; // Dừng lại, không gửi feedback nếu ảnh lỗi.
+        } finally {
+          setUploading(false);
+        }
+      }
+
+      // Bước 2: gửi feedback kèm tham chiếu imageObjectKey.
       await createFeedback({
         type,
         title,
         content,
-        relatedUrl: relatedUrlPayload,
-        imageUrl: imageUrlPayload,
+        relatedUrl: relatedUrl.trim() || null,
+        imageObjectKey,
       });
 
       toast.success("Phản hồi đã được gửi thành công!");
@@ -89,6 +125,8 @@ export default function FeedbackPage() {
       setSubmitting(false);
     }
   }
+
+  const isBusy = submitting || uploading;
 
   return (
     <div className="h-full overflow-y-auto bg-[#F6F8FB] px-4 py-12 sm:px-6 lg:px-8">
@@ -191,26 +229,66 @@ export default function FeedbackPage() {
                 <p className="mt-1 text-right text-xs text-slate-400">{content.length}/5000</p>
               </div>
 
-              {/* Ô INPUT GỘP THÔNG MINH BIẾN THIÊN */}
+              {/* LIÊN KẾT THAM KHẢO (Không bắt buộc) */}
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-slate-700">Liên kết liên quan / URL Ảnh chụp màn hình (Không bắt buộc)</label>
+                <label className="mb-1.5 block text-sm font-bold text-slate-700">Liên kết liên quan (Không bắt buộc)</label>
                 <div className="relative">
                   <LinkIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input
-                    value={combinedUrl}
-                    onChange={(event) => setCombinedUrl(event.target.value)}
-                    placeholder="Dán liên kết website hoặc link ảnh minh hoạ (đuôi tệp dạng .png, .jpg...)"
+                    value={relatedUrl}
+                    onChange={(event) => setRelatedUrl(event.target.value)}
+                    placeholder="Dán liên kết trang/màn hình gặp vấn đề (nếu có)"
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white focus:ring-4 focus:ring-orange-100"
                   />
                 </div>
+              </div>
 
-                {/* Chỉ hiển thị vùng preview này nếu hệ thống nhận diện được chuỗi nhập vào là LINK ẢNH */}
-                {imagePreviewSrc && (
-                  <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm animate-in fade-in duration-200">
-                    <div className="bg-slate-50 px-4 py-1.5 text-[11px] font-bold text-slate-400 border-b border-slate-100 uppercase tracking-wide">
-                      Xem trước ảnh đính kèm
+              {/* CHỌN ẢNH TỪ MÁY (Không bắt buộc) */}
+              <div>
+                <label className="mb-1.5 block text-sm font-bold text-slate-700">Ảnh đính kèm (Không bắt buộc)</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+
+                {!imageFile ? (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-slate-500 transition hover:border-orange-300 hover:bg-orange-50/40 hover:text-orange-600"
+                  >
+                    <ImagePlus size={24} />
+                    <span className="text-sm font-bold">Chọn ảnh từ thiết bị của bạn</span>
+                    <span className="text-xs text-slate-400">JPG, PNG, WEBP hoặc GIF · tối đa 5MB</span>
+                  </button>
+                ) : (
+                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between bg-slate-50 px-4 py-1.5 border-b border-slate-100">
+                      <span className="truncate text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                        {uploading ? "Đang tải ảnh lên..." : "Xem trước ảnh đính kèm"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={clearImage}
+                        disabled={isBusy}
+                        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold text-slate-400 transition hover:bg-slate-200 hover:text-slate-600 disabled:opacity-50"
+                      >
+                        <X size={12} /> Xóa
+                      </button>
                     </div>
-                    <img src={imagePreviewSrc} alt="Feedback attachment preview" className="max-h-60 w-full object-contain bg-slate-50/30 p-2" />
+                    {imagePreview && (
+                      <div className="relative">
+                        <img src={imagePreview} alt="Feedback attachment preview" className="max-h-60 w-full object-contain bg-slate-50/30 p-2" />
+                        {uploading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                            <LoaderCircle size={28} className="animate-spin text-orange-500" />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -218,11 +296,11 @@ export default function FeedbackPage() {
               {/* BUTTON SUBMIT */}
               <button
                 type="submit"
-                disabled={submitting || !title.trim() || !content.trim()}
+                disabled={isBusy || !title.trim() || !content.trim()}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {submitting ? <LoaderCircle size={16} className="animate-spin" /> : <Send size={16} />}
-                {submitting ? "Đang gửi..." : "Gửi phản hồi"}
+                {isBusy ? <LoaderCircle size={16} className="animate-spin" /> : <Send size={16} />}
+                {uploading ? "Đang tải ảnh..." : submitting ? "Đang gửi..." : "Gửi phản hồi"}
               </button>
             </div>
           </form>

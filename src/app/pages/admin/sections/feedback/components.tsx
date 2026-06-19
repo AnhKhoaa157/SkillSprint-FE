@@ -631,6 +631,27 @@ export function FeedbackDetailPanel({ fb }: { fb: FeedbackManager }) {
             );
           })()}
 
+          {/* Ảnh đính kèm (S3) */}
+          {selected.imageUrl && (
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
+                Ảnh đính kèm
+              </p>
+              <a href={selected.imageUrl} target="_blank" rel="noreferrer"
+                className="block rounded-xl border border-slate-200 bg-slate-50 p-1.5 transition hover:opacity-95 shadow-sm group"
+              >
+                <img
+                  src={selected.imageUrl}
+                  alt="Ảnh đính kèm"
+                  className="max-h-48 w-full rounded-lg object-contain bg-white"
+                />
+                <span className="block text-[10px] text-slate-400 text-center mt-1 font-semibold group-hover:text-slate-600">
+                  Mở ảnh trong tab mới ↗
+                </span>
+              </a>
+            </div>
+          )}
+
           {/* Status update */}
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
