@@ -25,57 +25,18 @@ import {
 } from "../../../../../api/admin/adminPointService";
 import { Input } from "../../../../components/ui/input";
 import { Button } from "../../../../components/ui/button";
-import { Skeleton } from "../../../../components/ui/skeleton";
 import { PERIOD_LABEL, formatDate } from "./pointPresentation";
 
 const PERIODS: AdminLeaderboardPeriod[] = ["WEEKLY", "MONTHLY", "ALL_TIME"];
 const PAGE_SIZE = 20;
 
-// High-fidelity Mock Data for Admin Bảng điểm Preview
-const MOCK_DATA_WEEKLY: AdminLeaderboardEntry[] = [
-  { rank: 1, userId: "u-1", fullName: "Nguyễn Văn Đạt", email: "dat.nguyen@skillsprint.vn", avatarObjectKey: null, points: 2850, streakDays: 14, lastPointDate: new Date(Date.now() - 3600000 * 2).toISOString() },
-  { rank: 2, userId: "u-2", fullName: "Lê Thị Hồng Nhung", email: "nhung.le@skillsprint.vn", avatarObjectKey: null, points: 2420, streakDays: 7, lastPointDate: new Date(Date.now() - 3600000 * 5).toISOString() },
-  { rank: 3, userId: "u-3", fullName: "Trần Minh Hoàng", email: "hoang.tran@skillsprint.vn", avatarObjectKey: null, points: 2100, streakDays: 9, lastPointDate: new Date(Date.now() - 3600000 * 12).toISOString() },
-  { rank: 4, userId: "u-4", fullName: "Phạm Thanh Thảo", email: "thao.pham@skillsprint.vn", avatarObjectKey: null, points: 1850, streakDays: 5, lastPointDate: new Date(Date.now() - 3600000 * 18).toISOString() },
-  { rank: 5, userId: "u-5", fullName: "Vũ Chí Bảo", email: "bao.vu@skillsprint.vn", avatarObjectKey: null, points: 1650, streakDays: 4, lastPointDate: new Date(Date.now() - 3600000 * 24).toISOString() },
-  { rank: 6, userId: "u-6", fullName: "Hoàng Anh Đức", email: "duc.hoang@skillsprint.vn", avatarObjectKey: null, points: 1520, streakDays: 12, lastPointDate: new Date(Date.now() - 3600000 * 30).toISOString() },
-  { rank: 7, userId: "u-7", fullName: "Vũ Thị Mai", email: "mai.vu@skillsprint.vn", avatarObjectKey: null, points: 1200, streakDays: 3, lastPointDate: new Date(Date.now() - 3600000 * 42).toISOString() },
-  { rank: 8, userId: "u-8", fullName: "Đỗ Gia Bảo", email: "bao.do@skillsprint.vn", avatarObjectKey: null, points: 950, streakDays: 8, lastPointDate: new Date(Date.now() - 3600000 * 48).toISOString() },
-  { rank: 9, userId: "u-9", fullName: "Nguyễn Thị Lan", email: "lan.nguyen@skillsprint.vn", avatarObjectKey: null, points: 880, streakDays: 2, lastPointDate: new Date(Date.now() - 3600000 * 60).toISOString() },
-  { rank: 10, userId: "u-10", fullName: "Phạm Hồng Sơn", email: "son.pham@skillsprint.vn", avatarObjectKey: null, points: 820, streakDays: 6, lastPointDate: new Date(Date.now() - 3600000 * 72).toISOString() },
-  { rank: 11, userId: "u-11", fullName: "Lê Minh Tuấn", email: "tuan.le@skillsprint.vn", avatarObjectKey: null, points: 760, streakDays: 1, lastPointDate: new Date(Date.now() - 3600000 * 80).toISOString() },
-  { rank: 12, userId: "u-12", fullName: "Trần Thu Thủy", email: "thuy.tran@skillsprint.vn", avatarObjectKey: null, points: 700, streakDays: 11, lastPointDate: new Date(Date.now() - 3600000 * 96).toISOString() },
-  { rank: 13, userId: "u-13", fullName: "Nguyễn Văn Hùng", email: "hung.nguyen@skillsprint.vn", avatarObjectKey: null, points: 640, streakDays: 0, lastPointDate: new Date(Date.now() - 3600000 * 100).toISOString() },
-  { rank: 14, userId: "u-14", fullName: "Hoàng Minh Triết", email: "triet.hoang@skillsprint.vn", avatarObjectKey: null, points: 590, streakDays: 5, lastPointDate: new Date(Date.now() - 3600000 * 110).toISOString() },
-  { rank: 15, userId: "u-15", fullName: "Phan Thanh Bình", email: "binh.phan@skillsprint.vn", avatarObjectKey: null, points: 530, streakDays: 3, lastPointDate: new Date(Date.now() - 3600000 * 120).toISOString() },
-  { rank: 16, userId: "u-16", fullName: "Đặng Hoàng Giang", email: "giang.dang@skillsprint.vn", avatarObjectKey: null, points: 480, streakDays: 9, lastPointDate: new Date(Date.now() - 3600000 * 130).toISOString() },
-  { rank: 17, userId: "u-17", fullName: "Bùi Thị Tuyết", email: "tuyet.bui@skillsprint.vn", avatarObjectKey: null, points: 420, streakDays: 2, lastPointDate: new Date(Date.now() - 3600000 * 140).toISOString() },
-  { rank: 18, userId: "u-18", fullName: "Dương Minh Khoa", email: "khoa.duong@skillsprint.vn", avatarObjectKey: null, points: 370, streakDays: 7, lastPointDate: new Date(Date.now() - 3600000 * 150).toISOString() },
-  { rank: 19, userId: "u-19", fullName: "Đỗ Thị Hạnh", email: "hanh.do@skillsprint.vn", avatarObjectKey: null, points: 310, streakDays: 4, lastPointDate: new Date(Date.now() - 3600000 * 160).toISOString() },
-  { rank: 20, userId: "u-20", fullName: "Nguyễn Khánh Nam", email: "nam.nguyen@skillsprint.vn", avatarObjectKey: null, points: 260, streakDays: 0, lastPointDate: new Date(Date.now() - 3600000 * 170).toISOString() },
-  { rank: 21, userId: "u-21", fullName: "Lâm Gia Huy", email: "huy.lam@skillsprint.vn", avatarObjectKey: null, points: 210, streakDays: 3, lastPointDate: new Date(Date.now() - 3600000 * 180).toISOString() },
-  { rank: 22, userId: "u-22", fullName: "Vương Chí Đạt", email: "dat.vuong@skillsprint.vn", avatarObjectKey: null, points: 150, streakDays: 1, lastPointDate: new Date(Date.now() - 3600000 * 190).toISOString() },
-];
-
-const MOCK_DATA_MONTHLY: AdminLeaderboardEntry[] = MOCK_DATA_WEEKLY.map((item) => ({
-  ...item,
-  points: item.points * 3.5,
-  streakDays: Math.min(30, Math.floor(item.streakDays * 1.8)),
-  lastPointDate: new Date(new Date(item.lastPointDate || "").getTime() - 3600000 * 4).toISOString(),
-})).sort((a, b) => b.points - a.points).map((item, idx) => ({ ...item, rank: idx + 1 }));
-
-const MOCK_DATA_ALL_TIME: AdminLeaderboardEntry[] = MOCK_DATA_WEEKLY.map((item) => ({
-  ...item,
-  points: item.points * 12.4,
-  streakDays: Math.min(100, Math.floor(item.streakDays * 5.2)),
-  lastPointDate: new Date(new Date(item.lastPointDate || "").getTime() - 3600000 * 24).toISOString(),
-})).sort((a, b) => b.points - a.points).map((item, idx) => ({ ...item, rank: idx + 1 }));
-
-const MOCK_DATA: Record<AdminLeaderboardPeriod, AdminLeaderboardEntry[]> = {
-  WEEKLY: MOCK_DATA_WEEKLY,
-  MONTHLY: MOCK_DATA_MONTHLY,
-  ALL_TIME: MOCK_DATA_ALL_TIME,
-};
+function resolveAvatar(objectKey: string | null): string | null {
+  if (!objectKey) return null;
+  const key = objectKey.trim();
+  if (!key || key.toLowerCase() === "null" || key.toLowerCase() === "undefined") return null;
+  if (key.startsWith("http://") || key.startsWith("https://")) return key;
+  return null;
+}
 
 /* -------------------------------------------------------------------------- */
 /*  RankBadge Component                                                       */
@@ -90,7 +51,7 @@ function RankBadge({ rank }: { rank: number }) {
   }
   if (rank === 2) {
     return (
-      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-350 to-slate-500 flex items-center justify-center shadow-[0_4px_12px_rgba(148,163,184,0.25)] border border-slate-300/30">
+      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-300 to-slate-500 flex items-center justify-center shadow-[0_4px_12px_rgba(148,163,184,0.25)] border border-slate-300/30">
         <Medal size={14} className="text-white fill-white/10" />
       </div>
     );
@@ -115,13 +76,14 @@ function RankBadge({ rank }: { rank: number }) {
 function EntryAvatar({ entry }: { entry: AdminLeaderboardEntry }) {
   const [errored, setErrored] = useState(false);
   const initial = (entry.fullName || entry.email || "?").charAt(0).toUpperCase();
-  const showImage = !!entry.avatarObjectKey && !errored;
+  const avatarUrl = resolveAvatar(entry.avatarObjectKey);
+  const showImage = avatarUrl !== null && !errored;
 
   if (showImage) {
     return (
       <div className="relative p-[2px] rounded-2xl bg-gradient-to-br from-[#FF6B00]/30 to-blue-500/10">
         <img
-          src={entry.avatarObjectKey ?? undefined}
+          src={avatarUrl}
           alt={entry.fullName}
           className="w-10 h-10 rounded-xl object-cover border border-white bg-white shrink-0"
           onError={() => setErrored(true)}
@@ -195,6 +157,8 @@ export default function AdminLeaderboardPage() {
   const [page, setPage] = useState(0);
   const [data, setData] = useState<AdminLeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
@@ -218,6 +182,7 @@ export default function AdminLeaderboardPage() {
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setError(null);
     getAdminLeaderboard({ period, search, page, size: PAGE_SIZE })
       .then((res) => {
         if (!active) return;
@@ -225,8 +190,10 @@ export default function AdminLeaderboardPage() {
       })
       .catch((err: unknown) => {
         if (!active) return;
+        const message = err instanceof Error ? err.message : "Không thể tải bảng xếp hạng";
         setData(null);
-        toast.error(err instanceof Error ? err.message : "Không thể tải bảng xếp hạng");
+        setError(message);
+        toast.error(message);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -234,7 +201,7 @@ export default function AdminLeaderboardPage() {
     return () => {
       active = false;
     };
-  }, [period, search, page]);
+  }, [period, search, page, refreshKey]);
 
   // Resolved list and values
   const entries = data?.entries.items ?? [];
@@ -260,6 +227,12 @@ export default function AdminLeaderboardPage() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setLocalSearch(e.target.value);
+  };
+
+  const retryLoad = (): void => {
+    setPage(0);
+    setSearch(localSearch.trim());
+    setRefreshKey((key) => key + 1);
   };
 
   return (
@@ -306,7 +279,7 @@ export default function AdminLeaderboardPage() {
         />
         <StatCard
           icon={<Crown className="w-5 h-5 fill-amber-500/10" />}
-          label="Điểm tích lũy cao nhất"
+          label="Điểm cao nhất trang này"
           value={`${stats.maxPoints.toLocaleString("vi-VN")} XP`}
           subtext="Học viên xuất sắc dẫn đầu"
           glowColor="bg-amber-400"
@@ -314,7 +287,7 @@ export default function AdminLeaderboardPage() {
         />
         <StatCard
           icon={<Flame className="w-5 h-5 fill-orange-500/10" />}
-          label="Chuỗi học liên tục kỷ lục"
+          label="Chuỗi cao nhất trang này"
           value={`${stats.maxStreak} ngày`}
           subtext="Học tập đều đặn hàng ngày"
           glowColor="bg-orange-500"
@@ -353,7 +326,7 @@ export default function AdminLeaderboardPage() {
             value={localSearch}
             onChange={handleSearchChange}
             placeholder="Tìm theo tên học viên hoặc email..."
-            className="pl-10 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50/80 focus:bg-white text-xs font-semibold py-5.5 shadow-inner"
+            className="h-11 pl-10 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50/80 focus:bg-white text-xs font-semibold shadow-inner"
           />
         </div>
       </div>
@@ -388,8 +361,24 @@ export default function AdminLeaderboardPage() {
             </div>
           ))}
 
-        {!loading && entries.length === 0 && (
-          <div className="rounded-3xl bg-white border border-slate-150 p-16 text-center shadow-[0_8px_30px_rgba(0,0,0,0.005)]">
+        {!loading && error && (
+          <div className="rounded-3xl bg-white border border-red-100 p-16 text-center shadow-[0_8px_30px_rgba(0,0,0,0.005)]">
+            <Info size={32} className="mx-auto text-red-400" />
+            <h4 className="text-sm font-extrabold text-slate-700 mt-2">Không thể tải bảng xếp hạng</h4>
+            <p className="text-xs text-slate-400 font-semibold mt-1">{error}</p>
+            <Button
+              type="button"
+              size="sm"
+              onClick={retryLoad}
+              className="mt-5 rounded-xl bg-[#FF6B00] text-white text-xs font-bold hover:bg-orange-600"
+            >
+              Thử lại
+            </Button>
+          </div>
+        )}
+
+        {!loading && !error && entries.length === 0 && (
+          <div className="rounded-3xl bg-white border border-slate-200 p-16 text-center shadow-[0_8px_30px_rgba(0,0,0,0.005)]">
             <User size={32} className="mx-auto text-slate-300" />
             <h4 className="text-sm font-extrabold text-slate-700 mt-2">Không tìm thấy kết quả</h4>
             <p className="text-xs text-slate-400 font-semibold mt-1">Không có học viên nào khớp với từ khóa tìm kiếm hiện tại.</p>
@@ -404,7 +393,7 @@ export default function AdminLeaderboardPage() {
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={() => navigate(`/admin/users/${encodeURIComponent(entry.userId)}/points`)}
-                className="group flex items-center justify-between gap-4 px-6 py-4.5 rounded-[22px] border border-slate-200/60 bg-white/85 backdrop-blur-sm hover:bg-white hover:border-orange-200/80 hover:shadow-[0_12px_35px_-12px_rgba(255,107,0,0.07)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                className="group flex items-center justify-between gap-4 px-6 py-[1.125rem] rounded-[22px] border border-slate-200/60 bg-white/85 backdrop-blur-sm hover:bg-white hover:border-orange-200/80 hover:shadow-[0_12px_35px_-12px_rgba(255,107,0,0.07)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
               >
                 {/* Rank column */}
                 <div className="w-10 flex items-center justify-center shrink-0">
@@ -424,14 +413,30 @@ export default function AdminLeaderboardPage() {
                       </span>
                     </div>
                     <p className="text-slate-400 font-semibold text-xs truncate max-w-[200px] mt-0.5">{entry.email}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:hidden">
+                      <span className="inline-flex items-center gap-1 rounded-lg border border-orange-100 bg-orange-50/70 px-2 py-1 text-[10px] font-black text-[#FF6B00]">
+                        <Zap size={10.5} className="fill-orange-500/10" />
+                        {entry.points.toLocaleString("vi-VN")} XP
+                      </span>
+                      {entry.streakDays > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-orange-100 bg-orange-50/60 px-2 py-1 text-[10px] font-bold text-orange-600">
+                          <Flame size={10.5} className="fill-orange-400 text-orange-500" />
+                          {entry.streakDays} ngày
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1 rounded-lg border border-slate-100 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-500">
+                        <Calendar size={10.5} className="text-slate-400" />
+                        {formatDate(entry.lastPointDate)}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
                 {/* XP Column */}
                 <div className="w-28 text-right shrink-0 sm:block hidden">
-                  <span className="inline-flex items-center gap-1 font-extrabold text-blue-600 text-xs bg-blue-50/60 px-3.5 py-1.5 rounded-xl border border-blue-100/30 shadow-sm shadow-blue-50/40">
-                    <Zap size={11.5} className="fill-blue-500/10 text-blue-500" />
-                    {entry.points.toLocaleString("vi-VN")} <span className="text-[9px] font-bold text-blue-400">XP</span>
+                  <span className="inline-flex items-center gap-1 font-extrabold text-[#FF6B00] text-xs bg-orange-50/70 px-3.5 py-1.5 rounded-xl border border-orange-100/50 shadow-sm shadow-orange-50/40">
+                    <Zap size={11.5} className="fill-orange-500/10 text-[#FF6B00]" />
+                    {entry.points.toLocaleString("vi-VN")} <span className="text-[9px] font-bold text-orange-400">XP</span>
                   </span>
                 </div>
 
@@ -449,7 +454,7 @@ export default function AdminLeaderboardPage() {
 
                 {/* Last point date column */}
                 <div className="w-40 text-slate-500 text-xs font-semibold md:block hidden shrink-0">
-                  <div className="flex items-center gap-1.5 text-slate-450">
+                  <div className="flex items-center gap-1.5 text-slate-500">
                     <Calendar size={12.5} className="text-slate-400" />
                     {formatDate(entry.lastPointDate)}
                   </div>
@@ -457,7 +462,7 @@ export default function AdminLeaderboardPage() {
 
                 {/* Action Column */}
                 <div className="w-12 flex justify-end shrink-0">
-                  <div className="w-8.5 h-8.5 rounded-xl bg-slate-50/80 border border-slate-100 text-slate-400 group-hover:bg-[#FF6B00] group-hover:text-white group-hover:border-[#FF6B00] group-hover:scale-105 transition-all duration-200 flex items-center justify-center shadow-sm">
+                  <div className="w-[34px] h-[34px] rounded-xl bg-slate-50/80 border border-slate-100 text-slate-400 group-hover:bg-[#FF6B00] group-hover:text-white group-hover:border-[#FF6B00] group-hover:scale-105 transition-all duration-200 flex items-center justify-center shadow-sm">
                     <ArrowRight size={13.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
                   </div>
                 </div>
@@ -478,7 +483,7 @@ export default function AdminLeaderboardPage() {
             size="sm"
             disabled={page === 0 || loading}
             onClick={() => setPage((p) => Math.max(0, p - 1))}
-            className="rounded-xl text-xs font-bold border-slate-200 text-slate-650 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+            className="rounded-xl text-xs font-bold border-slate-200 text-slate-600 bg-white hover:bg-slate-50 transition-colors shadow-sm"
           >
             <ChevronLeft size={14} /> Trước
           </Button>
@@ -488,7 +493,7 @@ export default function AdminLeaderboardPage() {
             size="sm"
             disabled={page + 1 >= totalPages || loading}
             onClick={() => setPage((p) => p + 1)}
-            className="rounded-xl text-xs font-bold border-slate-200 text-slate-650 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+            className="rounded-xl text-xs font-bold border-slate-200 text-slate-600 bg-white hover:bg-slate-50 transition-colors shadow-sm"
           >
             Tiếp <ChevronRight size={14} />
           </Button>
