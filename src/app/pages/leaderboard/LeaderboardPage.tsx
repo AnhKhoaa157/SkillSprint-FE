@@ -200,9 +200,9 @@ function LeaderboardRow({
 
       {/* Score */}
       <div className="w-24 text-right shrink-0">
-        <span className="inline-flex items-center justify-end gap-1 font-extrabold text-blue-600 text-xs bg-blue-50/50 px-2.5 py-1 rounded-xl border border-blue-100/40">
-          <Zap className="w-3 h-3 fill-blue-500/10 text-blue-500 shrink-0" />
-          {entry.points.toLocaleString("vi-VN")} <span className="text-[9px] font-bold text-blue-400">XP</span>
+        <span className="inline-flex items-center justify-end gap-1 font-extrabold text-[#FF6B00] text-xs bg-orange-50/70 px-2.5 py-1 rounded-xl border border-orange-200/50">
+          <Zap className="w-3 h-3 fill-orange-500/10 text-[#FF6B00] shrink-0" />
+          {entry.points.toLocaleString("vi-VN")} <span className="text-[9px] font-bold text-orange-400">XP</span>
         </span>
       </div>
     </motion.div>
@@ -254,7 +254,7 @@ function StatsDashboard({
         <div className="space-y-1 pl-2">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chuỗi liên tục</p>
           <h3 className="text-2xl font-black text-slate-800 tracking-tight">
-            {streak} <span className="text-xs font-bold text-slate-450">ngày</span>
+            {streak} <span className="text-xs font-bold text-slate-500">ngày</span>
           </h3>
           <p className="text-[11px] text-slate-500 font-semibold">Học tập đều đặn mỗi ngày</p>
         </div>
@@ -269,16 +269,16 @@ function StatsDashboard({
         transition={{ type: "spring", stiffness: 350, damping: 20 }}
         className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/70 backdrop-blur-md p-5 flex items-center justify-between shadow-[0_8px_30px_rgba(0,0,0,0.015)]"
       >
-        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-blue-500 to-indigo-600" />
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-[#FF6B00] to-orange-500" />
         <div className="space-y-1 pl-2">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Kinh nghiệm</p>
           <h3 className="text-2xl font-black text-slate-800 tracking-tight">
-            {points.toLocaleString("vi-VN")} <span className="text-xs font-bold text-slate-450">XP</span>
+            {points.toLocaleString("vi-VN")} <span className="text-xs font-bold text-slate-500">XP</span>
           </h3>
           <p className="text-[11px] text-slate-500 font-semibold">Tích lũy từ bài học & quiz</p>
         </div>
-        <div className="w-11 h-11 rounded-2xl bg-blue-50/80 border border-blue-200/50 flex items-center justify-center shadow-sm text-blue-600 shrink-0">
-          <Zap className="w-5 h-5 fill-blue-500/10" />
+        <div className="w-11 h-11 rounded-2xl bg-orange-50/80 border border-orange-200/50 flex items-center justify-center shadow-sm text-[#FF6B00] shrink-0">
+          <Zap className="w-5 h-5 fill-orange-500/10" />
         </div>
       </motion.div>
     </div>
@@ -300,7 +300,7 @@ function LeaderboardPodium({
   const [second, first, third] = top3;
 
   return (
-    <div className="relative overflow-hidden flex items-end justify-center gap-3 sm:gap-6 px-4 pt-16 pb-8 bg-gradient-to-b from-white/95 via-white/80 to-slate-50/70 backdrop-blur-md rounded-3xl border border-white/85 shadow-[0_15px_40px_-20px_rgba(255,107,0,0.04)] max-w-2xl mx-auto w-full">
+    <div className="relative overflow-hidden flex items-end justify-center gap-2 sm:gap-6 px-2.5 sm:px-4 pt-16 pb-8 bg-gradient-to-b from-white/95 via-white/80 to-slate-50/70 backdrop-blur-md rounded-3xl border border-white/85 shadow-[0_15px_40px_-20px_rgba(255,107,0,0.04)] max-w-2xl mx-auto w-full">
       {/* Accent line on top */}
       <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-orange-400 via-[#FF6B00] to-amber-500" />
       
@@ -308,7 +308,7 @@ function LeaderboardPodium({
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-full bg-gradient-to-b from-amber-400/10 via-amber-500/[0.01] to-transparent blur-2xl pointer-events-none z-0" />
 
       {/* Hạng 2 (Silver) */}
-      <div className="flex flex-col items-center flex-1 max-w-[130px] text-center z-10">
+      <div className="flex flex-col items-center w-[30%] max-w-[130px] min-w-0 text-center z-10">
         {second ? (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -318,7 +318,7 @@ function LeaderboardPodium({
           >
             <div className="relative mb-3 group">
               <div className="absolute inset-0 rounded-full bg-slate-400/20 blur-md opacity-25" />
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-4 border-slate-300 shadow-[0_4px_15px_rgba(148,163,184,0.2)] bg-white shrink-0 relative z-10">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border-4 border-slate-300 shadow-[0_4px_15px_rgba(148,163,184,0.2)] bg-white shrink-0 relative z-10">
                 <CircleAvatar
                   name={second.fullName}
                   objectKey={second.avatarObjectKey}
@@ -326,27 +326,27 @@ function LeaderboardPodium({
                   gradient={TOP3_GRADIENTS[1]}
                 />
               </div>
-              <div className="absolute -bottom-1 -right-1 w-6.5 h-6.5 rounded-full bg-slate-450 border-2 border-white flex items-center justify-center shadow z-20">
+              <div className="absolute -bottom-1 -right-1 w-6.5 h-6.5 rounded-full bg-slate-400 border-2 border-white flex items-center justify-center shadow z-20">
                 <Medal className="w-3.5 h-3.5 text-white fill-slate-200/50" />
               </div>
             </div>
 
-            <div className="px-1.5 w-full bg-white/95 rounded-2xl p-2 shadow-sm border border-slate-150 mb-3 z-10">
+            <div className="px-1.5 w-full bg-white/95 rounded-2xl p-2 shadow-sm border border-slate-200/70 mb-3 z-10">
               <p className="font-bold text-slate-800 text-[10px] sm:text-xs truncate w-full flex items-center justify-center gap-0.5">
                 {second.fullName}
                 {second.userId === myUserId && (
                   <span className="bg-[#FF6B00] text-white text-[7px] font-black px-1 rounded-sm shrink-0">BẠN</span>
                 )}
               </p>
-              <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] font-black text-slate-500 bg-slate-50 border border-slate-100 rounded-full px-2 py-0.5 mx-auto w-max">
-                <Zap className="w-2.5 h-2.5 fill-blue-500/10 text-blue-500" />
+              <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] font-black text-[#FF6B00] bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5 mx-auto max-w-full">
+                <Zap className="w-2.5 h-2.5 fill-orange-500/10 text-[#FF6B00]" />
                 {second.points.toLocaleString("vi-VN")} XP
               </div>
             </div>
           </motion.div>
         ) : (
           <div className="flex flex-col items-center w-full opacity-40">
-            <div className="w-12 h-12 rounded-full border-2 border-dashed border-slate-350 flex items-center justify-center text-slate-450 text-[10px] font-bold bg-white mb-3">
+            <div className="w-12 h-12 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-500 text-[10px] font-bold bg-white mb-3">
               Trống
             </div>
           </div>
@@ -357,7 +357,7 @@ function LeaderboardPodium({
           animate={{ scaleY: 1 }}
           transition={{ type: "spring", stiffness: 80, damping: 15, delay: 0.15 }}
           style={{ originY: 1 }}
-          className="w-full bg-gradient-to-b from-slate-100/60 via-slate-50/30 to-slate-400/10 border-t-4 border-slate-300 h-16 sm:h-20 rounded-t-2xl flex flex-col items-center justify-start pt-3 shadow-[0_10px_20px_-5px_rgba(71,85,105,0.1)] border border-slate-300/25 border-b-0 relative"
+          className="w-full bg-gradient-to-b from-slate-100/70 via-white/50 to-slate-400/15 border-t-4 border-t-slate-300 h-16 sm:h-20 rounded-t-2xl flex flex-col items-center justify-start pt-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_14px_24px_-10px_rgba(71,85,105,0.22)] border border-slate-300/25 border-b-0 relative"
         >
           <div className="w-7 h-7 rounded-full bg-slate-500/10 border border-slate-300/40 flex items-center justify-center text-xs font-black text-slate-500 shadow-sm">
             2
@@ -366,7 +366,7 @@ function LeaderboardPodium({
       </div>
 
       {/* Hạng 1 (Gold) */}
-      <div className="flex flex-col items-center flex-1 max-w-[140px] text-center z-20">
+      <div className="flex flex-col items-center w-[35%] max-w-[140px] min-w-0 text-center z-20">
         {first ? (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -383,7 +383,7 @@ function LeaderboardPodium({
               >
                 <Crown className="w-7 h-7 text-amber-500 fill-amber-300 drop-shadow-[0_2px_4px_rgba(245,158,11,0.4)]" />
               </motion.div>
-              <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-full overflow-hidden border-4 border-amber-400 shadow-[0_5px_18px_rgba(245,158,11,0.3)] bg-white shrink-0 relative z-10">
+              <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-full overflow-hidden border-4 border-amber-400 shadow-[0_5px_18px_rgba(245,158,11,0.3)] bg-white shrink-0 relative z-10">
                 <CircleAvatar
                   name={first.fullName}
                   objectKey={first.avatarObjectKey}
@@ -403,14 +403,15 @@ function LeaderboardPodium({
                   <span className="bg-[#FF6B00] text-white text-[7px] font-black px-1 rounded-sm shrink-0">BẠN</span>
                 )}
               </p>
-              <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] font-black text-amber-600 bg-amber-55 border border-amber-100 rounded-full px-2 py-0.5 mx-auto w-max shadow-sm">
+              <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] font-black text-[#FF6B00] bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5 mx-auto max-w-full shadow-sm">
+                <Zap className="w-2.5 h-2.5 fill-orange-500/10 text-[#FF6B00]" />
                 {first.points.toLocaleString("vi-VN")} XP
               </div>
             </div>
           </motion.div>
         ) : (
           <div className="flex flex-col items-center w-full opacity-40">
-            <div className="w-14 h-14 rounded-full border-2 border-dashed border-amber-300 flex items-center justify-center text-amber-550 text-xs font-bold bg-white mb-3">
+            <div className="w-14 h-14 rounded-full border-2 border-dashed border-amber-300 flex items-center justify-center text-amber-500 text-xs font-bold bg-white mb-3">
               Trống
             </div>
           </div>
@@ -421,16 +422,16 @@ function LeaderboardPodium({
           animate={{ scaleY: 1 }}
           transition={{ type: "spring", stiffness: 80, damping: 15, delay: 0.1 }}
           style={{ originY: 1 }}
-          className="w-full bg-gradient-to-b from-amber-100/60 via-amber-50/30 to-amber-500/10 border-t-4 border-amber-400 h-24 sm:h-28 rounded-t-2xl flex flex-col items-center justify-start pt-3 shadow-[0_12px_24px_-10px_rgba(245,158,11,0.2)] border border-amber-400/25 border-b-0 relative"
+          className="w-full bg-gradient-to-b from-amber-100/70 via-white/50 to-amber-500/15 border-t-4 border-t-amber-400 h-24 sm:h-28 rounded-t-2xl flex flex-col items-center justify-start pt-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_30px_-12px_rgba(245,158,11,0.3)] border border-amber-400/25 border-b-0 relative"
         >
-          <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-400/40 flex items-center justify-center text-sm font-black text-amber-650 shadow-inner">
+          <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-400/40 flex items-center justify-center text-sm font-black text-amber-600 shadow-inner">
             1
           </div>
         </motion.div>
       </div>
 
       {/* Hạng 3 (Bronze) */}
-      <div className="flex flex-col items-center flex-1 max-w-[130px] text-center z-10">
+      <div className="flex flex-col items-center w-[30%] max-w-[130px] min-w-0 text-center z-10">
         {third ? (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -440,7 +441,7 @@ function LeaderboardPodium({
           >
             <div className="relative mb-3 group">
               <div className="absolute inset-0 rounded-full bg-orange-400/20 blur-md opacity-25" />
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-4 border-orange-300 shadow-[0_4px_15px_rgba(249,115,22,0.18)] bg-white shrink-0 relative z-10">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border-4 border-orange-300 shadow-[0_4px_15px_rgba(249,115,22,0.18)] bg-white shrink-0 relative z-10">
                 <CircleAvatar
                   name={third.fullName}
                   objectKey={third.avatarObjectKey}
@@ -453,22 +454,22 @@ function LeaderboardPodium({
               </div>
             </div>
 
-            <div className="px-1.5 w-full bg-white/95 rounded-2xl p-2 shadow-sm border border-slate-150 mb-3 z-10">
+            <div className="px-1.5 w-full bg-white/95 rounded-2xl p-2 shadow-sm border border-orange-200/60 mb-3 z-10">
               <p className="font-bold text-slate-800 text-[10px] sm:text-xs truncate w-full flex items-center justify-center gap-0.5">
                 {third.fullName}
                 {third.userId === myUserId && (
                   <span className="bg-[#FF6B00] text-white text-[7px] font-black px-1 rounded-sm shrink-0">BẠN</span>
                 )}
               </p>
-              <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] font-black text-slate-500 bg-slate-50 border border-slate-100 rounded-full px-2 py-0.5 mx-auto w-max">
-                <Zap className="w-2.5 h-2.5 fill-blue-500/10 text-blue-500" />
+              <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] font-black text-[#FF6B00] bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5 mx-auto max-w-full">
+                <Zap className="w-2.5 h-2.5 fill-orange-500/10 text-[#FF6B00]" />
                 {third.points.toLocaleString("vi-VN")} XP
               </div>
             </div>
           </motion.div>
         ) : (
           <div className="flex flex-col items-center w-full opacity-40">
-            <div className="w-12 h-12 rounded-full border-2 border-dashed border-orange-305 flex items-center justify-center text-orange-450 text-[10px] font-bold bg-white mb-3">
+            <div className="w-12 h-12 rounded-full border-2 border-dashed border-orange-300 flex items-center justify-center text-orange-500 text-[10px] font-bold bg-white mb-3">
               Trống
             </div>
           </div>
@@ -479,9 +480,9 @@ function LeaderboardPodium({
           animate={{ scaleY: 1 }}
           transition={{ type: "spring", stiffness: 80, damping: 15, delay: 0.2 }}
           style={{ originY: 1 }}
-          className="w-full bg-gradient-to-b from-orange-100/60 via-orange-50/30 to-orange-400/10 border-t-4 border-orange-300 h-12 sm:h-15 rounded-t-2xl flex flex-col items-center justify-start pt-3 shadow-[0_10px_15px_-5px_rgba(249,115,22,0.1)] border border-orange-300/25 border-b-0 relative"
+          className="w-full bg-gradient-to-b from-orange-100/70 via-white/50 to-orange-400/15 border-t-4 border-t-orange-300 h-12 sm:h-15 rounded-t-2xl flex flex-col items-center justify-start pt-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_14px_22px_-12px_rgba(249,115,22,0.25)] border border-orange-300/25 border-b-0 relative"
         >
-          <div className="w-7 h-7 rounded-full bg-orange-500/10 border border-orange-300/40 flex items-center justify-center text-xs font-black text-orange-655 shadow-sm">
+          <div className="w-7 h-7 rounded-full bg-orange-500/10 border border-orange-300/40 flex items-center justify-center text-xs font-black text-orange-600 shadow-sm">
             3
           </div>
         </motion.div>
@@ -509,7 +510,7 @@ function TimelineHistoryPanel({ events }: { events: MyPointEvent[] }) {
         <div className="relative pl-4 border-l-2 border-slate-100 space-y-5">
           {events.slice(0, 5).map((event, i) => {
             let icon = <Zap className="w-3 h-3" />;
-            let iconBg = "bg-blue-50 border-blue-200 text-blue-500";
+            let iconBg = "bg-orange-50 border-orange-200 text-[#FF6B00]";
             
             if (event.eventType.includes("ROADMAP")) {
               icon = <Award className="w-3 h-3" />;
@@ -537,7 +538,7 @@ function TimelineHistoryPanel({ events }: { events: MyPointEvent[] }) {
                       {formatRelativeTime(event.createdAt)}
                     </p>
                   </div>
-                  <span className="shrink-0 bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-0.5 rounded-lg border border-blue-100/50">
+                  <span className="shrink-0 bg-orange-50 text-[#FF6B00] text-[10px] font-black px-2 py-0.5 rounded-lg border border-orange-100/50">
                     +{event.points}
                   </span>
                 </div>
@@ -576,7 +577,7 @@ function RulesGuidePanel() {
     {
       title: "Duy trì Chuỗi liên tục (Streak)",
       desc: "Vào học đều đặn hàng ngày để nâng điểm thưởng của bạn.",
-      badge: "bg-slate-50 text-slate-500 border border-slate-150/50",
+      badge: "bg-slate-50 text-slate-500 border border-slate-200/50",
       points: "Thưởng hàng ngày",
     },
   ];
@@ -600,7 +601,7 @@ function RulesGuidePanel() {
               </h4>
               <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
                 {rule.desc.split(rule.points)[0]}
-                <span className="text-blue-600 font-black">{rule.points}</span>
+                <span className="text-[#FF6B00] font-black">{rule.points}</span>
                 {rule.desc.split(rule.points)[1]}
               </p>
             </div>
@@ -793,7 +794,7 @@ export default function LeaderboardPage() {
             )}
 
             {state === "error" && (
-              <div className="bg-white rounded-3xl border border-slate-150 p-12 text-center">
+              <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center">
                 <AlertTriangle size={28} className="mx-auto text-red-500" />
                 <h3 className="mt-3 text-sm font-extrabold text-slate-800">Không thể tải danh sách</h3>
                 <p className="text-xs text-slate-400 font-medium mt-1">Đã có lỗi hệ thống xảy ra khi kết nối máy chủ.</p>
@@ -807,10 +808,10 @@ export default function LeaderboardPage() {
             )}
 
             {state === "ready" && entries.length === 0 && (
-              <div className="bg-white rounded-3xl border border-slate-150 p-12 text-center shadow-[0_8px_30px_rgba(0,0,0,0.005)]">
-                <User size={30} className="mx-auto text-slate-355" />
+              <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-[0_8px_30px_rgba(0,0,0,0.005)]">
+                <User size={30} className="mx-auto text-slate-300" />
                 <h3 className="mt-3 text-sm font-extrabold text-slate-800">Chưa có ai xếp hạng</h3>
-                <p className="text-xs text-slate-450 font-medium mt-1">Hãy là người đầu tiên học tập và tích lũy XP trong giai đoạn này!</p>
+                <p className="text-xs text-slate-500 font-medium mt-1">Hãy là người đầu tiên học tập và tích lũy XP trong giai đoạn này!</p>
               </div>
             )}
 
@@ -886,9 +887,9 @@ export default function LeaderboardPage() {
                 </span>
               </div>
               <div className="text-right">
-                <span className="inline-flex items-center gap-1 font-extrabold text-blue-600 text-xs bg-blue-50/50 px-2.5 py-1 rounded-xl border border-blue-100/40">
-                  <Zap className="w-3 h-3 fill-blue-500/10 text-blue-500 shrink-0" />
-                  {pointsFor(period, summary).toLocaleString("vi-VN")} <span className="text-[9px] font-bold text-blue-400">XP</span>
+                <span className="inline-flex items-center gap-1 font-extrabold text-[#FF6B00] text-xs bg-orange-50/70 px-2.5 py-1 rounded-xl border border-orange-200/50">
+                  <Zap className="w-3 h-3 fill-orange-500/10 text-[#FF6B00] shrink-0" />
+                  {pointsFor(period, summary).toLocaleString("vi-VN")} <span className="text-[9px] font-bold text-orange-400">XP</span>
                 </span>
               </div>
             </div>
