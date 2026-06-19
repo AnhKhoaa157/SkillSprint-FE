@@ -9,19 +9,22 @@ export default function AdminAuth() {
   const auth = useAdminAuth();
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-slate-50 font-['Inter']">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-[#FDFBF7] font-sans">
+      {/* Grid Coordinates Background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#f1e9db_1px,transparent_1px),linear-gradient(to_bottom,#f1e9db_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none z-0 opacity-45" />
+
       {/* Background glow */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] rounded-full bg-orange-400/10 blur-[80px]" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-orange-500/5 blur-[80px]" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-5%] right-[-5%] w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-[#FF8533]/12 to-[#FFA066]/6 blur-[120px]" />
+        <div className="absolute bottom-[-5%] left-[-5%] w-[500px] h-[500px] rounded-full bg-gradient-to-br from-[#FF8533]/6 to-transparent blur-[100px]" />
       </div>
 
       {/* Back to student login */}
       <button
         onClick={() => navigate("/login")}
-        className="absolute z-20 top-5 left-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 hover:shadow active:scale-95"
+        className="absolute z-20 top-6 left-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 bg-white/85 backdrop-blur-md border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all duration-200 hover:bg-slate-50 hover:border-slate-350 hover:text-slate-800 hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)] active:scale-95 cursor-pointer"
       >
-        <ArrowLeft className="w-4 h-4 text-slate-400" />
+        <ArrowLeft className="w-4 h-4 text-slate-450" />
         Quay lại đăng nhập sinh viên
       </button>
 
@@ -29,9 +32,11 @@ export default function AdminAuth() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-[900px]"
+        className="relative z-10 w-full max-w-[920px]"
       >
-        <div className="bg-white rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.04)] ring-1 ring-slate-100 overflow-hidden grid grid-cols-1 md:grid-cols-[1.1fr_1fr]">
+        <div className="relative bg-white/90 backdrop-blur-xl rounded-[2.2rem] border border-white/60 shadow-[0_0_0_1px_rgba(0,0,0,0.01),0_10px_30px_-10px_rgba(0,0,0,0.04),0_35px_70px_-15px_rgba(255,107,0,0.06),0_50px_100px_-20px_rgba(0,0,0,0.02)] overflow-hidden grid grid-cols-1 md:grid-cols-[1.15fr_1fr]">
+          {/* Top Accent Gradient Bar */}
+          <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-[#FFAC75] via-[#FF8533] to-[#FF6A00] z-20" />
 
           {/* ── Left — static branding ── */}
           <BrandPanel />

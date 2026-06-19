@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, User, Wrench } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, User, Wrench, Zap } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { getEmailError, F, InputField, isMaintenanceError } from "./components/AuthShared";
 import { login, register, isAdminRole } from "../../../api/authService";
@@ -104,10 +104,41 @@ function LoginForm({ props }: { props: CommonFormProps }) {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }} style={{ fontFamily: F }}>
-      <h2 className="text-[1.9rem] font-extrabold leading-tight tracking-[-0.035em] text-slate-900 mb-8">
-        Chào mừng trở lại 👋
-      </h2>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }} style={{ fontFamily: F }} className="w-full">
+      <style>{`
+        @keyframes wave-hand {
+          0%, 100% { transform: rotate(0deg); }
+          20%, 60% { transform: rotate(-14deg); }
+          40%, 80% { transform: rotate(10deg); }
+        }
+        .waving-hand {
+          display: inline-block;
+          transform-origin: 70% 70%;
+          animation: wave-hand 2.2s ease-in-out infinite;
+        }
+        @keyframes btn-gloss {
+          0% { transform: translateX(-150px); opacity: 0; }
+          12% { opacity: 1; }
+          35% { transform: translateX(380px); opacity: 0; }
+          100% { transform: translateX(380px); opacity: 0; }
+        }
+      `}</style>
+
+      <div className="flex justify-center w-full mb-6">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[10px] font-extrabold bg-gradient-to-r from-[#FF8533]/8 to-[#FFA066]/4 text-[#FF8533] border border-[#FF8533]/15 uppercase tracking-widest select-none shadow-[0_2px_8px_rgba(255,133,51,0.02)]">
+          <Zap size={11} className="fill-[#FF8533] text-[#FF8533] animate-pulse shrink-0" />
+          Nền tảng học tập AI
+        </div>
+      </div>
+
+      <div className="text-center mb-8 flex flex-col items-center">
+        <h2 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent flex items-center justify-center gap-2">
+          Chào mừng trở lại <span className="waving-hand text-2xl">👋</span>
+        </h2>
+        <p className="text-sm font-medium text-slate-500 mt-2 select-none leading-relaxed max-w-[340px] mx-auto">
+          Đăng nhập vào tài khoản SkillSprint để tiếp tục học tập.
+        </p>
+      </div>
 
       <AnimatePresence>
         {props.isMaintenanceActive && <MaintenanceBanner />}
@@ -115,51 +146,77 @@ function LoginForm({ props }: { props: CommonFormProps }) {
 
       <Button
         type="button" variant="outline" disabled={isSubmitting || props.isGoogleLoading || props.isMaintenanceActive} onClick={props.onContinueWithGoogle}
-        className="relative flex min-h-[48px] w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[15px] font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 cursor-pointer hover:border-slate-300 hover:shadow-[0_6px_14px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_1px_2px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.01)] transition-all duration-350 hover:bg-slate-50 hover:border-slate-350 hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
-        {props.isGoogleLoading ? <Loader2 size={17} className="animate-spin text-slate-400" /> : <div className="pointer-events-none shrink-0"><GoogleIcon /></div>}
-        <span>{props.isGoogleLoading ? "Đang kiểm tra hệ thống..." : "Sign in with Google"}</span>
+        {props.isGoogleLoading ? <Loader2 size={15} className="animate-spin text-slate-400" /> : <GoogleIcon />}
+        <span>Sign in with Google</span>
       </Button>
 
-      <div className="my-8 flex items-center gap-3">
-        <div className="h-px flex-1 border-t border-slate-100" />
-        <span className="whitespace-nowrap text-xs text-slate-400">hoặc tiếp tục với email</span>
-        <div className="h-px flex-1 border-t border-slate-100" />
+      <div className="my-6 flex items-center gap-4">
+        <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-slate-200/60" />
+        <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-widest select-none">hoặc đăng nhập bằng email</span>
+        <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-slate-200/60" />
       </div>
 
-      <form onSubmit={handleSubmit} noValidate className="space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <InputField id="auth-email" label="Địa chỉ email" icon={Mail} type="email" value={email} onChange={setEmail} onBlur={() => setTouched(t => ({ ...t, email: true }))} placeholder="student@gmail.com" autoComplete="email" error={emailError} disabled={props.isMaintenanceActive} />
         <InputField id="auth-password" label="Mật khẩu" icon={Lock} type={showPassword ? "text" : "password"} value={password} onChange={setPassword} onBlur={() => setTouched(t => ({ ...t, password: true }))} placeholder="••••••••" autoComplete="current-password" error={passwordError} disabled={props.isMaintenanceActive}
           labelAction={
-            <button type="button" onClick={props.onForgotPassword} className="cursor-pointer border-none bg-transparent p-0 text-[13px] font-semibold text-slate-700 underline-offset-4 transition-colors hover:text-[#FF6B00] hover:underline">Quên mật khẩu?</button>
+            <button type="button" onClick={props.onForgotPassword} className="cursor-pointer border-none bg-transparent p-0 text-xs font-bold text-slate-450 hover:text-[#FF8533] transition-colors duration-150">Quên mật khẩu?</button>
           }
           trailing={
-            <button type="button" onClick={() => setShowPassword(v => !v)} className="mr-3.5 flex cursor-pointer items-center border-none bg-transparent p-0 text-slate-400 hover:text-slate-600">
-              {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+            <button type="button" onClick={() => setShowPassword(v => !v)} className="mr-1 flex cursor-pointer items-center border-none bg-transparent p-0 text-slate-400 hover:text-slate-650 transition-colors duration-150">
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           }
         />
 
         <AnimatePresence>
           {authError && (
-            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-[13px] leading-relaxed text-red-700" role="alert">
+            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-xl border border-red-200 bg-red-50/70 px-4 py-3 text-xs leading-relaxed text-red-700 shadow-sm" role="alert">
               {authError}
             </motion.div>
           )}
         </AnimatePresence>
 
-        <Button type="submit" disabled={isSubmitting || props.isMaintenanceActive} className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-none text-[15px] font-bold text-white transition-all duration-150 ${props.isMaintenanceActive ? "cursor-not-allowed bg-slate-300" : "bg-[#FF6B00] hover:bg-[#FF7A00] hover:shadow-lg hover:shadow-orange-500/30 active:translate-y-0.5 cursor-pointer"}`}>
-          {props.isMaintenanceActive ? <><Wrench size={16} strokeWidth={2.4} /> Tạm khoá do bảo trì</> : isSubmitting ? <><Loader2 size={17} className="animate-spin" /> Đang đăng nhập...</> : <>Đăng nhập <ArrowRight size={16} strokeWidth={2.5} /></>}
+        <Button 
+          type="submit" 
+          disabled={isSubmitting || props.isMaintenanceActive} 
+          className={`group relative overflow-hidden flex h-12 w-full items-center justify-center gap-1.5 rounded-xl border-none text-sm font-extrabold uppercase tracking-wide text-white transition-all duration-300 shadow-[0_4px_16px_rgba(255,133,51,0.18)] hover:shadow-[0_8px_24px_rgba(255,133,51,0.3)] ${
+            props.isMaintenanceActive 
+              ? "cursor-not-allowed bg-slate-300" 
+              : "bg-gradient-to-r from-[#FFAC75] via-[#FF8533] to-[#FF6A00] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] cursor-pointer"
+          }`}
+        >
+          {/* Shimmer gloss effect */}
+          {!props.isMaintenanceActive && !isSubmitting && (
+            <div 
+              className="absolute top-0 bottom-0 left-0 w-[40px] bg-white/25 -skew-x-[20deg] pointer-events-none"
+              style={{
+                animation: "btn-gloss 3.5s cubic-bezier(0.19, 1, 0.22, 1) infinite",
+              }}
+            />
+          )}
+          {props.isMaintenanceActive ? (
+            <><Wrench size={14} strokeWidth={2.4} /> Tạm khoá do bảo trì</>
+          ) : isSubmitting ? (
+            <><Loader2 size={15} className="animate-spin" /> Đang đăng nhập...</>
+          ) : (
+            <>
+              <span>Đăng nhập</span> 
+              <ArrowRight size={14} strokeWidth={2.5} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+            </>
+          )}
         </Button>
       </form>
 
-      <div className="mt-7 space-y-4">
-        <p className="text-center text-[13px] text-slate-500">
+      <div className="mt-7 space-y-3.5">
+        <p className="text-center text-xs text-slate-500 select-none">
           Chưa có tài khoản?{" "}
-          <button type="button" onClick={() => props.onSwitchMode("signup")} className="cursor-pointer border-none bg-transparent p-0 text-[13px] font-bold text-[#FF6B00] hover:underline">Đăng ký ngay</button>
+          <button type="button" onClick={() => props.onSwitchMode("signup")} className="cursor-pointer border-none bg-transparent p-0 font-extrabold text-[#FF8533] hover:text-[#FFA066] hover:underline transition-colors duration-150">Đăng ký ngay</button>
         </p>
-        <p className="text-center text-xs">
-          <Link to="/admin-login" className="block w-full text-center mx-auto font-medium text-slate-700 no-underline transition-colors hover:text-slate-900 hover:underline">Đăng nhập cho đối tác trường ĐH</Link>
+        <p className="text-center">
+          <Link to="/admin-login" className="inline-block text-[11px] font-bold text-slate-400 no-underline transition-colors duration-150 hover:text-slate-700 hover:underline">Đăng nhập cổng Đối tác / Nhà trường</Link>
         </p>
       </div>
     </motion.div>
@@ -207,13 +264,31 @@ function RegisterForm({ props }: { props: CommonFormProps }) {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }} style={{ fontFamily: F }}>
-      <h2 className="text-[1.9rem] font-extrabold leading-tight tracking-[-0.035em] text-slate-900 mb-2">
-        Tạo tài khoản mới ✨
-      </h2>
-      <p className="mb-10 text-sm leading-relaxed text-slate-500">
-        Tham gia cùng các bạn sinh viên đang bứt phá.
-      </p>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }} style={{ fontFamily: F }} className="w-full">
+      <style>{`
+        @keyframes btn-gloss-reg {
+          0% { transform: translateX(-150px); opacity: 0; }
+          12% { opacity: 1; }
+          35% { transform: translateX(380px); opacity: 0; }
+          100% { transform: translateX(380px); opacity: 0; }
+        }
+      `}</style>
+
+      <div className="flex justify-center w-full mb-6">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[10px] font-extrabold bg-gradient-to-r from-[#FF8533]/8 to-[#FFA066]/4 text-[#FF8533] border border-[#FF8533]/15 uppercase tracking-widest select-none shadow-[0_2px_8px_rgba(255,133,51,0.02)]">
+          <Zap size={11} className="fill-[#FF8533] text-[#FF8533] animate-pulse shrink-0" />
+          Nền tảng học tập AI
+        </div>
+      </div>
+
+      <div className="text-center mb-8 flex flex-col items-center">
+        <h2 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
+          Tạo tài khoản mới ✨
+        </h2>
+        <p className="text-sm font-medium text-slate-500 mt-2 select-none leading-relaxed max-w-[340px] mx-auto">
+          Tham gia cùng các bạn sinh viên đang bứt phá.
+        </p>
+      </div>
 
       <AnimatePresence>
         {props.isMaintenanceActive && <MaintenanceBanner />}
@@ -221,48 +296,74 @@ function RegisterForm({ props }: { props: CommonFormProps }) {
 
       <Button
         type="button" variant="outline" disabled={isSubmitting || props.isGoogleLoading || props.isMaintenanceActive} onClick={props.onContinueWithGoogle}
-        className="relative flex min-h-[48px] w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[15px] font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 cursor-pointer hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_1px_2px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.01)] transition-all duration-350 hover:bg-slate-50 hover:border-slate-355 hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
-        {props.isGoogleLoading ? <Loader2 size={17} className="animate-spin text-slate-400" /> : <div className="pointer-events-none shrink-0"><GoogleIcon /></div>}
-        <span>{props.isGoogleLoading ? "Đang kiểm tra hệ thống..." : "Sign up with Google"}</span>
+        {props.isGoogleLoading ? <Loader2 size={15} className="animate-spin text-slate-400" /> : <GoogleIcon />}
+        <span>Sign up with Google</span>
       </Button>
 
-      <div className="my-8 flex items-center gap-3">
-        <div className="h-px flex-1 border-t border-slate-100" />
-        <span className="whitespace-nowrap text-xs text-slate-400">hoặc tiếp tục với email</span>
-        <div className="h-px flex-1 border-t border-slate-100" />
+      <div className="my-6 flex items-center gap-4">
+        <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-slate-200/60" />
+        <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-widest select-none">hoặc đăng ký bằng email</span>
+        <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-slate-200/60" />
       </div>
 
-      <form onSubmit={handleSubmit} noValidate className="space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <InputField id="auth-name" label="Họ và tên" icon={User} value={name} onChange={setName} onBlur={() => setTouched(t => ({ ...t, name: true }))} placeholder="Nguyễn Văn A" autoComplete="name" error={nameError} disabled={props.isMaintenanceActive} />
         <InputField id="auth-email" label="Địa chỉ email" icon={Mail} type="email" value={email} onChange={setEmail} onBlur={() => setTouched(t => ({ ...t, email: true }))} placeholder="student@gmail.com" autoComplete="email" error={emailError} disabled={props.isMaintenanceActive} />
         <InputField id="auth-password" label="Mật khẩu" icon={Lock} type={showPassword ? "text" : "password"} value={password} onChange={setPassword} onBlur={() => setTouched(t => ({ ...t, password: true }))} placeholder="••••••••" autoComplete="new-password" error={passwordError} disabled={props.isMaintenanceActive}
           trailing={
-            <button type="button" onClick={() => setShowPassword(v => !v)} className="mr-3.5 flex cursor-pointer items-center border-none bg-transparent p-0 text-slate-400 hover:text-slate-600">
-              {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+            <button type="button" onClick={() => setShowPassword(v => !v)} className="mr-1 flex cursor-pointer items-center border-none bg-transparent p-0 text-slate-400 hover:text-slate-655 transition-colors duration-150">
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           }
         />
 
         <AnimatePresence>
           {authError && (
-            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-[13px] leading-relaxed text-red-700" role="alert">
+            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-xl border border-red-200 bg-red-50/70 px-4 py-3 text-xs leading-relaxed text-red-700 shadow-sm" role="alert">
               {authError}
             </motion.div>
           )}
         </AnimatePresence>
 
-        <Button type="submit" disabled={isSubmitting || props.isMaintenanceActive} className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-none text-[15px] font-bold text-white transition-all duration-150 ${props.isMaintenanceActive ? "cursor-not-allowed bg-slate-300" : "bg-[#FF6B00] hover:bg-[#FF7A00] hover:shadow-lg hover:shadow-orange-500/30 active:translate-y-0.5 cursor-pointer"}`}>
-          {props.isMaintenanceActive ? <><Wrench size={16} strokeWidth={2.4} /> Tạm khoá do bảo trì</> : isSubmitting ? <><Loader2 size={17} className="animate-spin" /> Đang tạo...</> : <>Tạo tài khoản <ArrowRight size={16} strokeWidth={2.5} /></>}
+        <Button 
+          type="submit" 
+          disabled={isSubmitting || props.isMaintenanceActive} 
+          className={`group relative overflow-hidden flex h-12 w-full items-center justify-center gap-1.5 rounded-xl border-none text-sm font-extrabold uppercase tracking-wide text-white transition-all duration-300 shadow-[0_4px_16px_rgba(255,133,51,0.18)] hover:shadow-[0_8px_24px_rgba(255,133,51,0.3)] ${
+            props.isMaintenanceActive 
+              ? "cursor-not-allowed bg-slate-300" 
+              : "bg-gradient-to-r from-[#FFAC75] via-[#FF8533] to-[#FF6A00] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] cursor-pointer"
+          }`}
+        >
+          {/* Shimmer gloss effect */}
+          {!props.isMaintenanceActive && !isSubmitting && (
+            <div 
+              className="absolute top-0 bottom-0 left-0 w-[40px] bg-white/25 -skew-x-[20deg] pointer-events-none"
+              style={{
+                animation: "btn-gloss-reg 3.5s cubic-bezier(0.19, 1, 0.22, 1) infinite",
+              }}
+            />
+          )}
+          {props.isMaintenanceActive ? (
+            <><Wrench size={14} strokeWidth={2.4} /> Tạm khoá do bảo trì</>
+          ) : isSubmitting ? (
+            <><Loader2 size={15} className="animate-spin" /> Đang tạo...</>
+          ) : (
+            <>
+              <span>Tạo tài khoản</span> 
+              <ArrowRight size={14} strokeWidth={2.5} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+            </>
+          )}
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-xs text-slate-400">Bắt đầu miễn phí. Không cần thẻ tín dụng.</p>
+      <p className="mt-5 text-center text-[11px] font-bold text-slate-400 select-none">Bắt đầu miễn phí. Không cần thẻ tín dụng.</p>
 
-      <div className="mt-7 space-y-4">
-        <p className="text-center text-[13px] text-slate-500">
+      <div className="mt-6 space-y-4">
+        <p className="text-center text-xs text-slate-500 select-none">
           Đã có tài khoản?{" "}
-          <button type="button" onClick={() => props.onSwitchMode("signin")} className="cursor-pointer border-none bg-transparent p-0 text-[13px] font-bold text-[#FF6B00] hover:underline">Đăng nhập</button>
+          <button type="button" onClick={() => props.onSwitchMode("signin")} className="cursor-pointer border-none bg-transparent p-0 font-extrabold text-[#FF8533] hover:text-[#FFA066] hover:underline transition-colors duration-150">Đăng nhập</button>
         </p>
       </div>
     </motion.div>

@@ -47,10 +47,10 @@ export function ConfirmRegisterModal({ email, onClose, onConfirmed }: { email: s
       <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
         <Check size={24} className="text-emerald-500" strokeWidth={2.5} />
       </div>
-      <h2 className="text-center text-[1.6rem] font-extrabold leading-tight tracking-[-0.035em] text-slate-900 mb-2">
+      <h2 className="text-center text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent mb-2">
         Xác nhận email
       </h2>
-      <p className="mb-8 text-center text-[0.85rem] leading-relaxed text-slate-500">
+      <p className="mb-8 text-center text-sm font-medium leading-relaxed text-slate-500">
         Nhập mã xác nhận gồm 6 chữ số đã được gửi tới<br /><strong>{email}</strong>
       </p>
 
@@ -59,12 +59,12 @@ export function ConfirmRegisterModal({ email, onClose, onConfirmed }: { email: s
 
         <AnimatePresence>
           {error && (
-            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-[13px] leading-relaxed text-red-700" role="alert">
+            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-xl border border-red-200 bg-red-50/70 px-4 py-3 text-xs leading-relaxed text-red-700 shadow-sm" role="alert">
               {error}
             </motion.div>
           )}
           {notice && (
-            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[13px] leading-relaxed text-emerald-700" role="alert">
+            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-xs leading-relaxed text-emerald-700 shadow-sm" role="alert">
               {notice}
             </motion.div>
           )}
@@ -74,12 +74,36 @@ export function ConfirmRegisterModal({ email, onClose, onConfirmed }: { email: s
           <Button
             onClick={handleConfirm}
             disabled={loading}
-            className={`flex flex-1 min-h-[48px] items-center justify-center gap-2 rounded-xl border-none text-[15px] font-bold text-white transition-all duration-150 ${loading ? "cursor-not-allowed bg-slate-300 shadow-none" : "bg-[#FF6B00] shadow-[0_4px_14px_rgba(255,107,0,0.2)] hover:bg-[#FF7A00] hover:shadow-[0_0_20px_rgba(255,107,0,0.3)] active:translate-y-0.5 cursor-pointer"}`}
+            className={`group relative overflow-hidden flex flex-1 h-12 items-center justify-center gap-1.5 rounded-xl border-none text-sm font-extrabold uppercase tracking-wide text-white transition-all duration-300 shadow-[0_4px_16px_rgba(255,133,51,0.18)] hover:shadow-[0_8px_24px_rgba(255,133,51,0.3)] ${
+              loading
+                ? "cursor-not-allowed bg-slate-300"
+                : "bg-gradient-to-r from-[#FFAC75] via-[#FF8533] to-[#FF6A00] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] cursor-pointer"
+            }`}
           >
+            {/* Shimmer gloss effect */}
+            {!loading && (
+              <div 
+                className="absolute top-0 bottom-0 left-0 w-[40px] bg-white/25 -skew-x-[20deg] pointer-events-none"
+                style={{
+                  animation: "btn-gloss-confirm-reg 3.5s cubic-bezier(0.19, 1, 0.22, 1) infinite",
+                }}
+              />
+            )}
+            <style>{`
+              @keyframes btn-gloss-confirm-reg {
+                0% { transform: translateX(-150px); opacity: 0; }
+                12% { opacity: 1; }
+                35% { transform: translateX(380px); opacity: 0; }
+                100% { transform: translateX(380px); opacity: 0; }
+              }
+            `}</style>
             {loading ? (
-              <><Loader2 size={17} className="animate-spin" /> Đang xác nhận...</>
+              <><Loader2 size={15} className="animate-spin" /> Đang xác nhận...</>
             ) : (
-              <>Xác nhận <ArrowRight size={16} strokeWidth={2.5} /></>
+              <>
+                <span>Xác nhận</span>
+                <ArrowRight size={14} strokeWidth={2.5} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+              </>
             )}
           </Button>
 
@@ -87,7 +111,7 @@ export function ConfirmRegisterModal({ email, onClose, onConfirmed }: { email: s
             onClick={handleResend}
             disabled={loading}
             variant="outline"
-            className="flex min-h-[48px] px-6 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-[15px] font-semibold text-slate-700 transition-all duration-300 hover:bg-slate-50 hover:border-slate-300 active:translate-y-0.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-12 px-5 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.985] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             Gửi lại mã
           </Button>
@@ -95,7 +119,7 @@ export function ConfirmRegisterModal({ email, onClose, onConfirmed }: { email: s
       </div>
 
       <div className="mt-8 text-center">
-        <button type="button" onClick={onClose} className="cursor-pointer border-none bg-transparent p-0 text-[13px] font-semibold text-slate-400 hover:text-slate-600 transition-colors">
+        <button type="button" onClick={onClose} className="cursor-pointer border-none bg-transparent p-0 text-[13px] font-bold text-slate-400 hover:text-slate-650 transition-colors">
           Đóng và quay lại
         </button>
       </div>
