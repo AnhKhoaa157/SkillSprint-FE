@@ -160,12 +160,12 @@ export function FeedbackToolbar({ fb }: { fb: FeedbackManager }) {
   }, [localSearch]);
 
   // Uniform primitive styling shared across every input/select in the bar.
-  const fieldCls = "text-sm px-3 py-2 rounded-md border border-slate-200 bg-white text-slate-700 outline-none transition focus:border-violet-400";
+  const fieldCls = "h-10 text-sm px-3 rounded-xl border border-slate-200 bg-white/95 text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100";
 
   return (
     <div
-      className="p-3 flex flex-col gap-3"
-      style={{ borderBottom: "1px solid #F3F4F6", background: "#FAFAFA" }}
+      className="p-4 flex flex-col gap-3"
+      style={{ borderBottom: "1px solid #F1F5F9", background: "linear-gradient(180deg,#FFFFFF,#F8FAFC)" }}
     >
       {/* Top Row: Search & Refresh Group */}
       <div className="flex items-center gap-2 w-full">
@@ -193,15 +193,15 @@ export function FeedbackToolbar({ fb }: { fb: FeedbackManager }) {
           aria-label="Refresh list"
           onClick={() => load(page, statusFilter, typeFilter, searchInput, dateFrom, dateTo, { silent: feedbacks.length > 0 })}
           disabled={isFetching}
-          className="h-9 w-9 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:shadow-sm active:scale-[0.96] transition flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
           <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
         </button>
       </div>
 
       {/* Bottom Row: Filters & Actions Group */}
-      <div className="flex items-center gap-2 flex-wrap w-full">
-        <div className="relative flex-1 min-w-[130px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(130px,1fr)_minmax(130px,1fr)_minmax(130px,1fr)_minmax(130px,1fr)_auto] gap-2 w-full">
+        <div className="relative min-w-0">
           <select
             value={draft.type}
             onChange={e => setDraft(d => ({ ...d, type: e.target.value }))}
@@ -215,7 +215,7 @@ export function FeedbackToolbar({ fb }: { fb: FeedbackManager }) {
           <svg className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
         </div>
 
-        <div className="relative flex-1 min-w-[130px]">
+        <div className="relative min-w-0">
           <select
             value={draft.status}
             onChange={e => setDraft(d => ({ ...d, status: e.target.value }))}
@@ -236,7 +236,7 @@ export function FeedbackToolbar({ fb }: { fb: FeedbackManager }) {
           value={draft.dateFrom}
           max={draft.dateTo || undefined}
           onChange={e => setDraft(d => ({ ...d, dateFrom: e.target.value }))}
-          className={`${fieldCls} flex-1 min-w-[130px]`}
+          className={`${fieldCls} w-full`}
         />
         <input
           type="date"
@@ -245,14 +245,14 @@ export function FeedbackToolbar({ fb }: { fb: FeedbackManager }) {
           value={draft.dateTo}
           min={draft.dateFrom || undefined}
           onChange={e => setDraft(d => ({ ...d, dateTo: e.target.value }))}
-          className={`${fieldCls} flex-1 min-w-[130px]`}
+          className={`${fieldCls} w-full`}
         />
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center justify-end gap-2 sm:col-span-2 xl:col-span-1">
           <button
             onClick={apply}
             disabled={isFetching}
-            className="px-6 py-2 rounded-md text-sm font-bold text-white cursor-pointer shadow-sm shrink-0 transition active:scale-[0.97] disabled:opacity-50"
+            className="h-10 px-5 rounded-xl text-sm font-bold text-white cursor-pointer shadow-sm shrink-0 transition hover:shadow-md active:scale-[0.97] disabled:opacity-50"
             style={{ background: `linear-gradient(135deg,${accent},${accent}cc)` }}
           >
             Áp dụng
@@ -261,7 +261,7 @@ export function FeedbackToolbar({ fb }: { fb: FeedbackManager }) {
           {hasFilters && (
             <button
               onClick={clearFilters}
-              className="px-4 py-2 rounded-md text-sm font-semibold border border-slate-200 text-slate-500 hover:bg-slate-100 transition cursor-pointer shrink-0"
+              className="h-10 px-4 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 transition cursor-pointer shrink-0"
             >
               Xóa lọc
             </button>
@@ -286,7 +286,7 @@ export function FeedbackTable({ fb }: { fb: FeedbackManager }) {
     <>
       {/* Table header */}
       <div
-        className="grid px-5 py-2.5"
+        className="hidden md:grid px-5 py-2.5"
         style={{
           gridTemplateColumns: "2fr 1fr 1.2fr 1.2fr 72px",
           borderBottom: "1px solid #F3F4F6",
@@ -304,10 +304,26 @@ export function FeedbackTable({ fb }: { fb: FeedbackManager }) {
       </div>
 
       {/* Loading skeletons */}
+      {showInitialSkeleton && Array.from({ length: 4 }).map((_, i) => (
+        <div key={`mobile-${i}`} className="md:hidden p-4 border-b border-slate-100 animate-pulse">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-2 flex-1">
+              <div className="h-3.5 rounded-full bg-slate-100 w-3/4" />
+              <div className="h-3 rounded-full bg-slate-100 w-1/2" />
+            </div>
+            <div className="h-7 w-16 rounded-full bg-slate-100" />
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="h-8 rounded-xl bg-slate-100" />
+            <div className="h-8 rounded-xl bg-slate-100" />
+          </div>
+        </div>
+      ))}
+
       {showInitialSkeleton && Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
-          className="grid px-5 py-3.5 animate-pulse border-b border-slate-50"
+          className="hidden md:grid px-5 py-3.5 animate-pulse border-b border-slate-50"
           style={{ gridTemplateColumns: "2fr 1fr 1.2fr 1.2fr 72px", alignItems: "center" }}
         >
           {[0.65, 0.35, 0.45, 0.5, 0.3].map((w, j) => (
@@ -326,7 +342,69 @@ export function FeedbackTable({ fb }: { fb: FeedbackManager }) {
         </div>
       )}
 
-      {/* Rows */}
+      {/* Mobile cards */}
+      {!showInitialSkeleton && feedbacks.map(fbItem => {
+        const typeInfo   = FEEDBACK_TYPE_LABEL[fbItem.type] ?? FEEDBACK_TYPE_LABEL.OTHER;
+        const curStatus  = sanitizeFeedbackStatus(fbItem.status);
+        const statusInfo = FEEDBACK_STATUS_LABEL[curStatus] ?? FEEDBACK_STATUS_LABEL.OPEN;
+        const isActive   = selected?.feedbackId === fbItem.feedbackId;
+        const isClosed   = curStatus === "CLOSED";
+
+        return (
+          <div
+            key={`${fbItem.feedbackId}-card`}
+            onClick={() => handleSelect(fbItem)}
+            className={`md:hidden p-4 border-b border-slate-100 cursor-pointer transition ${
+              isActive ? "bg-violet-50/70" : "bg-white hover:bg-slate-50"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-extrabold text-slate-900 leading-snug overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]">{fbItem.title}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-400 truncate">
+                  {fbItem.userFullName || fbItem.userEmail || "Unknown user"}
+                </p>
+              </div>
+              <span
+                className="inline-flex shrink-0 items-center px-2 py-1 rounded-full text-[10px] font-bold"
+                style={{ background: typeInfo.bg, color: typeInfo.color }}
+              >
+                {typeInfo.label}
+              </span>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span
+                className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold"
+                style={{ background: statusInfo.bg, color: statusInfo.color, border: `1px solid ${statusInfo.border}` }}
+              >
+                {statusInfo.label}
+              </span>
+              <span className="text-[11px] font-semibold text-slate-500">{formatDate(fbItem.createdAt)}</span>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
+              <button
+                title={isClosed ? "Phản hồi đã đóng" : "Đóng phản hồi"}
+                disabled={isClosed}
+                onClick={() => setConfirmAction({ type: "close", feedbackId: fbItem.feedbackId, title: fbItem.title })}
+                className="flex-1 h-9 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              >
+                <Archive size={13} /> Đóng
+              </button>
+              <button
+                title="Xóa vĩnh viễn"
+                onClick={() => setConfirmAction({ type: "delete", feedbackId: fbItem.feedbackId, title: fbItem.title })}
+                className="flex-1 h-9 rounded-xl border border-red-200 bg-red-50/70 text-xs font-bold text-red-600 hover:bg-red-50 transition cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Trash2 size={13} /> Xóa
+              </button>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Desktop rows */}
       {!showInitialSkeleton && feedbacks.map(fbItem => {
         const typeInfo   = FEEDBACK_TYPE_LABEL[fbItem.type] ?? FEEDBACK_TYPE_LABEL.OTHER;
         const curStatus  = sanitizeFeedbackStatus(fbItem.status);
@@ -338,7 +416,7 @@ export function FeedbackTable({ fb }: { fb: FeedbackManager }) {
           <div
             key={fbItem.feedbackId}
             onClick={() => handleSelect(fbItem)}
-            className="grid px-5 py-3 cursor-pointer transition-colors"
+            className="hidden md:grid px-5 py-3 cursor-pointer transition-colors hover:bg-slate-50"
             style={{
               gridTemplateColumns: "2fr 1fr 1.2fr 1.2fr 72px",
               borderBottom: "1px solid #F9FAFB",
@@ -346,8 +424,6 @@ export function FeedbackTable({ fb }: { fb: FeedbackManager }) {
               background: isActive ? (isDashboard ? "#FFF7ED" : "#F5F3FF") : undefined,
               borderLeft: isActive ? `3px solid ${accent}` : "3px solid transparent",
             }}
-            onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = "#F8FAFC"; }}
-            onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
           >
             {/* User / Title */}
             <div className="min-w-0 pr-2">
@@ -409,7 +485,7 @@ export function FeedbackTable({ fb }: { fb: FeedbackManager }) {
 
       {/* Pagination */}
       <div
-        className="px-5 py-3 flex items-center justify-between"
+        className="px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
         style={{ borderTop: "1px solid #F3F4F6", background: "#FAFAFA" }}
       >
         <span style={{ fontSize: "0.8rem", color: "#64748B" }}>
@@ -448,8 +524,16 @@ export function FeedbackDetailPanel({ fb }: { fb: FeedbackManager }) {
   } = fb;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 h-fit">
-      <h3 className="text-base font-extrabold text-slate-900 mb-4">Chi tiết phản hồi</h3>
+    <div className="bg-white/95 rounded-3xl border border-white/80 shadow-[0_18px_50px_-34px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/70 p-5 h-fit xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <h3 className="text-base font-extrabold text-slate-900">Chi tiết phản hồi</h3>
+          <p className="text-xs font-semibold text-slate-400 mt-0.5">Cập nhật trạng thái và phản hồi người dùng</p>
+        </div>
+        <div className="w-10 h-10 rounded-2xl bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600 shrink-0">
+          <MessageSquare size={17} />
+        </div>
+      </div>
 
       {!selected ? (
         <div className="py-16 text-center">
@@ -483,7 +567,7 @@ export function FeedbackDetailPanel({ fb }: { fb: FeedbackManager }) {
       ) : (
         <div className="space-y-4">
           {/* Header info */}
-          <div className="rounded-xl p-3" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+          <div className="rounded-2xl p-3.5" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
             <p style={{ fontWeight: 700, fontSize: "0.88rem", color: "#0F172A" }}>{selected.title}</p>
             <p style={{ fontSize: "0.75rem", color: "#64748B", marginTop: 2 }}>
               {selected.userFullName || selected.userEmail || "Unknown user"} · {selected.userEmail || "No email"}
@@ -502,7 +586,7 @@ export function FeedbackDetailPanel({ fb }: { fb: FeedbackManager }) {
             const contentBlock = (
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Nội dung</p>
-                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50/50 border border-slate-100 rounded-xl px-3.5 py-3">
+                <p className="max-h-56 overflow-y-auto text-sm text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50/70 border border-slate-100 rounded-2xl px-3.5 py-3">
                   {selected.content}
                 </p>
               </div>
@@ -600,7 +684,7 @@ export function FeedbackDetailPanel({ fb }: { fb: FeedbackManager }) {
           <button
             onClick={handleUpdate}
             disabled={updating}
-            className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition cursor-pointer disabled:cursor-not-allowed shadow-md active:scale-[0.99]"
+            className="w-full py-2.5 rounded-2xl text-sm font-bold text-white transition cursor-pointer disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-[0.99]"
             style={{ background: accent }}
           >
             {updating ? (
@@ -611,7 +695,7 @@ export function FeedbackDetailPanel({ fb }: { fb: FeedbackManager }) {
           </button>
 
           {/* Destructive action row */}
-          <div className="pt-1 border-t border-slate-100 flex gap-2">
+          <div className="pt-3 border-t border-slate-100 flex gap-2">
             {/* Soft close */}
             <button
               title={selected.status === "CLOSED" ? "Phản hồi đã đóng" : "Đóng phản hồi"}
