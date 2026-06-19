@@ -33,16 +33,20 @@ import {
   Trophy,
   PartyPopper,
   X,
+  CalendarDays,
 } from "lucide-react";
 import studySessionService from "../../../api/learning/studySessionService";
 import type { StudySessionDetailResponse } from "../../../api/learning/studySessionService";
 import quizService from "../../../api/learning/quizService";
+import roadmapService from "../../../api/learning/roadmapService";
 import type { QuizAttemptResponse } from "../../../api/learning/quizService";
 import { usePomodoro, type PomodoroPhase } from "../../contexts/PomodoroContext";
 import { toast } from "sonner";
 import { useSubscription } from "../../../hooks/useSubscription";
 import { PricingModal } from "../../components/modals/PricingModal";
 import calendarService from "../../../api/utilities/calendarService";
+import { getMyPointEvents } from "../../../api/learning/pointService";
+import type { MyPointEvent } from "../../../api/core/skillSprintModels";
 import QuizContainer from "../../components/tools/QuizContainer";
 
 type StudySessionRouteState = {
@@ -200,6 +204,19 @@ export default function CoursePlayer() {
   const [quizStatus, setQuizStatus] = useState<"idle" | "passed" | "failed">("idle");
 
   const [isSubActionLoading, setIsSubActionLoading] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleTaskInfo, setRescheduleTaskInfo] = useState<{
+    taskId: string;
+    title: string;
+    originalDate: string;
+    newDate: string;
+  } | null>(null);
+  // ── "Study ahead" (current task scheduled in the future) ──
+  // Distinct from the next-step reschedule flow above: this reschedules / opens the
+  // task currently loaded in the player, without navigating away.
+  const [showStudyAheadModal, setShowStudyAheadModal] = useState(false);
+  const [studyAheadDate, setStudyAheadDate] = useState<string>(() => new Date().toLocaleDateString("sv-SE"));
+  const [isRescheduling, setIsRescheduling] = useState(false);
   const [sideTab, setSideTab] = useState<"pomodoro" | "quiz">("pomodoro");
   const { planId, rawPlanType, refresh: refreshSubscription } = useSubscription();
   const isPremiumMember = planId === "PREMIUM";
@@ -241,12 +258,26 @@ export default function CoursePlayer() {
   const canStart = canStartByDate && Boolean(taskId) && !hasStartedSession && !isStarting && !isFinishing && !isSessionCompleted;
   const canFinish = Boolean(activeSessionId) && !isSessionCompleted && !isStarting && !isFinishing;
 
+  // "07:00 24/06/2026" style label of the task's current schedule, for the modal.
+  const scheduledTimeLabel = useMemo(() => {
+    const datePart = task?.taskDate
+      ? new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(task.taskDate))
+      : "";
+    const timePart = task?.startTime ? task.startTime.slice(0, 5) : "";
+    return [timePart, datePart].filter(Boolean).join(" ");
+  }, [task?.taskDate, task?.startTime]);
+
   const taskDuration = task?.durationMinutes ?? 0;
   const minimumRequiredMinutes = useMemo(() => computeMinimumRequiredMinutes(taskDuration), [taskDuration]);
   const elapsedStudyMinutes = Math.floor(actualStudySeconds / 60);
   const hasMetMinimum = elapsedStudyMinutes >= minimumRequiredMinutes;
 
   useEffect(() => {
+    setQuizStatus("idle");
+    setLatestAttempt(null);
+    setHasQuizCreated(false);
+    setShowQuiz(false);
+
     if (!taskId) {
       setDetail(null);
       setIsLoading(false);
@@ -350,6 +381,47 @@ export default function CoursePlayer() {
     };
   }, [activeSessionId, activeStepId, hydrateTimer, roadmapStep?.stepId, taskId]);
 
+  // Surface the XP a roadmap-step completion actually earned. We never assume the
+  // amount client-side: the backend gates the 120 XP step reward behind a per-step
+  // study-time threshold and the 700 XP roadmap reward behind every step earning
+  // its points, so we read the real ledger and only toast events the server just
+  // wrote (recency-gated to avoid replaying historical awards). showToast dedupes,
+  // so calling this on every completion is safe.
+  const notifyRoadmapXpAwards = useCallback(
+    async (stepId: string | null) => {
+      try {
+        const events = await getMyPointEvents();
+        const isRecent = (event: MyPointEvent) => {
+          const ts = Date.parse(event.createdAt);
+          return Number.isFinite(ts) && Date.now() - ts < 60_000;
+        };
+
+        const stepAward = stepId
+          ? events.find(
+              (event) =>
+                event.eventType === "ROADMAP_STEP_COMPLETED" &&
+                event.sourceId === stepId &&
+                isRecent(event),
+            )
+          : undefined;
+        if (stepAward) {
+          showToast("success", `+${stepAward.points} XP (Roadmap Step Completed)`);
+        }
+
+        const roadmapAward = events.find(
+          (event) => event.eventType === "ROADMAP_COMPLETED" && isRecent(event),
+        );
+        if (roadmapAward) {
+          showToast("success", `+${roadmapAward.points} XP (SkillSprint Roadmap Completed)`);
+        }
+      } catch (err) {
+        // A toast is non-critical — never let a ledger read failure break the flow.
+        console.warn("Failed to load XP awards for toast", err);
+      }
+    },
+    [showToast],
+  );
+
   const fetchUpdatedDetail = async () => {
     if (!taskId) return;
     try {
@@ -411,10 +483,32 @@ export default function CoursePlayer() {
       setQuizStatus("passed");
       // Single source of truth for the toast — showToast dedupes internally.
       showToast("success", "Chúc mừng! Bạn đã PASS bài quiz.");
+      
+      // Stop and clear the Pomodoro timer so it doesn't block navigation
+      pauseTimer();
+      clearTimerContext();
+
+      // Auto-complete active study session on backend if running
+      if (activeSessionId) {
+        try {
+          await studySessionService.finishPomodoro(activeSessionId);
+          await studySessionService.finishStudySession(activeSessionId, {
+            notes: "Hoàn thành phiên học qua Quiz",
+            focusScore: 5,
+          });
+        } catch (e) {
+          console.warn("Failed to auto-close study session after passing quiz", e);
+        }
+        setActiveSessionId(null);
+        if (taskId) clearStoredSessionId(taskId);
+      }
+
       if (taskId) {
         try {
           await calendarService.completeCalendarTask(taskId);
           window.dispatchEvent(new Event("skillSprint:points-updated"));
+          // Backend has now run step/roadmap point gates — reflect the real awards.
+          await notifyRoadmapXpAwards(roadmapStep?.stepId ?? null);
         } catch (err) {
           console.error("Failed to mark task as complete on backend", err);
         }
@@ -495,8 +589,55 @@ export default function CoursePlayer() {
     }
   };
 
-  const handleNextStep = () => {
-    navigate("/app/calendar");
+  const handleNextStep = async () => {
+    if (!task?.workspaceId || !roadmapStep?.stepId) {
+      navigate("/app/calendar");
+      return;
+    }
+    setIsSubActionLoading(true);
+    try {
+      const roadmap = await roadmapService.getRoadmap(task.workspaceId);
+      if (!roadmap || !roadmap.steps) {
+        navigate("/app/calendar");
+        return;
+      }
+
+      const currentIndex = roadmap.steps.findIndex((s) => s.stepId === roadmapStep.stepId);
+      if (currentIndex === -1 || currentIndex >= roadmap.steps.length - 1) {
+        showToast("success", "Chúc mừng! Bạn đã hoàn thành bước học cuối cùng của lộ trình.");
+        navigate("/app/calendar");
+        return;
+      }
+
+      const nextStep = roadmap.steps[currentIndex + 1];
+      const tasks = await calendarService.getCalendarTasks(task.workspaceId);
+      const nextTask = tasks.find((t) => t.roadmapStepId === nextStep.stepId);
+
+      if (!nextTask) {
+        navigate("/app/calendar");
+        return;
+      }
+
+      const todayStr = new Date().toLocaleDateString("sv-SE");
+      const taskDateStr = nextTask.taskDate || "";
+
+      if (taskDateStr && taskDateStr > todayStr) {
+        setRescheduleTaskInfo({
+          taskId: nextTask.taskId,
+          title: nextTask.title,
+          originalDate: taskDateStr,
+          newDate: todayStr,
+        });
+        setShowRescheduleModal(true);
+      } else {
+        navigate(`/app/learning/course?taskId=${nextTask.taskId}`);
+      }
+    } catch (err) {
+      console.error("Failed to transition to next step", err);
+      navigate("/app/calendar");
+    } finally {
+      setIsSubActionLoading(false);
+    }
   };
 
   const handleStartSession = async () => {
@@ -525,6 +666,40 @@ export default function CoursePlayer() {
     } finally {
       setIsStarting(false);
     }
+  };
+
+  const handleOpenStudyAhead = () => {
+    setStudyAheadDate(new Date().toLocaleDateString("sv-SE"));
+    setShowStudyAheadModal(true);
+  };
+
+  // Primary modal action: move the task to the chosen date on the backend, then
+  // start the session on the refreshed (now-due) task.
+  const handleRescheduleAndStudy = async () => {
+    if (!taskId || isRescheduling) return;
+    setIsRescheduling(true);
+    try {
+      await calendarService.updateCalendarTask(taskId, {
+        taskDate: studyAheadDate,
+        startTime: "08:00",
+        endTime: "09:00",
+      });
+      await fetchUpdatedDetail();
+      setShowStudyAheadModal(false);
+      showToast("success", "Đã dời lịch học thành công!");
+      await handleStartSession();
+    } catch (err: unknown) {
+      const msg = (err as { message?: string })?.message || "Không thể dời lịch học. Vui lòng thử lại.";
+      toast.error(msg);
+    } finally {
+      setIsRescheduling(false);
+    }
+  };
+
+  // Secondary modal action: leave the future date untouched and study ahead now.
+  const handleKeepAndStudy = async () => {
+    setShowStudyAheadModal(false);
+    await handleStartSession();
   };
 
   const handlePausePomodoro = async () => {
@@ -611,6 +786,7 @@ export default function CoursePlayer() {
 
       clearTimerContext(); 
       await fetchUpdatedDetail();
+      window.dispatchEvent(new Event("skillSprint:points-updated"));
     } catch (err: unknown) {
       const msg = (err as { message?: string })?.message || "Không thể kết thúc phiên học.";
       showToast("warning", msg);
@@ -741,7 +917,7 @@ export default function CoursePlayer() {
                 <QuizContainer
                   stepId={roadmapStep?.stepId ?? undefined}
                   quizId={roadmapStep?.stepId ?? undefined}
-                  currentPlan={planId}
+                  currentPlan={rawPlanType}
                   onComplete={handleQuizCompletion}
                 />
               </div>
@@ -1295,16 +1471,26 @@ export default function CoursePlayer() {
                 </div>
               ) : !hasStartedSession ? (
                 <div className="mt-5 space-y-4">
-                  <div className="rounded-xl border border-orange-100/60 bg-orange-50/20 p-4 text-[11px] leading-5 text-slate-500">
+                  <div
+                    className={
+                      canStartByDate
+                        ? "rounded-xl border border-orange-100/60 bg-orange-50/20 p-4 text-[11px] leading-5 text-slate-500"
+                        : "rounded-2xl border border-amber-100 bg-amber-50/10 p-4 text-[11px] leading-5 text-amber-700"
+                    }
+                  >
                     {canStartByDate
                       ? "Nhấn nút dưới để bắt đầu chu kỳ tập trung học 25 phút bằng đồng hồ Pomodoro."
                       : "Mục học này chưa đến hạn. Bạn vẫn có thể mở học trước nếu muốn."}
                   </div>
                   <button
                     type="button"
-                    onClick={handleStartSession}
-                    disabled={!canStart}
-                    className="inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={canStartByDate ? handleStartSession : handleOpenStudyAhead}
+                    disabled={canStartByDate ? !canStart : isStarting || isFinishing || !taskId}
+                    className={
+                      canStartByDate
+                        ? "inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 transition hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                        : "inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#FF7E21] to-[#FF6B00] px-5 py-4 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 transition duration-200 hover:scale-[1.02] active:scale-98 disabled:cursor-not-allowed disabled:opacity-50"
+                    }
                   >
                     {isStarting ? <LoaderCircle size={18} className="animate-spin" /> : <Rocket size={18} />}
                     {canStartByDate ? "Bắt đầu tập trung (Pomodoro)" : "Vẫn mở học trước hạn"}
@@ -1470,6 +1656,144 @@ export default function CoursePlayer() {
                 className="w-full py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-400 hover:bg-slate-50 hover:text-red-500 transition active:scale-95"
               >
                 Hủy phiên & Rời đi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRescheduleModal && rescheduleTaskInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md transition-all">
+          <div className="w-full max-w-sm rounded-[28px] border border-orange-100 bg-white p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button
+              type="button"
+              onClick={() => setShowRescheduleModal(false)}
+              className="absolute top-5 right-5 h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B00] border border-orange-100/60 shadow-sm shadow-orange-50/50">
+                <CalendarDays size={18} />
+              </div>
+              <div className="text-left">
+                <h3 className="text-sm font-extrabold text-slate-800">Dời lịch học trước</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Học tập thông minh</p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <p className="text-xs leading-5 text-slate-500 font-semibold text-left">
+                Bài tiếp theo <span className="font-extrabold text-slate-800">"{rescheduleTaskInfo.title}"</span> đang được lên lịch vào ngày <span className="font-bold text-slate-700">{rescheduleTaskInfo.originalDate}</span>. Bạn muốn dời lịch để học ngay hôm nay không?
+              </p>
+              
+              <div className="space-y-1.5 text-left">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chọn ngày học mới</label>
+                <input
+                  type="date"
+                  value={rescheduleTaskInfo.newDate}
+                  onChange={(e) => setRescheduleTaskInfo(prev => prev ? { ...prev, newDate: e.target.value } : null)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-700 focus:border-orange-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRescheduleModal(false);
+                  navigate(`/app/learning/course?taskId=${rescheduleTaskInfo.taskId}`);
+                }}
+                className="flex-1 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:bg-slate-50 transition active:scale-95"
+              >
+                Giữ lịch & Học
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await calendarService.updateCalendarTask(rescheduleTaskInfo.taskId, {
+                      taskDate: rescheduleTaskInfo.newDate,
+                      startTime: "08:00",
+                      endTime: "09:00",
+                    });
+                    showToast("success", "Đã dời lịch học thành công!");
+                    setShowRescheduleModal(false);
+                    navigate(`/app/learning/course?taskId=${rescheduleTaskInfo.taskId}`);
+                  } catch (e) {
+                    showToast("error", "Không thể dời lịch học.");
+                  }
+                }}
+                className="flex-1 py-3 rounded-xl bg-[#FF6B00] text-xs font-bold text-white hover:bg-orange-600 transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                Dời lịch & Học
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STUDY-AHEAD RESCHEDULE MODAL (current task scheduled in the future) */}
+      {showStudyAheadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md transition-all">
+          <div className="w-full max-w-sm rounded-3xl border border-orange-100 bg-white p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.25)] relative animate-in zoom-in-95 duration-200">
+            <button
+              type="button"
+              onClick={() => setShowStudyAheadModal(false)}
+              disabled={isRescheduling}
+              className="absolute top-5 right-5 h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition disabled:opacity-40"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B00] border border-orange-100/60 shadow-sm shadow-orange-50/50">
+                <CalendarDays size={18} />
+              </div>
+              <div className="text-left">
+                <h3 className="text-sm font-extrabold text-slate-800">Dời lịch học trước hạn</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Học tập thông minh</p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/10 p-3.5 text-left">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lịch học hiện tại</p>
+                <p className="mt-1 text-sm font-extrabold text-slate-700">{scheduledTimeLabel || "Chưa xác định"}</p>
+              </div>
+
+              <div className="space-y-1.5 text-left">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chọn ngày học mới</label>
+                <input
+                  type="date"
+                  value={studyAheadDate}
+                  min={new Date().toLocaleDateString("sv-SE")}
+                  onChange={(e) => setStudyAheadDate(e.target.value)}
+                  disabled={isRescheduling}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-700 focus:border-orange-500 focus:outline-none disabled:opacity-60"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={handleKeepAndStudy}
+                disabled={isRescheduling}
+                className="flex-1 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:bg-slate-50 transition active:scale-95 disabled:opacity-50"
+              >
+                Giữ lịch & Học
+              </button>
+              <button
+                type="button"
+                onClick={handleRescheduleAndStudy}
+                disabled={isRescheduling}
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#FF7E21] to-[#FF6B00] text-xs font-bold text-white transition duration-200 hover:scale-[1.02] active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isRescheduling ? <LoaderCircle size={14} className="animate-spin" /> : null}
+                Dời lịch & Học
               </button>
             </div>
           </div>
