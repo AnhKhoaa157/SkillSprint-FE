@@ -118,19 +118,26 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
         className="flex min-h-screen w-full"
       >
         <LeftPanel />
-        <div className="h-screen min-h-screen w-full lg:w-[50%] flex flex-col bg-white overflow-hidden relative">
+        <div className="h-screen min-h-screen w-full lg:w-[50%] flex flex-col bg-[#FAF9F6] overflow-hidden relative">
+          {/* Ambient Grid Background */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f033_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f033_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none z-0 opacity-60" />
+          
+          {/* Ambient Background Glows */}
+          <div className="absolute top-[-10%] right-[-10%] w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-orange-500/8 to-amber-500/3 blur-[120px] pointer-events-none z-0" />
+          <div className="absolute bottom-[10%] left-[-5%] w-[350px] h-[350px] rounded-full bg-gradient-to-br from-[#FF6B00]/4 to-orange-400/2 blur-[100px] pointer-events-none z-0" />
+          <div className="absolute top-[40%] right-[20%] w-[250px] h-[250px] rounded-full bg-amber-500/3 blur-[80px] pointer-events-none z-0" />
+
           <MaintenanceBannerPill />
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", padding: "20px 32px" }}>
-            <Link to="/" style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.8rem", color: "#6B7280", textDecoration: "none", fontFamily: F, transition: "color 0.2s ease" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#111827"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#6B7280"; }}
-            >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", padding: "20px 32px" }} className="relative z-10">
+            <Link to="/" className="flex items-center gap-1.5 text-xs text-slate-400 no-underline transition-colors hover:text-slate-900">
               <ArrowLeft size={14} />
               Về trang chủ
             </Link>
           </div>
-          <div className="w-full max-w-[390px] mx-auto px-4 py-8 flex flex-1 flex-col justify-center min-h-0 relative z-10">
-            <div className="w-full">
+          <div className="w-full max-w-[480px] mx-auto px-4 py-8 flex flex-1 flex-col justify-center min-h-0 relative z-10">
+            <div className="w-full bg-white/85 backdrop-blur-xl rounded-[32px] border border-white/60 shadow-[0_0_0_1px_rgba(0,0,0,0.01),0_10px_30px_-10px_rgba(0,0,0,0.04),0_35px_70px_-15px_rgba(255,107,0,0.06),0_50px_100px_-20px_rgba(0,0,0,0.02)] px-6 py-9 md:px-9 md:py-11 relative overflow-hidden">
+              {/* Top Accent Gradient Bar */}
+              <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-[#FFAC75] via-[#FF8533] to-[#FF6A00]" />
               {children}
             </div>
           </div>

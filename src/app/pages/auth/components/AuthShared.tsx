@@ -30,33 +30,57 @@ export function InputField({
   labelAction?: React.ReactNode; trailing?: React.ReactNode; disabled?: boolean;
 }) {
   return (
-    <div className="space-y-2">
-      <div className="flex items-baseline justify-between">
-        <Label htmlFor={id} className="text-[13px] font-semibold tracking-[-0.01em] text-slate-700">
-          {label}
-        </Label>
+    <div className="space-y-1.5 text-left">
+      <div className="flex items-center justify-between min-h-4">
+        <div className="flex items-center gap-1.5 overflow-hidden">
+          <Label htmlFor={id} className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 select-none shrink-0">
+            {label}
+          </Label>
+          <AnimatePresence mode="wait">
+            {error && (
+              <motion.span 
+                initial={{ opacity: 0, x: -4 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                exit={{ opacity: 0, x: -4 }} 
+                transition={{ duration: 0.18 }}
+                className="text-[9.5px] font-bold text-rose-500 uppercase tracking-wide truncate"
+              >
+                — {error}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
         {labelAction}
       </div>
-      <div className="relative group flex items-center">
-        <Icon size={17} strokeWidth={2} aria-hidden className={`absolute left-3.5 z-10 transition-colors duration-300 ${error ? "text-rose-400" : "text-slate-400 group-focus-within:text-[#FF6B00]"}`} />
-        <Input
-          id={id} type={type} value={value} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} onBlur={onBlur}
-          placeholder={placeholder} autoComplete={autoComplete} aria-invalid={!!error} disabled={disabled}
-          className={`min-h-[48px] w-full rounded-xl pl-[2.4rem] pr-10 text-[15px] font-medium text-slate-900 placeholder:font-normal placeholder:text-slate-400 disabled:cursor-not-allowed transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 ${
-            error
-              ? "border-rose-500 focus-visible:border-rose-500 focus-visible:ring-rose-500/20"
-              : "border-slate-200 focus-visible:border-[#FF6B00] focus-visible:ring-[#FF6B00]/20"
-          }`}
+      <div 
+        className={`relative group flex items-center h-12 rounded-xl border bg-slate-50/40 px-3.5 transition-all duration-200 ${
+          error
+            ? "border-rose-200/90 focus-within:border-rose-450 focus-within:ring-4 focus-within:ring-rose-500/6 focus-within:bg-white shadow-[0_1px_2px_rgba(0,0,0,0.01)]"
+            : "border-slate-200/80 focus-within:border-[#FF8533] focus-within:ring-4 focus-within:ring-[#FF8533]/8 focus-within:bg-white shadow-[0_1px_2px_rgba(0,0,0,0.01)]"
+        } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+      >
+        <Icon 
+          size={15} 
+          strokeWidth={1.8} 
+          aria-hidden 
+          className={`shrink-0 transition-colors duration-200 mr-2 ${
+            error ? "text-rose-400" : "text-slate-400 group-focus-within:text-[#FF8533]"
+          }`} 
         />
-        {trailing && <div className="absolute right-0 top-0 bottom-0 flex items-center pr-1.5 z-10">{trailing}</div>}
+        <input
+          id={id} 
+          type={type} 
+          value={value} 
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} 
+          onBlur={onBlur}
+          placeholder={placeholder} 
+          autoComplete={autoComplete} 
+          aria-invalid={!!error} 
+          disabled={disabled}
+          className="w-full h-full bg-transparent text-sm font-medium text-slate-800 placeholder:font-normal placeholder:text-slate-400 outline-none border-none p-0 focus:ring-0 disabled:cursor-not-allowed"
+        />
+        {trailing && <div className="absolute right-3.5 top-0 bottom-0 flex items-center z-10">{trailing}</div>}
       </div>
-      <AnimatePresence>
-        {error && (
-          <motion.p initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="mt-1.5 text-xs font-medium text-rose-500">
-            {error}
-          </motion.p>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
