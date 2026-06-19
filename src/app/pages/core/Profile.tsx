@@ -6,6 +6,7 @@ import {
   Copy, Eye, EyeOff, HardDrive, Layers, Upload,
   Gem, Sparkles, RefreshCw, AlertCircle, ArrowUp, ArrowDown, X, MessageSquare,
   CheckCircle2, Brain, FileText, Clock, ArrowRight, LoaderCircle, Inbox, Info,
+  Link as LinkIcon,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -1263,6 +1264,12 @@ function formatFbDate(iso: string): string {
   return d.toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" });
 }
 
+function normalizeFeedbackUrl(url: string | null | undefined): string | null {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+  return trimmed.startsWith("ttps://") ? `h${trimmed}` : trimmed;
+}
+
 /* ═══════════════════════════════════════════════
    NOTIFICATIONS TAB
 ═══════════════════════════════════════════════ */
@@ -1551,7 +1558,7 @@ function FeedbackHistoryTab() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 8 }}
               transition={{ duration: 0.16 }}
-              className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+              className="w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
               {/* Modal header */}
@@ -1578,13 +1585,49 @@ function FeedbackHistoryTab() {
               </div>
 
               {/* Modal body */}
-              <div className="space-y-4 p-5">
+              <div className="max-h-[72vh] space-y-4 overflow-y-auto p-5">
                 <div>
                   <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Nội dung</p>
                   <p className="whitespace-pre-wrap rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3 text-sm leading-relaxed text-slate-700">
                     {selected.content || "—"}
                   </p>
                 </div>
+
+                {normalizeFeedbackUrl(selected.imageUrl) && (
+                  <div>
+                    <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Ảnh đính kèm</p>
+                    <a
+                      href={normalizeFeedbackUrl(selected.imageUrl) ?? undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group block overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-1.5 shadow-sm transition hover:border-orange-200 hover:bg-orange-50/30"
+                    >
+                      <img
+                        src={normalizeFeedbackUrl(selected.imageUrl) ?? undefined}
+                        alt="Ảnh đính kèm phản hồi"
+                        className="max-h-72 w-full rounded-lg bg-white object-contain"
+                        onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.display = "none"; }}
+                      />
+                      <span className="mt-1.5 flex items-center justify-center gap-1 break-all px-2 pb-1 text-[11px] font-semibold text-slate-400 transition group-hover:text-orange-600">
+                        <LinkIcon size={11} className="shrink-0" /> Mở ảnh trong tab mới
+                      </span>
+                    </a>
+                  </div>
+                )}
+
+                {normalizeFeedbackUrl(selected.relatedUrl) && (
+                  <div>
+                    <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">URL liên quan</p>
+                    <a
+                      href={normalizeFeedbackUrl(selected.relatedUrl) ?? undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 break-all rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-2 text-xs font-bold text-[#FF6B00] transition hover:border-orange-200 hover:bg-orange-50/50"
+                    >
+                      <LinkIcon size={12} className="shrink-0" /> {selected.relatedUrl}
+                    </a>
+                  </div>
+                )}
 
                 {selected.adminReply ? (
                   <div className="rounded-xl border border-[#FFEDD5] bg-[#FFF7ED] px-3.5 py-3">
