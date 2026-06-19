@@ -231,7 +231,6 @@ export function SubscriptionCard({ sub, plans }: { sub?: SubscriptionAdminRespon
 /* -------------------------------------------------------------------------- */
 
 const ORANGE = "bg-gradient-to-r from-[#FF6B00] to-[#EA580C]";
-const PURPLE = "bg-gradient-to-r from-[#7C3AED] to-[#6D28D9]";
 
 function AdminActionField({
   label,
@@ -344,7 +343,7 @@ export function ControlPanel({
           onSave={() => save("plan")}
           dirty={dirty.plan}
           saving={savingKey === "plan"}
-          gradient={PURPLE}
+          gradient={ORANGE}
           actionLabel="Cập nhật gói đăng ký"
           divider
         />
