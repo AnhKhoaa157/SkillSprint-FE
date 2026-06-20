@@ -13,13 +13,58 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
   const isMaster = points >= 50000 && points < 500000;
   const isPro = points >= 5000 && points < 50000;
 
+  if (isUltimate) {
+    const Component = onClick ? "button" : "div";
+    return (
+      <Component
+        type={onClick ? "button" : undefined}
+        onClick={onClick}
+        title={title}
+        aria-label={ariaLabel}
+        className={`group relative inline-flex items-center justify-center p-[1.5px] rounded-full overflow-hidden shadow-[0_0_12px_rgba(255,107,0,0.2)] motion-reduce:transition-none ${
+          onClick ? "transition-all duration-300 hover:scale-[1.05] active:scale-95 cursor-pointer motion-reduce:hover:scale-100" : ""
+        } ${className}`}
+      >
+        <style>
+          {`
+            @keyframes plasma-spin {
+              100% { transform: translate(-50%, -50%) rotate(360deg); }
+            }
+            .plasma-border {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              width: 250%;
+              height: 400%;
+              background: conic-gradient(from 90deg, transparent 0%, transparent 60%, #ff8c00 80%, #fff 100%);
+              transform: translate(-50%, -50%) rotate(0deg);
+              animation: plasma-spin 2.5s linear infinite;
+              z-index: 0;
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .plasma-border {
+                animation: none !important;
+                background: #ff8c00 !important;
+              }
+            }
+          `}
+        </style>
+        <div className="plasma-border" />
+        
+        <div className="relative z-10 flex items-center gap-1.5 bg-[#0F172A] rounded-full px-2.5 py-1 w-full h-full group-hover:bg-[#1E293B] transition-colors">
+          <Zap size={12} className="shrink-0 fill-orange-500/20 text-orange-400 drop-shadow-[0_0_5px_rgba(255,135,0,0.8)]" />
+          <span className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-300 via-orange-400 to-amber-300">
+            {points.toLocaleString("vi-VN")} <span className="text-[9px] font-bold text-orange-500/80 uppercase">XP</span>
+          </span>
+        </div>
+      </Component>
+    );
+  }
+
   let baseClass = "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold shadow-sm motion-reduce:transition-none";
   let iconClass = "shrink-0";
 
-  if (isUltimate) {
-    baseClass += " xp-ultimate-bg relative z-10 text-white border-transparent";
-    iconClass += " fill-white animate-pulse";
-  } else if (isMaster) {
+  if (isMaster) {
     baseClass += " bg-gradient-to-r from-cyan-50 to-blue-50 text-blue-700 border border-blue-200 shadow-md";
     iconClass += " fill-blue-500";
   } else if (isPro) {
@@ -37,68 +82,16 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
   const Component = onClick ? "button" : "div";
 
   return (
-    <>
-      {isUltimate && (
-        <style>
-          {`
-            @keyframes gradientShimmerXP {
-              0% { background-position: 0% 50%; }
-              50% { background-position: 100% 50%; }
-              100% { background-position: 0% 50%; }
-            }
-            @keyframes roaringFire {
-              0% { 
-                box-shadow: 0 0 4px #facc15, 2px -2px 6px #f59e0b, -2px -4px 8px #ea580c, 2px -8px 12px #dc2626, -2px -12px 14px #991b1b, 0 4px 10px rgba(220,38,38,0.5); 
-                transform: scale(1);
-              }
-              25% { 
-                box-shadow: 0 0 4px #facc15, -2px -3px 6px #f59e0b, 2px -5px 8px #ea580c, -2px -9px 12px #dc2626, 2px -13px 14px #991b1b, 0 4px 10px rgba(220,38,38,0.6); 
-                transform: scale(1.02);
-              }
-              50% { 
-                box-shadow: 0 0 4px #facc15, 2px -2px 6px #f59e0b, -2px -6px 8px #ea580c, 3px -10px 12px #dc2626, -1px -14px 14px #991b1b, 0 4px 10px rgba(220,38,38,0.7); 
-                transform: scale(1.01);
-              }
-              75% { 
-                box-shadow: 0 0 4px #facc15, -2px -2px 6px #f59e0b, 2px -5px 8px #ea580c, -3px -9px 12px #dc2626, 1px -13px 14px #991b1b, 0 4px 10px rgba(220,38,38,0.6); 
-                transform: scale(1.03);
-              }
-              100% { 
-                box-shadow: 0 0 4px #facc15, 2px -2px 6px #f59e0b, -2px -4px 8px #ea580c, 2px -8px 12px #dc2626, -2px -12px 14px #991b1b, 0 4px 10px rgba(220,38,38,0.5); 
-                transform: scale(1);
-              }
-            }
-            .xp-ultimate-bg {
-              background: linear-gradient(90deg, #FF6B00, #F59E0B, #EC4899, #FF6B00);
-              background-size: 300% 300%;
-              animation: gradientShimmerXP 3s ease infinite, roaringFire 0.8s infinite alternate ease-in-out;
-              margin-top: 8px; /* Give space for the fire above */
-            }
-            @media (prefers-reduced-motion: reduce) {
-              .xp-ultimate-bg {
-                animation: none !important;
-                transform: none !important;
-                box-shadow: none !important;
-                margin-top: 0 !important;
-              }
-              .animate-pulse {
-                animation: none !important;
-              }
-            }
-          `}
-        </style>
-      )}
-      <Component
-        type={onClick ? "button" : undefined}
-        onClick={onClick}
-        title={title}
-        aria-label={ariaLabel}
-        className={`${baseClass} ${className}`}
-      >
-        <Zap size={12} className={iconClass} />
-        {points.toLocaleString("vi-VN")} XP
-      </Component>
-    </>
+    <Component
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
+      className={`${baseClass} ${className}`}
+    >
+      <Zap size={12} className={iconClass} />
+      {points.toLocaleString("vi-VN")} XP
+    </Component>
   );
 }
 
