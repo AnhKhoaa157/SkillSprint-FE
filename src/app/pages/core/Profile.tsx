@@ -6,7 +6,7 @@ import {
   Copy, Eye, EyeOff, HardDrive, Layers, Upload,
   Gem, Sparkles, RefreshCw, AlertCircle, ArrowUp, ArrowDown, X, MessageSquare,
   CheckCircle2, Brain, FileText, Clock, ArrowRight, LoaderCircle, Inbox, Info,
-  Link as LinkIcon,
+  Link as LinkIcon, Flame,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -16,7 +16,8 @@ import { getMyFeedbacks, FeedbackStatus, FeedbackType, type FeedbackResponse } f
 import { getCurrentSubscription, getQuotaStatus, cancelSubscription } from "../../../api/billing/subscriptionsService";
 import { listSubscriptionPlans, formatPlanPrice, isFeatureEnabled, resolvePlanFeatures, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/admin/adminSubscriptionPlansService";
 import { createSepayPayment, getPaymentDetail } from "../../../api/billing/sepayPaymentService";
-import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse, CurrentSubscriptionResponse, QuotaStatusResponse, ServicePlanType } from "../../../api/core/skillSprintModels";
+import pointService from "../../../api/learning/pointService";
+import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse, CurrentSubscriptionResponse, QuotaStatusResponse, ServicePlanType, UserPointSummary } from "../../../api/core/skillSprintModels";
 import { PlanTypeBadge, PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
 import { normalizePlanType } from "../../../utils/adminStatusHelpers";
 import { useNotificationSocket } from "../../hooks/useNotificationSocket";
@@ -1698,6 +1699,7 @@ export default function Profile() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [subData, setSubData] = useState<CurrentSubscriptionResponse | null>(null);
+  const [pointSummary, setPointSummary] = useState<UserPointSummary | null>(null);
 
   // ── Derive current plan info from subscription data ──
   const rawPlanType = subData?.plan?.planType;
@@ -1714,13 +1716,15 @@ export default function Profile() {
 
     const loadProfile = async () => {
       try {
-        const [me, sub] = await Promise.all([
+        const [me, sub, points] = await Promise.all([
           meService.getMe(),
           getCurrentSubscription().catch(() => null),
+          pointService.getMeSummary().catch(() => null),
         ]);
         if (!mounted) return;
         setProfile(mapMeResponse(me));
         setSubData(sub);
+        setPointSummary(points);
       } catch (error: any) {
         if (!mounted) return;
 
@@ -1827,6 +1831,17 @@ export default function Profile() {
               border: `1px solid ${profile.emailVerified ? "#A7F3D0" : "#FED7AA"}`, fontWeight:700,
               display:"inline-flex", alignItems:"center", gap:"5px",
               }}>{profile.emailVerified ? <><BadgeCheck size={12} /> Email đã xác minh</> : <><AlertTriangle size={12} /> Email chưa xác minh</>}</span>
+            {pointSummary && pointSummary.streakDays > 0 && (
+              <span style={{
+                fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
+                background:"#FFF7ED", color:"#C2410C",
+                border:"1px solid #FED7AA", fontWeight:700,
+                display:"inline-flex", alignItems:"center", gap:"4px",
+              }}>
+                <Flame size={12} fill="#FB923C" color="#EA580C" /> 
+                {pointSummary.streakDays} ngày chuỗi
+              </span>
+            )}
             {profileLoading && (
               <span style={{
                 fontSize:"0.68rem", padding:"3px 9px", borderRadius:"99px",
