@@ -185,6 +185,13 @@ export default function StudyCalendar() {
   const [rescheduleEnd, setRescheduleEnd] = useState("");
   const [rescheduling, setRescheduling] = useState(false);
   
+  const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
+  const [createTaskTitle, setCreateTaskTitle] = useState("");
+  const [createTaskDate, setCreateTaskDate] = useState("");
+  const [createTaskStart, setCreateTaskStart] = useState("");
+  const [createTaskEnd, setCreateTaskEnd] = useState("");
+  const [creatingTask, setCreatingTask] = useState(false);
+  
   const { profile: onboardingProfile, fetchOnboardingProfile } = useOnboardingProfile(selectedWorkspaceId);
   const { roadmapData, isLoading: roadmapLoading, error: roadmapError } = useRoadmap(selectedWorkspaceId);
 
@@ -316,6 +323,31 @@ export default function StudyCalendar() {
     }
   };
 
+  const handleCreateTask = async () => {
+    if (!selectedWorkspaceId || !createTaskTitle.trim() || !createTaskDate) return;
+    setCreatingTask(true);
+    try {
+      await calendarService.createCalendarTask(selectedWorkspaceId, {
+        title: createTaskTitle.trim(),
+        taskDate: createTaskDate,
+        startTime: createTaskStart || undefined,
+        endTime: createTaskEnd || undefined,
+        status: "TODO"
+      });
+      toast.success("Tạo tác vụ thành công");
+      setCreateTaskModalOpen(false);
+      setCreateTaskTitle("");
+      setCreateTaskDate("");
+      setCreateTaskStart("");
+      setCreateTaskEnd("");
+      void reloadCalendarTasks();
+    } catch (err: any) {
+      toast.error(err?.message || "Không thể tạo tác vụ");
+    } finally {
+      setCreatingTask(false);
+    }
+  };
+
   const shiftMonth = (offset: number) => {
     const next = new Date(cursorYear, cursorMonth + offset, 1);
     setCursor(next);
@@ -429,6 +461,19 @@ export default function StudyCalendar() {
           >
             {savingSchedule ? <LoaderCircle size={14} className="animate-spin" /> : hasExistingCalendar ? <Check size={14} /> : <Sparkles size={14} />}
             {savingSchedule ? "Đang tạo lịch..." : hasExistingCalendar ? "Tùy chỉnh lịch" : "Tạo lịch AI"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setCreateTaskDate(toDateKey(cursor));
+              setCreateTaskModalOpen(true);
+            }}
+            disabled={!selectedWorkspaceId}
+            className={`inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-[0.98] ${!selectedWorkspaceId ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            <CalendarPlus size={14} />
+            Thêm tác vụ
           </button>
 
           <button
@@ -733,6 +778,97 @@ export default function StudyCalendar() {
                   className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition ${rescheduling || !rescheduleDate ? "bg-orange-300 cursor-not-allowed" : "bg-[#FF7E21] hover:bg-[#E05E00] cursor-pointer"}`}
                 >
                   {rescheduling ? <span className="flex items-center justify-center gap-1"><LoaderCircle size={14} className="animate-spin" /> Đang lưu...</span> : "Lưu lịch mới"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Create task modal */}
+      <AnimatePresence>
+        {createTaskModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(15,23,42,0.45)", backdropFilter: "blur(4px)" }}
+            onClick={() => setCreateTaskModalOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 6 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <CalendarPlus size={18} className="text-[#FF7E21]" />
+                  <h3 className="text-base font-black text-slate-800">Thêm tác vụ mới</h3>
+                </div>
+                <button onClick={() => setCreateTaskModalOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer">
+                  <X size={16} className="text-slate-500" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Tiêu đề tác vụ <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="VD: Làm bài tập toán..."
+                    value={createTaskTitle}
+                    onChange={e => setCreateTaskTitle(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 focus:border-[#FF7E21] focus:ring-2 focus:ring-[#FF7E21]/10 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Ngày làm <span className="text-red-500">*</span></label>
+                  <input
+                    type="date"
+                    value={createTaskDate}
+                    onChange={e => setCreateTaskDate(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 focus:border-[#FF7E21] focus:ring-2 focus:ring-[#FF7E21]/10 outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Bắt đầu (Tùy chọn)</label>
+                    <input
+                      type="time"
+                      value={createTaskStart}
+                      onChange={e => setCreateTaskStart(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 focus:border-[#FF7E21] focus:ring-2 focus:ring-[#FF7E21]/10 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Kết thúc (Tùy chọn)</label>
+                    <input
+                      type="time"
+                      value={createTaskEnd}
+                      onChange={e => setCreateTaskEnd(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 focus:border-[#FF7E21] focus:ring-2 focus:ring-[#FF7E21]/10 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-5">
+                <button
+                  onClick={() => setCreateTaskModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleCreateTask}
+                  disabled={creatingTask || !createTaskTitle.trim() || !createTaskDate}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition ${creatingTask || !createTaskTitle.trim() || !createTaskDate ? "bg-orange-300 cursor-not-allowed" : "bg-[#FF7E21] hover:bg-[#E05E00] cursor-pointer"}`}
+                >
+                  {creatingTask ? <span className="flex items-center justify-center gap-1"><LoaderCircle size={14} className="animate-spin" /> Đang tạo...</span> : "Thêm tác vụ"}
                 </button>
               </div>
             </motion.div>
