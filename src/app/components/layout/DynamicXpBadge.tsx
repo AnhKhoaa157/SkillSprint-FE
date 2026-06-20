@@ -22,66 +22,73 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
         onClick={onClick}
         title={title}
         aria-label={ariaLabel}
-        className={`group relative inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-black motion-reduce:transition-none bg-black border-[1.5px] border-yellow-500 overflow-visible ${
+        className={`group relative inline-flex items-center justify-center p-[2.5px] rounded-full overflow-visible shadow-[0_4px_20px_rgba(234,88,12,0.3)] motion-reduce:transition-none ${
           onClick ? "transition-all duration-300 hover:scale-[1.05] active:scale-95 cursor-pointer motion-reduce:hover:scale-100" : ""
         } ${className}`}
       >
         <style>
           {`
-            @keyframes fireFramePulse {
-              0%, 100% { box-shadow: 0 0 10px #ea580c, inset 0 0 5px #ea580c; border-color: #f59e0b; }
-              50% { box-shadow: 0 0 20px #facc15, inset 0 0 10px #facc15; border-color: #fef08a; }
+            @keyframes divineFireSpin {
+              100% { transform: translate(-50%, -50%) rotate(360deg); }
             }
-            .god-tier-frame {
-              animation: fireFramePulse 1.2s infinite alternate;
+            @keyframes divinePulse {
+              0%, 100% { box-shadow: inset 0 0 10px rgba(234,88,12,0.1); background-color: #ffffff; }
+              50% { box-shadow: inset 0 0 20px rgba(250,204,21,0.3); background-color: #fffbeb; }
             }
-            .god-tier-spark {
+            .divine-fire-bg {
               position: absolute;
-              width: 2px;
-              height: 2px;
+              top: 50%;
+              left: 50%;
+              width: 250%;
+              height: 400%;
+              background: conic-gradient(from 0deg, #ef4444, #f97316, #facc15, #f97316, #ef4444);
+              transform: translate(-50%, -50%) rotate(0deg);
+              animation: divineFireSpin 2.5s linear infinite;
+              z-index: 0;
+            }
+            .divine-spark {
+              position: absolute;
+              width: 3px;
+              height: 3px;
               background: #facc15;
               border-radius: 50%;
-              box-shadow: 0 0 4px #ea580c, 0 0 8px #ef4444;
-              animation: sparkRise 1s linear infinite;
+              box-shadow: 0 0 6px #ea580c;
+              animation: sparkRiseLight 1.2s linear infinite;
               z-index: 20;
             }
-            @keyframes sparkRise {
+            @keyframes sparkRiseLight {
               0% { transform: translateY(0px) scale(1); opacity: 1; }
               100% { transform: translateY(-15px) scale(0); opacity: 0; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .divine-fire-bg {
+                animation: none !important;
+                background: #f97316 !important;
+              }
             }
           `}
         </style>
         
-        {/* Frame Animation */}
-        <div className="absolute inset-0 rounded-xl god-tier-frame pointer-events-none" />
-
-        {/* Flames at Bottom Left */}
-        <div className="absolute -left-3 -bottom-3 pointer-events-none z-0" style={{ animation: 'fireFramePulse 0.8s infinite alternate' }}>
-          <Flame className="absolute -left-1 -bottom-1 w-8 h-8 fill-red-600 text-red-500 blur-[4px] opacity-70" />
-          <Flame className="absolute left-0 bottom-0 w-7 h-7 fill-orange-500 text-orange-400 blur-[2px] opacity-90" />
-          <Flame className="absolute left-1 bottom-1 w-5 h-5 fill-yellow-400 text-yellow-200" />
+        {/* Animated Fire Border (Clipped) */}
+        <div className="absolute inset-0 rounded-full overflow-hidden z-0">
+          <div className="divine-fire-bg" />
         </div>
-
-        {/* Flames at Top Right */}
-        <div className="absolute -right-3 -top-3 pointer-events-none z-0" style={{ animation: 'fireFramePulse 0.9s infinite alternate-reverse', transform: 'scale(-1, -1)' }}>
-          <Flame className="absolute -left-1 -bottom-1 w-8 h-8 fill-red-600 text-red-500 blur-[4px] opacity-70" />
-          <Flame className="absolute left-0 bottom-0 w-7 h-7 fill-orange-500 text-orange-400 blur-[2px] opacity-90" />
-          <Flame className="absolute left-1 bottom-1 w-5 h-5 fill-yellow-400 text-yellow-200" />
+        
+        {/* Inner white background to hollow out the border */}
+        <div 
+          className="relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 w-full h-full" 
+          style={{ animation: 'divinePulse 1.5s infinite alternate' }}
+        >
+          <Flame size={16} className="shrink-0 fill-orange-500 text-red-600 drop-shadow-[0_2px_4px_rgba(234,88,12,0.4)]" />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 font-black tracking-tight drop-shadow-[0_1px_1px_rgba(255,255,255,1)]">
+            {points.toLocaleString("vi-VN")} <span className="text-[10px] uppercase font-black text-orange-600 tracking-normal drop-shadow-none">XP</span>
+          </span>
         </div>
 
         {/* Sparks */}
-        <div className="god-tier-spark" style={{ left: '25%', bottom: '-2px', animationDelay: '0.1s' }} />
-        <div className="god-tier-spark" style={{ left: '65%', bottom: '-2px', animationDelay: '0.6s' }} />
-        <div className="god-tier-spark" style={{ left: '85%', bottom: '-2px', animationDelay: '0.3s' }} />
-        <div className="god-tier-spark" style={{ left: '10%', top: '-2px', animationDelay: '0.8s' }} />
-
-        {/* Inner Content */}
-        <div className="relative z-10 flex items-center gap-1.5">
-          <Flame size={14} className="shrink-0 fill-yellow-400 text-yellow-200 drop-shadow-[0_0_8px_rgba(250,204,21,1)]" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-b from-yellow-100 via-yellow-400 to-orange-600 font-black tracking-tight drop-shadow-[0_0_2px_rgba(234,88,12,0.8)]">
-            {points.toLocaleString("vi-VN")} <span className="text-[10px] uppercase font-black text-yellow-500 tracking-normal drop-shadow-none">XP</span>
-          </span>
-        </div>
+        <div className="divine-spark" style={{ left: '20%', bottom: '2px', animationDelay: '0.1s' }} />
+        <div className="divine-spark" style={{ left: '50%', bottom: '2px', animationDelay: '0.7s' }} />
+        <div className="divine-spark" style={{ left: '80%', bottom: '2px', animationDelay: '0.4s' }} />
       </Component>
     );
   }
