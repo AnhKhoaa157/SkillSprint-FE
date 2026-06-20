@@ -1307,9 +1307,29 @@ function NotificationsTab() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [isClearingAll, setIsClearingAll] = useState(false);
 
+  const [expandedNotifs, setExpandedNotifs] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setExpandedNotifs((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const filteredNotifications = notifications.filter((notif) => {
     if (filter === "unread") return !notif.read;
     return true;
+  });
+
+  const sortedNotifications = [...filteredNotifications].sort((a, b) => {
+    const isSysA = ["SYSTEM_INFO", "SYSTEM_WARNING", "FEEDBACK_REPLIED"].includes(a.type) || a.type.startsWith("SYSTEM_");
+    const isSysB = ["SYSTEM_INFO", "SYSTEM_WARNING", "FEEDBACK_REPLIED"].includes(b.type) || b.type.startsWith("SYSTEM_");
+    if (isSysA && !isSysB) return -1;
+    if (!isSysA && isSysB) return 1;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
   const handleMarkAllRead = async () => {
@@ -1396,7 +1416,7 @@ function NotificationsTab() {
       </div>
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6">
         <AnimatePresence mode="popLayout">
-          {filteredNotifications.length === 0 ? (
+          {sortedNotifications.length === 0 ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="py-12 text-center">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 border border-slate-100 mb-4 shadow-sm"><Inbox size={24} className="stroke-[1.8]" /></div>
               <h3 className="text-base font-extrabold text-slate-800">Không có thông báo nào</h3>
@@ -1404,10 +1424,12 @@ function NotificationsTab() {
             </motion.div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {filteredNotifications.map((notif) => {
+              {sortedNotifications.map((notif) => {
                 const visuals = getNotifVisuals(notif.type);
+                const isExpanded = expandedNotifs.has(notif.notificationId);
+                const isLongText = notif.message && notif.message.length > 120;
                 return (
-                  <motion.div key={notif.notificationId} layoutId={notif.notificationId} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`flex items-start gap-4 p-5 transition-all relative ${!notif.read ? "bg-[#FFF7ED] hover:bg-[#FFF7ED]/80" : "hover:bg-slate-50/50"}`}>
+                  <motion.div key={notif.notificationId} layoutId={notif.notificationId} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => handleNotificationClick(notif)} className={`flex items-start gap-4 p-5 transition-all relative cursor-pointer ${!notif.read ? "bg-[#FFF7ED] hover:bg-[#FFF7ED]/80" : "hover:bg-slate-50/50"}`}>
                     {!notif.read && <div className="absolute top-0 left-0 w-1 h-full bg-[#FF7E21]" />}
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${visuals.bg}`}>{visuals.icon}</div>
                     <div className="flex-1 min-w-0">
@@ -1419,16 +1441,24 @@ function NotificationsTab() {
                       {notif.type === "SYSTEM_INFO" && <div className="text-[11px] font-bold text-blue-600 mb-1">Thông tin</div>}
                       {notif.type === "SYSTEM_WARNING" && <div className="text-[11px] font-bold text-red-600 mb-1">Cảnh báo</div>}
                       <h4 className={`text-sm font-extrabold leading-snug tracking-tight text-slate-800 ${!notif.read ? 'text-slate-900' : ''}`}>{notif.title}</h4>
-                      <p className="mt-1.5 text-xs leading-relaxed text-slate-500 font-medium">{notif.message}</p>
+                      <p className={`mt-1.5 text-xs leading-relaxed text-slate-500 font-medium ${isExpanded ? "" : "line-clamp-2"}`}>{notif.message}</p>
+                      {isLongText && (
+                        <button
+                          onClick={(e) => toggleExpand(e, notif.notificationId)}
+                          className="text-[#FF6B00] hover:text-[#E05E00] text-[11px] font-semibold mt-1 transition-colors"
+                        >
+                          {isExpanded ? "Thu gọn" : "Xem thêm"}
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {!notif.read && <button onClick={() => markAsRead(notif.notificationId)} className="p-2 rounded-lg border border-slate-200 bg-white hover:border-[#FF7E21] hover:text-[#FF7E21] text-slate-500 transition-colors shadow-sm cursor-pointer" title="Đánh dấu đã đọc"><CheckCircle2 size={14} /></button>}
+                      {!notif.read && <button onClick={(e) => { e.stopPropagation(); markAsRead(notif.notificationId); }} className="p-2 rounded-lg border border-slate-200 bg-white hover:border-[#FF7E21] hover:text-[#FF7E21] text-slate-500 transition-colors shadow-sm cursor-pointer" title="Đánh dấu đã đọc"><CheckCircle2 size={14} /></button>}
                       {notif.workspaceId && !notif.type.startsWith("SYSTEM_") ? (
-                        <button onClick={() => handleNotificationClick(notif)} className="p-2 rounded-lg border border-slate-250 bg-white hover:border-[#FF7E21] hover:bg-orange-50/20 hover:text-[#E05E00] text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold">Truy cập <ArrowRight size={13} /></button>
+                        <div className="p-2 rounded-lg border border-slate-250 bg-white group-hover:border-[#FF7E21] group-hover:bg-orange-50/20 group-hover:text-[#E05E00] text-slate-700 transition shadow-sm flex items-center gap-1.5 text-xs font-bold">Truy cập <ArrowRight size={13} /></div>
                       ) : (notif.type === "TASK_REMINDER" || notif.type === "TASK_OVERDUE") ? (
-                        <button onClick={() => handleNotificationClick(notif)} className="p-2 rounded-lg border border-slate-250 bg-white hover:border-[#FF7E21] hover:bg-orange-50/20 hover:text-[#E05E00] text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold">Lịch học <ArrowRight size={13} /></button>
+                        <div className="p-2 rounded-lg border border-slate-250 bg-white group-hover:border-[#FF7E21] group-hover:bg-orange-50/20 group-hover:text-[#E05E00] text-slate-700 transition shadow-sm flex items-center gap-1.5 text-xs font-bold">Lịch học <ArrowRight size={13} /></div>
                       ) : (notif.type === "FEEDBACK_REPLIED") ? (
-                        <button onClick={() => handleNotificationClick(notif)} className="p-2 rounded-lg border border-slate-250 bg-white hover:border-violet-400 hover:bg-violet-50/40 hover:text-violet-700 text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold">Xem phản hồi <ArrowRight size={13} /></button>
+                        <div className="p-2 rounded-lg border border-slate-250 bg-white hover:border-violet-400 hover:bg-violet-50/40 hover:text-violet-700 text-slate-700 transition shadow-sm cursor-pointer flex items-center gap-1.5 text-xs font-bold">Xem phản hồi <ArrowRight size={13} /></div>
                       ) : null}
                     </div>
                   </motion.div>
