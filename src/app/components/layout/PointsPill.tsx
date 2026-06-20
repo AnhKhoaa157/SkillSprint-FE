@@ -48,7 +48,7 @@ export function PointsPill() {
   let iconClass = "shrink-0";
 
   if (isUltimate) {
-    className += " xp-ultimate-bg text-white border-transparent shadow-[0_0_15px_rgba(255,107,0,0.5)]";
+    className += " xp-ultimate-bg relative z-10 text-white border-transparent";
     iconClass += " fill-white animate-pulse";
   } else if (isMaster) {
     className += " bg-gradient-to-r from-cyan-50 to-blue-50 text-blue-700 border border-blue-200 shadow-md";
@@ -71,17 +71,35 @@ export function PointsPill() {
               50% { background-position: 100% 50%; }
               100% { background-position: 0% 50%; }
             }
+            @keyframes fireFlicker {
+              0%   { background-position: 0% 50%;   opacity: 0.7; filter: blur(5px); transform: scale(1.02); }
+              50%  { background-position: 100% 50%; opacity: 1.0; filter: blur(7px); transform: scale(1.06); }
+              100% { background-position: 0% 50%;   opacity: 0.8; filter: blur(4px); transform: scale(1.04); }
+            }
             .xp-ultimate-bg {
               background: linear-gradient(90deg, #FF6B00, #F59E0B, #EC4899, #FF6B00);
               background-size: 300% 300%;
               animation: gradientShimmerXP 3s ease infinite;
             }
+            .xp-ultimate-bg::after {
+              content: '';
+              position: absolute;
+              inset: -2px;
+              border-radius: 9999px;
+              background: linear-gradient(90deg, #ff1100, #ff8c00, #ff1100, #facc15, #ff8c00);
+              background-size: 400% 400%;
+              z-index: -1;
+              animation: fireFlicker 1.2s infinite alternate;
+              pointer-events: none;
+            }
             @media (prefers-reduced-motion: reduce) {
-              .xp-ultimate-bg {
-                animation: none;
+              .xp-ultimate-bg, .xp-ultimate-bg::after {
+                animation: none !important;
+                transform: none !important;
+                filter: none !important;
               }
               .animate-pulse {
-                animation: none;
+                animation: none !important;
               }
             }
           `}
