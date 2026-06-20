@@ -179,18 +179,62 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
     );
   }
 
+  if (isMaster) {
+    const Component = onClick ? "button" : "div";
+    return (
+      <Component
+        type={onClick ? "button" : undefined}
+        onClick={onClick}
+        title={title}
+        aria-label={ariaLabel}
+        className={`group relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black motion-reduce:transition-none diamond-master-bg border border-indigo-300/50 ${
+          onClick ? "transition-all duration-300 hover:scale-[1.05] active:scale-95 cursor-pointer motion-reduce:hover:scale-100" : ""
+        } ${className}`}
+      >
+        <style>
+          {`
+            @keyframes shimmerDiamond {
+              0% { background-position: -200% center; }
+              100% { background-position: 200% center; }
+            }
+            .diamond-master-bg {
+              background: linear-gradient(
+                110deg, 
+                #a5b4fc 0%, 
+                #6366f1 30%, 
+                #e0e7ff 50%, 
+                #6366f1 70%, 
+                #4f46e5 100%
+              );
+              background-size: 250% auto;
+              animation: shimmerDiamond 3s linear infinite;
+              box-shadow: 
+                inset 0 2px 3px rgba(255, 255, 255, 0.8), 
+                inset 0 -2px 3px rgba(49, 46, 129, 0.6),
+                0 4px 10px rgba(99, 102, 241, 0.3);
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .diamond-master-bg {
+                animation: none !important;
+                background-size: auto !important;
+              }
+            }
+          `}
+        </style>
+        <Gem size={12} className="shrink-0 fill-indigo-200 text-white drop-shadow-[0_1px_1px_rgba(49,46,129,0.5)]" />
+        <span className="whitespace-nowrap text-white font-black tracking-tight drop-shadow-[0_1px_1px_rgba(49,46,129,0.8)]">
+          {points.toLocaleString("vi-VN")} <span className="text-[9px] uppercase font-bold text-indigo-100 tracking-normal">XP</span>
+        </span>
+      </Component>
+    );
+  }
+
   let baseClass = "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black shadow-sm motion-reduce:transition-none";
   let iconClass = "shrink-0";
   let xpTextClass = "text-[9px] uppercase font-bold tracking-normal";
   let IconElement = Zap;
 
-  if (isMaster) {
-    // Epic Tier: Soft Indigo, Diamond Gem icon
-    IconElement = Gem;
-    baseClass += " bg-indigo-50 border border-indigo-200/80 text-indigo-700 shadow-sm";
-    iconClass += " fill-indigo-200 text-indigo-600";
-    xpTextClass += " text-indigo-500/80";
-  } else if (isPro) {
+  if (isPro) {
     // Rare Tier: Soft Sky Blue, Star icon
     IconElement = Star;
     baseClass += " bg-sky-50 border border-sky-200/80 text-sky-700 shadow-sm";
