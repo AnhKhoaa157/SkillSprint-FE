@@ -152,6 +152,21 @@ export async function deleteMaterial(workspaceId: string, materialId: string): P
   }
 }
 
+/**
+ * Fetches the details of a specific material (including fileUrl).
+ */
+export async function getMaterialDetail(workspaceId: string, materialId: string): Promise<UploadedMaterialResponse> {
+  const res = await requestJson<UploadedMaterialResponse>(`/api/workspaces/${workspaceId}/materials/${materialId}`, {
+    method: "GET",
+  });
+
+  if (!res.data) {
+    throw new Error(res.message || "Failed to load material detail");
+  }
+
+  return res.data;
+}
+
 export default {
   createMaterialUploadUrl,
   confirmMaterialUpload,
@@ -159,4 +174,5 @@ export default {
   getMaterials,
   getMaterialProcessingJob,
   deleteMaterial,
+  getMaterialDetail,
 };
