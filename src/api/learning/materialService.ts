@@ -65,6 +65,8 @@ export type UploadedMaterialResponse = {
   fileType: FileType;
   fileSizeBytes: number | null;
   fileUrl: string;
+  viewUrl: string | null;
+  viewUrlExpiresAt: string | null;
   uploadStatus: UploadStatus;
   processingStatus: MaterialProcessingStatus;
   processingJob: MaterialProcessingJobResponse | null;
