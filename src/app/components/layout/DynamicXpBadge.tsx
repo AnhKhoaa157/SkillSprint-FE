@@ -22,29 +22,31 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
         onClick={onClick}
         title={title}
         aria-label={ariaLabel}
-        className={`group relative inline-flex items-center justify-center p-[2.5px] rounded-full overflow-visible shadow-[0_4px_20px_rgba(234,88,12,0.3)] motion-reduce:transition-none text-xs font-black ${
+        className={`group relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black motion-reduce:transition-none godtier-bg border border-red-400/50 ${
           onClick ? "transition-all duration-300 hover:scale-[1.05] active:scale-95 cursor-pointer motion-reduce:hover:scale-100" : ""
         } ${className}`}
       >
         <style>
           {`
-            @keyframes divineFireSpin {
-              100% { transform: translate(-50%, -50%) rotate(360deg); }
+            @keyframes shimmerFire {
+              0% { background-position: -200% center; }
+              100% { background-position: 200% center; }
             }
-            @keyframes divinePulse {
-              0%, 100% { box-shadow: inset 0 0 10px rgba(234,88,12,0.1); background-color: #ffffff; }
-              50% { box-shadow: inset 0 0 20px rgba(250,204,21,0.3); background-color: #fffbeb; }
-            }
-            .divine-fire-bg {
-              position: absolute;
-              top: 50%;
-              left: 50%;
-              width: 250%;
-              height: 400%;
-              background: conic-gradient(from 0deg, #ef4444, #f97316, #facc15, #f97316, #ef4444);
-              transform: translate(-50%, -50%) rotate(0deg);
-              animation: divineFireSpin 2.5s linear infinite;
-              z-index: 0;
+            .godtier-bg {
+              background: linear-gradient(
+                110deg,
+                #ef4444 0%,
+                #f97316 25%,
+                #facc15 50%,
+                #f97316 75%,
+                #ef4444 100%
+              );
+              background-size: 200% auto;
+              animation: shimmerFire 3s linear infinite;
+              box-shadow: 
+                inset 0 2px 3px rgba(255, 255, 255, 0.6), 
+                inset 0 -2px 3px rgba(153, 27, 27, 0.8),
+                0 4px 15px rgba(234, 88, 12, 0.4);
             }
             .divine-spark {
               position: absolute;
@@ -61,29 +63,18 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
               100% { transform: translateY(-15px) scale(0); opacity: 0; }
             }
             @media (prefers-reduced-motion: reduce) {
-              .divine-fire-bg {
+              .godtier-bg {
                 animation: none !important;
-                background: #f97316 !important;
+                background-size: auto !important;
               }
             }
           `}
         </style>
         
-        {/* Animated Fire Border (Clipped) */}
-        <div className="absolute inset-0 rounded-full overflow-hidden z-0">
-          <div className="divine-fire-bg" />
-        </div>
-        
-        {/* Inner white background to hollow out the border */}
-        <div 
-          className="relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 w-full h-full" 
-          style={{ animation: 'divinePulse 1.5s infinite alternate' }}
-        >
-          <Flame size={16} className="shrink-0 fill-orange-500 text-red-600 drop-shadow-[0_2px_4px_rgba(234,88,12,0.4)]" />
-          <span className="whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 font-black tracking-tight drop-shadow-[0_1px_1px_rgba(255,255,255,1)]">
-            {points.toLocaleString("vi-VN")} <span className="text-[10px] uppercase font-black text-orange-600 tracking-normal drop-shadow-none">XP</span>
-          </span>
-        </div>
+        <Flame size={12} className="shrink-0 fill-yellow-300 text-yellow-100 drop-shadow-[0_1px_2px_rgba(153,27,27,0.5)] z-10" />
+        <span className="whitespace-nowrap text-white font-black tracking-tight drop-shadow-[0_1px_2px_rgba(153,27,27,0.8)] z-10">
+          {points.toLocaleString("vi-VN")} <span className="text-[9px] uppercase font-bold text-yellow-200 tracking-normal">XP</span>
+        </span>
 
         {/* Sparks */}
         <div className="divine-spark" style={{ left: '20%', bottom: '2px', animationDelay: '0.1s' }} />
