@@ -163,11 +163,12 @@ type EisenhowerRawApiData = {
   quadrants: EisenhowerRawQuadrantItem[];
 };
 
-export async function getEisenhowerTasks(workspaceId: string): Promise<EisenhowerBoardResponse> {
-  const res = await requestJson<EisenhowerRawApiData>(
-    `/api/workspaces/${workspaceId}/eisenhower-tasks`,
-    { method: "GET" },
-  );
+export async function getEisenhowerTasks(workspaceId: string, date?: string): Promise<EisenhowerBoardResponse> {
+  const endpoint = date 
+    ? `/api/workspaces/${workspaceId}/calendar/eisenhower?date=${date}`
+    : `/api/workspaces/${workspaceId}/eisenhower-tasks`;
+
+  const res = await requestJson<EisenhowerRawApiData>(endpoint, { method: "GET" });
 
   const board: EisenhowerBoardResponse = { DO_NOW: [], SCHEDULE: [], DELAY_OR_DELEGATE: [], ELIMINATE: [] };
 

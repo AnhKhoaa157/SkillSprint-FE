@@ -140,3 +140,10 @@ export async function getAdminPayments(
   if (!res.data) throw new Error(res.message || "Không tải được danh sách thanh toán");
   return res.data;
 }
+
+export async function reconcilePayment(paymentId: string): Promise<void> {
+  const res = await requestJson<void>(`/api/admin/payments/${paymentId}/reconcile`, {
+    method: "POST"
+  });
+  if (res.code !== 200) throw new Error(res.message || "Đối soát thanh toán thất bại");
+}

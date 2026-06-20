@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
   CheckCircle2, ChevronDown, Circle,
-  Loader2, Plus, Sparkles, LayoutGrid,
+  Loader2, Plus, Sparkles, LayoutGrid, X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -136,6 +136,7 @@ export default function TaskMatrix() {
   const [draft,        setDraft]        = useState<Record<QuadrantKey, string>>({ DO_NOW: "", SCHEDULE: "", DELAY_OR_DELEGATE: "", ELIMINATE: "" });
   const [boardLoading, setBoardLoading] = useState(false);
   const [refreshKey,   setRefreshKey]   = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [activeMobileQuadrant, setActiveMobileQuadrant] = useState<QuadrantKey>("DO_NOW");
 
   useEffect(() => {
@@ -163,7 +164,7 @@ export default function TaskMatrix() {
       setBoardLoading(true);
       setBoard(emptyBoard());
       try {
-        const data = await getEisenhowerTasks(selectedWorkspaceId);
+        const data = await getEisenhowerTasks(selectedWorkspaceId, selectedDate || undefined);
         if (mounted) setBoard(boardFromResponse(data));
       } catch {
         if (mounted) { toast.error("Không thể tải ma trận công việc."); setBoard(emptyBoard()); }
@@ -173,7 +174,7 @@ export default function TaskMatrix() {
     };
     run();
     return () => { mounted = false; };
-  }, [selectedWorkspaceId, refreshKey]);
+  }, [selectedWorkspaceId, refreshKey, selectedDate]);
 
   async function toggleTask(quadrant: QuadrantKey, id: string) {
     const task = board[quadrant]?.find((t) => t.id === id);
@@ -234,6 +235,27 @@ export default function TaskMatrix() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="relative">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              disabled={boardLoading}
+              title="Lọc task theo ngày"
+              className="appearance-none pl-3 pr-8 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 text-[0.78rem] font-semibold cursor-pointer outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/15 transition disabled:opacity-50"
+              style={{ colorScheme: "light" }}
+            />
+            {selectedDate && (
+              <button
+                onClick={() => setSelectedDate("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-slate-100 text-slate-400 cursor-pointer"
+                title="Bỏ lọc ngày"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
           {!workspacesLoading && workspaces.length > 0 && (
             <div className="relative">
               <select
