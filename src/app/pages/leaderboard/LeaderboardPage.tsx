@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { getLeaderboard, getMeSummary, getMyPointEvents } from "../../../api/learning/pointService";
 import { getMe } from "../../../api/utilities/meService";
+import { DynamicXpBadge } from "../../components/layout/DynamicXpBadge";
 import type {
   LeaderboardEntry,
   LeaderboardPeriod,
@@ -200,10 +201,7 @@ function LeaderboardRow({
 
       {/* Score */}
       <div className="w-24 text-right shrink-0">
-        <span className="inline-flex items-center justify-end gap-1 font-extrabold text-[#FF6B00] text-xs bg-orange-50/70 px-2.5 py-1 rounded-xl border border-orange-200/50">
-          <Zap className="w-3 h-3 fill-orange-500/10 text-[#FF6B00] shrink-0" />
-          {entry.points.toLocaleString("vi-VN")} <span className="text-[9px] font-bold text-orange-400">XP</span>
-        </span>
+        <DynamicXpBadge points={entry.points} />
       </div>
     </motion.div>
   );
@@ -272,9 +270,9 @@ function StatsDashboard({
         <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-[#FF6B00] to-orange-500" />
         <div className="space-y-1 pl-2">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Kinh nghiệm</p>
-          <h3 className="text-2xl font-black text-slate-800 tracking-tight">
-            {points.toLocaleString("vi-VN")} <span className="text-xs font-bold text-slate-500">XP</span>
-          </h3>
+          <div className="text-2xl font-black text-slate-800 tracking-tight">
+            <DynamicXpBadge points={points} />
+          </div>
           <p className="text-[11px] text-slate-500 font-semibold">Tích lũy từ bài học & quiz</p>
         </div>
         <div className="w-11 h-11 rounded-2xl bg-orange-50/80 border border-orange-200/50 flex items-center justify-center shadow-sm text-[#FF6B00] shrink-0">
@@ -338,9 +336,8 @@ function LeaderboardPodium({
                   <span className="bg-[#FF6B00] text-white text-[7px] font-black px-1 rounded-sm shrink-0">BẠN</span>
                 )}
               </p>
-              <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] font-black text-[#FF6B00] bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5 mx-auto max-w-full">
-                <Zap className="w-2.5 h-2.5 fill-orange-500/10 text-[#FF6B00]" />
-                {second.points.toLocaleString("vi-VN")} XP
+              <div className="flex justify-center mt-0.5">
+                <DynamicXpBadge points={second.points} />
               </div>
             </div>
           </motion.div>
@@ -403,9 +400,8 @@ function LeaderboardPodium({
                   <span className="bg-[#FF6B00] text-white text-[7px] font-black px-1 rounded-sm shrink-0">BẠN</span>
                 )}
               </p>
-              <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] font-black text-[#FF6B00] bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5 mx-auto max-w-full shadow-sm">
-                <Zap className="w-2.5 h-2.5 fill-orange-500/10 text-[#FF6B00]" />
-                {first.points.toLocaleString("vi-VN")} XP
+              <div className="flex justify-center mt-0.5">
+                <DynamicXpBadge points={first.points} />
               </div>
             </div>
           </motion.div>
@@ -461,9 +457,8 @@ function LeaderboardPodium({
                   <span className="bg-[#FF6B00] text-white text-[7px] font-black px-1 rounded-sm shrink-0">BẠN</span>
                 )}
               </p>
-              <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] font-black text-[#FF6B00] bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5 mx-auto max-w-full">
-                <Zap className="w-2.5 h-2.5 fill-orange-500/10 text-[#FF6B00]" />
-                {third.points.toLocaleString("vi-VN")} XP
+              <div className="flex justify-center mt-0.5">
+                <DynamicXpBadge points={third.points} />
               </div>
             </div>
           </motion.div>
@@ -887,10 +882,7 @@ export default function LeaderboardPage() {
                 </span>
               </div>
               <div className="text-right">
-                <span className="inline-flex items-center gap-1 font-extrabold text-[#FF6B00] text-xs bg-orange-50/70 px-2.5 py-1 rounded-xl border border-orange-200/50">
-                  <Zap className="w-3 h-3 fill-orange-500/10 text-[#FF6B00] shrink-0" />
-                  {pointsFor(period, summary).toLocaleString("vi-VN")} <span className="text-[9px] font-bold text-orange-400">XP</span>
-                </span>
+                <DynamicXpBadge points={pointsFor(period, summary)} />
               </div>
             </div>
           </div>
