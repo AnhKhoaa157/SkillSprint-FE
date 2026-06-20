@@ -1,4 +1,4 @@
-import { Zap, Flame } from "lucide-react";
+import { Zap, Flame, Star, Gem, Crown } from "lucide-react";
 
 export interface DynamicXpBadgeProps {
   points: number;
@@ -77,7 +77,7 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
 
         {/* Inner Content */}
         <div className="relative z-10 flex items-center gap-1.5">
-          <Zap size={14} className="shrink-0 fill-yellow-400 text-yellow-200 drop-shadow-[0_0_8px_rgba(250,204,21,1)]" />
+          <Flame size={14} className="shrink-0 fill-yellow-400 text-yellow-200 drop-shadow-[0_0_8px_rgba(250,204,21,1)]" />
           <span className="text-transparent bg-clip-text bg-gradient-to-b from-yellow-100 via-yellow-400 to-orange-600 font-black tracking-tight drop-shadow-[0_0_2px_rgba(234,88,12,0.8)]">
             {points.toLocaleString("vi-VN")} <span className="text-[10px] uppercase font-black text-yellow-500 tracking-normal drop-shadow-none">XP</span>
           </span>
@@ -128,7 +128,7 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
             }
           `}
         </style>
-        <Zap size={12} className="shrink-0 fill-amber-700 text-amber-900 drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]" />
+        <Crown size={12} className="shrink-0 fill-amber-300 text-amber-700 drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]" />
         <span className="text-amber-900 font-black tracking-tight drop-shadow-[0_1px_0_rgba(255,255,255,0.6)]">
           {points.toLocaleString("vi-VN")} <span className="text-[9px] uppercase font-bold text-amber-800/90 tracking-normal">XP</span>
         </span>
@@ -139,21 +139,25 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
   let baseClass = "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black shadow-sm motion-reduce:transition-none";
   let iconClass = "shrink-0";
   let xpTextClass = "text-[9px] uppercase font-bold tracking-normal";
+  let IconElement = Zap;
 
   if (isMaster) {
-    // Epic Tier: Purple / Fuchsia
-    baseClass += " bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border border-fuchsia-400/50 shadow-[0_4px_10px_rgba(192,38,211,0.25)]";
-    iconClass += " fill-fuchsia-300 text-fuchsia-100 drop-shadow-sm";
-    xpTextClass += " text-white/80";
+    // Epic Tier: Soft Indigo, Diamond Gem icon
+    IconElement = Gem;
+    baseClass += " bg-indigo-50 border border-indigo-200/80 text-indigo-700 shadow-sm";
+    iconClass += " fill-indigo-200 text-indigo-600";
+    xpTextClass += " text-indigo-500/80";
   } else if (isPro) {
-    // Rare Tier: Emerald / Teal
-    baseClass += " bg-gradient-to-r from-emerald-500 to-teal-500 text-white border border-teal-300/50 shadow-[0_2px_8px_rgba(20,184,166,0.25)]";
-    iconClass += " fill-teal-200 text-teal-50 drop-shadow-sm";
-    xpTextClass += " text-white/80";
+    // Rare Tier: Soft Sky Blue, Star icon
+    IconElement = Star;
+    baseClass += " bg-sky-50 border border-sky-200/80 text-sky-700 shadow-sm";
+    iconClass += " fill-sky-200 text-sky-600";
+    xpTextClass += " text-sky-500/80";
   } else {
-    // Common Tier: Brand Orange (Light)
+    // Common Tier: Soft Orange, Zap icon
+    IconElement = Zap;
     baseClass += " bg-orange-50 border border-[#FF6B00]/25 text-[#FF6B00]";
-    iconClass += " fill-[#FF6B00]";
+    iconClass += " fill-orange-200 text-[#FF6B00]";
     xpTextClass += " text-[#FF6B00]/80";
   }
 
@@ -171,7 +175,7 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
       aria-label={ariaLabel}
       className={`${baseClass} ${className}`}
     >
-      <Zap size={12} className={iconClass} />
+      <IconElement size={12} className={iconClass} />
       <span>
         {points.toLocaleString("vi-VN")} <span className={xpTextClass}>XP</span>
       </span>
