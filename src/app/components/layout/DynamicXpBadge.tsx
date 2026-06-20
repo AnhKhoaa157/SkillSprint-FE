@@ -21,42 +21,44 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
         onClick={onClick}
         title={title}
         aria-label={ariaLabel}
-        className={`group relative inline-flex items-center justify-center p-[1.5px] rounded-full overflow-hidden shadow-[0_0_12px_rgba(255,107,0,0.2)] motion-reduce:transition-none ${
+        className={`group relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black motion-reduce:transition-none gold-ultimate-bg border border-amber-300/50 ${
           onClick ? "transition-all duration-300 hover:scale-[1.05] active:scale-95 cursor-pointer motion-reduce:hover:scale-100" : ""
         } ${className}`}
       >
         <style>
           {`
-            @keyframes plasma-spin {
-              100% { transform: translate(-50%, -50%) rotate(360deg); }
+            @keyframes shimmerGold {
+              0% { background-position: -200% center; }
+              100% { background-position: 200% center; }
             }
-            .plasma-border {
-              position: absolute;
-              top: 50%;
-              left: 50%;
-              width: 250%;
-              height: 400%;
-              background: conic-gradient(from 90deg, transparent 0%, transparent 60%, #ff8c00 80%, #fff 100%);
-              transform: translate(-50%, -50%) rotate(0deg);
-              animation: plasma-spin 2.5s linear infinite;
-              z-index: 0;
+            .gold-ultimate-bg {
+              background: linear-gradient(
+                110deg, 
+                #FBBF24 0%, 
+                #F59E0B 30%, 
+                #FEF08A 50%, 
+                #F59E0B 70%, 
+                #D97706 100%
+              );
+              background-size: 250% auto;
+              animation: shimmerGold 3s linear infinite;
+              box-shadow: 
+                inset 0 2px 3px rgba(255, 255, 255, 0.7), 
+                inset 0 -2px 3px rgba(180, 83, 9, 0.6),
+                0 4px 12px rgba(245, 158, 11, 0.35);
             }
             @media (prefers-reduced-motion: reduce) {
-              .plasma-border {
+              .gold-ultimate-bg {
                 animation: none !important;
-                background: #ff8c00 !important;
+                background-size: auto !important;
               }
             }
           `}
         </style>
-        <div className="plasma-border" />
-        
-        <div className="relative z-10 flex items-center gap-1.5 bg-[#0F172A] rounded-full px-2.5 py-1 w-full h-full group-hover:bg-[#1E293B] transition-colors">
-          <Zap size={12} className="shrink-0 fill-orange-500/20 text-orange-400 drop-shadow-[0_0_5px_rgba(255,135,0,0.8)]" />
-          <span className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-300 via-orange-400 to-amber-300">
-            {points.toLocaleString("vi-VN")} <span className="text-[9px] font-bold text-orange-500/80 uppercase">XP</span>
-          </span>
-        </div>
+        <Zap size={12} className="shrink-0 fill-amber-700 text-amber-900 drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]" />
+        <span className="text-amber-900 font-black tracking-tight drop-shadow-[0_1px_0_rgba(255,255,255,0.6)]">
+          {points.toLocaleString("vi-VN")} <span className="text-[9px] uppercase font-bold text-amber-800/90 tracking-normal">XP</span>
+        </span>
       </Component>
     );
   }
