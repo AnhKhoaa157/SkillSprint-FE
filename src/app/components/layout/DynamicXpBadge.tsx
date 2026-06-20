@@ -80,7 +80,7 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
           style={{ animation: 'divinePulse 1.5s infinite alternate' }}
         >
           <Flame size={16} className="shrink-0 fill-orange-500 text-red-600 drop-shadow-[0_2px_4px_rgba(234,88,12,0.4)]" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 font-black tracking-tight drop-shadow-[0_1px_1px_rgba(255,255,255,1)]">
+          <span className="whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 font-black tracking-tight drop-shadow-[0_1px_1px_rgba(255,255,255,1)]">
             {points.toLocaleString("vi-VN")} <span className="text-[10px] uppercase font-black text-orange-600 tracking-normal drop-shadow-none">XP</span>
           </span>
         </div>
@@ -136,7 +136,7 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
           `}
         </style>
         <Crown size={12} className="shrink-0 fill-amber-300 text-amber-700 drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]" />
-        <span className="text-amber-900 font-black tracking-tight drop-shadow-[0_1px_0_rgba(255,255,255,0.6)]">
+        <span className="whitespace-nowrap text-amber-900 font-black tracking-tight drop-shadow-[0_1px_0_rgba(255,255,255,0.6)]">
           {points.toLocaleString("vi-VN")} <span className="text-[9px] uppercase font-bold text-amber-800/90 tracking-normal">XP</span>
         </span>
       </Component>
@@ -183,7 +183,7 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
       className={`${baseClass} ${className}`}
     >
       <IconElement size={12} className={iconClass} />
-      <span>
+      <span className="whitespace-nowrap">
         {points.toLocaleString("vi-VN")} <span className={xpTextClass}>XP</span>
       </span>
     </Component>
