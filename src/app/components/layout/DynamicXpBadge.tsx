@@ -193,9 +193,17 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
       >
         <style>
           {`
-            @keyframes shimmerDiamond {
-              0% { background-position: -200% center; }
-              100% { background-position: 200% center; }
+            @keyframes diamondBreathe {
+              0%, 100% { 
+                box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.8), inset 0 -2px 3px rgba(49, 46, 129, 0.6), 0 4px 8px rgba(99, 102, 241, 0.3); 
+              }
+              50% { 
+                box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.9), inset 0 -2px 3px rgba(49, 46, 129, 0.8), 0 4px 18px rgba(99, 102, 241, 0.7); 
+              }
+            }
+            @keyframes diamondGlint {
+              0%, 85%, 100% { filter: brightness(1) drop-shadow(0 1px 1px rgba(49,46,129,0.5)); transform: scale(1) rotate(0deg); }
+              92% { filter: brightness(1.5) drop-shadow(0 0 8px rgba(255,255,255,0.9)); transform: scale(1.15) rotate(5deg); }
             }
             .diamond-master-bg {
               background: linear-gradient(
@@ -206,22 +214,19 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
                 #6366f1 70%, 
                 #4f46e5 100%
               );
-              background-size: 250% auto;
-              animation: shimmerDiamond 3s linear infinite;
-              box-shadow: 
-                inset 0 2px 3px rgba(255, 255, 255, 0.8), 
-                inset 0 -2px 3px rgba(49, 46, 129, 0.6),
-                0 4px 10px rgba(99, 102, 241, 0.3);
+              animation: diamondBreathe 2.5s ease-in-out infinite;
+            }
+            .diamond-icon {
+              animation: diamondGlint 3.5s ease-in-out infinite;
             }
             @media (prefers-reduced-motion: reduce) {
-              .diamond-master-bg {
+              .diamond-master-bg, .diamond-icon {
                 animation: none !important;
-                background-size: auto !important;
               }
             }
           `}
         </style>
-        <Gem size={12} className="shrink-0 fill-indigo-200 text-white drop-shadow-[0_1px_1px_rgba(49,46,129,0.5)]" />
+        <Gem size={12} className="diamond-icon shrink-0 fill-indigo-200 text-white drop-shadow-[0_1px_1px_rgba(49,46,129,0.5)]" />
         <span className="whitespace-nowrap text-white font-black tracking-tight drop-shadow-[0_1px_1px_rgba(49,46,129,0.8)]">
           {points.toLocaleString("vi-VN")} <span className="text-[9px] uppercase font-bold text-indigo-100 tracking-normal">XP</span>
         </span>
