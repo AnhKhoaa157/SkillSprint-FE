@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { DollarSign } from "lucide-react";
+import { DollarSign, RefreshCw, X, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
-import { getAdminPayments, type PaymentTransactionResponse } from "../../../../../api/admin/adminDashboardService";
+import { getAdminPayments, reconcilePayment, type PaymentTransactionResponse } from "../../../../../api/admin/adminDashboardService";
+import { AnimatePresence } from "motion/react";
 
 /* ─────────────────────────────────────────────────────────
    ── PAYMENTS view ──
@@ -30,7 +31,7 @@ const PLAN_LABEL: Record<string, string> = {
   PREMIUM: "Premium",
 };
 
-const PAYMENTS_COLS = "2fr 1.2fr 1.2fr 1.4fr 1.3fr 1.5fr";
+const PAYMENTS_COLS = "2fr 1.2fr 1.2fr 1.4fr 1.3fr 1.5fr 1fr";
 
 export function PaymentsView() {
   const [payments, setPayments] = useState<PaymentTransactionResponse[]>([]);
@@ -38,7 +39,24 @@ export function PaymentsView() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [reconcilingId, setReconcilingId] = useState<string | null>(null);
+  const [reconcileModalOpen, setReconcileModalOpen] = useState<PaymentTransactionResponse | null>(null);
   const PAGE_SIZE = 10;
+
+  async function handleReconcile() {
+    if (!reconcileModalOpen) return;
+    setReconcilingId(reconcileModalOpen.paymentId);
+    try {
+      await reconcilePayment(reconcileModalOpen.paymentId);
+      toast.success("Đối soát giao dịch thành công");
+      setReconcileModalOpen(null);
+      void load(page);
+    } catch (err: any) {
+      toast.error(err?.message || "Đối soát thất bại");
+    } finally {
+      setReconcilingId(null);
+    }
+  }
 
   async function load(p: number) {
     setLoading(true);
@@ -102,7 +120,7 @@ export function PaymentsView() {
         {/* Column headers */}
         <div className="grid px-6 py-2.5"
           style={{ gridTemplateColumns: PAYMENTS_COLS, borderBottom: "1px solid #F3F4F6", background: "#FAFAFA" }}>
-          {["Mã giao dịch", "Gói", "Số tiền", "Trạng thái", "Thanh toán lúc", "Tạo lúc"].map(col => (
+          {["Mã giao dịch", "Gói", "Số tiền", "Trạng thái", "Thanh toán lúc", "Tạo lúc", "Hành động"].map(col => (
             <span key={col}
               style={{ color: "#9CA3AF", fontSize: "0.68rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               {col}
@@ -170,6 +188,19 @@ export function PaymentsView() {
 
               {/* Created at */}
               <span style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>{formatDate(tx.createdAt)}</span>
+
+              {/* Action */}
+              <div>
+                {(tx.status === "FAILED" || tx.status === "PENDING") && (
+                  <button
+                    onClick={() => setReconcileModalOpen(tx)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-[0.98] bg-orange-50 text-[#FF6B00] border border-orange-200 hover:bg-orange-100 cursor-pointer"
+                  >
+                    <RefreshCw size={12} />
+                    Đối soát
+                  </button>
+                )}
+              </div>
             </motion.div>
           );
         })}
@@ -206,6 +237,60 @@ export function PaymentsView() {
           </div>
         </div>
       </motion.div>
+
+      {/* Reconcile Modal */}
+      <AnimatePresence>
+        {reconcileModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(15,23,42,0.45)", backdropFilter: "blur(4px)" }}
+            onClick={() => setReconcileModalOpen(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 6 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <RefreshCw size={18} className="text-[#FF6B00]" />
+                  <h3 className="text-base font-black text-slate-800">Đối soát thanh toán</h3>
+                </div>
+                <button onClick={() => setReconcileModalOpen(null)} className="p-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer">
+                  <X size={16} className="text-slate-500" />
+                </button>
+              </div>
+
+              <p className="text-sm text-slate-600 mb-6">
+                Bạn có chắc chắn muốn đối soát lại giao dịch <strong>{reconcileModalOpen.paymentId.slice(0, 8).toUpperCase()}…</strong> không?
+                Hệ thống sẽ thử kiểm tra trạng thái trên gateway một lần nữa.
+              </p>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setReconcileModalOpen(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleReconcile}
+                  disabled={reconcilingId !== null}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition ${reconcilingId !== null ? "bg-orange-300 cursor-not-allowed" : "bg-[#FF6B00] hover:bg-[#E05E00] cursor-pointer"}`}
+                >
+                  {reconcilingId !== null ? <span className="flex items-center justify-center gap-1"><LoaderCircle size={14} className="animate-spin" /> Đang xử lý...</span> : "Đồng ý đối soát"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
