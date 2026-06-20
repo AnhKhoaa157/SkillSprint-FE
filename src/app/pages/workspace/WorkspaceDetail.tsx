@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import LearningStructureDisplay from "../../components/workspace/LearningStructureDisplay";
-import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Trash2, AlertTriangle, LoaderCircle, SlidersHorizontal, Settings, Check, Calendar, RefreshCw, type LucideIcon } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, Bot, FileUp, Sparkles, Layers3, CheckCircle2, Clock3, FileText, BrainCircuit, UploadCloud, MoveDown, ShieldCheck, X, Trash2, AlertTriangle, LoaderCircle, SlidersHorizontal, Settings, Check, Calendar, RefreshCw, ExternalLink, type LucideIcon } from "lucide-react";
 import EmptyState from "../../components/ui/EmptyState";
 import { getStoredAuthSession } from "../../../api/auth/authService";
 import AiTutorChat from "./AiTutorChat";
@@ -23,6 +23,7 @@ type UploadFile = {
   status: "idle" | "processing" | "done";
   jobStatus?: string;
   materialId?: string;
+  fileUrl?: string;
 };
 
 type LearningStructureTopic = {
@@ -75,6 +76,7 @@ function normalizeMaterialUploadFile(material: MaterialUploadedMaterialResponse,
     status: isProcessingState(jobStatus) ? "processing" : String(jobStatus || "").toUpperCase() === "COMPLETED" ? "done" : "idle",
     jobStatus: jobStatus || undefined,
     materialId: String(material.materialId || fallbackIndex),
+    fileUrl: material.fileUrl,
   };
 }
 
@@ -312,6 +314,24 @@ export default function WorkspaceDetail() {
   const [workspaceTutorOpen, setWorkspaceTutorOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UploadFile | null>(null);
   const [deletingMaterial, setDeletingMaterial] = useState(false);
+  const [viewingMaterialId, setViewingMaterialId] = useState<string | null>(null);
+
+  async function handleViewMaterial(file: UploadFile) {
+    if (!id || !file.materialId) return;
+    try {
+      setViewingMaterialId(file.materialId);
+      const detail = await materialService.getMaterialDetail(id, file.materialId);
+      if (detail.viewUrl) {
+        window.open(detail.viewUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        toast.error('Không thể lấy đường dẫn tài liệu');
+      }
+    } catch {
+      toast.error('Lỗi khi mở tài liệu');
+    } finally {
+      setViewingMaterialId(null);
+    }
+  }
 
   // Each workspace holds a single main material — block new uploads while one exists.
   const hasMaterial = files.length > 0;
@@ -563,6 +583,11 @@ export default function WorkspaceDetail() {
                           {f.jobStatus === 'COMPLETED' || f.status === 'done' ? 'Hoàn thành' : 'Đang xử lý'}
                         </span>
                       </div>
+                      {(f.jobStatus === 'COMPLETED' || f.status === 'done') && f.fileUrl && (
+                        <button type="button" onClick={() => handleViewMaterial(f)} disabled={viewingMaterialId === f.materialId} title="Xem tài liệu" aria-label="Xem tài liệu" className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-[#FF6B00] hover:border-orange-200 hover:bg-orange-50 disabled:opacity-50 disabled:cursor-wait transition">
+                          {viewingMaterialId === f.materialId ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />}
+                        </button>
+                      )}
                       <button type="button" onClick={() => handleDeleteClick(f)} title="Xóa tài liệu" aria-label="Xóa tài liệu" className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50 transition"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   ))}
