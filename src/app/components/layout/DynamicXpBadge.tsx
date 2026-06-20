@@ -63,18 +63,25 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
     );
   }
 
-  let baseClass = "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold shadow-sm motion-reduce:transition-none";
+  let baseClass = "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black shadow-sm motion-reduce:transition-none";
   let iconClass = "shrink-0";
+  let xpTextClass = "text-[9px] uppercase font-bold tracking-normal";
 
   if (isMaster) {
-    baseClass += " bg-gradient-to-r from-cyan-50 to-blue-50 text-blue-700 border border-blue-200 shadow-md";
-    iconClass += " fill-blue-500";
+    // Epic Tier: Purple / Fuchsia
+    baseClass += " bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border border-fuchsia-400/50 shadow-[0_4px_10px_rgba(192,38,211,0.25)]";
+    iconClass += " fill-fuchsia-300 text-fuchsia-100 drop-shadow-sm";
+    xpTextClass += " text-white/80";
   } else if (isPro) {
-    baseClass += " bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 border border-amber-300";
-    iconClass += " fill-amber-500";
+    // Rare Tier: Emerald / Teal
+    baseClass += " bg-gradient-to-r from-emerald-500 to-teal-500 text-white border border-teal-300/50 shadow-[0_2px_8px_rgba(20,184,166,0.25)]";
+    iconClass += " fill-teal-200 text-teal-50 drop-shadow-sm";
+    xpTextClass += " text-white/80";
   } else {
+    // Common Tier: Brand Orange (Light)
     baseClass += " bg-orange-50 border border-[#FF6B00]/25 text-[#FF6B00]";
     iconClass += " fill-[#FF6B00]";
+    xpTextClass += " text-[#FF6B00]/80";
   }
 
   if (onClick) {
@@ -92,7 +99,9 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
       className={`${baseClass} ${className}`}
     >
       <Zap size={12} className={iconClass} />
-      {points.toLocaleString("vi-VN")} XP
+      <span>
+        {points.toLocaleString("vi-VN")} <span className={xpTextClass}>XP</span>
+      </span>
     </Component>
   );
 }
