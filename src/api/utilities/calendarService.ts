@@ -137,10 +137,15 @@ export type EisenhowerTask = {
 
 export type EisenhowerBoardResponse = Record<EisenhowerQuadrant, EisenhowerTask[]>;
 
-export type CreateEisenhowerTaskRequest = {
+export type CreateCalendarTaskRequest = {
   title: string;
-  quadrant: EisenhowerQuadrant;
-  status: string;
+  description?: string;
+  quadrant?: EisenhowerQuadrant;
+  status?: string;
+  taskDate?: string;
+  startTime?: string;
+  endTime?: string;
+  durationMinutes?: number;
 };
 
 export type UpdateTaskStatusRequest = {
@@ -176,7 +181,7 @@ export async function getEisenhowerTasks(workspaceId: string): Promise<Eisenhowe
   return board;
 }
 
-export async function createCalendarTask(workspaceId: string, body: CreateEisenhowerTaskRequest): Promise<CalendarTaskResponse> {
+export async function createCalendarTask(workspaceId: string, body: CreateCalendarTaskRequest): Promise<CalendarTaskResponse> {
   const res = await requestJson<CalendarTaskResponse>(
     `/api/workspaces/${workspaceId}/calendar/tasks`,
     { method: "POST", body: JSON.stringify(body) },
