@@ -22,7 +22,7 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
         onClick={onClick}
         title={title}
         aria-label={ariaLabel}
-        className={`group relative inline-flex items-center justify-center p-[2.5px] rounded-full overflow-visible shadow-[0_4px_20px_rgba(234,88,12,0.3)] motion-reduce:transition-none ${
+        className={`group relative inline-flex items-center justify-center p-[2.5px] rounded-full overflow-visible shadow-[0_4px_20px_rgba(234,88,12,0.3)] motion-reduce:transition-none text-xs font-black ${
           onClick ? "transition-all duration-300 hover:scale-[1.05] active:scale-95 cursor-pointer motion-reduce:hover:scale-100" : ""
         } ${className}`}
       >

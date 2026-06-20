@@ -371,7 +371,7 @@ function LeaderboardPodium({
             transition={{ duration: 0.35 }}
             className="flex flex-col items-center w-full"
           >
-            <div className="relative mb-3 group -translate-y-3">
+            <div className="relative mb-3 group">
               <div className="absolute inset-0 rounded-full bg-amber-400 blur-md opacity-25 animate-pulse" />
               <motion.div
                 animate={{ y: [0, -3, 0], rotate: [0, -2, 2, 0] }}
@@ -393,7 +393,7 @@ function LeaderboardPodium({
               </div>
             </div>
 
-            <div className="px-1.5 w-full bg-white/95 rounded-2xl p-2 shadow-md border border-amber-100/50 mb-3 z-10 -mt-2">
+            <div className="px-1.5 w-full bg-white/95 rounded-2xl p-2 shadow-md border border-amber-100/50 mb-3 z-10">
               <p className="font-extrabold text-slate-800 text-xs truncate w-full flex items-center justify-center gap-0.5">
                 {first.fullName}
                 {first.userId === myUserId && (
