@@ -25,6 +25,17 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [activeCategory, setActiveCategory] = useState<"all" | "learning" | "tasks" | "system">("all");
   const [isClearingAll, setIsClearingAll] = useState(false);
+  const [expandedNotifs, setExpandedNotifs] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setExpandedNotifs((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // Filter list by status & category
   const filteredNotifications = notifications.filter((notif) => {
@@ -42,6 +53,14 @@ export default function NotificationsPage() {
       return ["SYSTEM_INFO", "SYSTEM_WARNING", "FEEDBACK_REPLIED"].includes(notif.type) || notif.type.startsWith("SYSTEM_");
     }
     return true;
+  });
+
+  const sortedNotifications = [...filteredNotifications].sort((a, b) => {
+    const isSysA = ["SYSTEM_INFO", "SYSTEM_WARNING", "FEEDBACK_REPLIED"].includes(a.type) || a.type.startsWith("SYSTEM_");
+    const isSysB = ["SYSTEM_INFO", "SYSTEM_WARNING", "FEEDBACK_REPLIED"].includes(b.type) || b.type.startsWith("SYSTEM_");
+    if (isSysA && !isSysB) return -1;
+    if (!isSysA && isSysB) return 1;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
   const handleMarkAllRead = async () => {
@@ -280,7 +299,7 @@ export default function NotificationsPage() {
       {/* Floating Cards List */}
       <div className="flex flex-col gap-3 mb-6">
         <AnimatePresence mode="popLayout">
-          {filteredNotifications.length === 0 ? (
+          {sortedNotifications.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.99 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -298,8 +317,10 @@ export default function NotificationsPage() {
               </p>
             </motion.div>
           ) : (
-            filteredNotifications.map((notif) => {
+            sortedNotifications.map((notif) => {
               const visuals = getNotifVisuals(notif.type);
+              const isExpanded = expandedNotifs.has(notif.notificationId);
+              const isLongText = notif.message && notif.message.length > 120;
               return (
                 <motion.div
                   key={notif.notificationId}
@@ -343,9 +364,17 @@ export default function NotificationsPage() {
                     }`}>
                       {notif.title}
                     </h4>
-                    <p className="mt-1 text-[12px] text-slate-500 leading-relaxed font-normal">
+                    <p className={`mt-1 text-[12px] text-slate-500 leading-relaxed font-normal ${isExpanded ? "" : "line-clamp-2"}`}>
                       {notif.message}
                     </p>
+                    {isLongText && (
+                      <button
+                        onClick={(e) => toggleExpand(e, notif.notificationId)}
+                        className="text-[#FF6B00] hover:text-[#E05E00] text-[11px] font-semibold mt-1.5 transition-colors"
+                      >
+                        {isExpanded ? "Thu gọn" : "Xem thêm"}
+                      </button>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0 self-center">
