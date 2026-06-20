@@ -25,6 +25,7 @@ import {
 } from "../../../../../api/admin/adminPointService";
 import { Input } from "../../../../components/ui/input";
 import { Button } from "../../../../components/ui/button";
+import { DynamicXpBadge } from "../../../../components/layout/DynamicXpBadge";
 import { PERIOD_LABEL, formatDate } from "./pointPresentation";
 
 const PERIODS: AdminLeaderboardPeriod[] = ["WEEKLY", "MONTHLY", "ALL_TIME"];
@@ -414,10 +415,7 @@ export default function AdminLeaderboardPage() {
                     </div>
                     <p className="text-slate-400 font-semibold text-xs truncate max-w-[200px] mt-0.5">{entry.email}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:hidden">
-                      <span className="inline-flex items-center gap-1 rounded-lg border border-orange-100 bg-orange-50/70 px-2 py-1 text-[10px] font-black text-[#FF6B00]">
-                        <Zap size={10.5} className="fill-orange-500/10" />
-                        {entry.points.toLocaleString("vi-VN")} XP
-                      </span>
+                      <DynamicXpBadge points={entry.points} className="scale-[0.85] origin-left" />
                       {entry.streakDays > 0 && (
                         <span className="inline-flex items-center gap-1 rounded-lg border border-orange-100 bg-orange-50/60 px-2 py-1 text-[10px] font-bold text-orange-600">
                           <Flame size={10.5} className="fill-orange-400 text-orange-500" />
@@ -434,10 +432,7 @@ export default function AdminLeaderboardPage() {
 
                 {/* XP Column */}
                 <div className="w-28 text-right shrink-0 sm:block hidden">
-                  <span className="inline-flex items-center gap-1 font-extrabold text-[#FF6B00] text-xs bg-orange-50/70 px-3.5 py-1.5 rounded-xl border border-orange-100/50 shadow-sm shadow-orange-50/40">
-                    <Zap size={11.5} className="fill-orange-500/10 text-[#FF6B00]" />
-                    {entry.points.toLocaleString("vi-VN")} <span className="text-[9px] font-bold text-orange-400">XP</span>
-                  </span>
+                  <DynamicXpBadge points={entry.points} />
                 </div>
 
                 {/* Streak Column */}
