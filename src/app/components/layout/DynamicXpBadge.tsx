@@ -22,7 +22,7 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
         onClick={onClick}
         title={title}
         aria-label={ariaLabel}
-        className={`group relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black motion-reduce:transition-none godtier-bg border border-red-400/50 ${
+        className={`group relative z-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black motion-reduce:transition-none godtier-bg border border-red-400/50 ${
           onClick ? "transition-all duration-300 hover:scale-[1.05] active:scale-95 cursor-pointer motion-reduce:hover:scale-100" : ""
         } ${className}`}
       >
@@ -48,38 +48,83 @@ export function DynamicXpBadge({ points, className = "", onClick, title, "aria-l
                 inset 0 -2px 3px rgba(153, 27, 27, 0.8),
                 0 4px 15px rgba(234, 88, 12, 0.4);
             }
+            @keyframes divineAuraPulse {
+              0%, 100% { transform: scale(1); opacity: 0.5; }
+              50% { transform: scale(1.15); opacity: 0.85; }
+            }
+            .godtier-aura {
+              position: absolute;
+              inset: -2px;
+              border-radius: 9999px;
+              background: linear-gradient(90deg, #ef4444, #f97316, #facc15);
+              filter: blur(10px);
+              opacity: 0.6;
+              animation: divineAuraPulse 2s ease-in-out infinite;
+              z-index: -1;
+            }
+            @keyframes glassSweep {
+              0% { transform: translateX(-150%) skewX(-25deg); }
+              20%, 100% { transform: translateX(250%) skewX(-25deg); }
+            }
+            .godtier-sweep {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 30%;
+              height: 100%;
+              background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+              animation: glassSweep 3s infinite;
+              pointer-events: none;
+            }
+            @keyframes flameFlicker {
+              0%, 100% { transform: scale(1) rotate(-2deg); filter: brightness(1); }
+              50% { transform: scale(1.15) rotate(2deg); filter: brightness(1.3); }
+            }
+            .godtier-flame {
+              animation: flameFlicker 0.6s ease-in-out infinite alternate;
+            }
             .divine-spark {
               position: absolute;
-              width: 3px;
-              height: 3px;
               background: #facc15;
               border-radius: 50%;
-              box-shadow: 0 0 6px #ea580c;
-              animation: sparkRiseLight 1.2s linear infinite;
+              box-shadow: 0 0 8px #ea580c, 0 0 12px #facc15;
+              animation: sparkRiseLight 1s linear infinite;
               z-index: 20;
             }
             @keyframes sparkRiseLight {
               0% { transform: translateY(0px) scale(1); opacity: 1; }
-              100% { transform: translateY(-15px) scale(0); opacity: 0; }
+              100% { transform: translateY(-20px) scale(0); opacity: 0; }
             }
             @media (prefers-reduced-motion: reduce) {
-              .godtier-bg {
+              .godtier-bg, .godtier-aura, .godtier-sweep, .godtier-flame, .divine-spark {
                 animation: none !important;
-                background-size: auto !important;
+              }
+              .godtier-sweep, .divine-spark {
+                display: none !important;
               }
             }
           `}
         </style>
         
-        <Flame size={12} className="shrink-0 fill-yellow-300 text-yellow-100 drop-shadow-[0_1px_2px_rgba(153,27,27,0.5)] z-10" />
-        <span className="whitespace-nowrap text-white font-black tracking-tight drop-shadow-[0_1px_2px_rgba(153,27,27,0.8)] z-10">
+        {/* Aura */}
+        <div className="godtier-aura pointer-events-none" />
+
+        {/* Sweep */}
+        <div className="absolute inset-0 overflow-hidden rounded-full z-[5] pointer-events-none">
+          <div className="godtier-sweep" />
+        </div>
+
+        <Flame size={12} className="godtier-flame shrink-0 fill-yellow-300 text-yellow-100 drop-shadow-[0_1px_2px_rgba(153,27,27,0.5)] z-10" />
+        <span className="whitespace-nowrap text-white font-black tracking-tight drop-shadow-[0_1px_2px_rgba(153,27,27,0.8)] z-10 relative">
           {points.toLocaleString("vi-VN")} <span className="text-[9px] uppercase font-bold text-yellow-200 tracking-normal">XP</span>
         </span>
 
         {/* Sparks */}
-        <div className="divine-spark" style={{ left: '20%', bottom: '2px', animationDelay: '0.1s' }} />
-        <div className="divine-spark" style={{ left: '50%', bottom: '2px', animationDelay: '0.7s' }} />
-        <div className="divine-spark" style={{ left: '80%', bottom: '2px', animationDelay: '0.4s' }} />
+        <div className="divine-spark w-[3px] h-[3px]" style={{ left: '15%', bottom: '0px', animationDelay: '0.1s', animationDuration: '1.2s' }} />
+        <div className="divine-spark w-[4px] h-[4px]" style={{ left: '35%', bottom: '-2px', animationDelay: '0.5s', animationDuration: '0.9s' }} />
+        <div className="divine-spark w-[2px] h-[2px]" style={{ left: '50%', bottom: '2px', animationDelay: '0.8s', animationDuration: '1.5s' }} />
+        <div className="divine-spark w-[3px] h-[3px]" style={{ left: '70%', bottom: '-1px', animationDelay: '0.3s', animationDuration: '1.1s' }} />
+        <div className="divine-spark w-[4px] h-[4px]" style={{ left: '85%', bottom: '1px', animationDelay: '0.9s', animationDuration: '1s' }} />
       </Component>
     );
   }
