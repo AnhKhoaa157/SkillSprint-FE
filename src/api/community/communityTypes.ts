@@ -4,19 +4,18 @@ export type CommentStatus = "VISIBLE" | "PENDING_MODERATION" | "HIDDEN";
 export interface CommunityPostUser {
   userId: string;
   fullName: string;
-  avatarUrl?: string;
+  avatarObjectKey?: string;
 }
 
 export interface CommunityPost {
   postId: string;
-  user: CommunityPostUser;
+  author: CommunityPostUser;
   content: string;
   hashtags: string[];
   status: PostStatus;
   likeCount: number;
   commentCount: number;
-  reportCount: number;
-  isLikedByMe?: boolean;
+  likedByMe?: boolean;
   createdAt: string;
   updatedAt: string;
 }
