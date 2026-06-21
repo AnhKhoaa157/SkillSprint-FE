@@ -204,70 +204,72 @@ export default function CommunityFeed() {
         </aside>
 
         <main className="w-full max-w-[590px] shrink-0 space-y-4 pb-20 sm:w-[590px] xl:max-w-[680px] xl:w-[680px]">
-          <div className="rounded-2xl bg-white p-3 shadow-sm border border-slate-200/60">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex gap-1 rounded-2xl bg-slate-100 p-1 min-w-[140px]">
-                {FEED_TABS.map(tab => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-extrabold transition ${
-                        isActive
-                          ? "bg-white text-[#FF6B00] shadow-sm"
-                          : "text-slate-500 hover:bg-white/70 hover:text-slate-800"
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span className="hidden sm:inline">{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+          <CreatePostBox onPostCreated={() => fetchPosts(0, hashtagFilter, searchFilter, true)} />
 
-              <form onSubmit={handleSearchSubmit} className="relative flex min-w-0 flex-1 items-center gap-2 md:max-w-xs">
-                <Search className="absolute left-3 h-4 w-4 text-slate-400" />
-                <Input
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Tìm kiếm bài viết hoặc #hashtag"
-                  className="h-10 rounded-full border-slate-200 bg-slate-50 pl-9 pr-10 text-sm focus-visible:ring-[#FF6B00]"
-                />
-                {(hashtagFilter || searchFilter) && (
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-1">
+            <div className="flex gap-1">
+              {FEED_TABS.map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
                   <button
+                    key={tab.id}
                     type="button"
-                    title="Xóa lọc"
-                    onClick={() => {
-                      setSearchInput("");
-                      setHashtagFilter("");
-                      setSearchFilter("");
-                    }}
-                    className="absolute right-2 flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex min-h-9 items-center justify-center gap-2 rounded-lg px-3 text-sm font-bold transition ${
+                      isActive
+                        ? "bg-slate-200/80 text-[#FF6B00]"
+                        : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-800"
+                    }`}
                   >
-                    <X className="h-4 w-4" />
+                    <Icon className="h-4 w-4" />
+                    <span className="hidden sm:inline">{tab.label}</span>
                   </button>
-                )}
-              </form>
+                );
+              })}
             </div>
 
-            {hashtagFilter && (
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00]">
-                <Hash className="h-3.5 w-3.5" />
-                Đang xem #{hashtagFilter}
-              </div>
-            )}
-            {searchFilter && (
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00]">
-                <Search className="h-3.5 w-3.5" />
-                Kết quả tìm kiếm cho "{searchFilter}"
-              </div>
-            )}
+            <form onSubmit={handleSearchSubmit} className="relative flex min-w-0 flex-1 items-center gap-2 md:max-w-xs">
+              <Search className="absolute left-3 h-4 w-4 text-slate-400" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Tìm kiếm bài viết hoặc #hashtag"
+                className="h-9 rounded-full border-slate-200/60 bg-white shadow-sm pl-9 pr-10 text-[13px] focus-visible:ring-[#FF6B00]"
+              />
+              {(hashtagFilter || searchFilter) && (
+                <button
+                  type="button"
+                  title="Xóa lọc"
+                  onClick={() => {
+                    setSearchInput("");
+                    setHashtagFilter("");
+                    setSearchFilter("");
+                  }}
+                  className="absolute right-2 flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </form>
           </div>
 
-          <CreatePostBox onPostCreated={() => fetchPosts(0, hashtagFilter, searchFilter, true)} />
+          {(hashtagFilter || searchFilter) && (
+            <div className="flex flex-wrap gap-2 px-1">
+              {hashtagFilter && (
+                <div className="inline-flex items-center gap-2 rounded-full border border-orange-200/60 bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00]">
+                  <Hash className="h-3.5 w-3.5" />
+                  Đang xem #{hashtagFilter}
+                </div>
+              )}
+              {searchFilter && (
+                <div className="inline-flex items-center gap-2 rounded-full border border-orange-200/60 bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00]">
+                  <Search className="h-3.5 w-3.5" />
+                  Kết quả tìm kiếm cho "{searchFilter}"
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-col gap-4">
             {visiblePosts.map(post => (
