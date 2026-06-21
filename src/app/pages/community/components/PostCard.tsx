@@ -30,11 +30,13 @@ export function PostCard({ post, onPostUpdated }: PostCardProps) {
     });
 
     try {
+      let updatedServerPost;
       if (isCurrentlyLiked) {
-        await communityService.unlikePost(post.postId);
+        updatedServerPost = await communityService.unlikePost(post.postId);
       } else {
-        await communityService.likePost(post.postId);
+        updatedServerPost = await communityService.likePost(post.postId);
       }
+      onPostUpdated(updatedServerPost);
     } catch (err: any) {
       onPostUpdated({
         ...post,

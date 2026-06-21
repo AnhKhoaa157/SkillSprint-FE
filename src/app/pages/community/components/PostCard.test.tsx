@@ -65,7 +65,11 @@ describe("PostCard", () => {
   });
 
   it("should call likePost api and optimistic update when liking", async () => {
-    vi.mocked(communityService.likePost).mockResolvedValueOnce();
+    vi.mocked(communityService.likePost).mockResolvedValueOnce({
+      ...mockPost,
+      likedByMe: true,
+      likeCount: 6
+    });
 
     render(<PostCard post={mockPost} onPostUpdated={mockOnPostUpdated} />);
 
@@ -81,7 +85,11 @@ describe("PostCard", () => {
   });
 
   it("should call unlikePost api and optimistic update when unliking", async () => {
-    vi.mocked(communityService.unlikePost).mockResolvedValueOnce();
+    vi.mocked(communityService.unlikePost).mockResolvedValueOnce({
+      ...mockPost,
+      likedByMe: false,
+      likeCount: 5
+    });
 
     const likedPost = { ...mockPost, likedByMe: true, likeCount: 6 };
     render(<PostCard post={likedPost} onPostUpdated={mockOnPostUpdated} />);
