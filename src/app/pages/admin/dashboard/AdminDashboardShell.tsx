@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, X, Layers, ServerCog, Megaphone, BarChart3 } from "lucide-react";
+import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminHealth from "../sections/health";
@@ -12,6 +12,7 @@ import PaymentsView from "../sections/payments";
 import SubscriptionPlansView from "../sections/subscriptionPlans";
 import AdminSystemSection from "../sections/system/AdminSystemSection";
 import AdminLeaderboard from "../sections/leaderboard";
+import AdminCommunityModeration from "../sections/community";
 import healthService from "../../../../api/system/healthService";
 
 function toCsv(rows: Record<string, string | number>[]) {
@@ -71,7 +72,7 @@ function AdminNavAvatar({ avatarUrl, fullName }: { avatarUrl?: string; fullName?
 }
 
 export default function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions" | "system" | "leaderboard">("financials");
+  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions" | "system" | "leaderboard" | "community">("financials");
   const [, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<{ fullName?: string; roles?: string[]; avatarUrl?: string } | null>(null);
@@ -88,6 +89,7 @@ export default function AdminDashboard() {
     { id: "payments",      label: "Quản lý thanh toán",  icon: DollarSign  },
     { id: "subscriptions", label: "Gói dịch vụ",         icon: Layers      },
     { id: "feedback",      label: "Feedback người dùng", icon: MessageSquare },
+    { id: "community",     label: "Kiểm duyệt cộng đồng", icon: ShieldAlert },
     { id: "system",        label: "Hệ thống & Cảnh báo", icon: ServerCog   },
   ] as const;
 
@@ -115,6 +117,7 @@ export default function AdminDashboard() {
     payments:      { title: "Quản lý thanh toán",  sub: "Lịch sử giao dịch · Phân tích thanh toán" },
     subscriptions: { title: "Gói dịch vụ",         sub: "Quản lý subscription plans · Tính năng · Nhật ký" },
     feedback:      { title: "Feedback người dùng", sub: "Xem và quản lý phản hồi từ người dùng" },
+    community:     { title: "Kiểm duyệt cộng đồng", sub: "Duyệt bài viết · Bình luận · Report · Từ khóa cấm" },
     system:        { title: "Hệ thống & Cảnh báo", sub: "Bảo trì hệ thống · Thông báo chung" },
   };
   const current = headerLabels[activeNav];
@@ -402,6 +405,7 @@ export default function AdminDashboard() {
           {activeNav === "payments" && <PaymentsView />}
           {activeNav === "subscriptions" && <SubscriptionPlansView />}
           {activeNav === "feedback" && <AdminFeedback isDashboard={true} />}
+          {activeNav === "community" && <AdminCommunityModeration isDashboard={true} />}
           {activeNav === "system" && (
             <AdminSystemSection />
           )}

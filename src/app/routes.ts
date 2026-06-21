@@ -18,6 +18,7 @@ import AdminUserDetail from "./pages/admin/userDetail";
 import AdminUserPointHistory from "./pages/admin/sections/leaderboard/AdminUserPointHistoryPage";
 import AdminProfile from "./pages/admin/profile";
 import AdminFeedback from "./pages/admin/sections/feedback";
+import AdminCommunityModeration from "./pages/admin/sections/community";
 import PostUpgradeDashboard from "./pages/core/PostUpgrade";
 import FeaturesLanding from "./pages/public/Features";
 import PricingPage from "./pages/public/PricingPage";
@@ -69,6 +70,7 @@ export const routeRegistry = {
     userPoints: "users/:id/points",
     health: "health",
     feedback: "feedback",
+    communityModeration: "community/moderation",
   },
   app: {
     root: "/app",
@@ -134,6 +136,7 @@ export const router = createBrowserRouter([
           { path: adminRoutes.userPoints, Component: AdminUserPointHistory },
           { path: adminRoutes.health, Component: AdminHealth },
           { path: adminRoutes.feedback, Component: AdminFeedback },
+          { path: adminRoutes.communityModeration, Component: AdminCommunityModeration },
         ],
       },
       { path: publicRoutes.course, Component: CoursePlayer },
