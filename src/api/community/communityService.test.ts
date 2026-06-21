@@ -33,7 +33,7 @@ describe("communityService", () => {
       const mockResponse = { data: { content: [], last: true } };
       vi.mocked(skillSprintApiClient.get).mockResolvedValueOnce(mockResponse);
 
-      const result = await communityService.getPosts(1, 20, "react");
+      const result = await communityService.getPosts(1, 20, undefined, "react");
 
       expect(skillSprintApiClient.get).toHaveBeenCalledWith("/api/community/posts?page=1&size=20&hashtag=react");
       expect(result).toEqual(mockResponse.data);
@@ -101,7 +101,7 @@ describe("communityService", () => {
     it("should delete comment", async () => {
       vi.mocked(skillSprintApiClient.delete).mockResolvedValueOnce({ data: null });
       await communityService.deleteComment("post-1", "c1");
-      expect(skillSprintApiClient.delete).toHaveBeenCalledWith("/api/community/posts/post-1/comments/c1");
+      expect(skillSprintApiClient.delete).toHaveBeenCalledWith("/api/community/comments/c1");
     });
   });
 });
