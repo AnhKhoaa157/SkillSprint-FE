@@ -57,7 +57,6 @@ describe("CreatePostBox", () => {
       hashtags: ["react"],
       likeCount: 0,
       commentCount: 0,
-      reportCount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -95,7 +94,6 @@ describe("CreatePostBox", () => {
       hashtags: [],
       likeCount: 0,
       commentCount: 0,
-      reportCount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

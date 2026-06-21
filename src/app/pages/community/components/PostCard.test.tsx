@@ -42,14 +42,13 @@ vi.mock("./CommentSection", () => ({
 
 const mockPost = {
   postId: "p1",
-  user: { userId: "u1", fullName: "John Doe" },
+  author: { userId: "u1", fullName: "John Doe" },
   content: "This is a test post content",
   hashtags: ["test", "react"],
   status: "APPROVED" as const,
   likeCount: 5,
   commentCount: 2,
-  reportCount: 0,
-  isLikedByMe: false,
+  likedByMe: false,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -81,7 +80,7 @@ describe("PostCard", () => {
 
     expect(mockOnPostUpdated).toHaveBeenCalledWith({
       ...mockPost,
-      isLikedByMe: true,
+      likedByMe: true,
       likeCount: 6
     });
     expect(communityService.likePost).toHaveBeenCalledWith("p1");
@@ -90,7 +89,7 @@ describe("PostCard", () => {
   it("should call unlikePost api and optimistic update when unliking", async () => {
     vi.mocked(communityService.unlikePost).mockResolvedValueOnce();
     
-    const likedPost = { ...mockPost, isLikedByMe: true, likeCount: 6 };
+    const likedPost = { ...mockPost, likedByMe: true, likeCount: 6 };
     render(<PostCard post={likedPost} onPostUpdated={mockOnPostUpdated} />);
     
     const likeBtn = screen.getByText("6").closest("button");
@@ -100,7 +99,7 @@ describe("PostCard", () => {
 
     expect(mockOnPostUpdated).toHaveBeenCalledWith({
       ...likedPost,
-      isLikedByMe: false,
+      likedByMe: false,
       likeCount: 5
     });
     expect(communityService.unlikePost).toHaveBeenCalledWith("p1");
@@ -117,7 +116,7 @@ describe("PostCard", () => {
     // Initially optimistic update
     expect(mockOnPostUpdated).toHaveBeenNthCalledWith(1, {
       ...mockPost,
-      isLikedByMe: true,
+      likedByMe: true,
       likeCount: 6
     });
 
@@ -125,7 +124,7 @@ describe("PostCard", () => {
     await waitFor(() => {
       expect(mockOnPostUpdated).toHaveBeenNthCalledWith(2, {
         ...mockPost,
-        isLikedByMe: false,
+        likedByMe: false,
         likeCount: 5
       });
       expect(toast.error).toHaveBeenCalledWith("API failure");
