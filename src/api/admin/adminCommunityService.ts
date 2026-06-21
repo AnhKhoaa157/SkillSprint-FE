@@ -13,6 +13,11 @@ import type {
   UpdateContentReportStatusRequest,
   UpdatePostCommentStatusRequest,
   CreateBlacklistKeywordRequest,
+  AdminCommunityRoomParams,
+  CommunityRoomResponse,
+  CommunityChatMessageResponse,
+  UpdateCommunityRoomStatusRequest,
+  HideCommunityChatMessageRequest,
 } from "./adminCommunityTypes";
 
 const BASE_URL = "/api/admin/community";
@@ -123,6 +128,63 @@ export async function deleteAdminCommunityBlacklistKeyword(wordId: number): Prom
   await requestJson<void>(`${BASE_URL}/blacklist/${wordId}`, { method: "DELETE" });
 }
 
+export async function getAdminCommunityRooms(
+  params: AdminCommunityRoomParams = {},
+): Promise<AdminCommunityPageResponse<CommunityRoomResponse>> {
+  const query = new URLSearchParams();
+  appendPageParams(query, params.page, params.size);
+  if (params.status) query.set("status", params.status);
+  if (params.mode) query.set("mode", params.mode);
+  if (params.search?.trim()) query.set("search", params.search.trim());
+
+  return requireData(
+    await requestJson<AdminCommunityPageResponse<CommunityRoomResponse>>(`${BASE_URL}/rooms?${query.toString()}`),
+  );
+}
+
+export async function updateAdminCommunityRoomStatus(
+  roomId: string,
+  body: UpdateCommunityRoomStatusRequest,
+): Promise<CommunityRoomResponse> {
+  return requireData(
+    await requestJson<CommunityRoomResponse>(`${BASE_URL}/rooms/${encodeURIComponent(roomId)}/status`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+export async function getAdminCommunityRoomMessages(
+  roomId: string,
+  page: number = 0,
+  size: number = 30,
+): Promise<AdminCommunityPageResponse<CommunityChatMessageResponse>> {
+  const query = new URLSearchParams();
+  appendPageParams(query, page, size);
+
+  return requireData(
+    await requestJson<AdminCommunityPageResponse<CommunityChatMessageResponse>>(
+      `${BASE_URL}/rooms/${encodeURIComponent(roomId)}/messages?${query.toString()}`,
+    ),
+  );
+}
+
+export async function hideAdminCommunityRoomMessage(
+  roomId: string,
+  messageId: string,
+  body: HideCommunityChatMessageRequest,
+): Promise<CommunityChatMessageResponse> {
+  return requireData(
+    await requestJson<CommunityChatMessageResponse>(
+      `${BASE_URL}/rooms/${encodeURIComponent(roomId)}/messages/${encodeURIComponent(messageId)}/hide`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      },
+    ),
+  );
+}
+
 export const adminCommunityService = {
   getAdminCommunityPosts,
   getAdminCommunityComments,
@@ -133,6 +195,10 @@ export const adminCommunityService = {
   getAdminCommunityBlacklist,
   addAdminCommunityBlacklistKeyword,
   deleteAdminCommunityBlacklistKeyword,
+  getAdminCommunityRooms,
+  updateAdminCommunityRoomStatus,
+  getAdminCommunityRoomMessages,
+  hideAdminCommunityRoomMessage,
 };
 
 export default adminCommunityService;
