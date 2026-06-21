@@ -79,7 +79,7 @@ export function PostCard({ post, onPostUpdated }: PostCardProps) {
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <Avatar className="h-11 w-11 shrink-0 ring-2 ring-orange-50">
-              <AvatarImage src={post.author.avatarObjectKey} />
+              <AvatarImage src={post.author.avatarUrl ?? undefined} />
               <AvatarFallback className="bg-gradient-to-br from-orange-100 to-amber-100 text-sm font-black text-[#FF6B00]">
                 {post.author.fullName.charAt(0)}
               </AvatarFallback>
