@@ -23,13 +23,11 @@ vi.mock("sonner", () => ({
   }
 }));
 
-// Mock auth context to provide current user
 vi.mock("../../../../api/auth/authService", () => ({
   getStoredUserProfile: vi.fn(),
   getStoredAuthSession: vi.fn(),
 }));
 
-// Provide a mock user whose id is 'u1' to match some comment authors
 const mockCurrentUser = {
   email: "current@test.com",
   fullName: "Current User",
@@ -68,11 +66,13 @@ describe("CommentSection", () => {
     vi.clearAllMocks();
     vi.mocked(authService.getStoredUserProfile).mockReturnValue(mockCurrentUser as any);
     vi.mocked(authService.getStoredAuthSession).mockReturnValue(mockAuthSession as any);
-    
-    // Default mock for getComments
+
     vi.mocked(communityService.getComments).mockResolvedValue({
       items: mockComments,
-      page: 0, size: 10, totalItems: 2, first: true,
+      page: 0,
+      size: 10,
+      totalItems: 2,
+      first: true,
       last: true,
       totalPages: 1,
     });
@@ -80,15 +80,13 @@ describe("CommentSection", () => {
 
   it("should fetch and render comments on mount", async () => {
     render(<CommentSection postId="p1" initialCommentCount={2} />);
-    
-    // Shows loading initially, but resolves quickly
+
     await waitFor(() => {
       expect(communityService.getComments).toHaveBeenCalledWith("p1", 0, 10);
     });
 
     expect(screen.getByText("My own comment")).toBeInTheDocument();
     expect(screen.getByText("Current User")).toBeInTheDocument();
-    
     expect(screen.getByText("Someone else comment")).toBeInTheDocument();
     expect(screen.getByText("Other User")).toBeInTheDocument();
   });
@@ -105,10 +103,10 @@ describe("CommentSection", () => {
     });
 
     render(<CommentSection postId="p1" initialCommentCount={2} />);
-    
+
     const input = screen.getByPlaceholderText("Viết bình luận...");
     await userEvent.type(input, "A brand new comment");
-    
+
     const submitBtn = input.closest("form")?.querySelector<HTMLButtonElement>("button[type='submit']");
     if (!submitBtn) {
       throw new Error("Submit button not found");
@@ -135,11 +133,11 @@ describe("CommentSection", () => {
     });
 
     render(<CommentSection postId="p1" initialCommentCount={2} />);
-    
+
     const input = screen.getByPlaceholderText("Viết bình luận...");
     await userEvent.type(input, "Sensitive comment");
-    
-    const submitBtn = input.parentElement?.querySelector("button[type='submit']");
+
+    const submitBtn = input.closest("form")?.querySelector<HTMLButtonElement>("button[type='submit']");
     await userEvent.click(submitBtn!);
 
     await waitFor(() => {
@@ -147,22 +145,13 @@ describe("CommentSection", () => {
     });
   });
 
-  // Note: Testing DropdownMenu visibility in JSDOM often requires mocking ResizeObserver
-  // or pointer events, but we can test the delete function indirectly if we can trigger the menu item
   it("should show delete option only for user's own comments", async () => {
     render(<CommentSection postId="p1" initialCommentCount={2} />);
-    
+
     await waitFor(() => {
       expect(screen.getByText("My own comment")).toBeInTheDocument();
     });
 
-    // The MoreHorizontal button is rendered only for own comments.
-    // In our mock, u1 has 1 comment, u2 has 1.
-    // So there should be exactly 1 "More options" trigger button.
-    const moreBtns = screen.getAllByRole("button", { expanded: false }); 
-    // Wait, the dropdown triggers might just be buttons. Let's find it by the parent structure or class if needed.
-    // Alternatively, just count buttons.
-    // 1 submit button + 1 MoreHorizontal button = 2 buttons
     const buttons = document.querySelectorAll("button");
     expect(buttons.length).toBeGreaterThanOrEqual(2);
   });

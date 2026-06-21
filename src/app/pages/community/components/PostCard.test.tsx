@@ -6,7 +6,6 @@ import { PostCard } from "./PostCard";
 import communityService from "../../../../api/community/communityService";
 import { toast } from "sonner";
 
-// Mock dependencies
 vi.mock("../../../../api/community/communityService", () => ({
   default: {
     likePost: vi.fn(),
@@ -22,7 +21,6 @@ vi.mock("sonner", () => ({
   }
 }));
 
-// Mock window.prompt
 const originalPrompt = window.prompt;
 const originalScrollTo = window.scrollTo;
 beforeEach(() => {
@@ -35,7 +33,6 @@ afterAll(() => {
   window.scrollTo = originalScrollTo;
 });
 
-// Mock CommentSection to prevent it from rendering actual DOM which involves other requests
 vi.mock("./CommentSection", () => ({
   CommentSection: () => <div data-testid="mock-comment-section" />
 }));
@@ -58,25 +55,22 @@ describe("PostCard", () => {
 
   it("should render post information correctly", () => {
     render(<PostCard post={mockPost} onPostUpdated={mockOnPostUpdated} />);
-    
+
     expect(screen.getByText("John Doe")).toBeInTheDocument();
     expect(screen.getByText("This is a test post content")).toBeInTheDocument();
     expect(screen.getByText("#test")).toBeInTheDocument();
     expect(screen.getByText("#react")).toBeInTheDocument();
-    expect(screen.getByText("5")).toBeInTheDocument(); // Like count
-    expect(screen.getByText("2")).toBeInTheDocument(); // Comment count
+    expect(screen.getByText("5 lượt thích")).toBeInTheDocument();
+    expect(screen.getByText("2 bình luận")).toBeInTheDocument();
   });
 
   it("should call likePost api and optimistic update when liking", async () => {
     vi.mocked(communityService.likePost).mockResolvedValueOnce();
-    
+
     render(<PostCard post={mockPost} onPostUpdated={mockOnPostUpdated} />);
-    
-    // Find the Like button (it contains '5' from likeCount)
-    const likeBtn = screen.getByText("5").closest("button");
-    expect(likeBtn).not.toBeNull();
-    
-    await userEvent.click(likeBtn!);
+
+    const likeBtn = screen.getByRole("button", { name: /^Thích$/ });
+    await userEvent.click(likeBtn);
 
     expect(mockOnPostUpdated).toHaveBeenCalledWith({
       ...mockPost,
@@ -88,14 +82,12 @@ describe("PostCard", () => {
 
   it("should call unlikePost api and optimistic update when unliking", async () => {
     vi.mocked(communityService.unlikePost).mockResolvedValueOnce();
-    
+
     const likedPost = { ...mockPost, likedByMe: true, likeCount: 6 };
     render(<PostCard post={likedPost} onPostUpdated={mockOnPostUpdated} />);
-    
-    const likeBtn = screen.getByText("6").closest("button");
-    expect(likeBtn).not.toBeNull();
-    
-    await userEvent.click(likeBtn!);
+
+    const likeBtn = screen.getByRole("button", { name: /^Thích$/ });
+    await userEvent.click(likeBtn);
 
     expect(mockOnPostUpdated).toHaveBeenCalledWith({
       ...likedPost,
@@ -107,20 +99,18 @@ describe("PostCard", () => {
 
   it("should revert like on API failure", async () => {
     vi.mocked(communityService.likePost).mockRejectedValueOnce(new Error("API failure"));
-    
-    render(<PostCard post={mockPost} onPostUpdated={mockOnPostUpdated} />);
-    
-    const likeBtn = screen.getByText("5").closest("button");
-    await userEvent.click(likeBtn!);
 
-    // Initially optimistic update
+    render(<PostCard post={mockPost} onPostUpdated={mockOnPostUpdated} />);
+
+    const likeBtn = screen.getByRole("button", { name: /^Thích$/ });
+    await userEvent.click(likeBtn);
+
     expect(mockOnPostUpdated).toHaveBeenNthCalledWith(1, {
       ...mockPost,
       likedByMe: true,
       likeCount: 6
     });
 
-    // Revert after failure
     await waitFor(() => {
       expect(mockOnPostUpdated).toHaveBeenNthCalledWith(2, {
         ...mockPost,
@@ -136,7 +126,7 @@ describe("PostCard", () => {
     vi.mocked(communityService.reportPost).mockResolvedValueOnce();
 
     render(<PostCard post={mockPost} onPostUpdated={mockOnPostUpdated} />);
-    
+
     const reportBtn = screen.getByTitle("Báo cáo vi phạm");
     await userEvent.click(reportBtn);
 
@@ -150,19 +140,18 @@ describe("PostCard", () => {
 
   it("should toggle comment section visibility when clicking comments", async () => {
     render(<PostCard post={mockPost} onPostUpdated={mockOnPostUpdated} />);
-    
+
     expect(screen.queryByTestId("mock-comment-section")).not.toBeInTheDocument();
-    
-    const commentBtn = screen.getByText("2").closest("button");
-    await userEvent.click(commentBtn!);
+
+    const commentBtn = screen.getByRole("button", { name: /^Bình luận$/ });
+    await userEvent.click(commentBtn);
 
     await waitFor(() => {
       expect(screen.getByTestId("mock-comment-section")).toBeInTheDocument();
     });
-    
-    // Click again to hide
-    await userEvent.click(commentBtn!);
-    
+
+    await userEvent.click(commentBtn);
+
     await waitFor(() => {
       expect(screen.queryByTestId("mock-comment-section")).not.toBeInTheDocument();
     });
