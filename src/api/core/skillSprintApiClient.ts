@@ -62,11 +62,12 @@ skillSprintApiClient.interceptors.request.use((config) => {
 
 export function extractApiData<T>(response: AxiosResponse<ApiResponse<T>>): T {
   const payload = response.data;
-  if (payload?.data === null || payload?.data === undefined) {
-    throw new Error(payload?.message || "Empty response payload");
+  
+  if (payload && payload.success === false) {
+    throw new Error(payload.message || "Lỗi từ máy chủ");
   }
 
-  return payload.data;
+  return payload?.data as T;
 }
 
 export function getApiMessage<T>(response: AxiosResponse<ApiResponse<T>>): string {
