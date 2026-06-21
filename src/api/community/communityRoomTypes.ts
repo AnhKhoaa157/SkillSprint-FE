@@ -104,6 +104,7 @@ export interface MuteCommunityRoomMemberRequest {
 }
 
 export interface CreateCommunityPinRequest {
+  itemType: "ANNOUNCEMENT" | "DOCUMENT_URL" | "MESSAGE";
   title: string;
   content: string;
   linkUrl?: string;
