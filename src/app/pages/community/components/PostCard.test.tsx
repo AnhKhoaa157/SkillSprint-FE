@@ -11,23 +11,34 @@ vi.mock("../../../../api/community/communityService", () => ({
     likePost: vi.fn(),
     unlikePost: vi.fn(),
     reportPost: vi.fn(),
+    updatePost: vi.fn(),
+    deletePost: vi.fn(),
   }
+}));
+
+vi.mock("../../../../api/auth/authService", () => ({
+  getStoredUserId: vi.fn(() => "viewer"),
 }));
 
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
+    info: vi.fn(),
   }
 }));
 
 const originalPrompt = window.prompt;
 const originalScrollTo = window.scrollTo;
+let promptMock: ReturnType<typeof vi.fn<(message?: string, defaultValue?: string) => string | null>>;
+
 beforeEach(() => {
-  window.prompt = vi.fn();
+  promptMock = vi.fn<(message?: string, defaultValue?: string) => string | null>();
+  window.prompt = promptMock;
   window.scrollTo = vi.fn();
   vi.clearAllMocks();
 });
+
 afterAll(() => {
   window.prompt = originalPrompt;
   window.scrollTo = originalScrollTo;
@@ -130,7 +141,7 @@ describe("PostCard", () => {
   });
 
   it("should call report API when user provides a reason", async () => {
-    vi.mocked(window.prompt as any).mockReturnValueOnce("Spam");
+    promptMock.mockReturnValueOnce("Spam");
     vi.mocked(communityService.reportPost).mockResolvedValueOnce();
 
     render(<PostCard post={mockPost} onPostUpdated={mockOnPostUpdated} />);

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CreatePostBox } from "./CreatePostBox";
 import communityService from "../../../../api/community/communityService";
+import meService, { type MeResponse } from "../../../../api/utilities/meService";
 import { toast } from "sonner";
 
 vi.mock("../../../../api/community/communityService", () => ({
@@ -18,6 +19,12 @@ vi.mock("../../../../api/auth/authService", () => ({
   })),
 }));
 
+vi.mock("../../../../api/utilities/meService", () => ({
+  default: {
+    getMe: vi.fn(),
+  },
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -28,9 +35,20 @@ vi.mock("sonner", () => ({
 
 describe("CreatePostBox", () => {
   const mockOnPostCreated = vi.fn();
+  const mockMe: MeResponse = {
+    userId: "u1",
+    email: "test@example.com",
+    emailVerified: true,
+    fullName: "Test User",
+    avatarUrl: "",
+    timeZone: "Asia/Saigon",
+    status: "ACTIVE",
+    roles: ["LEARNER"],
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(meService.getMe).mockResolvedValue(mockMe);
   });
 
   it("should render input fields and disabled submit button initially", () => {
