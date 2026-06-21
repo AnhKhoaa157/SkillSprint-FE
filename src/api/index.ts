@@ -8,3 +8,4 @@ export * as learning from './learning';
 export * as billing from './billing';
 export * as system from './system';
 export * as utilities from './utilities';
+export * as community from './community';

@@ -50,6 +50,12 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     ],
   },
   {
+    label: "Kết nối",
+    items: [
+      { path: "/app/community", label: "Cộng đồng", icon: Users, match: "prefix" },
+    ],
+  },
+  {
     label: "Hệ thống",
     items: [
       { path: "/app/leaderboard", label: "Bảng xếp hạng", icon: Trophy },
