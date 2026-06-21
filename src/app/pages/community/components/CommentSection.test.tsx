@@ -71,15 +71,10 @@ describe("CommentSection", () => {
     
     // Default mock for getComments
     vi.mocked(communityService.getComments).mockResolvedValue({
-      content: mockComments,
-      pageable: { pageNumber: 0, pageSize: 10 },
+      items: mockComments,
+      page: 0, size: 10, totalItems: 2, first: true,
       last: true,
       totalPages: 1,
-      totalElements: 2,
-      first: true,
-      size: 10,
-      number: 0,
-      empty: false,
     });
   });
 

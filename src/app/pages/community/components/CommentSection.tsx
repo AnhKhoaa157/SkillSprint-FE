@@ -48,9 +48,9 @@ export function CommentSection({ postId, initialCommentCount }: CommentSectionPr
     try {
       const response = await communityService.getComments(postId, pageToLoad, 10);
       if (pageToLoad === 0) {
-        setComments(response.content);
+        setComments(response.items);
       } else {
-        setComments(prev => [...prev, ...response.content]);
+        setComments(prev => [...prev, ...response.items]);
       }
       setHasMore(!response.last);
       setPage(pageToLoad);

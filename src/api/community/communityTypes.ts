@@ -31,18 +31,13 @@ export interface PostComment {
 }
 
 export interface PageableResponse<T> {
-  content: T[];
-  pageable: {
-    pageNumber: number;
-    pageSize: number;
-  };
-  last: boolean;
-  totalPages: number;
-  totalElements: number;
-  first: boolean;
+  items: T[];
+  page: number;
   size: number;
-  number: number;
-  empty: boolean;
+  totalItems: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
 }
 
 export interface CreatePostRequest {

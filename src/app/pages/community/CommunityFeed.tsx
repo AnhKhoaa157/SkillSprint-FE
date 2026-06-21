@@ -30,9 +30,9 @@ export default function CommunityFeed() {
     try {
       const res = await communityService.getPosts(pageToFetch, PAGE_SIZE, hashtag);
       if (isNewSearch) {
-        setPosts(res.content);
+        setPosts(res.items);
       } else {
-        setPosts(prev => [...prev, ...res.content]);
+        setPosts(prev => [...prev, ...res.items]);
       }
       setHasMore(!res.last);
       setPage(pageToFetch);
