@@ -17,7 +17,7 @@ export function CreatePostBox({ onPostCreated }: CreatePostBoxProps) {
   const [hashtags, setHashtags] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const currentUser = getStoredUserProfile();
-  const avatarUrl = (currentUser as { avatarObjectKey?: string } | null)?.avatarObjectKey;
+  const avatarUrl = (currentUser as { avatarUrl?: string } | null)?.avatarUrl;
 
   const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();

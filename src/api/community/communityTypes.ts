@@ -5,6 +5,7 @@ export interface CommunityPostUser {
   userId: string;
   fullName: string;
   avatarObjectKey?: string;
+  avatarUrl?: string | null;
 }
 
 export interface CommunityPost {
