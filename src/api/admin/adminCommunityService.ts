@@ -18,6 +18,7 @@ import type {
   CommunityChatMessageResponse,
   UpdateCommunityRoomStatusRequest,
   HideCommunityChatMessageRequest,
+  CommunityPinResponse,
 } from "./adminCommunityTypes";
 
 const BASE_URL = "/api/admin/community";
@@ -185,6 +186,19 @@ export async function hideAdminCommunityRoomMessage(
   );
 }
 
+export async function getAdminCommunityRoomPins(roomId: string): Promise<CommunityPinResponse[]> {
+  return requireData(
+    await requestJson<CommunityPinResponse[]>(`${BASE_URL}/rooms/${encodeURIComponent(roomId)}/pins`),
+  );
+}
+
+export async function deleteAdminCommunityRoomPin(roomId: string, pinId: string): Promise<void> {
+  await requestJson<void>(
+    `${BASE_URL}/rooms/${encodeURIComponent(roomId)}/pins/${encodeURIComponent(pinId)}`,
+    { method: "DELETE" },
+  );
+}
+
 export const adminCommunityService = {
   getAdminCommunityPosts,
   getAdminCommunityComments,
@@ -199,6 +213,8 @@ export const adminCommunityService = {
   updateAdminCommunityRoomStatus,
   getAdminCommunityRoomMessages,
   hideAdminCommunityRoomMessage,
+  getAdminCommunityRoomPins,
+  deleteAdminCommunityRoomPin,
 };
 
 export default adminCommunityService;

@@ -1,20 +1,47 @@
 import React, { useState } from "react";
-import { Flag, Heart, MessageCircle, MoreHorizontal, Share2 } from "lucide-react";
+import { Flag, Heart, MessageCircle, MoreHorizontal, Pencil, Share2, Trash, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../components/ui/dropdown-menu";
 import type { CommunityPost } from "../../../../api/community/communityTypes";
 import communityService from "../../../../api/community/communityService";
+import { getStoredUserId } from "../../../../api/auth/authService";
 import { CommentSection } from "./CommentSection";
 
 interface PostCardProps {
   post: CommunityPost;
   onPostUpdated: (updatedPost: CommunityPost) => void;
+  onPostDeleted?: (postId: string) => void;
 }
 
-export function PostCard({ post, onPostUpdated }: PostCardProps) {
+/** Parse a free-text hashtag field ("#react springboot, ts") into clean tags. */
+function parseHashtags(input: string): string[] {
+  return Array.from(
+    new Set(
+      input
+        .split(/[\s,]+/)
+        .map((tag) => tag.replace(/^#+/, "").trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) {
   const [showComments, setShowComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
+  const [editHashtags, setEditHashtags] = useState((post.hashtags ?? []).join(" "));
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isAuthor = getStoredUserId() === post.author.userId;
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -58,6 +85,53 @@ export function PostCard({ post, onPostUpdated }: PostCardProps) {
       toast.success("Đã gửi báo cáo vi phạm. Quản trị viên sẽ xem xét.");
     } catch (err: any) {
       toast.error(err.message || "Không thể gửi báo cáo");
+    }
+  };
+
+  const startEditing = () => {
+    setEditContent(post.content);
+    setEditHashtags((post.hashtags ?? []).join(" "));
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    const content = editContent.trim();
+    if (!content) {
+      toast.error("Nội dung bài viết không được để trống");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const updated = await communityService.updatePost(post.postId, {
+        content,
+        hashtags: parseHashtags(editHashtags),
+      });
+      onPostUpdated(updated);
+      setIsEditing(false);
+      if (updated.status === "PENDING_MODERATION") {
+        toast.info("Bài viết đã chỉnh sửa chứa từ khóa nhạy cảm và đang chờ duyệt.");
+      } else {
+        toast.success("Đã cập nhật bài viết");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Không thể cập nhật bài viết");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm("Bạn có chắc muốn xóa bài viết này?")) return;
+
+    setIsDeleting(true);
+    try {
+      await communityService.deletePost(post.postId);
+      onPostDeleted?.(post.postId);
+      toast.success("Đã xóa bài viết");
+    } catch (err: any) {
+      toast.error(err.message || "Không thể xóa bài viết");
+      setIsDeleting(false);
     }
   };
 
@@ -108,34 +182,89 @@ export function PostCard({ post, onPostUpdated }: PostCardProps) {
             >
               <Flag className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              title="Tùy chọn"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
+            {isAuthor && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    title="Tùy chọn"
+                    disabled={isDeleting}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={startEditing}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Chỉnh sửa
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-red-600" onClick={handleDelete}>
+                    <Trash className="mr-2 h-4 w-4" />
+                    Xóa bài viết
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
-        <div className="space-y-4">
-          <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-slate-800">
-            {post.content}
-          </p>
-
-          {post.hashtags && post.hashtags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {post.hashtags.map((tag: string) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00] transition hover:bg-orange-100"
-                >
-                  #{tag}
-                </span>
-              ))}
+        {isEditing ? (
+          <div className="space-y-3">
+            <textarea
+              value={editContent}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditContent(e.target.value)}
+              rows={4}
+              className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-3 text-[15px] leading-relaxed text-slate-800 outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-2 focus:ring-orange-100"
+              placeholder="Bạn đang nghĩ gì?"
+              disabled={isSaving}
+            />
+            <input
+              value={editHashtags}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditHashtags(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-[#FF6B00] outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-2 focus:ring-orange-100"
+              placeholder="Hashtag (cách nhau bởi dấu cách), ví dụ: react springboot"
+              disabled={isSaving}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                disabled={isSaving}
+                className="flex h-9 items-center gap-1.5 rounded-xl px-4 text-sm font-extrabold text-slate-500 transition hover:bg-slate-100 disabled:opacity-50"
+              >
+                <X className="h-4 w-4" /> Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={isSaving || !editContent.trim()}
+                className="flex h-9 items-center gap-1.5 rounded-xl bg-[#FF6B00] px-4 text-sm font-extrabold text-white transition hover:bg-[#e85f00] disabled:opacity-50"
+              >
+                {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-slate-800">
+              {post.content}
+            </p>
+
+            {post.hashtags && post.hashtags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {post.hashtags.map((tag: string) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00] transition hover:bg-orange-100"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-5 flex items-center justify-between border-b border-slate-100 pb-3 text-xs font-semibold text-slate-500">
           <div className="flex items-center gap-2">

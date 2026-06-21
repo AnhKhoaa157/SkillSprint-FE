@@ -277,57 +277,11 @@ export async function finishStudySession(
   throw new Error((res as any)?.message || "Operation failed");
 }
 
-// ==================================================================
-// NEW endpoints: Workspace-based Pomodoro (start / complete)
-// These are used directly from the Roadmap page without a calendar task.
-// ==================================================================
-
-/**
- * POST /api/workspaces/{workspaceId}/study-sessions/start
- * Khởi động phiên Pomodoro từ Roadmap (không cần calendar task).
- * Body: { roadmapStepId }
- */
-export async function startRoadmapStudySession(
-  workspaceId: string,
-  roadmapStepId: string,
-): Promise<StartStudySessionResponse> {
-  const res = await requestJson<StartStudySessionResponse>(
-    `/api/workspaces/${workspaceId}/study-sessions/start`,
-    {
-      method: "POST",
-      body: JSON.stringify({ roadmapStepId }),
-    },
-  );
-
-  const cleanData = unwrapData<StartStudySessionResponse>(res);
-  if (cleanData && typeof cleanData === "object" && cleanData.sessionId) {
-    return cleanData;
-  }
-  throw new Error((res as any)?.message || "Operation failed");
-}
-
-/**
- * POST /api/study-sessions/{studySessionId}/complete
- * Kết thúc phiên Pomodoro đang chạy.
- */
-export async function completeStudySession(
-  studySessionId: string,
-): Promise<StartStudySessionResponse> {
-  const res = await requestJson<StartStudySessionResponse>(
-    `/api/study-sessions/${studySessionId}/complete`,
-    { method: "POST" },
-  );
-
-  return unwrapData<StartStudySessionResponse>(res);
-}
-
 export default {
   getStudySessionDetail,
   getStudySession,
   getStudySessionState,
   startStudySession,
-  startRoadmapStudySession,
-  completeStudySession,
   pausePomodoro,
   resumePomodoro,
   nextPomodoroPhase,

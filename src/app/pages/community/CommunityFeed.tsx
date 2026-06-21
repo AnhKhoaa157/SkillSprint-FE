@@ -111,6 +111,10 @@ export default function CommunityFeed() {
     setPosts(prev => prev.map(p => p.postId === updatedPost.postId ? updatedPost : p));
   };
 
+  const handlePostDeleted = (postId: string) => {
+    setPosts(prev => prev.filter(p => p.postId !== postId));
+  };
+
   const handleRetry = () => {
     const isInitialLoad = posts.length === 0;
     fetchPosts(isInitialLoad ? 0 : page + 1, hashtagFilter, searchFilter, isInitialLoad);
@@ -304,7 +308,7 @@ export default function CommunityFeed() {
 
           <div className="flex flex-col gap-4">
             {visiblePosts.map(post => (
-              <PostCard key={post.postId} post={post} onPostUpdated={handlePostUpdated} />
+              <PostCard key={post.postId} post={post} onPostUpdated={handlePostUpdated} onPostDeleted={handlePostDeleted} />
             ))}
 
             <div ref={observerTarget} className="flex justify-center py-5 text-slate-400">

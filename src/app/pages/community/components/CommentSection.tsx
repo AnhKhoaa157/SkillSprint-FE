@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MoreHorizontal, Send, Trash } from "lucide-react";
+import { MoreHorizontal, Pencil, Send, Trash, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
 import { Input } from "../../../components/ui/input";
 import { toast } from "sonner";
@@ -11,19 +11,8 @@ import {
 } from "../../../components/ui/dropdown-menu";
 import communityService from "../../../../api/community/communityService";
 import type { PostComment } from "../../../../api/community/communityTypes";
-import { getStoredUserProfile, getStoredAuthSession } from "../../../../api/auth/authService";
-
-function decodeUserId(): string | null {
-  const session = getStoredAuthSession();
-  if (!session?.idToken) return null;
-  try {
-    const payloadB64 = session.idToken.split(".")[1];
-    const json = JSON.parse(atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/")));
-    return json.sub || json.userId || json.user_id || null;
-  } catch {
-    return null;
-  }
-}
+import { getStoredUserProfile, getStoredUserId } from "../../../../api/auth/authService";
+import meService from "../../../../api/utilities/meService";
 
 interface CommentSectionProps {
   postId: string;
@@ -39,9 +28,17 @@ export function CommentSection({ postId, initialCommentCount, onCommentAdded, on
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const currentUser = getStoredUserProfile();
-  const currentUserId = decodeUserId();
+  const currentUserId = getStoredUserId();
+
+  useEffect(() => {
+    meService.getMe().then(me => setAvatarUrl(me.avatarUrl)).catch(() => {});
+  }, []);
 
   const loadComments = async (pageToLoad: number) => {
     setIsLoading(true);
@@ -98,10 +95,42 @@ export function CommentSection({ postId, initialCommentCount, onCommentAdded, on
     }
   };
 
+  const startEditing = (comment: PostComment) => {
+    setEditingId(comment.commentId);
+    setEditValue(comment.content);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const handleUpdate = async (commentId: string) => {
+    const content = editValue.trim();
+    if (!content) return;
+
+    setIsSavingEdit(true);
+    try {
+      const updated = await communityService.updateComment(postId, commentId, { content });
+      setComments(prev => prev.map(c => (c.commentId === commentId ? updated : c)));
+      cancelEditing();
+      if (updated.status === "PENDING_MODERATION") {
+        toast.info("Bình luận đã chỉnh sửa chứa từ khóa nhạy cảm và đang chờ duyệt.");
+      } else {
+        toast.success("Đã cập nhật bình luận");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Không thể cập nhật bình luận");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4 border-t border-slate-100 pt-4">
       <form onSubmit={handleSubmit} className="flex gap-3">
         <Avatar className="h-8 w-8 shrink-0 ring-2 ring-orange-50">
+          <AvatarImage src={avatarUrl} />
           <AvatarFallback className="bg-orange-50 text-xs font-black text-[#FF6B00]">
             {currentUser?.fullName?.charAt(0) || "U"}
           </AvatarFallback>
@@ -135,30 +164,64 @@ export function CommentSection({ postId, initialCommentCount, onCommentAdded, on
             </Avatar>
 
             <div className="min-w-0 flex-1">
-              <div className="flex items-start gap-2">
-                <div className="min-w-0 rounded-2xl bg-slate-100 px-4 py-2">
-                  <p className="text-sm font-extrabold text-slate-800">{comment.author.fullName}</p>
-                  <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">
-                    {comment.content}
-                  </p>
+              {editingId === comment.commentId ? (
+                <div className="flex flex-col gap-2">
+                  <Input
+                    value={editValue}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditValue(e.target.value)}
+                    className="h-10 rounded-2xl border-slate-200 bg-slate-50 text-sm focus-visible:ring-[#FF6B00]"
+                    disabled={isSavingEdit}
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdate(comment.commentId)}
+                      disabled={isSavingEdit || !editValue.trim()}
+                      className="rounded-full bg-[#FF6B00] px-4 py-1.5 text-xs font-extrabold text-white transition hover:bg-[#e85f00] disabled:opacity-50"
+                    >
+                      {isSavingEdit ? "Đang lưu..." : "Lưu"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditing}
+                      disabled={isSavingEdit}
+                      className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-extrabold text-slate-500 transition hover:bg-slate-100 disabled:opacity-50"
+                    >
+                      <X className="h-3.5 w-3.5" /> Hủy
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 rounded-2xl bg-slate-100 px-4 py-2">
+                    <p className="text-sm font-extrabold text-slate-800">{comment.author.fullName}</p>
+                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">
+                      {comment.content}
+                    </p>
+                  </div>
 
-                {currentUserId === comment.author.userId && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="mt-1 flex h-7 w-7 items-center justify-center rounded-full text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(comment.commentId)}>
-                        <Trash className="mr-2 h-4 w-4" />
-                        Xóa bình luận
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
+                  {currentUserId === comment.author.userId && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="mt-1 flex h-7 w-7 items-center justify-center rounded-full text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => startEditing(comment)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Chỉnh sửa
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(comment.commentId)}>
+                          <Trash className="mr-2 h-4 w-4" />
+                          Xóa bình luận
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              )}
 
               <span className="mt-1 block px-2 text-[11px] font-semibold text-slate-400">
                 {new Date(comment.createdAt).toLocaleDateString("vi-VN", { hour: "2-digit", minute: "2-digit" })}

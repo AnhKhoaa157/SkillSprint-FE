@@ -11,6 +11,7 @@ import {
   storeAuthTokens,
   clearAuthTokens,
   isValidAuthSession,
+  logout as revokeServerSession,
   type AuthSession,
 } from "../../api/auth/authService";
 import { resetSessionExpiry } from "../../api/auth/sessionExpiry";
@@ -90,7 +91,10 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    clearAuthTokens();
+    // Revoke the session server-side (POST /api/auth/logout) then clear local
+    // auth state. revokeServerSession() captures headers + clears storage
+    // synchronously, so the fetch runs best-effort in the background.
+    void revokeServerSession();
     try {
       sessionStorage.removeItem(AUTH_STORAGE_KEY);
       sessionStorage.removeItem(SESSION_HYDRATED_KEY);

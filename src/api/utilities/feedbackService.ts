@@ -192,6 +192,19 @@ export async function getMyFeedbacks(page = 0, size = 10): Promise<FeedbackPageR
   return normalizePage(payload.data, normalizeFeedback);
 }
 
+/**
+ * GET /api/feedback/{feedbackId}
+ * Fetch the detail of one of the logged-in user's own feedback entries.
+ */
+export async function getMyFeedbackDetail(feedbackId: string): Promise<FeedbackResponse> {
+  const id = feedbackId.trim();
+  if (!id) throw new Error("Invalid feedback ID");
+
+  const result = await requestJson<unknown>(`/api/feedback/${encodeURIComponent(id)}`);
+  if (!result.data) throw new Error(result.message || "Could not load feedback detail");
+  return normalizeFeedback(result.data);
+}
+
 // Hàm gửi Feedback: chỉ gửi JSON thuần (ảnh đã nằm trên S3, tham chiếu qua imageObjectKey)
 export async function createFeedback(payload: CreateFeedbackPayload): Promise<FeedbackResponse> {
   const body = {
@@ -326,6 +339,7 @@ export default {
   getFeedbackImageUploadUrl,
   uploadFeedbackImage,
   getMyFeedbacks,
+  getMyFeedbackDetail,
   getAdminFeedbacks,
   getFeedbackDetail,
   updateFeedbackStatus,

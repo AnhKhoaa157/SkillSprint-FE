@@ -431,6 +431,22 @@ export function getStoredUserProfile(): StoredUserProfile | null {
   };
 }
 
+/**
+ * The Cognito subject (the backend userId) of the signed-in user, or null when
+ * no valid session exists. Used by the UI to gate author-only actions such as
+ * editing/deleting one's own community posts and comments.
+ */
+export function getStoredUserId(): string | null {
+  const session = getStoredAuthSession();
+  if (!session?.idToken) {
+    return null;
+  }
+
+  const payload = decodeJwtPayload(session.idToken);
+  const candidate = payload?.sub ?? payload?.userId ?? payload?.user_id;
+  return typeof candidate === "string" && candidate.trim() ? candidate : null;
+}
+
 async function requestJson<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
   let response: Response;
   try {
@@ -672,5 +688,141 @@ export function clearAuthTokens(): void {
   for (const key of AUTH_CLEANUP_KEYS) {
     localStorage.removeItem(key);
     sessionStorage.removeItem(key);
+  }
+}
+
+/**
+ * Reads the persisted session blob WITHOUT enforcing access-token expiry. On a
+ * 401 the access token is usually already expired (so getStoredAuthSession()
+ * returns null), but we still need the refresh token + sessionId to renew it.
+ */
+function readRawStoredSession(): AuthSession | null {
+  const raw = sessionStorage.getItem(AUTH_STORAGE_KEY) ?? localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<AuthSession>;
+    return {
+      accessToken: parsed.accessToken ?? "",
+      idToken: parsed.idToken ?? "",
+      refreshToken: parsed.refreshToken ?? "",
+      expiresIn: parsed.expiresIn ?? 0,
+      tokenType: parsed.tokenType ?? "Bearer",
+      role: extractRole(parsed as Partial<AuthPayload> & Record<string, unknown>),
+      sessionId: parsed.sessionId ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function readEmailFromTokens(idToken: string, accessToken: string): string {
+  return (
+    readStringClaim(decodeJwtPayload(idToken), ["email", "username", "cognito:username"]) ||
+    readStringClaim(decodeJwtPayload(accessToken), ["email", "username", "cognito:username"])
+  );
+}
+
+// Single-flight guard so a burst of concurrent 401s triggers only one refresh.
+let refreshInFlight: Promise<AuthSession | null> | null = null;
+
+/**
+ * Attempt to silently renew the session via POST /api/auth/refresh-token before
+ * falling back to a full logout. Reads the raw stored session (the access token
+ * may already be expired), exchanges the Cognito refresh token for fresh tokens,
+ * persists them, and returns the new session — or null if no refresh is possible
+ * or the backend rejects it. Concurrent callers share one in-flight request.
+ */
+export function refreshAuthSession(): Promise<AuthSession | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = performTokenRefresh().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+async function performTokenRefresh(): Promise<AuthSession | null> {
+  const stored = readRawStoredSession();
+  if (!stored || !hasText(stored.refreshToken) || !hasText(stored.sessionId)) {
+    return null;
+  }
+
+  const email = readEmailFromTokens(stored.idToken, stored.accessToken);
+  if (!email) {
+    return null;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/api/auth/refresh-token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-Id": stored.sessionId,
+      },
+      body: JSON.stringify({ email, refreshToken: stored.refreshToken }),
+    });
+  } catch {
+    return null; // network error — let the caller fall back to full logout
+  }
+
+  const payload = (await response.json().catch(() => null)) as ApiResponse<AuthPayload> | null;
+  if (!response.ok || !payload?.data) {
+    return null;
+  }
+
+  // Cognito's refresh grant returns new access/id tokens but reuses the existing
+  // refresh token + session, so fall back to the stored values when absent.
+  const next = buildAuthSession({
+    ...payload.data,
+    refreshToken: payload.data.refreshToken || stored.refreshToken,
+    sessionId: payload.data.sessionId || stored.sessionId,
+  });
+
+  if (!isValidAuthSession(next)) {
+    return null;
+  }
+
+  storeAuthTokens(next);
+  // Keep sessionStorage hydration in sync so a tab reload sees the renewed token.
+  try {
+    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // non-critical
+  }
+  return next;
+}
+
+/**
+ * Revoke the current session server-side via POST /api/auth/logout, then wipe
+ * local auth state. Auth headers are captured and storage is cleared up-front so
+ * the UI updates instantly and no stale token leaks; the revoke call is fired
+ * best-effort and never blocks (or fails) the local logout.
+ */
+export async function logout(): Promise<void> {
+  const stored = readRawStoredSession();
+  const accessToken = stored?.accessToken;
+  const sessionId = stored?.sessionId;
+
+  clearAuthTokens();
+
+  if (!hasText(accessToken) || !hasText(sessionId)) {
+    return;
+  }
+
+  try {
+    await fetch(`${API_BASE}/api/auth/logout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        "X-Session-Id": sessionId,
+      },
+    });
+  } catch {
+    // best-effort: server-side revoke is non-critical for the local logout
   }
 }

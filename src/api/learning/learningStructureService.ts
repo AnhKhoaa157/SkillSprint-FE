@@ -50,25 +50,6 @@ export type LearningStructureResponse = {
   [key: string]: unknown;
 };
 
-// ─── Request Types ────────────────────────────────────────────────────────────
-
-export type UpdateChapterRequest = {
-  title?: string;
-  summary?: string;
-  sequenceNo?: number;
-};
-
-export type UpdateTopicRequest = {
-  title?: string;
-  summaryContent?: string;
-  sequenceNo?: number;
-};
-
-export type AddTopicRequest = {
-  title: string;
-  summaryContent?: string;
-};
-
 // ─── URL helper ───────────────────────────────────────────────────────────────
 
 const base = (workspaceId: string) =>
@@ -123,79 +104,12 @@ async function confirmLearningStructure(
   return extractApiData(res);
 }
 
-/**
- * PATCH /api/workspaces/{workspaceId}/learning-structure/chapters/{chapterId}
- * Updates chapter title, summary, or sequence order.
- */
-async function updateChapter(
-  workspaceId: string,
-  chapterId: string,
-  body: UpdateChapterRequest,
-): Promise<ChapterResponse> {
-  const res = await skillSprintApiClient.patch<ApiResponse<ChapterResponse>>(
-    `${base(workspaceId)}/chapters/${chapterId}`,
-    body,
-  );
-  return extractApiData(res);
-}
-
-/**
- * PATCH /api/workspaces/{workspaceId}/learning-structure/chapters/{chapterId}/topics/{topicId}
- * Updates topic title, summary, or sequence order within a chapter.
- */
-async function updateTopic(
-  workspaceId: string,
-  chapterId: string,
-  topicId: string,
-  body: UpdateTopicRequest,
-): Promise<TopicResponse> {
-  const res = await skillSprintApiClient.patch<ApiResponse<TopicResponse>>(
-    `${base(workspaceId)}/chapters/${chapterId}/topics/${topicId}`,
-    body,
-  );
-  return extractApiData(res);
-}
-
-/**
- * POST /api/workspaces/{workspaceId}/learning-structure/chapters/{chapterId}/topics
- * Appends a new topic to an existing chapter.
- */
-async function addTopic(
-  workspaceId: string,
-  chapterId: string,
-  body: AddTopicRequest,
-): Promise<TopicResponse> {
-  const res = await skillSprintApiClient.post<ApiResponse<TopicResponse>>(
-    `${base(workspaceId)}/chapters/${chapterId}/topics`,
-    body,
-  );
-  return extractApiData(res);
-}
-
-/**
- * DELETE /api/workspaces/{workspaceId}/learning-structure/chapters/{chapterId}/topics/{topicId}
- * Permanently removes a topic from a chapter.
- */
-async function deleteTopic(
-  workspaceId: string,
-  chapterId: string,
-  topicId: string,
-): Promise<void> {
-  await skillSprintApiClient.delete(
-    `${base(workspaceId)}/chapters/${chapterId}/topics/${topicId}`,
-  );
-}
-
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 const learningStructureService = {
   generateLearningStructure,
   getLearningStructure,
   confirmLearningStructure,
-  updateChapter,
-  updateTopic,
-  addTopic,
-  deleteTopic,
 };
 
 export default learningStructureService;

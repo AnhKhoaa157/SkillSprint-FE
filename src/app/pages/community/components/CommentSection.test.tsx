@@ -11,6 +11,7 @@ vi.mock("../../../../api/community/communityService", () => ({
   default: {
     getComments: vi.fn(),
     createComment: vi.fn(),
+    updateComment: vi.fn(),
     deleteComment: vi.fn(),
   }
 }));
@@ -26,6 +27,7 @@ vi.mock("sonner", () => ({
 vi.mock("../../../../api/auth/authService", () => ({
   getStoredUserProfile: vi.fn(),
   getStoredAuthSession: vi.fn(),
+  getStoredUserId: vi.fn(),
 }));
 
 const mockCurrentUser = {
@@ -66,6 +68,7 @@ describe("CommentSection", () => {
     vi.clearAllMocks();
     vi.mocked(authService.getStoredUserProfile).mockReturnValue(mockCurrentUser as any);
     vi.mocked(authService.getStoredAuthSession).mockReturnValue(mockAuthSession as any);
+    vi.mocked(authService.getStoredUserId).mockReturnValue("u1");
 
     vi.mocked(communityService.getComments).mockResolvedValue({
       items: mockComments,
