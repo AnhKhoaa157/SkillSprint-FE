@@ -12,8 +12,8 @@ import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { clearAuthTokens, getStoredUserProfile, type StoredUserProfile } from "../../../api/auth/authService";
 import meService, { type MeResponse } from "../../../api/utilities/meService";
-import { getMyFeedbacks, FeedbackStatus, FeedbackType, type FeedbackResponse } from "../../../api/utilities/feedbackService";
-import { getCurrentSubscription, getQuotaStatus, cancelSubscription } from "../../../api/billing/subscriptionsService";
+import { getMyFeedbacks, getMyFeedbackDetail, FeedbackStatus, FeedbackType, type FeedbackResponse } from "../../../api/utilities/feedbackService";
+import { getCurrentSubscription, getQuotaStatus } from "../../../api/billing/subscriptionsService";
 import { listSubscriptionPlans, formatPlanPrice, isFeatureEnabled, resolvePlanFeatures, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/admin/adminSubscriptionPlansService";
 import { createSepayPayment, getPaymentDetail } from "../../../api/billing/sepayPaymentService";
 import pointService from "../../../api/learning/pointService";
@@ -638,8 +638,6 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
   const [qrLoaded,        setQrLoaded]        = useState(false);
 
   /* ── Cancel flow ── */
-  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
-  const [cancelLoading,     setCancelLoading]     = useState(false);
 
   const pollingRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollAttemptRef = useRef(0);
@@ -824,7 +822,9 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
   const handlePlanAction = (planId: PlanId) => {
     const idx = planValue[planId];
     if (idx === currentPlanIndex) return;
-    if (idx < currentPlanIndex) { setCancelConfirmOpen(true); return; }
+    // Downgrades are handled by letting the current plan lapse at period end;
+    // there is no self-service cancel endpoint, so lower-tier cards are inert.
+    if (idx < currentPlanIndex) return;
     void handleUpgrade(planId);
   };
 
@@ -874,22 +874,6 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
     setPollError(null);
   };
 
-  /* ── Cancel subscription ── */
-  const handleCancelSubscription = async () => {
-    setCancelLoading(true);
-    try {
-      await cancelSubscription();
-      setCancelConfirmOpen(false);
-      toast.success("Đã hủy gói thành công. Gói của bạn sẽ hết hạn vào cuối kỳ thanh toán.");
-      void loadData();
-      onSubscriptionChanged?.();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Không thể hủy gói. Vui lòng thử lại.");
-    } finally {
-      setCancelLoading(false);
-    }
-  };
-
   /* ── Button style per card ── */
   function getButtonConfig(planId: PlanId) {
     const idx = planValue[planId];
@@ -932,15 +916,6 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
             <div style={{ width:"5px", height:"5px", borderRadius:"50%", background:OG }}/>
             <span style={{ fontSize:"0.75rem", color:OG, fontWeight:700, fontFamily:F }}>Đang sử dụng</span>
           </div>
-          {/* Cancel button — only for paid plans */}
-          {currentPlanId !== "starter" && (
-            <button
-              onClick={() => setCancelConfirmOpen(true)}
-              style={{ display:"flex", alignItems:"center", gap:"5px", padding:"5px 12px", borderRadius:"8px", background:"transparent", border:"1.5px solid #FECDD3", color:"#EF4444", fontFamily:F, fontWeight:600, fontSize:"0.75rem", cursor:"pointer" }}
-            >
-              <X size={12}/> Hủy gói
-            </button>
-          )}
         </div>
       </div>
 
@@ -1171,40 +1146,6 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
         )}
       </AnimatePresence>
 
-      {/* ════════════════════════════════════════
-          CANCEL CONFIRMATION MODAL
-      ════════════════════════════════════════ */}
-      <AnimatePresence>
-        {cancelConfirmOpen && (
-          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-            onClick={() => !cancelLoading && setCancelConfirmOpen(false)}
-            style={{ position:"fixed", inset:0, zIndex:60, background:"rgba(0,0,0,0.5)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:"16px" }}
-          >
-            <motion.div initial={{ scale:0.92, opacity:0 }} animate={{ scale:1, opacity:1 }} exit={{ scale:0.92, opacity:0 }}
-              onClick={e => e.stopPropagation()}
-              style={{ background:CARD, borderRadius:"16px", padding:"28px", maxWidth:"420px", width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.18)", fontFamily:F }}
-            >
-              <div style={{ width:"44px", height:"44px", borderRadius:"12px", background:"#FFF1F2", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"14px" }}>
-                <AlertTriangle size={20} color="#EF4444"/>
-              </div>
-              <h3 style={{ fontWeight:900, fontSize:"1.05rem", color:T1, marginBottom:"8px" }}>Hủy gói {planLabel[currentPlanId]}?</h3>
-              <p style={{ fontSize:"0.875rem", color:T2, lineHeight:1.65, marginBottom:"20px" }}>
-                Gói của bạn sẽ tiếp tục hoạt động đến cuối kỳ thanh toán hiện tại. Sau đó tài khoản sẽ chuyển về gói <strong>Starter</strong> (miễn phí).
-              </p>
-              <div style={{ display:"flex", gap:"10px" }}>
-                <button onClick={() => setCancelConfirmOpen(false)} disabled={cancelLoading}
-                  style={{ flex:1, padding:"10px", borderRadius:"9px", border:`1px solid ${BDR}`, background:CARD, color:T2, fontFamily:F, fontWeight:600, cursor:cancelLoading?"not-allowed":"pointer" }}>
-                  Giữ gói
-                </button>
-                <button onClick={handleCancelSubscription} disabled={cancelLoading}
-                  style={{ flex:1, padding:"10px", borderRadius:"9px", background:cancelLoading?"#F87171":"#EF4444", border:"none", color:"#fff", fontFamily:F, fontWeight:700, cursor:cancelLoading?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px" }}>
-                  {cancelLoading ? <><Loader2 size={14} className="animate-spin"/> Đang hủy...</> : "Xác nhận hủy gói"}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -1480,7 +1421,23 @@ function FeedbackHistoryTab() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const [selected, setSelected]     = useState<FeedbackResponse | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const SIZE = 10;
+
+  // Open the detail modal: show the list snapshot instantly, then refresh it
+  // from GET /api/feedback/{feedbackId} so any newer admin reply/status shows.
+  const openDetail = async (fb: FeedbackResponse) => {
+    setSelected(fb);
+    setDetailLoading(true);
+    try {
+      const detail = await getMyFeedbackDetail(fb.feedbackId);
+      setSelected((current) => (current?.feedbackId === detail.feedbackId ? detail : current));
+    } catch {
+      // keep the list snapshot if the detail fetch fails
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -1550,7 +1507,7 @@ function FeedbackHistoryTab() {
                 <button
                   key={fb.feedbackId}
                   type="button"
-                  onClick={() => setSelected(fb)}
+                  onClick={() => openDetail(fb)}
                   className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50/70"
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-100/60 bg-orange-50 text-[#FF6B00]">
@@ -1631,7 +1588,10 @@ function FeedbackHistoryTab() {
                     </span>
                   </div>
                   <h3 className="truncate text-base font-extrabold text-slate-900">{selected.title || "(Không có tiêu đề)"}</h3>
-                  <p className="mt-0.5 text-[11px] font-semibold text-slate-400">Gửi lúc {formatFbDate(selected.createdAt)}</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                    Gửi lúc {formatFbDate(selected.createdAt)}
+                    {detailLoading && <Loader2 size={11} className="animate-spin text-slate-300" />}
+                  </p>
                 </div>
                 <button
                   type="button"

@@ -102,6 +102,21 @@ export interface CommunityChatMessageResponse {
   sentAt: string;
 }
 
+export type CommunityPinItemType = "MESSAGE" | "NOTE" | string;
+
+export interface CommunityPinResponse {
+  pinId: string;
+  roomId: string;
+  itemType: CommunityPinItemType;
+  title?: string | null;
+  content?: string | null;
+  messageId?: string | null;
+  pinnedBy: CommunityAuthorResponse | null;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AdminCommunityListParams<TStatus extends string = string> {
   status?: TStatus;
   search?: string;

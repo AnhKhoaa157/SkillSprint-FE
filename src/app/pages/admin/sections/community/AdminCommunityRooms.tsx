@@ -14,12 +14,16 @@ import {
   Users,
   X,
   Eye,
+  Pin,
+  Trash2,
 } from "lucide-react";
 import {
   getAdminCommunityRooms,
   updateAdminCommunityRoomStatus,
   getAdminCommunityRoomMessages,
   hideAdminCommunityRoomMessage,
+  getAdminCommunityRoomPins,
+  deleteAdminCommunityRoomPin,
 } from "../../../../../api/admin/adminCommunityService";
 import type {
   CommunityRoomResponse,
@@ -27,6 +31,7 @@ import type {
   CommunityRoomMode,
   CommunityChatMessageResponse,
   CommunityAuthorResponse,
+  CommunityPinResponse,
 } from "../../../../../api/admin/adminCommunityTypes";
 
 const PAGE_SIZE = 10;
@@ -202,6 +207,10 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
   const [msgTotalPages, setMsgTotalPages] = useState(1);
   const [loadingMessages, setLoadingMessages] = useState(false);
 
+  // Pinned items for the selected room
+  const [pins, setPins] = useState<CommunityPinResponse[]>([]);
+  const [loadingPins, setLoadingPins] = useState(false);
+
   const loadRooms = useCallback(
     async (pageToLoad = page) => {
       setLoading(true);
@@ -247,6 +256,43 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
     },
     []
   );
+
+  const loadPins = useCallback(async (roomId: string) => {
+    setLoadingPins(true);
+    try {
+      const data = await getAdminCommunityRoomPins(roomId);
+      setPins(data);
+    } catch (error) {
+      toast.error((error as Error).message || "Không thể tải danh sách ghim");
+    } finally {
+      setLoadingPins(false);
+    }
+  }, []);
+
+  const deletePin = async (pin: CommunityPinResponse) => {
+    if (!window.confirm("Bạn có chắc muốn xóa mục ghim này?")) return;
+    setActionId(pin.pinId);
+    try {
+      await deleteAdminCommunityRoomPin(pin.roomId, pin.pinId);
+      setPins((prev) => prev.filter((item) => item.pinId !== pin.pinId));
+      toast.success("Đã xóa mục ghim");
+    } catch (error) {
+      toast.error((error as Error).message || "Không thể xóa mục ghim");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const openRoomDrawer = (room: CommunityRoomResponse) => {
+    setSelectedRoom(room);
+    loadMessages(room.roomId, 0);
+    loadPins(room.roomId);
+  };
+
+  const closeRoomDrawer = () => {
+    setSelectedRoom(null);
+    setPins([]);
+  };
 
   const promptNote = (title: string): string | null => {
     const note = window.prompt(title, "");
@@ -400,10 +446,7 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
-                          setSelectedRoom(room);
-                          loadMessages(room.roomId, 0);
-                        }}
+                        onClick={() => openRoomDrawer(room)}
                         className="mt-2 inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-orange-50 px-4 text-sm font-extrabold text-[#FF6B00] transition hover:bg-orange-100"
                       >
                         <MessageSquare size={15} /> Xem tin nhắn
@@ -447,7 +490,7 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedRoom(null)}
+              onClick={closeRoomDrawer}
               className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
             />
             <motion.div
@@ -464,7 +507,7 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSelectedRoom(null)}
+                  onClick={closeRoomDrawer}
                   className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
                 >
                   <X size={20} />
@@ -472,6 +515,50 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {/* Pinned items */}
+                <div className="rounded-2xl border border-amber-100 bg-amber-50/40 p-3">
+                  <div className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-amber-700">
+                    <Pin size={13} /> Mục ghim ({pins.length})
+                  </div>
+                  {loadingPins ? (
+                    <div className="flex justify-center py-3 text-amber-500">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                  ) : pins.length === 0 ? (
+                    <p className="py-1 text-xs font-semibold text-slate-400">Phòng chưa có mục ghim nào.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {pins.map((pin) => (
+                        <div
+                          key={pin.pinId}
+                          className="flex items-start justify-between gap-2 rounded-xl border border-amber-100 bg-white p-2.5 shadow-sm"
+                        >
+                          <div className="min-w-0">
+                            {pin.title && (
+                              <p className="truncate text-sm font-extrabold text-slate-800">{pin.title}</p>
+                            )}
+                            {pin.content && (
+                              <p className="mt-0.5 break-words text-xs font-medium text-slate-500">{pin.content}</p>
+                            )}
+                            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-amber-600">
+                              {pin.itemType} · {authorName(pin.pinnedBy)}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => deletePin(pin)}
+                            disabled={actionId === pin.pinId}
+                            title="Xóa mục ghim"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-bold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                          >
+                            <Trash2 size={12} /> Xóa
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {loadingMessages ? (
                   <div className="flex py-10 justify-center text-slate-400">
                     <Loader2 className="h-6 w-6 animate-spin" />

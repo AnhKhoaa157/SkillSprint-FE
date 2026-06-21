@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Hash, Lightbulb, Send, Sparkles } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Textarea } from "../../../components/ui/textarea";
@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avat
 import { toast } from "sonner";
 import communityService from "../../../../api/community/communityService";
 import { getStoredUserProfile } from "../../../../api/auth/authService";
+import meService from "../../../../api/utilities/meService";
 
 interface CreatePostBoxProps {
   onPostCreated: () => void;
@@ -16,8 +17,11 @@ export function CreatePostBox({ onPostCreated }: CreatePostBoxProps) {
   const [content, setContent] = useState("");
   const [hashtags, setHashtags] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
   const currentUser = getStoredUserProfile();
-  const avatarUrl = (currentUser as { avatarUrl?: string } | null)?.avatarUrl;
+  useEffect(() => {
+    meService.getMe().then(me => setAvatarUrl(me.avatarUrl)).catch(() => {});
+  }, []);
 
   const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();

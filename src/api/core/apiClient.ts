@@ -1,4 +1,4 @@
-import { getStoredAuthSession, isValidAuthSession, isAdminRole } from "../auth/authService";
+import { getStoredAuthSession, isValidAuthSession, isAdminRole, refreshAuthSession } from "../auth/authService";
 import { triggerSessionExpiry, extractAuthCode } from "../auth/sessionExpiry";
 import { isMaintenanceActive } from "../system/maintenanceState";
 import { API_BASE } from "./config";
@@ -73,6 +73,7 @@ export function getAuthHeaders(): Record<string, string> {
 export async function requestJson<T>(
   path: string,
   opts: RequestInit = {},
+  isRetry = false,
 ): Promise<ApiResponse<T>> {
   // Maintenance lockdown: short-circuit non-admin traffic before touching the network.
   assertMaintenanceAllows(path);
@@ -111,6 +112,15 @@ export async function requestJson<T>(
     }
 
     if (response.status === 401) {
+      // Before declaring the session dead, try one silent token refresh and
+      // replay the request. Skip for auth endpoints and already-retried calls
+      // to avoid recursion / refresh loops.
+      if (!isRetry && !path.startsWith("/api/auth/")) {
+        const refreshed = await refreshAuthSession();
+        if (refreshed) {
+          return requestJson<T>(path, opts, true);
+        }
+      }
       triggerSessionExpiry({ status: 401, code: extractAuthCode(payload) });
     }
 

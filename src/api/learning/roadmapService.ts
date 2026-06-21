@@ -113,44 +113,6 @@ export async function getMyRoadmap(workspaceId: string): Promise<RoadmapResponse
 export const getRoadmap = getMyRoadmap;
 
 /**
- * PATCH /api/roadmap/steps/{stepId}
- * Cập nhật trạng thái của một step trong roadmap.
- */
-export async function updateRoadmapStep(stepId: string, body: { status: string }): Promise<RoadmapStepResponse> {
-  const res = await requestJson<RoadmapStepResponse>(`/api/roadmap/steps/${stepId}`, {
-    method: "PATCH",
-    body: JSON.stringify(body),
-  });
-
-  const cleanData = res?.data || res;
-
-  if (cleanData && typeof cleanData === "object" && (cleanData as any).stepId) {
-    return cleanData as RoadmapStepResponse;
-  }
-
-  throw new Error((res as any)?.message || "Operation failed");
-}
-
-/**
- * PATCH /api/workspaces/{workspaceId}/roadmaps
- * Cập nhật thông tin roadmap (ví dụ: thay đổi status).
- */
-export async function updateRoadmap(workspaceId: string, body: { status: string }): Promise<RoadmapResponse> {
-  const res = await requestJson<RoadmapResponse>(`/api/workspaces/${workspaceId}/roadmaps`, {
-    method: "PATCH",
-    body: JSON.stringify(body),
-  });
-
-  const cleanData = res?.data || res;
-
-  if (cleanData && typeof cleanData === "object" && ((cleanData as any).roadmapId || Array.isArray((cleanData as any).steps))) {
-    return cleanData as RoadmapResponse;
-  }
-
-  throw new Error((res as any)?.message || "Operation failed");
-}
-
-/**
  * POST /api/workspaces/{workspaceId}/roadmaps/claim-reward
  * Nhận phần thưởng khi hoàn thành toàn bộ roadmap.
  */
@@ -164,7 +126,5 @@ export default {
   generateRoadmap,
   getRoadmap,
   getMyRoadmap,
-  updateRoadmapStep,
-  updateRoadmap,
   claimRoadmapReward,
 };
