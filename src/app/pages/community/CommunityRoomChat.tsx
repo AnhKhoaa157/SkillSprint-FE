@@ -115,7 +115,11 @@ export default function CommunityRoomChat() {
   const handleCreatePin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await communityRoomService.createPin(roomId!, newPin);
+      const requestPayload = {
+        ...newPin,
+        itemType: newPin.linkUrl ? "DOCUMENT_URL" : "ANNOUNCEMENT"
+      } as any;
+      await communityRoomService.createPin(roomId!, requestPayload);
       toast.success("Đã ghim thành công");
       setCreatePinModalOpen(false);
       setNewPin({ title: "", content: "", linkUrl: "" });
