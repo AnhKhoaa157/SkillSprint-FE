@@ -52,3 +52,5 @@ export interface CreateCommentRequest {
 export interface ReportRequest {
   reason: string;
 }
+
+export type UpdatePostRequest = Partial<CreatePostRequest>;

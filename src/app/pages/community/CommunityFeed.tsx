@@ -37,19 +37,20 @@ export default function CommunityFeed() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [hashtagFilter, setHashtagFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [activeTab, setActiveTab] = useState<FeedTab>("latest");
   const observerTarget = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false);
 
-  const fetchPosts = useCallback(async (pageToFetch: number, hashtag?: string, isNewSearch = false) => {
+  const fetchPosts = useCallback(async (pageToFetch: number, hashtag?: string, search?: string, isNewSearch = false) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     setIsLoading(true);
     setLoadError(false);
 
     try {
-      const res = await communityService.getPosts(pageToFetch, PAGE_SIZE, hashtag);
+      const res = await communityService.getPosts(pageToFetch, PAGE_SIZE, search, hashtag);
       if (isNewSearch) {
         setPosts(res.items);
       } else {
@@ -71,17 +72,17 @@ export default function CommunityFeed() {
   }, []);
 
   useEffect(() => {
-    fetchPosts(0, hashtagFilter, true);
-  }, [fetchPosts, hashtagFilter]);
+    fetchPosts(0, hashtagFilter, searchFilter, true);
+  }, [fetchPosts, hashtagFilter, searchFilter]);
 
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
       const target = entries[0];
       if (target?.isIntersecting && posts.length > 0 && hasMore && !loadError && !isFetchingRef.current) {
-        fetchPosts(page + 1, hashtagFilter, false);
+        fetchPosts(page + 1, hashtagFilter, searchFilter, false);
       }
     },
-    [fetchPosts, page, posts.length, hasMore, loadError, hashtagFilter]
+    [fetchPosts, page, posts.length, hasMore, loadError, hashtagFilter, searchFilter]
   );
 
   useEffect(() => {
@@ -98,8 +99,13 @@ export default function CommunityFeed() {
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmedInput = searchInput.trim();
-    const cleanTag = trimmedInput.startsWith("#") ? trimmedInput.substring(1) : trimmedInput;
-    setHashtagFilter(cleanTag);
+    if (trimmedInput.startsWith("#")) {
+      setHashtagFilter(trimmedInput.substring(1));
+      setSearchFilter("");
+    } else {
+      setSearchFilter(trimmedInput);
+      setHashtagFilter("");
+    }
   };
 
   const handlePostUpdated = (updatedPost: CommunityPost) => {
@@ -108,12 +114,13 @@ export default function CommunityFeed() {
 
   const handleRetry = () => {
     const isInitialLoad = posts.length === 0;
-    fetchPosts(isInitialLoad ? 0 : page + 1, hashtagFilter, isInitialLoad);
+    fetchPosts(isInitialLoad ? 0 : page + 1, hashtagFilter, searchFilter, isInitialLoad);
   };
 
   const handleTopicSelect = (topic: string) => {
     setSearchInput(`#${topic}`);
     setHashtagFilter(topic);
+    setSearchFilter("");
   };
 
   const trendingHashtags = React.useMemo(() => {
@@ -270,16 +277,17 @@ export default function CommunityFeed() {
                 <Input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Lọc theo #hashtag"
+                  placeholder="Tìm kiếm bài viết hoặc #hashtag"
                   className="h-10 rounded-full border-slate-200 bg-slate-50 pl-9 pr-10 text-sm focus-visible:ring-[#FF6B00]"
                 />
-                {hashtagFilter && (
+                {(hashtagFilter || searchFilter) && (
                   <button
                     type="button"
                     title="Xóa lọc"
                     onClick={() => {
                       setSearchInput("");
                       setHashtagFilter("");
+                      setSearchFilter("");
                     }}
                     className="absolute right-2 flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
                   >
@@ -295,9 +303,15 @@ export default function CommunityFeed() {
                 Đang xem #{hashtagFilter}
               </div>
             )}
+            {searchFilter && (
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00]">
+                <Search className="h-3.5 w-3.5" />
+                Kết quả tìm kiếm cho "{searchFilter}"
+              </div>
+            )}
           </section>
 
-          <CreatePostBox onPostCreated={() => fetchPosts(0, hashtagFilter, true)} />
+          <CreatePostBox onPostCreated={() => fetchPosts(0, hashtagFilter, searchFilter, true)} />
 
           <div className="flex flex-col gap-4">
             {visiblePosts.map(post => (
