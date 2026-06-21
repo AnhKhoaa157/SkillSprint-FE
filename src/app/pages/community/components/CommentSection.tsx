@@ -28,9 +28,11 @@ function decodeUserId(): string | null {
 interface CommentSectionProps {
   postId: string;
   initialCommentCount: number;
+  onCommentAdded?: () => void;
+  onCommentDeleted?: () => void;
 }
 
-export function CommentSection({ postId, initialCommentCount }: CommentSectionProps) {
+export function CommentSection({ postId, initialCommentCount, onCommentAdded, onCommentDeleted }: CommentSectionProps) {
   const [comments, setComments] = useState<PostComment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -76,6 +78,7 @@ export function CommentSection({ postId, initialCommentCount }: CommentSectionPr
       } else {
         setComments(prev => [comment, ...prev]);
         setNewComment("");
+        onCommentAdded?.();
       }
     } catch (err: any) {
       toast.error(err.message || "Không thể gửi bình luận");
@@ -88,6 +91,7 @@ export function CommentSection({ postId, initialCommentCount }: CommentSectionPr
     try {
       await communityService.deleteComment(postId, commentId);
       setComments(prev => prev.filter(c => c.commentId !== commentId));
+      onCommentDeleted?.();
       toast.success("Đã xóa bình luận");
     } catch (err: any) {
       toast.error(err.message || "Không thể xóa bình luận");
