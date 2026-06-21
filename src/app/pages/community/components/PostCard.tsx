@@ -178,7 +178,9 @@ export function PostCard({ post, onPostUpdated }: PostCardProps) {
 
           <button
             type="button"
-            className="flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-extrabold text-slate-500 transition hover:bg-slate-50 hover:text-slate-700 active:scale-[0.98]"
+            disabled
+            title="Đang phát triển"
+            className="flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-extrabold text-slate-400 bg-slate-50 cursor-not-allowed"
           >
             <Share2 className="h-4 w-4" />
             Chia sẻ
@@ -194,7 +196,12 @@ export function PostCard({ post, onPostUpdated }: PostCardProps) {
               className="overflow-hidden"
             >
               <div className="mt-3">
-                <CommentSection postId={post.postId} initialCommentCount={post.commentCount} />
+                <CommentSection
+                  postId={post.postId}
+                  initialCommentCount={post.commentCount}
+                  onCommentAdded={() => onPostUpdated({ ...post, commentCount: post.commentCount + 1 })}
+                  onCommentDeleted={() => onPostUpdated({ ...post, commentCount: Math.max(0, post.commentCount - 1) })}
+                />
               </div>
             </motion.div>
           )}
