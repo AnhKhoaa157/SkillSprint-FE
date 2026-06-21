@@ -7,20 +7,28 @@ import { toast } from "sonner";
 import { Filter } from "lucide-react";
 import { Input } from "../../components/ui/input";
 
+const PAGE_SIZE = 10;
+const LOAD_ERROR_TOAST_ID = "community-feed-load-error";
+
 export default function CommunityFeed() {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [hashtagFilter, setHashtagFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const observerTarget = useRef<HTMLDivElement>(null);
+  const isFetchingRef = useRef(false);
 
-  const fetchPosts = async (pageToFetch: number, hashtag?: string, isNewSearch = false) => {
-    if (isLoading) return;
+  const fetchPosts = useCallback(async (pageToFetch: number, hashtag?: string, isNewSearch = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setIsLoading(true);
+    setLoadError(false);
+
     try {
-      const res = await communityService.getPosts(pageToFetch, 10, hashtag);
+      const res = await communityService.getPosts(pageToFetch, PAGE_SIZE, hashtag);
       if (isNewSearch) {
         setPosts(res.content);
       } else {
@@ -28,27 +36,31 @@ export default function CommunityFeed() {
       }
       setHasMore(!res.last);
       setPage(pageToFetch);
-    } catch (err: any) {
-      toast.error("Không thể tải bảng tin");
+    } catch {
+      if (isNewSearch) {
+        setPosts([]);
+      }
+      setHasMore(false);
+      setLoadError(true);
+      toast.error("Không thể tải bảng tin", { id: LOAD_ERROR_TOAST_ID });
     } finally {
+      isFetchingRef.current = false;
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    // Initial fetch
     fetchPosts(0, hashtagFilter, true);
-  }, [hashtagFilter]);
+  }, [fetchPosts, hashtagFilter]);
 
-  // Infinite Scroll logic
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
       const target = entries[0];
-      if (target.isIntersecting && hasMore && !isLoading) {
+      if (target?.isIntersecting && posts.length > 0 && hasMore && !loadError && !isFetchingRef.current) {
         fetchPosts(page + 1, hashtagFilter, false);
       }
     },
-    [page, hasMore, isLoading, hashtagFilter]
+    [fetchPosts, page, posts.length, hasMore, loadError, hashtagFilter]
   );
 
   useEffect(() => {
@@ -70,6 +82,11 @@ export default function CommunityFeed() {
 
   const handlePostUpdated = (updatedPost: CommunityPost) => {
     setPosts(prev => prev.map(p => p.postId === updatedPost.postId ? updatedPost : p));
+  };
+
+  const handleRetry = () => {
+    const isInitialLoad = posts.length === 0;
+    fetchPosts(isInitialLoad ? 0 : page + 1, hashtagFilter, isInitialLoad);
   };
 
   return (
@@ -118,10 +135,19 @@ export default function CommunityFeed() {
           {isLoading && (
             <div className="w-6 h-6 border-2 border-slate-200 border-t-[#FF6B00] rounded-full animate-spin" />
           )}
-          {!hasMore && posts.length > 0 && !isLoading && (
+          {loadError && !isLoading && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="text-sm font-semibold text-[#FF6B00] hover:underline"
+            >
+              Không thể tải bảng tin. Thử lại
+            </button>
+          )}
+          {!hasMore && posts.length > 0 && !isLoading && !loadError && (
             <span className="text-sm font-medium">Bạn đã xem hết tin hôm nay 🎉</span>
           )}
-          {!hasMore && posts.length === 0 && !isLoading && (
+          {!hasMore && posts.length === 0 && !isLoading && !loadError && (
             <span className="text-sm font-medium">Chưa có bài viết nào với hashtag này.</span>
           )}
         </div>
