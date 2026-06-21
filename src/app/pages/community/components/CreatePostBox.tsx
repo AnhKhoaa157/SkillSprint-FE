@@ -62,7 +62,7 @@ export function CreatePostBox({ onPostCreated }: CreatePostBoxProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_30px_-20px_rgba(15,23,42,0.25)] transition hover:border-orange-100 hover:shadow-[0_18px_38px_-24px_rgba(255,107,0,0.35)]"
+      className="rounded-2xl border border-slate-200/60 bg-white shadow-sm"
     >
       <div className="flex gap-3 p-4 sm:p-5">
         <Avatar className="h-11 w-11 shrink-0 ring-2 ring-orange-50">
@@ -94,7 +94,7 @@ export function CreatePostBox({ onPostCreated }: CreatePostBoxProps) {
         </div>
       </div>
 
-      <div className="border-t border-slate-100 bg-slate-50/70 p-3 sm:px-5">
+      <div className="border-t border-slate-100 px-4 py-3 sm:px-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative min-w-0 flex-1">
             <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />

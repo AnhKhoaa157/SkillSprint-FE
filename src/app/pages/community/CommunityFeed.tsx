@@ -163,46 +163,39 @@ export default function CommunityFeed() {
   const loadedLikeCount = posts.reduce((total, post) => total + post.likeCount, 0);
 
   return (
-    <div className="relative min-h-screen bg-[#F9FAFB] px-2 py-5 text-slate-900 sm:px-4 lg:px-6">
-      <div className="pointer-events-none absolute left-[-12%] top-[-12%] -z-10 h-[520px] w-[520px] rounded-full bg-[#FF6B00]/5 blur-[120px]" />
-      <div className="pointer-events-none absolute right-[-16%] top-[28%] -z-10 h-[460px] w-[460px] rounded-full bg-emerald-500/5 blur-[130px]" />
-
-      <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[240px_minmax(0,680px)] xl:grid-cols-[240px_minmax(0,680px)_300px]">
-        <aside className="hidden lg:block">
-          <div className="sticky top-6 space-y-3">
-            <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.25)]">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF7E21] to-[#FF6B00] text-white shadow-md shadow-orange-500/20">
+    <div className="relative min-h-screen bg-[#F0F2F5] pt-4 text-slate-900 sm:pt-6">
+      <div className="mx-auto flex w-full max-w-[1600px] justify-center gap-4 px-2 sm:px-4 lg:gap-8">
+        <aside className="hidden w-[280px] shrink-0 xl:block xl:w-[320px]">
+          <div className="sticky top-20 space-y-6 px-2">
+            <div className="space-y-1">
+              <Link to="/app/community" className="flex items-center gap-3 rounded-xl p-2 transition hover:bg-slate-200/60">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#FF7E21] to-[#FF6B00] text-white shadow-sm">
                   <Users className="h-5 w-5" />
                 </div>
-                <div>
-                  <h1 className="text-base font-extrabold text-slate-900">Cộng đồng</h1>
-                  <p className="text-xs font-medium text-slate-500">SkillSprint Feed</p>
+                <span className="font-semibold text-slate-800">SkillSprint Feed</span>
+              </Link>
+              <Link to="/app/community/rooms" className="flex items-center gap-3 rounded-xl p-2 transition hover:bg-slate-200/60">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100/80 text-[#FF6B00]">
+                  <MessageSquare className="h-5 w-5" />
                 </div>
-              </div>
-
-              <div className="grid gap-2 text-sm">
-                <Link
-                  to="/app/community/rooms"
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left font-semibold text-slate-600 transition hover:bg-orange-50 hover:text-[#FF6B00]"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  Phòng Chat
-                </Link>
-              </div>
+                <span className="font-semibold text-slate-800">Phòng Chat</span>
+              </Link>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.2)]">
-              <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-slate-400">Chủ đề nhanh</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="mt-6 border-t border-slate-300/50 pt-4">
+              <h3 className="mb-2 px-2 text-[15px] font-semibold text-slate-500">Chủ đề nhanh</h3>
+              <div className="space-y-1">
                 {QUICK_TOPICS.map(topic => (
                   <button
                     key={topic}
                     type="button"
                     onClick={() => handleTopicSelect(topic)}
-                    className="rounded-full border border-orange-100 bg-orange-50/70 px-3 py-1.5 text-xs font-bold text-[#FF6B00] transition hover:border-[#FF6B00]/40 hover:bg-orange-100"
+                    className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition hover:bg-slate-200/60"
                   >
-                    #{topic}
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-100/50 text-[#FF6B00]">
+                      <Hash className="h-4 w-4" />
+                    </div>
+                    <span className="font-semibold text-slate-700">{topic}</span>
                   </button>
                 ))}
               </div>
@@ -210,38 +203,8 @@ export default function CommunityFeed() {
           </div>
         </aside>
 
-        <main className="min-w-0 space-y-5">
-          <section className="overflow-hidden rounded-[1.75rem] border border-orange-100 bg-gradient-to-br from-white via-[#FFF8F3] to-white p-5 shadow-[0_18px_42px_-24px_rgba(255,107,0,0.35)] sm:p-6">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[#FF6B00]">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Learning Social
-                </div>
-                <h2 className="text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">
-                  Cộng đồng học tập
-                </h2>
-                <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-slate-600">
-                  Đặt câu hỏi, chia sẻ điều vừa học và cùng nhau giữ nhịp sprint mỗi ngày.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 sm:w-[270px]">
-                {[
-                  { label: "Bài viết", value: posts.length },
-                  { label: "Bình luận", value: loadedCommentCount },
-                  { label: "Lượt thích", value: loadedLikeCount },
-                ].map(stat => (
-                  <div key={stat.label} className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-center shadow-sm">
-                    <div className="text-lg font-black text-slate-900">{stat.value}</div>
-                    <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.25)]">
+        <main className="w-full max-w-[590px] shrink-0 space-y-4 pb-20 sm:w-[590px] xl:max-w-[680px] xl:w-[680px]">
+          <div className="rounded-2xl bg-white p-3 shadow-sm border border-slate-200/60">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex gap-1 rounded-2xl bg-slate-100 p-1 min-w-[140px]">
                 {FEED_TABS.map(tab => {
@@ -302,7 +265,7 @@ export default function CommunityFeed() {
                 Kết quả tìm kiếm cho "{searchFilter}"
               </div>
             )}
-          </section>
+          </div>
 
           <CreatePostBox onPostCreated={() => fetchPosts(0, hashtagFilter, searchFilter, true)} />
 
@@ -338,41 +301,39 @@ export default function CommunityFeed() {
           </div>
         </main>
 
-        <aside className="hidden xl:block">
-          <div className="sticky top-6 space-y-4">
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.2)]">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-extrabold text-slate-900">Hashtag đang nổi</h3>
-                <TrendingUp className="h-4 w-4 text-[#FF6B00]" />
-              </div>
-              <div className="space-y-2">
+        <aside className="hidden w-[280px] shrink-0 lg:block xl:w-[320px]">
+          <div className="sticky top-20 space-y-4 px-2">
+            <div className="mb-2 pt-2">
+              <h3 className="mb-4 text-[15px] font-semibold text-slate-500">Hashtag đang nổi</h3>
+              <div className="space-y-1">
                 {trendingHashtags.map(item => (
                   <button
                     key={item.tag}
                     type="button"
                     onClick={() => handleTopicSelect(item.tag)}
-                    className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition hover:bg-orange-50"
+                    className="flex w-full items-center justify-between rounded-xl p-2 text-left transition hover:bg-slate-200/60"
                   >
-                    <span className="text-sm font-bold text-slate-700">#{item.tag}</span>
-                    <span className="text-xs font-semibold text-slate-400">
+                    <span className="font-semibold text-slate-800">#{item.tag}</span>
+                    <span className="text-[13px] font-medium text-slate-500">
                       {item.count > 0 ? `${item.count} bài` : "gợi ý"}
                     </span>
                   </button>
                 ))}
               </div>
-            </section>
+            </div>
 
-            <section className="rounded-2xl border border-orange-100 bg-gradient-to-br from-white to-orange-50/40 p-4 shadow-[0_12px_30px_-20px_rgba(255,107,0,0.25)]">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-100 text-[#FF6B00]">
-                <BookOpenCheck className="h-5 w-5" />
+            <div className="border-t border-slate-300/50 pt-4">
+              <h3 className="mb-2 text-[15px] font-semibold text-slate-500">Quy tắc cộng đồng</h3>
+              <div className="space-y-3 text-[13px] text-slate-500">
+                <p>• Chia sẻ rõ vấn đề bạn đang học.</p>
+                <p>• Góp ý lịch sự và có ví dụ cụ thể.</p>
+                <p>• Dùng hashtag để dễ tìm kiếm.</p>
               </div>
-              <h3 className="text-sm font-extrabold text-slate-900">Quy tắc cộng đồng</h3>
-              <div className="mt-3 space-y-2 text-sm font-medium text-slate-600">
-                <p>Chia sẻ rõ vấn đề bạn đang học.</p>
-                <p>Góp ý lịch sự và có ví dụ cụ thể.</p>
-                <p>Dùng hashtag để mọi người tìm thấy chủ đề.</p>
-              </div>
-            </section>
+            </div>
+            
+            <div className="mt-6 text-[12px] text-slate-400">
+              SkillSprint © 2026. Một sản phẩm được thiết kế với giao diện hiện đại.
+            </div>
           </div>
         </aside>
       </div>
