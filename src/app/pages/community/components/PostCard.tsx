@@ -148,7 +148,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   };
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_30px_-20px_rgba(15,23,42,0.25)] transition hover:border-orange-100 hover:shadow-[0_18px_38px_-24px_rgba(255,107,0,0.35)]">
+    <article className="rounded-2xl border border-slate-200/60 bg-white shadow-sm">
       <div className="p-4 sm:p-5">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
