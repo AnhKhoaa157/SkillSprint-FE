@@ -52,12 +52,11 @@ describe("CreatePostBox", () => {
     vi.mocked(communityService.createPost).mockResolvedValueOnce({
       status: "APPROVED",
       postId: "1",
-      user: { userId: "u1", fullName: "Test User" },
+      author: { userId: "u1", fullName: "Test User" },
       content: "Hello world",
       hashtags: ["react"],
       likeCount: 0,
       commentCount: 0,
-      reportCount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -90,12 +89,11 @@ describe("CreatePostBox", () => {
     vi.mocked(communityService.createPost).mockResolvedValueOnce({
       status: "PENDING_MODERATION",
       postId: "2",
-      user: { userId: "u1", fullName: "Test User" },
+      author: { userId: "u1", fullName: "Test User" },
       content: "Hello world",
       hashtags: [],
       likeCount: 0,
       commentCount: 0,
-      reportCount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

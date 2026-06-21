@@ -20,13 +20,13 @@ export function PostCard({ post, onPostUpdated }: PostCardProps) {
     if (isLiking) return;
     setIsLiking(true);
     
-    const isCurrentlyLiked = post.isLikedByMe;
+    const isCurrentlyLiked = post.likedByMe;
     const previousLikeCount = post.likeCount;
     
     // Optimistic update
     onPostUpdated({
       ...post,
-      isLikedByMe: !isCurrentlyLiked,
+      likedByMe: !isCurrentlyLiked,
       likeCount: isCurrentlyLiked ? Math.max(0, previousLikeCount - 1) : previousLikeCount + 1
     });
 
@@ -40,7 +40,7 @@ export function PostCard({ post, onPostUpdated }: PostCardProps) {
       // Revert on error
       onPostUpdated({
         ...post,
-        isLikedByMe: isCurrentlyLiked,
+        likedByMe: isCurrentlyLiked,
         likeCount: previousLikeCount
       });
       toast.error(err.message || "Không thể thực hiện thao tác");
@@ -79,14 +79,14 @@ export function PostCard({ post, onPostUpdated }: PostCardProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <Avatar className="w-10 h-10">
-            <AvatarImage src={post.user.avatarUrl} />
+            <AvatarImage src={post.author.avatarObjectKey} />
             <AvatarFallback className="bg-orange-100 text-[#FF6B00] font-semibold">
-              {post.user.fullName.charAt(0)}
+              {post.author.fullName.charAt(0)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
             <span className="font-semibold text-slate-800 text-sm leading-tight">
-              {post.user.fullName}
+              {post.author.fullName}
             </span>
             <span className="text-xs text-slate-500">
               {timeAgo(post.createdAt)}
@@ -126,10 +126,10 @@ export function PostCard({ post, onPostUpdated }: PostCardProps) {
         <button 
           onClick={handleLike}
           className={`flex items-center gap-1.5 text-sm font-medium transition-all active:scale-95 ${
-            post.isLikedByMe ? "text-red-500" : "text-slate-500 hover:text-slate-700"
+            post.likedByMe ? "text-red-500" : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          <Heart size={18} fill={post.isLikedByMe ? "currentColor" : "none"} className={post.isLikedByMe ? "text-red-500" : ""} />
+          <Heart size={18} fill={post.likedByMe ? "currentColor" : "none"} className={post.likedByMe ? "text-red-500" : ""} />
           <span>{post.likeCount > 0 ? post.likeCount : "Thích"}</span>
         </button>
 

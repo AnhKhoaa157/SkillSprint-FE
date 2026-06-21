@@ -129,7 +129,7 @@ export function CommentSection({ postId, initialCommentCount }: CommentSectionPr
         {comments.map(comment => (
           <div key={comment.commentId} className="flex gap-3 group">
             <Avatar className="w-8 h-8 shrink-0">
-              <AvatarImage src={comment.author.avatarUrl} />
+              <AvatarImage src={comment.author.avatarObjectKey} />
               <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
                 {comment.author.fullName.charAt(0)}
               </AvatarFallback>
