@@ -72,6 +72,36 @@ export interface BlacklistKeywordResponse {
   updatedAt: string;
 }
 
+export interface CommunityRoomResponse {
+  roomId: string;
+  name: string;
+  description: string;
+  mode: CommunityRoomMode;
+  status: CommunityRoomStatus;
+  owner: CommunityAuthorResponse | null;
+  maxMembers: number;
+  memberCount: number;
+  reportCount: number;
+  myRole: CommunityRoomRole | null;
+  joined: boolean;
+  banned: boolean;
+  adminNote?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommunityChatMessageResponse {
+  messageId: string;
+  roomId: string;
+  sender: CommunityAuthorResponse | null;
+  content: string;
+  rawContent?: string | null;
+  hidden: boolean;
+  reportCount: number;
+  adminNote?: string | null;
+  sentAt: string;
+}
+
 export interface AdminCommunityListParams<TStatus extends string = string> {
   status?: TStatus;
   search?: string;
@@ -103,4 +133,22 @@ export interface UpdateContentReportStatusRequest {
 
 export interface CreateBlacklistKeywordRequest {
   keyword: string;
+}
+
+export interface AdminCommunityRoomParams {
+  status?: CommunityRoomStatus;
+  mode?: CommunityRoomMode;
+  search?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface UpdateCommunityRoomStatusRequest {
+  status: CommunityRoomStatus;
+  adminNote?: string;
+}
+
+export interface HideCommunityChatMessageRequest {
+  hidden: boolean;
+  adminNote?: string;
 }

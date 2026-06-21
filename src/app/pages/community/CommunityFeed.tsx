@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Link } from "react-router";
 import { CreatePostBox } from "./components/CreatePostBox";
 import { PostCard } from "./components/PostCard";
 import communityService from "../../../api/community/communityService";
 import type { CommunityPost } from "../../../api/community/communityTypes";
 import { toast } from "sonner";
 import {
-  Award,
   BookOpenCheck,
   Flame,
   Hash,
   MessageCircle,
+  MessageSquare,
   Search,
   Sparkles,
   TrendingUp,
@@ -25,9 +26,7 @@ const QUICK_TOPICS = ["React", "SpringBoot", "Interview", "Roadmap", "TypeScript
 type FeedTab = "latest" | "popular" | "discussed";
 
 const FEED_TABS: Array<{ id: FeedTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-  { id: "latest", label: "Mới nhất", icon: Sparkles },
-  { id: "popular", label: "Nổi bật", icon: Flame },
-  { id: "discussed", label: "Thảo luận", icon: MessageCircle },
+  { id: "latest", label: "Bảng tin", icon: Sparkles },
 ];
 
 export default function CommunityFeed() {
@@ -179,23 +178,13 @@ export default function CommunityFeed() {
               </div>
 
               <div className="grid gap-2 text-sm">
-                {[
-                  { icon: BookOpenCheck, label: "Hỏi đáp học tập" },
-                  { icon: TrendingUp, label: "Chia sẻ tiến độ" },
-                  { icon: Award, label: "Kinh nghiệm phỏng vấn" },
-                ].map(item => {
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.label}
-                      type="button"
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left font-semibold text-slate-600 transition hover:bg-orange-50 hover:text-[#FF6B00]"
-                    >
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </button>
-                  );
-                })}
+                <Link
+                  to="/app/community/rooms"
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left font-semibold text-slate-600 transition hover:bg-orange-50 hover:text-[#FF6B00]"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Phòng Chat
+                </Link>
               </div>
             </div>
 
@@ -250,7 +239,7 @@ export default function CommunityFeed() {
 
           <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.25)]">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="grid grid-cols-3 gap-1 rounded-2xl bg-slate-100 p-1">
+              <div className="flex gap-1 rounded-2xl bg-slate-100 p-1 min-w-[140px]">
                 {FEED_TABS.map(tab => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;

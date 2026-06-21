@@ -40,6 +40,8 @@ import WorkspacesNew from "./pages/deprecated/WorkspacesNew";
 import NotificationsPage from "./pages/core/NotificationsPage";
 import FeedbackPage from "./pages/core/FeedbackPage";
 import CommunityFeed from "./pages/community/CommunityFeed";
+import CommunityRooms from "./pages/community/CommunityRooms";
+import CommunityRoomChat from "./pages/community/CommunityRoomChat";
 
 export const routeRegistry = {
   public: {
@@ -92,6 +94,8 @@ export const routeRegistry = {
     feedback: "feedback",
     learning: "learning",
     community: "community",
+    communityRooms: "community/rooms",
+    communityRoomChat: "community/rooms/:roomId",
     learningCourse: "learning/course",
     learningQuiz: "learning/quiz/:quizId",
     quizReview: "quiz-review",
@@ -163,6 +167,8 @@ export const router = createBrowserRouter([
           { path: appRoutes.upgraded, Component: PostUpgradeDashboard },
           { path: appRoutes.feedback, Component: FeedbackPage },
           { path: appRoutes.community, Component: CommunityFeed },
+          { path: appRoutes.communityRooms, Component: CommunityRooms },
+          { path: appRoutes.communityRoomChat, Component: CommunityRoomChat },
           { path: appRoutes.learningCourse, Component: CoursePlayer },
           { path: appRoutes.learningQuiz, Component: QuizPage },
           { path: appRoutes.quizReview, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },

@@ -63,7 +63,6 @@ export function useNotificationSocket(): UseNotificationSocketReturn {
   const [unreadCount, setUnreadCount] = useState(0);
   const [connected, setConnected] = useState(false);
   const clientRef = useRef<Client | null>(null);
-  const aliveRef = useRef(true);
 
   // Load history from REST on mount + active public announcement
   useEffect(() => {
@@ -107,7 +106,7 @@ export function useNotificationSocket(): UseNotificationSocketReturn {
 
   // STOMP WebSocket lifecycle
   useEffect(() => {
-    aliveRef.current = true;
+    let isActive = true;
     const token = getAuthToken();
     if (!token) return;
 
@@ -122,13 +121,13 @@ export function useNotificationSocket(): UseNotificationSocketReturn {
       heartbeatOutgoing: 4000,
 
       onConnect: () => {
-        if (!aliveRef.current) return;
+        if (!isActive) return;
         setConnected(true);
 
         client.subscribe(
           `/topic/users/${userId}/notifications`,
           (frame: IMessage) => {
-            if (!aliveRef.current) return;
+            if (!isActive) return;
             try {
               const incoming = JSON.parse(frame.body) as NotificationResponse;
 
@@ -155,16 +154,16 @@ export function useNotificationSocket(): UseNotificationSocketReturn {
         );
       },
 
-      onDisconnect: () => { if (aliveRef.current) setConnected(false); },
-      onStompError: () => { if (aliveRef.current) setConnected(false); },
-      onWebSocketError: () => { if (aliveRef.current) setConnected(false); },
+      onDisconnect: () => { if (isActive) setConnected(false); },
+      onStompError: () => { if (isActive) setConnected(false); },
+      onWebSocketError: () => { if (isActive) setConnected(false); },
     });
 
     client.activate();
     clientRef.current = client;
 
     return () => {
-      aliveRef.current = false;
+      isActive = false;
       client.deactivate();
     };
   }, []); // intentionally empty — token/userId are stable per session
