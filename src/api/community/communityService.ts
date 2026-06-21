@@ -8,7 +8,7 @@ import type {
   ReportRequest
 } from "./communityTypes";
 
-const BASE_URL = "/api/posts";
+const BASE_URL = "/api/community/posts";
 
 export const communityService = {
   /**
