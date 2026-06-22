@@ -753,20 +753,20 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
       </div>
 
       <Dialog open={noteDialog.isOpen} onOpenChange={(open) => !open && closeNoteDialog()}>
-        <DialogContent>
+        <DialogContent className="bg-white text-slate-900 border-slate-200 shadow-xl">
           <DialogHeader>
-            <DialogTitle>{noteDialog.title}</DialogTitle>
-            <DialogDescription>Ghi chú này sẽ được lưu lại trong lịch sử kiểm duyệt.</DialogDescription>
+            <DialogTitle className="text-slate-900 font-semibold">{noteDialog.title}</DialogTitle>
+            <DialogDescription className="text-slate-500">Ghi chú này sẽ được lưu lại trong lịch sử kiểm duyệt.</DialogDescription>
           </DialogHeader>
           <Textarea
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
             placeholder="Nhập ghi chú của bạn (không bắt buộc)..."
-            className="min-h-[100px]"
+            className="min-h-[100px] bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-[#FF6B00]"
           />
           <DialogFooter>
-            <Button variant="outline" onClick={closeNoteDialog}>Hủy</Button>
-            <Button onClick={() => {
+            <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 bg-white" onClick={closeNoteDialog}>Hủy</Button>
+            <Button className="bg-[#FF6B00] text-white hover:bg-[#EA580C] border-none" onClick={() => {
               noteDialog.onConfirm(noteText.trim());
               closeNoteDialog();
             }}>
@@ -777,14 +777,14 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
       </Dialog>
 
       <Dialog open={confirmDialog.isOpen} onOpenChange={(open) => !open && closeConfirmDialog()}>
-        <DialogContent>
+        <DialogContent className="bg-white text-slate-900 border-slate-200 shadow-xl">
           <DialogHeader>
-            <DialogTitle>{confirmDialog.title}</DialogTitle>
-            <DialogDescription>{confirmDialog.message}</DialogDescription>
+            <DialogTitle className="text-slate-900 font-semibold">{confirmDialog.title}</DialogTitle>
+            <DialogDescription className="text-slate-500">{confirmDialog.message}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={closeConfirmDialog}>Hủy</Button>
-            <Button variant="destructive" onClick={() => {
+            <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 bg-white" onClick={closeConfirmDialog}>Hủy</Button>
+            <Button variant="destructive" className="bg-red-600 text-white hover:bg-red-700 border-none" onClick={() => {
               confirmDialog.onConfirm();
               closeConfirmDialog();
             }}>
