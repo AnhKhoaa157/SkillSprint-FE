@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { Search, Plus, Users, Hash, Shield, MessageSquare, Lock, ArrowLeft, CalendarDays } from "lucide-react";
+import { Search, Plus, Users, Hash, Shield, MessageSquare, Lock, ArrowLeft, CalendarDays, MailCheck, X } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { toast } from "sonner";
@@ -8,7 +8,12 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 
 import communityRoomService from "../../../api/community/communityRoomService";
-import type { CommunityRoomResponse, CommunityRoomMode, CreateCommunityRoomRequest } from "../../../api/community/communityRoomTypes";
+import type {
+  CommunityRoomResponse,
+  CommunityRoomMode,
+  CommunityRoomInviteResponse,
+  CreateCommunityRoomRequest
+} from "../../../api/community/communityRoomTypes";
 
 // Thêm Modal Dialog đơn giản (dùng HTML native dialog hoặc custom)
 // Tạm dùng div overlay cho Modal
@@ -112,7 +117,10 @@ function CreateRoomModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onCl
 export default function CommunityRooms() {
   const [activeTab, setActiveTab] = useState<"MY_ROOMS" | "DISCOVER">("MY_ROOMS");
   const [rooms, setRooms] = useState<CommunityRoomResponse[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<CommunityRoomInviteResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [invitesLoading, setInvitesLoading] = useState(false);
+  const [inviteActionId, setInviteActionId] = useState<string | null>(null);
   
   // Filters
   const [search, setSearch] = useState("");
@@ -122,6 +130,18 @@ export default function CommunityRooms() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
+
+  const fetchInvites = async () => {
+    try {
+      setInvitesLoading(true);
+      const res = await communityRoomService.getMyInvites(0, 20);
+      setPendingInvites(res.items.filter((invite) => invite.status === "PENDING"));
+    } catch (err: any) {
+      toast.error(err.message || "Không thể tải lời mời phòng");
+    } finally {
+      setInvitesLoading(false);
+    }
+  };
 
   const fetchRooms = async (isLoadMore = false) => {
     try {
@@ -151,6 +171,9 @@ export default function CommunityRooms() {
 
   useEffect(() => {
     fetchRooms();
+    if (activeTab === "MY_ROOMS") {
+      fetchInvites();
+    }
   }, [activeTab, modeFilter]);
 
   // Debounced search
@@ -168,6 +191,35 @@ export default function CommunityRooms() {
       navigate(`/app/community/rooms/${roomId}`);
     } catch (err: any) {
       toast.error(err.message || "Không thể tham gia phòng");
+    }
+  };
+
+  const handleAcceptInvite = async (inviteId: string) => {
+    try {
+      setInviteActionId(inviteId);
+      const acceptedRoom = await communityRoomService.acceptInvite(inviteId);
+      toast.success("Đã chấp nhận lời mời");
+      setPendingInvites((prev) => prev.filter((invite) => invite.inviteId !== inviteId));
+      window.dispatchEvent(new Event("community-room-invites-changed"));
+      navigate(`/app/community/rooms/${acceptedRoom.roomId}`);
+    } catch (err: any) {
+      toast.error(err.message || "Không thể chấp nhận lời mời");
+    } finally {
+      setInviteActionId(null);
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId: string) => {
+    try {
+      setInviteActionId(inviteId);
+      await communityRoomService.declineInvite(inviteId);
+      toast.success("Đã từ chối lời mời");
+      setPendingInvites((prev) => prev.filter((invite) => invite.inviteId !== inviteId));
+      window.dispatchEvent(new Event("community-room-invites-changed"));
+    } catch (err: any) {
+      toast.error(err.message || "Không thể từ chối lời mời");
+    } finally {
+      setInviteActionId(null);
     }
   };
 
@@ -240,6 +292,80 @@ export default function CommunityRooms() {
           </div>
         )}
       </div>
+
+      {activeTab === "MY_ROOMS" && (invitesLoading || pendingInvites.length > 0) && (
+        <section className="mb-8 rounded-3xl border border-orange-100 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
+                <MailCheck className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="text-base font-extrabold text-slate-900">Lời mời vào phòng</h2>
+                <p className="text-sm font-medium text-slate-500">Các phòng đang chờ bạn xác nhận tham gia.</p>
+              </div>
+            </div>
+            {pendingInvites.length > 0 && (
+              <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
+                {pendingInvites.length} lời mời
+              </span>
+            )}
+          </div>
+
+          {invitesLoading ? (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {[0, 1].map((item) => (
+                <div key={item} className="h-28 animate-pulse rounded-2xl bg-slate-100" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {pendingInvites.map((invite) => {
+                const isBusy = inviteActionId === invite.inviteId;
+
+                return (
+                  <div key={invite.inviteId} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-bold text-slate-900" title={invite.roomName}>
+                          {invite.roomName}
+                        </h3>
+                        <p className="mt-1 text-xs font-medium text-slate-500">
+                          Mời bởi {invite.inviter?.fullName || "thành viên SkillSprint"}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Hết hạn {format(new Date(invite.expiresAt), "dd/MM/yyyy", { locale: vi })}
+                        </p>
+                      </div>
+                      <MailCheck className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={Boolean(inviteActionId)}
+                        onClick={() => handleDeclineInvite(invite.inviteId)}
+                        className="h-9 rounded-xl text-slate-600 hover:bg-white"
+                      >
+                        <X className="mr-1.5 h-4 w-4" />
+                        Từ chối
+                      </Button>
+                      <Button
+                        type="button"
+                        disabled={Boolean(inviteActionId)}
+                        onClick={() => handleAcceptInvite(invite.inviteId)}
+                        className="h-9 rounded-xl bg-orange-500 text-white hover:bg-orange-600"
+                      >
+                        {isBusy ? "Đang xử lý..." : "Chấp nhận"}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Content */}
       {loading && rooms.length === 0 ? (

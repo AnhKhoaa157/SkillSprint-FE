@@ -14,7 +14,8 @@ import {
   Inbox,
   MessageSquare,
   Info,
-  Shield
+  Shield,
+  Users
 } from "lucide-react";
 import { useNotificationSocket } from "../../hooks/useNotificationSocket";
 
@@ -23,7 +24,7 @@ export default function NotificationsPage() {
   const { notifications, unreadCount, markAsRead } = useNotificationSocket();
 
   const [filter, setFilter] = useState<"all" | "unread">("all");
-  const [activeCategory, setActiveCategory] = useState<"all" | "learning" | "tasks" | "system">("all");
+  const [activeCategory, setActiveCategory] = useState<"all" | "learning" | "tasks" | "community" | "system">("all");
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [expandedNotifs, setExpandedNotifs] = useState<Set<string>>(new Set());
 
@@ -48,6 +49,9 @@ export default function NotificationsPage() {
     }
     if (activeCategory === "tasks") {
       return ["TASK_REMINDER", "TASK_OVERDUE"].includes(notif.type);
+    }
+    if (activeCategory === "community") {
+      return notif.type === "COMMUNITY_ROOM_INVITE";
     }
     if (activeCategory === "system") {
       return ["SYSTEM_INFO", "SYSTEM_WARNING", "FEEDBACK_REPLIED"].includes(notif.type) || notif.type.startsWith("SYSTEM_");
@@ -88,6 +92,10 @@ export default function NotificationsPage() {
 
     if (notif.type === "FEEDBACK_REPLIED") {
       navigate("/app/profile?tab=feedback");
+      return;
+    }
+    if (notif.type === "COMMUNITY_ROOM_INVITE") {
+      navigate("/app/community/rooms");
       return;
     }
     if (notif.workspaceId && notif.workspaceId !== "system") {
@@ -152,6 +160,13 @@ export default function NotificationsPage() {
           label: "Phản hồi",
           labelColor: "text-violet-700 bg-violet-50/60 border-violet-100/50"
         };
+      case "COMMUNITY_ROOM_INVITE":
+        return {
+          bg: "bg-orange-50 text-[#FF6B00] border-orange-100",
+          icon: <Users size={16} className="stroke-[2]" />,
+          label: "Cộng đồng",
+          labelColor: "text-orange-700 bg-orange-50/60 border-orange-100/50"
+        };
       case "SYSTEM_INFO":
         return {
           bg: "bg-blue-50 text-blue-600 border-blue-100",
@@ -208,6 +223,11 @@ export default function NotificationsPage() {
       id: "tasks",
       label: "Nhiệm vụ",
       count: notifications.filter(n => ["TASK_REMINDER", "TASK_OVERDUE"].includes(n.type)).length
+    },
+    {
+      id: "community",
+      label: "Cộng đồng",
+      count: notifications.filter(n => n.type === "COMMUNITY_ROOM_INVITE").length
     },
     {
       id: "system",
@@ -378,7 +398,12 @@ export default function NotificationsPage() {
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0 self-center">
-                    {notif.workspaceId && notif.workspaceId !== "system" ? (
+                    {notif.type === "COMMUNITY_ROOM_INVITE" ? (
+                      <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-orange-100 bg-orange-50 text-xs font-semibold text-orange-700 shadow-sm transition duration-200 group-hover:border-[#FF6B00]/30">
+                        <span>Xem lời mời</span>
+                        <ArrowRight size={11} className="stroke-[2.5] transition-transform group-hover:translate-x-0.5 text-orange-500" />
+                      </div>
+                    ) : notif.workspaceId && notif.workspaceId !== "system" ? (
                       <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-sm transition duration-200 group-hover:border-[#FF6B00]/30 group-hover:text-[#FF6B00] group-hover:bg-orange-50/[0.04]">
                         <span>Truy cập</span>
                         <ArrowRight size={11} className="stroke-[2.5] transition-transform group-hover:translate-x-0.5 text-slate-400 group-hover:text-[#FF6B00]" />
