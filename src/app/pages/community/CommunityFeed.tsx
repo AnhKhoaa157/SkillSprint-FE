@@ -149,8 +149,6 @@ export default function CommunityFeed() {
     return QUICK_TOPICS.map(tag => ({ tag, count: 0 }));
   }, [posts]);
 
-  const loadedCommentCount = posts.reduce((total, post) => total + post.commentCount, 0);
-  const loadedLikeCount = posts.reduce((total, post) => total + post.likeCount, 0);
   const activeFilterLabel = hashtagFilter ? `#${hashtagFilter}` : searchFilter;
 
   return (
@@ -160,16 +158,16 @@ export default function CommunityFeed() {
           <div className="sticky top-4 space-y-2">
             <Link
               to="/app/community"
-              className="flex h-12 items-center gap-3 rounded-md bg-white px-3 text-[15px] font-semibold text-[#1877f2] shadow-sm ring-1 ring-black/5"
+              className="flex h-12 items-center gap-3 rounded-2xl bg-white px-3 text-[15px] font-semibold text-[#FF6B00] shadow-sm ring-1 ring-orange-100"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e7f3ff] text-[#1877f2]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-[#FF6B00]">
                 <Home className="h-5 w-5" />
               </span>
               Bảng tin
             </Link>
             <Link
               to="/app/community/rooms"
-              className="flex h-12 items-center gap-3 rounded-md px-3 text-[15px] font-semibold text-[#050505] transition hover:bg-white hover:shadow-sm"
+              className="flex h-12 items-center gap-3 rounded-2xl px-3 text-[15px] font-semibold text-[#050505] transition hover:bg-white hover:shadow-sm"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e4e6eb] text-[#1c1e21]">
                 <MessageSquare className="h-5 w-5" />
@@ -178,21 +176,31 @@ export default function CommunityFeed() {
             </Link>
             <button
               type="button"
-              className="flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-[15px] font-semibold text-[#050505] transition hover:bg-white hover:shadow-sm"
+              disabled
+              title="Đang phát triển"
+              className="flex h-12 w-full cursor-not-allowed items-center gap-3 rounded-2xl px-3 text-left text-[15px] font-semibold text-[#65676b] opacity-75"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e4e6eb] text-[#1c1e21]">
                 <Bookmark className="h-5 w-5" />
               </span>
-              Bài đã lưu
+              <span className="min-w-0 flex-1">Bài đã lưu</span>
+              <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase text-[#FF6B00]">
+                Đang phát triển
+              </span>
             </button>
             <button
               type="button"
-              className="flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-[15px] font-semibold text-[#050505] transition hover:bg-white hover:shadow-sm"
+              disabled
+              title="Đang phát triển"
+              className="flex h-12 w-full cursor-not-allowed items-center gap-3 rounded-2xl px-3 text-left text-[15px] font-semibold text-[#65676b] opacity-75"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e4e6eb] text-[#1c1e21]">
                 <CalendarDays className="h-5 w-5" />
               </span>
-              Sự kiện học tập
+              <span className="min-w-0 flex-1">Sự kiện học tập</span>
+              <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase text-[#FF6B00]">
+                Đang phát triển
+              </span>
             </button>
 
             <div className="my-3 h-px bg-[#ced0d4]" />
@@ -204,9 +212,9 @@ export default function CommunityFeed() {
                   key={topic}
                   type="button"
                   onClick={() => handleTopicSelect(topic)}
-                  className="flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-[15px] font-semibold text-[#050505] transition hover:bg-white hover:shadow-sm"
+                  className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-[15px] font-semibold text-[#050505] transition hover:bg-white hover:shadow-sm"
                 >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-[#1877f2] to-[#42b72a] text-white">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#FF6B00] to-[#16a34a] text-white">
                     <Hash className="h-4 w-4" />
                   </span>
                   #{topic}
@@ -217,30 +225,15 @@ export default function CommunityFeed() {
         </aside>
 
         <main className="min-w-0 space-y-4 lg:mx-auto lg:w-full">
-          <section className="rounded-lg bg-white shadow-sm ring-1 ring-black/5">
+          <section className="rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
             <div className="flex flex-col gap-3 border-b border-[#e4e6eb] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1877f2] text-white">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FF6B00] text-white">
                   <Users className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
                   <h1 className="truncate text-xl font-bold tracking-normal text-[#050505]">Cộng đồng SkillSprint</h1>
                   <p className="truncate text-sm font-medium text-[#65676b]">Cập nhật bài viết, câu hỏi và kinh nghiệm học tập mới nhất</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 sm:w-[270px]">
-                <div className="rounded-md bg-[#f0f2f5] px-3 py-2 text-center">
-                  <div className="text-base font-bold text-[#050505]">{posts.length}</div>
-                  <div className="text-[11px] font-bold uppercase text-[#65676b]">Bài</div>
-                </div>
-                <div className="rounded-md bg-[#f0f2f5] px-3 py-2 text-center">
-                  <div className="text-base font-bold text-[#1877f2]">{loadedLikeCount}</div>
-                  <div className="text-[11px] font-bold uppercase text-[#65676b]">Thích</div>
-                </div>
-                <div className="rounded-md bg-[#f0f2f5] px-3 py-2 text-center">
-                  <div className="text-base font-bold text-[#42b72a]">{loadedCommentCount}</div>
-                  <div className="text-[11px] font-bold uppercase text-[#65676b]">Bình luận</div>
                 </div>
               </div>
             </div>
@@ -249,14 +242,14 @@ export default function CommunityFeed() {
               <div className="grid grid-cols-2 gap-2 xl:hidden">
                 <Link
                   to="/app/community"
-                  className="flex h-10 items-center justify-center gap-2 rounded-md bg-[#e7f3ff] text-sm font-bold text-[#1877f2]"
+                  className="flex h-10 items-center justify-center gap-2 rounded-full bg-orange-50 text-sm font-bold text-[#FF6B00]"
                 >
                   <Home className="h-4 w-4" />
                   Feed
                 </Link>
                 <Link
                   to="/app/community/rooms"
-                  className="flex h-10 items-center justify-center gap-2 rounded-md bg-[#f0f2f5] text-sm font-bold text-[#050505]"
+                  className="flex h-10 items-center justify-center gap-2 rounded-full bg-[#f0f2f5] text-sm font-bold text-[#050505]"
                 >
                   <MessageSquare className="h-4 w-4" />
                   Phòng chat
@@ -269,7 +262,7 @@ export default function CommunityFeed() {
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Tìm kiếm trên SkillSprint"
-                  className="h-11 rounded-full border-0 bg-[#f0f2f5] pl-11 pr-11 text-[15px] shadow-none placeholder:text-[#65676b] focus-visible:ring-2 focus-visible:ring-[#1877f2]"
+                  className="h-11 rounded-full border-0 bg-[#f0f2f5] pl-11 pr-11 text-[15px] shadow-none placeholder:text-[#65676b] focus-visible:ring-2 focus-visible:ring-[#FF6B00]"
                 />
                 {(hashtagFilter || searchFilter) && (
                   <button
@@ -289,9 +282,9 @@ export default function CommunityFeed() {
                     key={topic}
                     type="button"
                     onClick={() => handleTopicSelect(topic)}
-                    className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full bg-[#f0f2f5] px-4 text-sm font-bold text-[#050505] transition hover:bg-[#e4e6eb]"
+                    className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full bg-[#f0f2f5] px-4 text-sm font-bold text-[#050505] transition hover:bg-orange-50 hover:text-[#FF6B00]"
                   >
-                    <Hash className="h-4 w-4 text-[#1877f2]" />
+                    <Hash className="h-4 w-4 text-[#FF6B00]" />
                     {topic}
                   </button>
                 ))}
@@ -301,23 +294,23 @@ export default function CommunityFeed() {
 
           <CreatePostBox onPostCreated={() => fetchPosts(0, hashtagFilter, searchFilter, true)} />
 
-          <div className="rounded-lg bg-white shadow-sm ring-1 ring-black/5">
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
             <div className="flex flex-col gap-3 border-b border-[#e4e6eb] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-[17px] font-bold text-[#050505]">
-                <Sparkles className="h-5 w-5 text-[#1877f2]" />
+                <Sparkles className="h-5 w-5 text-[#FF6B00]" />
                 Bài viết mới nhất
               </div>
 
               {(hashtagFilter || searchFilter) && (
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="inline-flex min-w-0 items-center gap-2 rounded-full bg-[#e7f3ff] px-3 py-1.5 text-sm font-bold text-[#1877f2]">
+                  <span className="inline-flex min-w-0 items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-sm font-bold text-[#FF6B00]">
                     {hashtagFilter ? <Hash className="h-4 w-4 shrink-0" /> : <Search className="h-4 w-4 shrink-0" />}
                     <span className="truncate">{activeFilterLabel}</span>
                   </span>
                   <button
                     type="button"
                     onClick={clearFilters}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f0f2f5] text-[#65676b] transition hover:bg-[#e4e6eb] hover:text-[#050505]"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f0f2f5] text-[#65676b] transition hover:bg-orange-50 hover:text-[#FF6B00]"
                     title="Xóa lọc"
                   >
                     <X className="h-4 w-4" />
@@ -334,13 +327,13 @@ export default function CommunityFeed() {
 
             <div ref={observerTarget} className="flex justify-center py-5 text-[#65676b]">
               {isLoading && (
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#d8dadf] border-t-[#1877f2]" />
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#d8dadf] border-t-[#FF6B00]" />
               )}
               {loadError && !isLoading && (
                 <button
                   type="button"
                   onClick={handleRetry}
-                  className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-bold text-[#1877f2] shadow-sm ring-1 ring-black/10 transition hover:bg-[#f0f2f5]"
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#FF6B00] shadow-sm ring-1 ring-orange-100 transition hover:bg-orange-50"
                 >
                   <RefreshCw className="h-4 w-4" />
                   Thử lại
@@ -352,7 +345,7 @@ export default function CommunityFeed() {
                 </span>
               )}
               {!hasMore && posts.length === 0 && !isLoading && !loadError && (
-                <span className="rounded-lg border border-dashed border-[#ced0d4] bg-white px-5 py-4 text-center text-sm font-semibold text-[#65676b]">
+                <span className="rounded-2xl border border-dashed border-[#ced0d4] bg-white px-5 py-4 text-center text-sm font-semibold text-[#65676b]">
                   Chưa có bài viết phù hợp.
                 </span>
               )}
@@ -362,10 +355,10 @@ export default function CommunityFeed() {
 
         <aside className="hidden lg:block">
           <div className="sticky top-4 space-y-4">
-            <section className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-[17px] font-bold text-[#65676b]">Đang nổi bật</h2>
-                <TrendingUp className="h-5 w-5 text-[#1877f2]" />
+                <TrendingUp className="h-5 w-5 text-[#FF6B00]" />
               </div>
               <div className="space-y-1">
                 {trendingHashtags.map(item => (
@@ -373,7 +366,7 @@ export default function CommunityFeed() {
                     key={item.tag}
                     type="button"
                     onClick={() => handleTopicSelect(item.tag)}
-                    className="flex w-full items-center justify-between rounded-md px-2 py-2.5 text-left transition hover:bg-[#f0f2f5]"
+                    className="flex w-full items-center justify-between rounded-xl px-2 py-2.5 text-left transition hover:bg-orange-50"
                   >
                     <span className="min-w-0 truncate text-[15px] font-semibold text-[#050505]">#{item.tag}</span>
                     <span className="ml-3 shrink-0 text-xs font-semibold text-[#65676b]">
@@ -384,14 +377,14 @@ export default function CommunityFeed() {
               </div>
             </section>
 
-            <section className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-[17px] font-bold text-[#65676b]">Hoạt động</h2>
                 <Bell className="h-5 w-5 text-[#65676b]" />
               </div>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e7f3ff] text-[#1877f2]">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-[#FF6B00]">
                     <Flame className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
@@ -411,9 +404,9 @@ export default function CommunityFeed() {
               </div>
             </section>
 
-            <section className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
               <div className="mb-3 flex items-center gap-2">
-                <BookOpenCheck className="h-5 w-5 text-[#1877f2]" />
+                <BookOpenCheck className="h-5 w-5 text-[#FF6B00]" />
                 <h2 className="text-[17px] font-bold text-[#65676b]">Quy tắc cộng đồng</h2>
               </div>
               <div className="space-y-2 text-sm leading-relaxed text-[#65676b]">
