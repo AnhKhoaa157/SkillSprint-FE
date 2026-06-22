@@ -56,7 +56,7 @@ export default function CommunityRoomChat() {
 
   // Modals state
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteUserId, setInviteUserId] = useState("");
 
   const [createPinModalOpen, setCreatePinModalOpen] = useState(false);
   const [newPin, setNewPin] = useState({ title: "", content: "", linkUrl: "" });
@@ -103,10 +103,10 @@ export default function CommunityRoomChat() {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await communityRoomService.inviteMember(roomId!, { inviteeEmail: inviteEmail });
+      await communityRoomService.inviteMember(roomId!, { inviteeUserId: inviteUserId });
       toast.success("Đã gửi lời mời");
       setInviteModalOpen(false);
-      setInviteEmail("");
+      setInviteUserId("");
     } catch (err: any) {
       toast.error(err.message || "Lỗi khi mời thành viên");
     }
@@ -348,13 +348,13 @@ export default function CommunityRoomChat() {
             <h2 className="text-xl font-bold mb-4">Mời thành viên</h2>
             <form onSubmit={handleInvite}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email người được mời</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">User ID người được mời</label>
                 <Input
                   required
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="user@example.com"
+                  type="text"
+                  value={inviteUserId}
+                  onChange={(e) => setInviteUserId(e.target.value)}
+                  placeholder="Nhập User ID"
                 />
               </div>
               <div className="flex justify-end gap-3 mt-6">

@@ -92,7 +92,7 @@ export interface UpdateCommunityRoomRequest {
 }
 
 export interface CreateCommunityRoomInviteRequest {
-  inviteeEmail: string;
+  inviteeUserId: string;
 }
 
 export interface UpdateCommunityRoomMemberRoleRequest {
