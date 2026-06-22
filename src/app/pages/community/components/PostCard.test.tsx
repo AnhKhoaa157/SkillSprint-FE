@@ -28,19 +28,14 @@ vi.mock("sonner", () => ({
   }
 }));
 
-const originalPrompt = window.prompt;
 const originalScrollTo = window.scrollTo;
-let promptMock: ReturnType<typeof vi.fn<(message?: string, defaultValue?: string) => string | null>>;
 
 beforeEach(() => {
-  promptMock = vi.fn<(message?: string, defaultValue?: string) => string | null>();
-  window.prompt = promptMock;
   window.scrollTo = vi.fn();
   vi.clearAllMocks();
 });
 
 afterAll(() => {
-  window.prompt = originalPrompt;
   window.scrollTo = originalScrollTo;
 });
 
@@ -141,7 +136,6 @@ describe("PostCard", () => {
   });
 
   it("should call report API when user provides a reason", async () => {
-    promptMock.mockReturnValueOnce("Spam");
     vi.mocked(communityService.reportPost).mockResolvedValueOnce();
 
     render(<PostCard post={mockPost} onPostUpdated={mockOnPostUpdated} />);
@@ -149,7 +143,10 @@ describe("PostCard", () => {
     const reportBtn = screen.getByTitle("Báo cáo vi phạm");
     await userEvent.click(reportBtn);
 
-    expect(window.prompt).toHaveBeenCalledWith("Lý do báo cáo bài viết này:");
+    expect(screen.getByText("Báo cáo bài viết")).toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText("Nhập lý do báo cáo..."), "Spam");
+    await userEvent.click(screen.getByRole("button", { name: "Gửi báo cáo" }));
+
     expect(communityService.reportPost).toHaveBeenCalledWith("p1", { reason: "Spam" });
 
     await waitFor(() => {
