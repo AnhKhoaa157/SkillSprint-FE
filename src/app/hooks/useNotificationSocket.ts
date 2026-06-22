@@ -6,8 +6,12 @@ import { API_BASE } from "../../api/core/config";
 import { getNotifications, markNotificationRead } from "../../api/utilities/notificationsService";
 import type { NotificationResponse } from "../../api/core/skillSprintModels";
 import { getActivePublicAnnouncement } from "../../api/system/systemAnnouncementService";
+import communityRoomService from "../../api/community/communityRoomService";
+import type { CommunityRoomInviteResponse } from "../../api/community/communityRoomTypes";
 
 const WS_BASE = API_BASE.replace(/^https/, "wss").replace(/^http/, "ws");
+const ROOM_INVITE_NOTIFICATION_PREFIX = "community-room-invite-";
+const ROOM_INVITE_POLL_MS = 30_000;
 
 function decodeJwtUserId(token: string): string | null {
   try {
@@ -32,6 +36,7 @@ type NotificationType =
   | "TASK_OVERDUE"
   | "AI_SCHEDULE_READY"
   | "FEEDBACK_REPLIED"
+  | "COMMUNITY_ROOM_INVITE"
   | "SYSTEM_INFO"
   | "SYSTEM_WARNING"
   | string;
@@ -45,10 +50,60 @@ function toastIcon(type: NotificationType): string {
     case "TASK_OVERDUE": return "⚠️";
     case "AI_SCHEDULE_READY": return "🤖";
     case "FEEDBACK_REPLIED": return "💬";
+    case "COMMUNITY_ROOM_INVITE": return "👥";
     case "SYSTEM_INFO": return "📢";
     case "SYSTEM_WARNING": return "🚨";
     default: return "🔔";
   }
+}
+
+function inviteReadKey(inviteId: string): string {
+  return `community_room_invite_notification_read:${inviteId}`;
+}
+
+function isRoomInviteNotification(notificationId: string): boolean {
+  return notificationId.startsWith(ROOM_INVITE_NOTIFICATION_PREFIX);
+}
+
+function hasReadInviteNotification(inviteId: string): boolean {
+  try {
+    return localStorage.getItem(inviteReadKey(inviteId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markInviteNotificationRead(inviteId: string) {
+  try {
+    localStorage.setItem(inviteReadKey(inviteId), "1");
+  } catch {}
+}
+
+function inviteToNotification(invite: CommunityRoomInviteResponse): NotificationResponse {
+  const inviterName = invite.inviter?.fullName?.trim() || "Một thành viên SkillSprint";
+  const read = hasReadInviteNotification(invite.inviteId);
+
+  return {
+    notificationId: `${ROOM_INVITE_NOTIFICATION_PREFIX}${invite.inviteId}`,
+    workspaceId: `community-room:${invite.roomId}`,
+    type: "COMMUNITY_ROOM_INVITE",
+    title: `Lời mời vào phòng ${invite.roomName}`,
+    message: `${inviterName} đã mời bạn tham gia phòng cộng đồng này.`,
+    read,
+    readAt: read ? new Date().toISOString() : null,
+    createdAt: invite.createdAt,
+  };
+}
+
+function mergeInviteNotifications(
+  current: NotificationResponse[],
+  inviteNotifications: NotificationResponse[]
+): NotificationResponse[] {
+  const nonInvite = current.filter((notification) => !isRoomInviteNotification(notification.notificationId));
+  const systemAnnouncements = nonInvite.filter((notification) => notification.notificationId.startsWith("sys-ann-"));
+  const rest = nonInvite.filter((notification) => !notification.notificationId.startsWith("sys-ann-"));
+
+  return [...systemAnnouncements, ...inviteNotifications, ...rest];
 }
 
 export interface UseNotificationSocketReturn {
@@ -63,15 +118,50 @@ export function useNotificationSocket(): UseNotificationSocketReturn {
   const [unreadCount, setUnreadCount] = useState(0);
   const [connected, setConnected] = useState(false);
   const clientRef = useRef<Client | null>(null);
+  const knownInviteNotificationIdsRef = useRef<Set<string>>(new Set());
+
+  const syncRoomInviteNotifications = useCallback(async (notifyNew = false) => {
+    const res = await communityRoomService.getMyInvites(0, 20);
+    const inviteNotifications = res.items
+      .filter((invite) => invite.status === "PENDING")
+      .map(inviteToNotification);
+
+    const nextInviteIds = new Set(inviteNotifications.map((notification) => notification.notificationId));
+    const newInviteNotifications = inviteNotifications.filter(
+      (notification) =>
+        !knownInviteNotificationIdsRef.current.has(notification.notificationId) && !notification.read
+    );
+
+    knownInviteNotificationIdsRef.current = nextInviteIds;
+
+    setNotifications((prev) => {
+      const next = mergeInviteNotifications(prev, inviteNotifications);
+      setUnreadCount(next.filter((notification) => !notification.read).length);
+      return next;
+    });
+
+    if (notifyNew) {
+      newInviteNotifications.forEach((notification) => {
+        toast(notification.title, {
+          description: notification.message,
+          duration: 3000,
+          closeButton: true,
+          icon: toastIcon(notification.type),
+          position: "top-right",
+        });
+      });
+    }
+  }, []);
 
   // Load history from REST on mount + active public announcement
   useEffect(() => {
     let active = true;
     Promise.all([
       getNotifications().catch(() => [] as NotificationResponse[]),
-      getActivePublicAnnouncement().catch(() => null)
+      getActivePublicAnnouncement().catch(() => null),
+      communityRoomService.getMyInvites(0, 20).catch(() => null)
     ])
-      .then(([data, ann]) => {
+      .then(([data, ann, invites]) => {
         if (!active) return;
         
         let history = [...data];
@@ -98,11 +188,39 @@ export function useNotificationSocket(): UseNotificationSocketReturn {
           }
         }
 
+        const inviteNotifications = (invites?.items ?? [])
+          .filter((invite) => invite.status === "PENDING")
+          .map(inviteToNotification);
+
+        knownInviteNotificationIdsRef.current = new Set(
+          inviteNotifications.map((notification) => notification.notificationId)
+        );
+
+        history = mergeInviteNotifications(history, inviteNotifications);
+        unreadCountBase = history.filter((notification) => !notification.read).length;
+
         setNotifications(history);
         setUnreadCount(unreadCountBase);
       });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      void syncRoomInviteNotifications(true).catch(() => {});
+    }, ROOM_INVITE_POLL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [syncRoomInviteNotifications]);
+
+  useEffect(() => {
+    const handleInvitesChanged = () => {
+      void syncRoomInviteNotifications(false).catch(() => {});
+    };
+
+    window.addEventListener("community-room-invites-changed", handleInvitesChanged);
+    return () => window.removeEventListener("community-room-invites-changed", handleInvitesChanged);
+  }, [syncRoomInviteNotifications]);
 
   // STOMP WebSocket lifecycle
   useEffect(() => {
@@ -169,6 +287,18 @@ export function useNotificationSocket(): UseNotificationSocketReturn {
   }, []); // intentionally empty — token/userId are stable per session
 
   const markAsRead = useCallback(async (notificationId: string) => {
+    if (isRoomInviteNotification(notificationId)) {
+      const inviteId = notificationId.replace(ROOM_INVITE_NOTIFICATION_PREFIX, "");
+      markInviteNotificationRead(inviteId);
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.notificationId === notificationId ? { ...n, read: true, readAt: new Date().toISOString() } : n,
+        ),
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+      return;
+    }
+
     if (notificationId.startsWith("sys-ann-")) {
       setNotifications((prev) =>
         prev.map((n) =>
