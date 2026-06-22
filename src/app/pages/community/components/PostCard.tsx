@@ -299,13 +299,13 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 pt-3">
+        <div className="grid grid-cols-3 gap-1 pt-2.5">
           <button
             type="button"
             onClick={handleLike}
-            className={`flex h-10 items-center justify-center gap-2 rounded-full text-sm font-bold transition active:scale-[0.98] ${
+            className={`flex h-9 items-center justify-center gap-2 rounded-xl text-sm font-bold transition active:scale-[0.98] ${
               post.likedByMe
-                ? "bg-orange-50 text-[#D95B00]"
+                ? "bg-orange-50/80 text-[#D95B00]"
                 : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
             }`}
           >
@@ -316,7 +316,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
           <button
             type="button"
             onClick={() => setShowComments(!showComments)}
-            className="flex h-10 items-center justify-center gap-2 rounded-full text-sm font-bold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 active:scale-[0.98]"
+            className="flex h-9 items-center justify-center gap-2 rounded-xl text-sm font-bold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 active:scale-[0.98]"
           >
             <MessageCircle className="h-4 w-4" />
             Bình luận
@@ -326,7 +326,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
             type="button"
             disabled
             title="Đang phát triển"
-            className="flex h-10 cursor-not-allowed items-center justify-center gap-2 rounded-full bg-slate-50 text-sm font-bold text-slate-400"
+            className="flex h-9 cursor-not-allowed items-center justify-center gap-2 rounded-xl text-sm font-bold text-slate-400"
           >
             <Share2 className="h-4 w-4" />
             Chia sẻ
