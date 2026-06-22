@@ -137,42 +137,31 @@ function CommunityHeader({
   const activeFilterLabel = hashtagFilter ? `#${hashtagFilter}` : searchFilter;
 
   return (
-    <section className="rounded-[18px] border border-slate-200/80 bg-[linear-gradient(135deg,#ffffff_0%,#ffffff_68%,#fff7ed_100%)] p-4 shadow-[0_8px_28px_rgba(15,23,42,0.06)] sm:p-5">
+    <section className="rounded-[18px] border border-slate-200/80 bg-[linear-gradient(135deg,#ffffff_0%,#ffffff_82%,#fffaf5_100%)] p-4 shadow-[0_6px_22px_rgba(15,23,42,0.05)]">
       <div className="flex items-start gap-3">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-orange-50 text-[#D95B00] ring-1 ring-orange-100">
-          <Users className="h-7 w-7" />
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-50/80 text-[#D95B00] ring-1 ring-orange-100/70">
+          <Users className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-2xl font-extrabold tracking-normal text-slate-950 sm:text-[28px]">
+          <h1 className="truncate text-[22px] font-extrabold tracking-normal text-slate-950 sm:text-2xl">
             Cộng đồng SkillSprint
           </h1>
-          <p className="mt-1.5 line-clamp-2 text-sm font-medium leading-6 text-slate-600">
+          <p className="mt-1 line-clamp-2 text-sm font-medium leading-5 text-slate-600">
             Cập nhật câu hỏi, kinh nghiệm học tập và những sprint mới nhất từ cộng đồng.
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {[
-              "128 thành viên",
-              `${Math.max(postsCount, 24)} bài viết tuần này`,
-              `${topicsCount} chủ đề nổi bật`,
-            ].map((stat) => (
-              <span
-                key={stat}
-                className="inline-flex h-7 items-center rounded-full bg-white/80 px-3 text-xs font-bold text-slate-600 ring-1 ring-slate-200"
-              >
-                {stat}
-              </span>
-            ))}
-          </div>
+          <p className="mt-2 text-xs font-semibold text-slate-500">
+            {`${postsCount} bài trong feed · ${topicsCount} chủ đề nổi bật`}
+          </p>
         </div>
       </div>
 
-      <form onSubmit={onSearchSubmit} className="relative mt-4">
+      <form onSubmit={onSearchSubmit} className="relative mt-3">
         <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <Input
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
           placeholder="Tìm kiếm trong cộng đồng"
-          className="h-11 rounded-full border-0 bg-[#F3F4F6] pl-11 pr-11 text-[15px] shadow-none placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-orange-200"
+          className="h-10 rounded-full border-0 bg-[#F3F4F6] pl-11 pr-11 text-[15px] shadow-none placeholder:text-slate-400 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-200"
         />
         {(hashtagFilter || searchFilter) && (
           <button
@@ -186,13 +175,13 @@ function CommunityHeader({
         )}
       </form>
 
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-2.5 flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {QUICK_TOPICS.map(topic => (
           <button
           key={topic}
           type="button"
           onClick={() => onTopicSelect(topic)}
-            className={`inline-flex h-9 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold transition ${
+            className={`inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-semibold transition ${
               hashtagFilter === topic
                 ? "bg-[#FF6B00] text-white shadow-sm shadow-orange-500/20"
                 : "bg-[#F3F4F6] text-slate-700 hover:bg-orange-50 hover:text-[#D95B00]"
@@ -202,7 +191,7 @@ function CommunityHeader({
           </button>
         ))}
         {(hashtagFilter || searchFilter) && (
-          <span className="inline-flex h-9 min-w-0 shrink-0 items-center gap-2 rounded-full bg-orange-50 px-3.5 text-sm font-semibold text-[#D95B00] ring-1 ring-orange-100">
+          <span className="inline-flex h-8 min-w-0 shrink-0 items-center gap-2 rounded-full bg-orange-50 px-3 text-sm font-semibold text-[#D95B00] ring-1 ring-orange-100">
             <span className="max-w-[180px] truncate">{activeFilterLabel}</span>
             <button type="button" onClick={onClearFilters} title="Xóa lọc">
               <X className="h-3.5 w-3.5" />
@@ -477,7 +466,7 @@ export default function CommunityPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F6F8] text-slate-950">
-      <div className="mx-auto grid w-full max-w-[1320px] grid-cols-1 gap-5 px-3 pb-24 pt-4 sm:px-5 lg:max-w-[760px] xl:max-w-[1320px] xl:grid-cols-[260px_minmax(0,680px)_300px]">
+      <div className="mx-auto grid w-full max-w-[1320px] grid-cols-1 gap-4 px-3 pb-24 pt-4 sm:px-5 lg:max-w-[780px] xl:max-w-[1320px] xl:grid-cols-[250px_minmax(0,720px)_292px]">
         <Sidebar onTopicSelect={handleTopicSelect} />
 
         <main className="min-w-0 space-y-4 xl:mx-auto xl:w-full">

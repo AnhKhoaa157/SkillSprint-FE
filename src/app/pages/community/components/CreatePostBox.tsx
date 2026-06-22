@@ -58,7 +58,7 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
     <>
       <section
         onClick={() => setIsModalOpen(true)}
-        className="group cursor-pointer rounded-[18px] border border-slate-200/80 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.06)] transition duration-200 hover:border-orange-200 hover:shadow-[0_14px_38px_rgba(15,23,42,0.09)]"
+        className="group cursor-pointer rounded-[18px] border border-slate-200/80 bg-white p-4 shadow-[0_6px_22px_rgba(15,23,42,0.05)] transition duration-200 hover:border-orange-200 hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
       >
         <div className="flex min-h-12 items-center gap-3">
           <Avatar className="h-10 w-10 shrink-0">
@@ -74,12 +74,12 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
               event.stopPropagation();
               setIsModalOpen(true);
             }}
-            className="min-w-0 flex-1 rounded-full bg-[#F3F4F6] px-4 py-3 text-left text-[15px] font-medium text-slate-500 transition group-hover:bg-white group-hover:ring-1 group-hover:ring-orange-100 hover:bg-white focus:outline-none focus:ring-2 focus:ring-orange-200"
+            className="min-w-0 flex-1 rounded-full bg-[#F3F4F6] px-4 py-3 text-left text-[15px] font-semibold text-slate-600 transition group-hover:bg-white group-hover:text-slate-800 group-hover:ring-1 group-hover:ring-orange-100 hover:bg-white focus:outline-none focus:ring-2 focus:ring-orange-200"
           >
             {firstName} ơi, bạn đang nghĩ gì thế?
           </button>
 
-          <div className="hidden items-center gap-1 sm:flex">
+          <div className="hidden items-center gap-1.5 sm:flex">
             <button
               type="button"
               title="Video"
@@ -88,9 +88,9 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
                 event.stopPropagation();
                 setIsModalOpen(true);
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition group-hover:bg-slate-50 hover:bg-orange-50 hover:text-[#D95B00]"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition group-hover:bg-slate-50 hover:bg-orange-50 hover:text-[#D95B00]"
             >
-              <Video className="h-5 w-5" />
+              <Video className="h-[18px] w-[18px]" />
             </button>
             <button
               type="button"
@@ -100,9 +100,9 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
                 event.stopPropagation();
                 setIsModalOpen(true);
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition group-hover:bg-slate-50 hover:bg-orange-50 hover:text-[#D95B00]"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition group-hover:bg-slate-50 hover:bg-orange-50 hover:text-[#D95B00]"
             >
-              <Image className="h-5 w-5" />
+              <Image className="h-[18px] w-[18px]" />
             </button>
             <button
               type="button"
@@ -112,9 +112,9 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
                 event.stopPropagation();
                 setIsModalOpen(true);
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition group-hover:bg-slate-50 hover:bg-orange-50 hover:text-[#D95B00]"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition group-hover:bg-slate-50 hover:bg-orange-50 hover:text-[#D95B00]"
             >
-              <Clapperboard className="h-5 w-5" />
+              <Clapperboard className="h-[18px] w-[18px]" />
             </button>
           </div>
         </div>
