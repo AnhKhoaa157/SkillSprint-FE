@@ -43,6 +43,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   const [editHashtags, setEditHashtags] = useState((post.hashtags ?? []).join(" "));
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const isAuthor = getStoredUserId() === post.author.userId;
 
@@ -148,8 +149,8 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   };
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition hover:border-slate-300">
-      <div className="p-4 sm:p-5">
+    <article className="overflow-hidden rounded-[18px] border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.06)] transition duration-200 hover:border-slate-300 hover:shadow-[0_14px_38px_rgba(15,23,42,0.09)]">
+      <div className="p-5 sm:p-6">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <Avatar className="h-11 w-11 shrink-0">
@@ -176,16 +177,23 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
           <div className="flex items-center gap-1">
             <button
               type="button"
-              disabled
-              title="Đang phát triển"
-              className="flex h-9 w-9 cursor-not-allowed items-center justify-center rounded-full text-slate-300"
+              onClick={() => setIsSaved((current) => !current)}
+              title={isSaved ? "Bỏ lưu bài viết" : "Lưu bài viết"}
+              aria-label={isSaved ? "Bỏ lưu bài viết" : "Lưu bài viết"}
+              aria-pressed={isSaved}
+              className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+                isSaved
+                  ? "bg-orange-50 text-[#D95B00]"
+                  : "text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              }`}
             >
-              <Bookmark className="h-4 w-4" />
+              <Bookmark className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
             </button>
             <button
               type="button"
               onClick={handleReport}
               title="Báo cáo vi phạm"
+              aria-label="Báo cáo vi phạm"
               className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-500"
             >
               <Flag className="h-4 w-4" />
@@ -196,6 +204,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
                   <button
                     type="button"
                     title="Tùy chọn"
+                    aria-label="Tùy chọn bài viết"
                     disabled={isDeleting}
                     className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
                   >
@@ -300,7 +309,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
                 : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
             }`}
           >
-            <Heart className={`h-4 w-4 ${post.likedByMe ? "fill-current" : ""}`} />
+            <Heart className={`h-4 w-4 transition-transform duration-150 ${post.likedByMe ? "scale-110 fill-current" : ""}`} />
             Thích
           </button>
 

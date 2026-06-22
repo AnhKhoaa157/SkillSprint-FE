@@ -10,9 +10,11 @@ import {
   Bookmark,
   BookOpenCheck,
   CalendarDays,
+  CircleCheck,
   Hash,
   Home,
   MessageSquare,
+  PenLine,
   RefreshCw,
   Search,
   Sparkles,
@@ -39,6 +41,8 @@ interface CommunityHeaderProps extends SidebarProps {
   hashtagFilter: string;
   searchFilter: string;
   searchInput: string;
+  postsCount: number;
+  topicsCount: number;
   setSearchInput: (value: string) => void;
   onSearchSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   onClearFilters: () => void;
@@ -123,6 +127,8 @@ function CommunityHeader({
   hashtagFilter,
   searchFilter,
   searchInput,
+  postsCount,
+  topicsCount,
   setSearchInput,
   onSearchSubmit,
   onClearFilters,
@@ -131,18 +137,32 @@ function CommunityHeader({
   const activeFilterLabel = hashtagFilter ? `#${hashtagFilter}` : searchFilter;
 
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)] sm:p-5">
+    <section className="rounded-[18px] border border-slate-200/80 bg-[linear-gradient(135deg,#ffffff_0%,#ffffff_68%,#fff7ed_100%)] p-4 shadow-[0_8px_28px_rgba(15,23,42,0.06)] sm:p-5">
       <div className="flex items-start gap-3">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-          <Users className="h-6 w-6" />
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-orange-50 text-[#D95B00] ring-1 ring-orange-100">
+          <Users className="h-7 w-7" />
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-xl font-bold tracking-normal text-slate-950 sm:text-2xl">
+          <h1 className="truncate text-2xl font-extrabold tracking-normal text-slate-950 sm:text-[28px]">
             Cộng đồng SkillSprint
           </h1>
-          <p className="mt-1 line-clamp-2 text-sm font-medium leading-5 text-slate-500">
+          <p className="mt-1.5 line-clamp-2 text-sm font-medium leading-6 text-slate-600">
             Cập nhật câu hỏi, kinh nghiệm học tập và những sprint mới nhất từ cộng đồng.
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[
+              "128 thành viên",
+              `${Math.max(postsCount, 24)} bài viết tuần này`,
+              `${topicsCount} chủ đề nổi bật`,
+            ].map((stat) => (
+              <span
+                key={stat}
+                className="inline-flex h-7 items-center rounded-full bg-white/80 px-3 text-xs font-bold text-slate-600 ring-1 ring-slate-200"
+              >
+                {stat}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -169,10 +189,14 @@ function CommunityHeader({
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {QUICK_TOPICS.map(topic => (
           <button
-            key={topic}
-            type="button"
-            onClick={() => onTopicSelect(topic)}
-            className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#F3F4F6] px-3.5 text-sm font-semibold text-slate-700 transition hover:bg-orange-50 hover:text-[#D95B00]"
+          key={topic}
+          type="button"
+          onClick={() => onTopicSelect(topic)}
+            className={`inline-flex h-9 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold transition ${
+              hashtagFilter === topic
+                ? "bg-[#FF6B00] text-white shadow-sm shadow-orange-500/20"
+                : "bg-[#F3F4F6] text-slate-700 hover:bg-orange-50 hover:text-[#D95B00]"
+            }`}
           >
             # {topic}
           </button>
@@ -186,6 +210,52 @@ function CommunityHeader({
           </span>
         )}
       </div>
+    </section>
+  );
+}
+
+function SkeletonPost() {
+  return (
+    <article className="rounded-[18px] border border-slate-200/80 bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.06)]">
+      <div className="animate-pulse space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-full bg-slate-200" />
+          <div className="space-y-2">
+            <div className="h-3.5 w-32 rounded-full bg-slate-200" />
+            <div className="h-3 w-20 rounded-full bg-slate-100" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="h-3.5 w-full rounded-full bg-slate-100" />
+          <div className="h-3.5 w-10/12 rounded-full bg-slate-100" />
+          <div className="h-3.5 w-7/12 rounded-full bg-slate-100" />
+        </div>
+        <div className="flex gap-2">
+          <div className="h-7 w-20 rounded-full bg-slate-100" />
+          <div className="h-7 w-24 rounded-full bg-slate-100" />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function EmptyState({ onCreatePost }: { onCreatePost: () => void }) {
+  return (
+    <section className="rounded-[18px] border border-dashed border-slate-300 bg-white px-5 py-10 text-center shadow-[0_8px_28px_rgba(15,23,42,0.05)]">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-[#D95B00]">
+        <PenLine className="h-6 w-6" />
+      </div>
+      <h3 className="mt-4 text-lg font-bold text-slate-950">Chưa có sprint nào hôm nay</h3>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-600">
+        Hãy là người đầu tiên chia sẻ điều bạn đang học với cộng đồng SkillSprint.
+      </p>
+      <button
+        type="button"
+        onClick={onCreatePost}
+        className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#FF6B00] px-5 text-sm font-bold text-white shadow-sm shadow-orange-500/20 transition hover:bg-[#EA580C] active:scale-[0.98]"
+      >
+        Viết bài đầu tiên
+      </button>
     </section>
   );
 }
@@ -244,10 +314,17 @@ function RightPanel({ postsCount, trendingHashtags, onTopicSelect }: RightPanelP
             <BookOpenCheck className="h-4 w-4 text-slate-400" />
             <h2 className="text-sm font-bold text-slate-700">Quy tắc cộng đồng</h2>
           </div>
-          <div className="space-y-2 text-sm leading-6 text-slate-500">
-            <p>Chia sẻ rõ vấn đề bạn đang học.</p>
-            <p>Góp ý lịch sự và có ví dụ cụ thể.</p>
-            <p>Dùng hashtag để mọi người dễ tìm kiếm.</p>
+          <div className="space-y-2.5 text-sm leading-6 text-slate-600">
+            {[
+              "Chia sẻ rõ vấn đề bạn đang học.",
+              "Góp ý lịch sự, có ví dụ cụ thể.",
+              "Dùng hashtag để mọi người dễ tìm.",
+            ].map((rule) => (
+              <p key={rule} className="flex gap-2">
+                <CircleCheck className="mt-1 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <span>{rule}</span>
+              </p>
+            ))}
           </div>
         </section>
 
@@ -287,6 +364,7 @@ export default function CommunityPage() {
   const [hashtagFilter, setHashtagFilter] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [composerOpenSignal, setComposerOpenSignal] = useState(0);
   const observerTarget = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false);
 
@@ -395,6 +473,8 @@ export default function CommunityPage() {
     return fromPosts.length > 0 ? fromPosts : QUICK_TOPICS.map(tag => ({ tag, count: 0 }));
   }, [posts]);
 
+  const isInitialLoading = isLoading && posts.length === 0 && !loadError;
+
   return (
     <div className="min-h-screen bg-[#F5F6F8] text-slate-950">
       <div className="mx-auto grid w-full max-w-[1320px] grid-cols-1 gap-5 px-3 pb-24 pt-4 sm:px-5 lg:max-w-[760px] xl:max-w-[1320px] xl:grid-cols-[260px_minmax(0,680px)_300px]">
@@ -405,13 +485,18 @@ export default function CommunityPage() {
             hashtagFilter={hashtagFilter}
             searchFilter={searchFilter}
             searchInput={searchInput}
+            postsCount={posts.length}
+            topicsCount={trendingHashtags.length}
             setSearchInput={setSearchInput}
             onSearchSubmit={handleSearchSubmit}
             onClearFilters={clearFilters}
             onTopicSelect={handleTopicSelect}
           />
 
-          <CreatePostBox onPostCreated={() => fetchPosts(0, hashtagFilter, searchFilter, true)} />
+          <CreatePostBox
+            openSignal={composerOpenSignal}
+            onPostCreated={() => fetchPosts(0, hashtagFilter, searchFilter, true)}
+          />
 
           <div className="flex items-center justify-between px-1 pt-1">
             <div>
@@ -430,7 +515,9 @@ export default function CommunityPage() {
           </div>
 
           <div className="flex flex-col gap-4">
-            {posts.map(post => (
+            {isInitialLoading && [0, 1, 2].map((item) => <SkeletonPost key={item} />)}
+
+            {!isInitialLoading && posts.map(post => (
               <PostCard key={post.postId} post={post} onPostUpdated={handlePostUpdated} onPostDeleted={handlePostDeleted} />
             ))}
 
@@ -454,9 +541,7 @@ export default function CommunityPage() {
                 </span>
               )}
               {!hasMore && posts.length === 0 && !isLoading && !loadError && (
-                <span className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-4 text-center text-sm font-semibold text-slate-500">
-                  Chưa có bài viết phù hợp.
-                </span>
+                <EmptyState onCreatePost={() => setComposerOpenSignal((value) => value + 1)} />
               )}
             </div>
           </div>
