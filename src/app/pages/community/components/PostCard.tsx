@@ -148,7 +148,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   };
 
   return (
-    <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md">
+    <article className="overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm transition hover:border-orange-200 hover:shadow-md">
       <div className="p-4 sm:p-5">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -215,14 +215,14 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
               value={editContent}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditContent(e.target.value)}
               rows={4}
-              className="w-full resize-y rounded-lg border border-slate-200 bg-slate-50 p-3 text-[15px] leading-relaxed text-slate-800 outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-2 focus:ring-orange-100"
+              className="w-full resize-y rounded-2xl border border-slate-200 bg-slate-50 p-3 text-[15px] leading-relaxed text-slate-800 outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-2 focus:ring-orange-100"
               placeholder="Bạn đang nghĩ gì?"
               disabled={isSaving}
             />
             <input
               value={editHashtags}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditHashtags(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-[#FF6B00] outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-2 focus:ring-orange-100"
+              className="w-full rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-[#FF6B00] outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-2 focus:ring-orange-100"
               placeholder="Hashtag, ví dụ: react springboot"
               disabled={isSaving}
             />
@@ -231,7 +231,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
                 type="button"
                 onClick={() => setIsEditing(false)}
                 disabled={isSaving}
-                className="flex h-9 items-center gap-1.5 rounded-lg px-4 text-sm font-bold text-slate-500 transition hover:bg-slate-100 disabled:opacity-50"
+                className="flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-bold text-slate-500 transition hover:bg-slate-100 disabled:opacity-50"
               >
                 <X className="h-4 w-4" /> Hủy
               </button>
@@ -239,7 +239,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
                 type="button"
                 onClick={handleSaveEdit}
                 disabled={isSaving || !editContent.trim()}
-                className="flex h-9 items-center gap-1.5 rounded-lg bg-[#FF6B00] px-4 text-sm font-bold text-white transition hover:bg-[#ea580c] disabled:opacity-50"
+                className="flex h-9 items-center gap-1.5 rounded-full bg-[#FF6B00] px-4 text-sm font-bold text-white transition hover:bg-[#ea580c] disabled:opacity-50"
               >
                 {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
               </button>
@@ -286,7 +286,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
           <button
             type="button"
             onClick={handleLike}
-            className={`flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-bold transition active:scale-[0.98] ${
+            className={`flex h-10 items-center justify-center gap-2 rounded-full text-sm font-bold transition active:scale-[0.98] ${
               post.likedByMe
                 ? "bg-orange-50 text-[#FF6B00]"
                 : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
@@ -299,7 +299,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
           <button
             type="button"
             onClick={() => setShowComments(!showComments)}
-            className="flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-bold text-slate-500 transition hover:bg-slate-50 hover:text-slate-700 active:scale-[0.98]"
+            className="flex h-10 items-center justify-center gap-2 rounded-full text-sm font-bold text-slate-500 transition hover:bg-slate-50 hover:text-slate-700 active:scale-[0.98]"
           >
             <MessageCircle className="h-4 w-4" />
             Bình luận
@@ -309,7 +309,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
             type="button"
             disabled
             title="Đang phát triển"
-            className="flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-50 text-sm font-bold text-slate-400 cursor-not-allowed"
+            className="flex h-10 items-center justify-center gap-2 rounded-full bg-slate-50 text-sm font-bold text-slate-400 cursor-not-allowed"
           >
             <Share2 className="h-4 w-4" />
             Chia sẻ

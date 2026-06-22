@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Hash, Lightbulb, Send, Sparkles } from "lucide-react";
+import { Hash, Lightbulb, Send, SmilePlus, Sparkles } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Textarea } from "../../../components/ui/textarea";
 import { Input } from "../../../components/ui/input";
@@ -13,6 +13,8 @@ interface CreatePostBoxProps {
   onPostCreated: () => void;
 }
 
+const EMOJI_OPTIONS = ["😀", "😍", "🔥", "🚀", "💡", "👏", "✅", "🎯", "💪", "✨", "📚", "☕"];
+
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
@@ -22,6 +24,7 @@ export function CreatePostBox({ onPostCreated }: CreatePostBoxProps) {
   const [hashtags, setHashtags] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const currentUser = getStoredUserProfile();
 
   useEffect(() => {
@@ -29,6 +32,10 @@ export function CreatePostBox({ onPostCreated }: CreatePostBoxProps) {
       if (me.avatarUrl) setAvatarUrl(me.avatarUrl);
     }).catch(() => {});
   }, []);
+
+  const appendEmoji = (emoji: string) => {
+    setContent((current) => `${current}${emoji}`);
+  };
 
   const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
@@ -58,6 +65,7 @@ export function CreatePostBox({ onPostCreated }: CreatePostBoxProps) {
 
       setContent("");
       setHashtags("");
+      setShowEmojiPicker(false);
       onPostCreated();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Có lỗi xảy ra khi đăng bài."));
@@ -69,7 +77,7 @@ export function CreatePostBox({ onPostCreated }: CreatePostBoxProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+      className="overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm"
     >
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 sm:px-5">
         <div className="flex items-center gap-2 text-sm font-black text-slate-800">
@@ -98,7 +106,7 @@ export function CreatePostBox({ onPostCreated }: CreatePostBoxProps) {
             maxLength={5000}
           />
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1.5 text-xs font-bold text-[#FF6B00]">
               <Sparkles className="h-3.5 w-3.5" />
               Sprint note
@@ -107,7 +115,30 @@ export function CreatePostBox({ onPostCreated }: CreatePostBoxProps) {
               <Lightbulb className="h-3.5 w-3.5" />
               Mẹo học tập
             </span>
+            <button
+              type="button"
+              title="Thêm emoji"
+              onClick={() => setShowEmojiPicker((current) => !current)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-500 transition hover:bg-orange-50 hover:text-[#FF6B00]"
+            >
+              <SmilePlus className="h-4 w-4" />
+            </button>
           </div>
+
+          {showEmojiPicker && (
+            <div className="mt-3 flex flex-wrap gap-1.5 rounded-2xl border border-orange-100 bg-orange-50/60 p-2">
+              {EMOJI_OPTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => appendEmoji(emoji)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-lg transition hover:bg-white hover:shadow-sm"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -119,14 +150,14 @@ export function CreatePostBox({ onPostCreated }: CreatePostBoxProps) {
               value={hashtags}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHashtags(e.target.value)}
               placeholder="Hashtags: React, SpringBoot"
-              className="h-10 rounded-lg border-slate-200 bg-white pl-9 text-sm shadow-none focus-visible:ring-[#FF6B00]"
+              className="h-10 rounded-full border-orange-100 bg-white pl-9 text-sm shadow-none focus-visible:ring-[#FF6B00]"
             />
           </div>
 
           <Button
             type="submit"
             disabled={isSubmitting || !content.trim()}
-            className="h-10 shrink-0 rounded-lg bg-[#FF6B00] px-5 text-white shadow-sm shadow-orange-500/20 transition hover:bg-[#ea580c] active:scale-[0.98]"
+            className="h-10 shrink-0 rounded-full bg-[#FF6B00] px-5 text-white shadow-sm shadow-orange-500/20 transition hover:bg-[#ea580c] active:scale-[0.98]"
           >
             {isSubmitting ? (
               <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
