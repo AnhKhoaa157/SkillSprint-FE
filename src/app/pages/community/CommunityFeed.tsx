@@ -6,8 +6,14 @@ import communityService from "../../../api/community/communityService";
 import type { CommunityPost } from "../../../api/community/communityTypes";
 import { toast } from "sonner";
 import {
+  Bell,
+  Bookmark,
   BookOpenCheck,
+  CalendarDays,
+  Flame,
+  GraduationCap,
   Hash,
+  Home,
   MessageSquare,
   RefreshCw,
   Search,
@@ -21,8 +27,6 @@ import { Input } from "../../components/ui/input";
 const PAGE_SIZE = 10;
 const LOAD_ERROR_TOAST_ID = "community-feed-load-error";
 const QUICK_TOPICS = ["React", "SpringBoot", "Interview", "Roadmap", "TypeScript"];
-
-
 
 export default function CommunityFeed() {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
@@ -147,148 +151,180 @@ export default function CommunityFeed() {
 
   const loadedCommentCount = posts.reduce((total, post) => total + post.commentCount, 0);
   const loadedLikeCount = posts.reduce((total, post) => total + post.likeCount, 0);
+  const activeFilterLabel = hashtagFilter ? `#${hashtagFilter}` : searchFilter;
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#ffffff_0%,#f7f8fb_220px,#eef2f7_100%)] text-slate-900">
-      <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:py-7 xl:grid-cols-[232px_minmax(0,680px)_280px]">
+    <div className="min-h-screen bg-[#f0f2f5] text-[#050505]">
+      <div className="mx-auto grid w-full max-w-[1320px] grid-cols-1 gap-4 px-3 pb-16 pt-4 sm:px-4 lg:grid-cols-[minmax(0,680px)_300px] xl:grid-cols-[280px_minmax(0,680px)_300px]">
         <aside className="hidden xl:block">
-          <div className="sticky top-20 space-y-5">
-            <nav className="space-y-2">
-              <Link
-                to="/app/community"
-                className="flex items-center gap-3 rounded-lg bg-white px-3 py-3 text-slate-900 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FF6B00] text-white shadow-sm shadow-orange-500/25">
-                  <Users className="h-5 w-5" />
-                </span>
-                <span className="font-semibold">SkillSprint Feed</span>
-              </Link>
-              <Link
-                to="/app/community/rooms"
-                className="flex items-center gap-3 rounded-lg px-3 py-3 text-slate-700 transition hover:bg-white hover:text-slate-950 hover:shadow-sm"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-[#FF6B00]">
-                  <MessageSquare className="h-5 w-5" />
-                </span>
-                <span className="font-semibold">Phòng chat</span>
-              </Link>
-            </nav>
+          <div className="sticky top-4 space-y-2">
+            <Link
+              to="/app/community"
+              className="flex h-12 items-center gap-3 rounded-md bg-white px-3 text-[15px] font-semibold text-[#1877f2] shadow-sm ring-1 ring-black/5"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e7f3ff] text-[#1877f2]">
+                <Home className="h-5 w-5" />
+              </span>
+              Bảng tin
+            </Link>
+            <Link
+              to="/app/community/rooms"
+              className="flex h-12 items-center gap-3 rounded-md px-3 text-[15px] font-semibold text-[#050505] transition hover:bg-white hover:shadow-sm"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e4e6eb] text-[#1c1e21]">
+                <MessageSquare className="h-5 w-5" />
+              </span>
+              Phòng chat
+            </Link>
+            <button
+              type="button"
+              className="flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-[15px] font-semibold text-[#050505] transition hover:bg-white hover:shadow-sm"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e4e6eb] text-[#1c1e21]">
+                <Bookmark className="h-5 w-5" />
+              </span>
+              Bài đã lưu
+            </button>
+            <button
+              type="button"
+              className="flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-[15px] font-semibold text-[#050505] transition hover:bg-white hover:shadow-sm"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e4e6eb] text-[#1c1e21]">
+                <CalendarDays className="h-5 w-5" />
+              </span>
+              Sự kiện học tập
+            </button>
 
-            <section className="space-y-3 border-t border-slate-200 pt-5">
-              <div className="flex items-center gap-2 px-1 text-sm font-bold text-slate-500">
-                <Hash className="h-4 w-4 text-[#FF6B00]" />
-                Chủ đề nhanh
-              </div>
-              <div className="space-y-1">
-                {QUICK_TOPICS.map(topic => (
-                  <button
-                    key={topic}
-                    type="button"
-                    onClick={() => handleTopicSelect(topic)}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-[#FF6B00] hover:shadow-sm"
-                  >
-                    <Hash className="h-4 w-4 text-orange-400" />
-                    {topic}
-                  </button>
-                ))}
-              </div>
+            <div className="my-3 h-px bg-[#ced0d4]" />
+
+            <section className="space-y-1">
+              <div className="px-3 pb-1 text-[17px] font-bold text-[#65676b]">Lối tắt</div>
+              {QUICK_TOPICS.map(topic => (
+                <button
+                  key={topic}
+                  type="button"
+                  onClick={() => handleTopicSelect(topic)}
+                  className="flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-[15px] font-semibold text-[#050505] transition hover:bg-white hover:shadow-sm"
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-[#1877f2] to-[#42b72a] text-white">
+                    <Hash className="h-4 w-4" />
+                  </span>
+                  #{topic}
+                </button>
+              ))}
             </section>
           </div>
         </aside>
 
-        <main className="min-w-0 space-y-4 pb-20">
-          <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="min-w-0">
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00]">
-                  <BookOpenCheck className="h-3.5 w-3.5" />
-                  Cộng đồng học tập
+        <main className="min-w-0 space-y-4 lg:mx-auto lg:w-full">
+          <section className="rounded-lg bg-white shadow-sm ring-1 ring-black/5">
+            <div className="flex flex-col gap-3 border-b border-[#e4e6eb] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1877f2] text-white">
+                  <Users className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <h1 className="truncate text-xl font-bold tracking-normal text-[#050505]">Cộng đồng SkillSprint</h1>
+                  <p className="truncate text-sm font-medium text-[#65676b]">Cập nhật bài viết, câu hỏi và kinh nghiệm học tập mới nhất</p>
                 </div>
-                <h1 className="text-2xl font-black tracking-normal text-slate-950 sm:text-3xl">
-                  SkillSprint Feed
-                </h1>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[300px]">
-                <div className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
-                  <div className="text-lg font-black text-slate-950">{posts.length}</div>
-                  <div className="text-[11px] font-bold uppercase text-slate-400">Bài</div>
+              <div className="grid grid-cols-3 gap-2 sm:w-[270px]">
+                <div className="rounded-md bg-[#f0f2f5] px-3 py-2 text-center">
+                  <div className="text-base font-bold text-[#050505]">{posts.length}</div>
+                  <div className="text-[11px] font-bold uppercase text-[#65676b]">Bài</div>
                 </div>
-                <div className="rounded-lg bg-orange-50 px-3 py-2 ring-1 ring-orange-100">
-                  <div className="text-lg font-black text-[#FF6B00]">{loadedLikeCount}</div>
-                  <div className="text-[11px] font-bold uppercase text-orange-400">Thích</div>
+                <div className="rounded-md bg-[#f0f2f5] px-3 py-2 text-center">
+                  <div className="text-base font-bold text-[#1877f2]">{loadedLikeCount}</div>
+                  <div className="text-[11px] font-bold uppercase text-[#65676b]">Thích</div>
                 </div>
-                <div className="rounded-lg bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100">
-                  <div className="text-lg font-black text-emerald-700">{loadedCommentCount}</div>
-                  <div className="text-[11px] font-bold uppercase text-emerald-500">Bình luận</div>
+                <div className="rounded-md bg-[#f0f2f5] px-3 py-2 text-center">
+                  <div className="text-base font-bold text-[#42b72a]">{loadedCommentCount}</div>
+                  <div className="text-[11px] font-bold uppercase text-[#65676b]">Bình luận</div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center">
-              <div className="grid grid-cols-2 gap-2 sm:hidden">
+            <div className="space-y-3 px-4 py-3">
+              <div className="grid grid-cols-2 gap-2 xl:hidden">
                 <Link
                   to="/app/community"
-                  className="flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-900 text-sm font-bold text-white"
+                  className="flex h-10 items-center justify-center gap-2 rounded-md bg-[#e7f3ff] text-sm font-bold text-[#1877f2]"
                 >
-                  <Users className="h-4 w-4" />
+                  <Home className="h-4 w-4" />
                   Feed
                 </Link>
                 <Link
                   to="/app/community/rooms"
-                  className="flex h-10 items-center justify-center gap-2 rounded-lg bg-orange-50 text-sm font-bold text-[#FF6B00] ring-1 ring-orange-100"
+                  className="flex h-10 items-center justify-center gap-2 rounded-md bg-[#f0f2f5] text-sm font-bold text-[#050505]"
                 >
                   <MessageSquare className="h-4 w-4" />
                   Phòng chat
                 </Link>
               </div>
 
-              <form onSubmit={handleSearchSubmit} className="relative min-w-0 flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <form onSubmit={handleSearchSubmit} className="relative">
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#65676b]" />
                 <Input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Tìm bài viết hoặc #hashtag"
-                  className="h-11 rounded-lg border-slate-200 bg-slate-50 pl-10 pr-10 text-sm shadow-none focus-visible:ring-[#FF6B00]"
+                  placeholder="Tìm kiếm trên SkillSprint"
+                  className="h-11 rounded-full border-0 bg-[#f0f2f5] pl-11 pr-11 text-[15px] shadow-none placeholder:text-[#65676b] focus-visible:ring-2 focus-visible:ring-[#1877f2]"
                 />
                 {(hashtagFilter || searchFilter) && (
                   <button
                     type="button"
                     title="Xóa lọc"
                     onClick={clearFilters}
-                    className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
+                    className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[#65676b] transition hover:bg-[#e4e6eb] hover:text-[#050505]"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 )}
               </form>
+
+              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {QUICK_TOPICS.map(topic => (
+                  <button
+                    key={topic}
+                    type="button"
+                    onClick={() => handleTopicSelect(topic)}
+                    className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full bg-[#f0f2f5] px-4 text-sm font-bold text-[#050505] transition hover:bg-[#e4e6eb]"
+                  >
+                    <Hash className="h-4 w-4 text-[#1877f2]" />
+                    {topic}
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
 
           <CreatePostBox onPostCreated={() => fetchPosts(0, hashtagFilter, searchFilter, true)} />
 
-          <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-2 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div className="inline-flex h-10 items-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-bold text-white shadow-sm">
-              <Sparkles className="h-4 w-4" />
-              <span>Bảng tin</span>
-            </div>
-
-            {(hashtagFilter || searchFilter) && (
-              <div className="flex min-w-0 flex-wrap gap-2 px-1 sm:justify-end">
-                {hashtagFilter && (
-                  <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00] ring-1 ring-orange-100">
-                    <Hash className="h-3.5 w-3.5" />
-                    #{hashtagFilter}
-                  </span>
-                )}
-                {searchFilter && (
-                  <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00] ring-1 ring-orange-100">
-                    <Search className="h-3.5 w-3.5" />
-                    <span className="truncate">{searchFilter}</span>
-                  </span>
-                )}
+          <div className="rounded-lg bg-white shadow-sm ring-1 ring-black/5">
+            <div className="flex flex-col gap-3 border-b border-[#e4e6eb] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-[17px] font-bold text-[#050505]">
+                <Sparkles className="h-5 w-5 text-[#1877f2]" />
+                Bài viết mới nhất
               </div>
-            )}
+
+              {(hashtagFilter || searchFilter) && (
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="inline-flex min-w-0 items-center gap-2 rounded-full bg-[#e7f3ff] px-3 py-1.5 text-sm font-bold text-[#1877f2]">
+                    {hashtagFilter ? <Hash className="h-4 w-4 shrink-0" /> : <Search className="h-4 w-4 shrink-0" />}
+                    <span className="truncate">{activeFilterLabel}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f0f2f5] text-[#65676b] transition hover:bg-[#e4e6eb] hover:text-[#050505]"
+                    title="Xóa lọc"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -296,27 +332,27 @@ export default function CommunityFeed() {
               <PostCard key={post.postId} post={post} onPostUpdated={handlePostUpdated} onPostDeleted={handlePostDeleted} />
             ))}
 
-            <div ref={observerTarget} className="flex justify-center py-5 text-slate-400">
+            <div ref={observerTarget} className="flex justify-center py-5 text-[#65676b]">
               {isLoading && (
-                <div className="h-8 w-8 rounded-full border-2 border-slate-200 border-t-[#FF6B00] animate-spin" />
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#d8dadf] border-t-[#1877f2]" />
               )}
               {loadError && !isLoading && (
                 <button
                   type="button"
                   onClick={handleRetry}
-                  className="inline-flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-bold text-[#FF6B00] transition hover:bg-orange-100"
+                  className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-bold text-[#1877f2] shadow-sm ring-1 ring-black/10 transition hover:bg-[#f0f2f5]"
                 >
                   <RefreshCw className="h-4 w-4" />
                   Thử lại
                 </button>
               )}
               {!hasMore && posts.length > 0 && !isLoading && !loadError && (
-                <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-500 shadow-sm ring-1 ring-slate-200">
+                <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#65676b] shadow-sm ring-1 ring-black/5">
                   Bạn đã xem hết tin hôm nay
                 </span>
               )}
               {!hasMore && posts.length === 0 && !isLoading && !loadError && (
-                <span className="rounded-lg border border-dashed border-slate-200 bg-white px-5 py-4 text-center text-sm font-semibold text-slate-500">
+                <span className="rounded-lg border border-dashed border-[#ced0d4] bg-white px-5 py-4 text-center text-sm font-semibold text-[#65676b]">
                   Chưa có bài viết phù hợp.
                 </span>
               )}
@@ -325,11 +361,11 @@ export default function CommunityFeed() {
         </main>
 
         <aside className="hidden lg:block">
-          <div className="sticky top-20 space-y-4">
-            <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="sticky top-4 space-y-4">
+            <section className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/5">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-black text-slate-800">Hashtag nổi bật</h2>
-                <TrendingUp className="h-4 w-4 text-[#FF6B00]" />
+                <h2 className="text-[17px] font-bold text-[#65676b]">Đang nổi bật</h2>
+                <TrendingUp className="h-5 w-5 text-[#1877f2]" />
               </div>
               <div className="space-y-1">
                 {trendingHashtags.map(item => (
@@ -337,10 +373,10 @@ export default function CommunityFeed() {
                     key={item.tag}
                     type="button"
                     onClick={() => handleTopicSelect(item.tag)}
-                    className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left transition hover:bg-slate-50"
+                    className="flex w-full items-center justify-between rounded-md px-2 py-2.5 text-left transition hover:bg-[#f0f2f5]"
                   >
-                    <span className="min-w-0 truncate text-sm font-bold text-slate-900">#{item.tag}</span>
-                    <span className="ml-3 shrink-0 text-xs font-semibold text-slate-400">
+                    <span className="min-w-0 truncate text-[15px] font-semibold text-[#050505]">#{item.tag}</span>
+                    <span className="ml-3 shrink-0 text-xs font-semibold text-[#65676b]">
                       {item.count > 0 ? `${item.count} bài` : "gợi ý"}
                     </span>
                   </button>
@@ -348,16 +384,46 @@ export default function CommunityFeed() {
               </div>
             </section>
 
-            <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="mb-3 text-sm font-black text-slate-800">Quy tắc cộng đồng</h2>
-              <div className="space-y-3 text-sm leading-relaxed text-slate-600">
-                <p>Chia sẻ rõ vấn đề bạn đang học.</p>
-                <p>Góp ý lịch sự và có ví dụ cụ thể.</p>
-                <p>Dùng hashtag để dễ tìm kiếm.</p>
+            <section className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/5">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-[17px] font-bold text-[#65676b]">Hoạt động</h2>
+                <Bell className="h-5 w-5 text-[#65676b]" />
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e7f3ff] text-[#1877f2]">
+                    <Flame className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#050505]">Feed học tập đang mở</p>
+                    <p className="text-xs text-[#65676b]">{posts.length} bài đã tải trong phiên này</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e6f4ea] text-[#42b72a]">
+                    <GraduationCap className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#050505]">Cùng nhau học tốt hơn</p>
+                    <p className="text-xs text-[#65676b]">Đặt câu hỏi rõ ràng, phản hồi tử tế</p>
+                  </div>
+                </div>
               </div>
             </section>
 
-            <p className="px-1 text-xs leading-relaxed text-slate-400">
+            <section className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/5">
+              <div className="mb-3 flex items-center gap-2">
+                <BookOpenCheck className="h-5 w-5 text-[#1877f2]" />
+                <h2 className="text-[17px] font-bold text-[#65676b]">Quy tắc cộng đồng</h2>
+              </div>
+              <div className="space-y-2 text-sm leading-relaxed text-[#65676b]">
+                <p>Chia sẻ rõ vấn đề bạn đang học.</p>
+                <p>Góp ý lịch sự và có ví dụ cụ thể.</p>
+                <p>Dùng hashtag để mọi người dễ tìm kiếm.</p>
+              </div>
+            </section>
+
+            <p className="px-1 text-xs leading-relaxed text-[#65676b]">
               SkillSprint © 2026
             </p>
           </div>
