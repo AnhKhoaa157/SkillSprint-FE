@@ -33,6 +33,11 @@ vi.mock("sonner", () => ({
   }
 }));
 
+async function openComposer() {
+  await userEvent.click(screen.getByRole("button", { name: /User ơi, bạn đang nghĩ gì thế/i }));
+  return screen.findByText("Tạo bài viết");
+}
+
 describe("CreatePostBox", () => {
   const mockOnPostCreated = vi.fn();
   const mockMe: MeResponse = {
@@ -51,11 +56,15 @@ describe("CreatePostBox", () => {
     vi.mocked(meService.getMe).mockResolvedValue(mockMe);
   });
 
-  it("should render input fields and disabled submit button initially", () => {
+  it("should render collapsed composer and open modal with disabled submit button", async () => {
     render(<CreatePostBox onPostCreated={mockOnPostCreated} />);
 
-    expect(screen.getByPlaceholderText("Bạn đang học được điều gì hôm nay?")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Hashtags: React, SpringBoot")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /User ơi, bạn đang nghĩ gì thế/i })).toBeInTheDocument();
+
+    await openComposer();
+
+    expect(screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Thêm hashtag: React, SpringBoot...")).toBeInTheDocument();
 
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
     expect(submitBtn).toBeDisabled();
@@ -64,14 +73,16 @@ describe("CreatePostBox", () => {
   it("should enable submit button when content is entered", async () => {
     render(<CreatePostBox onPostCreated={mockOnPostCreated} />);
 
-    const textarea = screen.getByPlaceholderText("Bạn đang học được điều gì hôm nay?");
+    await openComposer();
+
+    const textarea = screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?");
     await userEvent.type(textarea, "Hôm nay tôi học được React Testing Library!");
 
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
     expect(submitBtn).not.toBeDisabled();
   });
 
-  it("should call createPost API and onPostCreated on successful submission", async () => {
+  it("should call createPost API, close modal and call onPostCreated on successful submission", async () => {
     vi.mocked(communityService.createPost).mockResolvedValueOnce({
       status: "APPROVED",
       postId: "1",
@@ -86,8 +97,10 @@ describe("CreatePostBox", () => {
 
     render(<CreatePostBox onPostCreated={mockOnPostCreated} />);
 
-    const textarea = screen.getByPlaceholderText("Bạn đang học được điều gì hôm nay?");
-    const hashtagInput = screen.getByPlaceholderText("Hashtags: React, SpringBoot");
+    await openComposer();
+
+    const textarea = screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?");
+    const hashtagInput = screen.getByPlaceholderText("Thêm hashtag: React, SpringBoot...");
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
 
     await userEvent.type(textarea, "Hello world");
@@ -102,8 +115,7 @@ describe("CreatePostBox", () => {
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith("Đăng bài viết thành công!");
       expect(mockOnPostCreated).toHaveBeenCalled();
-      expect(textarea).toHaveValue("");
-      expect(hashtagInput).toHaveValue("");
+      expect(screen.queryByText("Tạo bài viết")).not.toBeInTheDocument();
     });
   });
 
@@ -122,7 +134,9 @@ describe("CreatePostBox", () => {
 
     render(<CreatePostBox onPostCreated={mockOnPostCreated} />);
 
-    const textarea = screen.getByPlaceholderText("Bạn đang học được điều gì hôm nay?");
+    await openComposer();
+
+    const textarea = screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?");
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
 
     await userEvent.type(textarea, "Sensitive content");
@@ -139,7 +153,9 @@ describe("CreatePostBox", () => {
 
     render(<CreatePostBox onPostCreated={mockOnPostCreated} />);
 
-    const textarea = screen.getByPlaceholderText("Bạn đang học được điều gì hôm nay?");
+    await openComposer();
+
+    const textarea = screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?");
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
 
     await userEvent.type(textarea, "Hello world");
@@ -148,6 +164,7 @@ describe("CreatePostBox", () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("API Error");
       expect(mockOnPostCreated).not.toHaveBeenCalled();
+      expect(screen.getByText("Tạo bài viết")).toBeInTheDocument();
     });
   });
 });
