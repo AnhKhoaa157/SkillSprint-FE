@@ -113,7 +113,7 @@ describe("CreatePostBox", () => {
     });
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith("Đăng bài viết thành công!");
+      expect(toast.success).toHaveBeenCalledWith("Đã đăng sprint của bạn 🚀");
       expect(mockOnPostCreated).toHaveBeenCalled();
       expect(screen.queryByText("Tạo bài viết")).not.toBeInTheDocument();
     });
