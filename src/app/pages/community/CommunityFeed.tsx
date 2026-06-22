@@ -11,7 +11,6 @@ import {
   BookOpenCheck,
   CalendarDays,
   CircleCheck,
-  Hash,
   Home,
   MessageSquare,
   PenLine,
@@ -23,10 +22,11 @@ import {
   X,
 } from "lucide-react";
 import { Input } from "../../components/ui/input";
+import { normalizeHashtag, normalizeHashtagValue } from "./communityHashtags";
 
 const PAGE_SIZE = 10;
 const LOAD_ERROR_TOAST_ID = "community-feed-load-error";
-const QUICK_TOPICS = ["React", "SpringBoot", "Interview", "Roadmap", "TypeScript"];
+const QUICK_TOPICS = ["reactjs", "springboot", "cors", "debug", "phongvan"];
 
 interface TopicItem {
   tag: string;
@@ -62,6 +62,8 @@ function DevelopmentBadge() {
 }
 
 function Sidebar({ onTopicSelect }: SidebarProps) {
+  const quickTopics = QUICK_TOPICS.map(normalizeHashtagValue).filter(Boolean);
+
   return (
     <aside className="hidden xl:block">
       <div className="sticky top-5 space-y-5">
@@ -105,15 +107,14 @@ function Sidebar({ onTopicSelect }: SidebarProps) {
         <section className="border-t border-slate-200 pt-4">
           <h2 className="px-3 text-sm font-bold text-slate-600">Lối tắt</h2>
           <div className="mt-2 space-y-1">
-            {QUICK_TOPICS.map(topic => (
+            {quickTopics.map(topic => (
               <button
                 key={topic}
                 type="button"
                 onClick={() => onTopicSelect(topic)}
-                className="flex h-10 w-full items-center rounded-xl px-3 text-left text-[15px] font-semibold text-slate-700 transition hover:bg-white hover:text-[#D95B00] hover:shadow-sm"
+                className="flex h-10 w-full items-center rounded-xl px-3 text-left text-[15px] font-semibold text-slate-700 transition hover:bg-white hover:text-[#D95B00] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200"
               >
-                <span className="mr-2 text-slate-400">#</span>
-                {topic}
+                <span className="max-w-[180px] truncate">{normalizeHashtag(topic)}</span>
               </button>
             ))}
           </div>
@@ -134,12 +135,13 @@ function CommunityHeader({
   onClearFilters,
   onTopicSelect,
 }: CommunityHeaderProps) {
-  const activeFilterLabel = hashtagFilter ? `#${hashtagFilter}` : searchFilter;
+  const activeFilterLabel = hashtagFilter ? normalizeHashtag(hashtagFilter) : searchFilter;
+  const quickTopics = QUICK_TOPICS.map(normalizeHashtagValue).filter(Boolean);
 
   return (
-    <section className="rounded-[18px] border border-slate-200/80 bg-[linear-gradient(135deg,#ffffff_0%,#ffffff_82%,#fffaf5_100%)] p-4 shadow-[0_6px_22px_rgba(15,23,42,0.05)]">
-      <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-50/80 text-[#D95B00] ring-1 ring-orange-100/70">
+    <section className="relative overflow-hidden rounded-[20px] border border-orange-100/50 bg-gradient-to-br from-white via-orange-50/30 to-amber-50/40 p-5 shadow-[0_8px_30px_rgba(255,107,0,0.04)]">
+      <div className="relative z-10 flex items-start gap-4">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 to-amber-100 text-orange-600 shadow-inner ring-1 ring-white/50">
           <Users className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
@@ -158,6 +160,7 @@ function CommunityHeader({
       <form onSubmit={onSearchSubmit} className="relative mt-3">
         <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <Input
+          aria-label="Tìm kiếm trong cộng đồng"
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
           placeholder="Tìm kiếm trong cộng đồng"
@@ -167,6 +170,7 @@ function CommunityHeader({
           <button
             type="button"
             title="Xóa lọc"
+            aria-label="Xóa bộ lọc"
             onClick={onClearFilters}
             className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition hover:bg-white hover:text-slate-700"
           >
@@ -176,24 +180,24 @@ function CommunityHeader({
       </form>
 
       <div className="mt-2.5 flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {QUICK_TOPICS.map(topic => (
+        {quickTopics.map(topic => (
           <button
-          key={topic}
-          type="button"
-          onClick={() => onTopicSelect(topic)}
-            className={`inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-semibold transition ${
+            key={topic}
+            type="button"
+            onClick={() => onTopicSelect(topic)}
+            className={`inline-flex h-8 max-w-[160px] shrink-0 items-center rounded-full px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 ${
               hashtagFilter === topic
                 ? "bg-[#FF6B00] text-white shadow-sm shadow-orange-500/20"
                 : "bg-[#F3F4F6] text-slate-700 hover:bg-orange-50 hover:text-[#D95B00]"
             }`}
           >
-            # {topic}
+            <span className="truncate">{normalizeHashtag(topic)}</span>
           </button>
         ))}
         {(hashtagFilter || searchFilter) && (
           <span className="inline-flex h-8 min-w-0 shrink-0 items-center gap-2 rounded-full bg-orange-50 px-3 text-sm font-semibold text-[#D95B00] ring-1 ring-orange-100">
-            <span className="max-w-[180px] truncate">{activeFilterLabel}</span>
-            <button type="button" onClick={onClearFilters} title="Xóa lọc">
+            <span className="max-w-[160px] truncate">{activeFilterLabel}</span>
+            <button type="button" onClick={onClearFilters} title="Xóa lọc" aria-label="Xóa bộ lọc">
               <X className="h-3.5 w-3.5" />
             </button>
           </span>
@@ -250,29 +254,40 @@ function EmptyState({ onCreatePost }: { onCreatePost: () => void }) {
 }
 
 function RightPanel({ postsCount, trendingHashtags, onTopicSelect }: RightPanelProps) {
+  const hasTrending = trendingHashtags.length > 0;
+  const title = trendingHashtags.length === 1 && trendingHashtags[0].count <= 1 ? "Chủ đề gần đây" : "Đang nổi bật";
+
   return (
     <aside className="hidden xl:block">
       <div className="sticky top-5 space-y-4">
         <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-slate-700">Đang nổi bật</h2>
+            <h2 className="text-sm font-bold text-slate-700">{title}</h2>
             <TrendingUp className="h-4 w-4 text-slate-400" />
           </div>
-          <div className="space-y-1">
-            {trendingHashtags.map(item => (
-              <button
-                key={item.tag}
-                type="button"
-                onClick={() => onTopicSelect(item.tag)}
-                className="flex w-full items-center justify-between rounded-xl px-2 py-2.5 text-left transition hover:bg-slate-50"
-              >
-                <span className="min-w-0 truncate text-sm font-semibold text-slate-900">#{item.tag}</span>
-                <span className="ml-3 shrink-0 text-xs font-medium text-slate-500">
-                  {item.count > 0 ? `${item.count} bài` : "gợi ý"}
-                </span>
-              </button>
-            ))}
-          </div>
+          {hasTrending ? (
+            <div className="space-y-1">
+              {trendingHashtags.map(item => (
+                <button
+                  key={item.tag}
+                  type="button"
+                  onClick={() => onTopicSelect(item.tag)}
+                  className="flex w-full items-center justify-between rounded-xl px-2 py-2.5 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200"
+                >
+                  <span className="min-w-0 max-w-[180px] truncate text-sm font-semibold text-slate-900">
+                    {normalizeHashtag(item.tag)}
+                  </span>
+                  <span className="ml-3 shrink-0 text-xs font-medium text-slate-500">
+                    {`${item.count} bài`}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xl bg-slate-50 px-3 py-3 text-sm font-medium leading-5 text-slate-500">
+              Chưa có hashtag nổi bật
+            </p>
+          )}
         </section>
 
         <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -412,7 +427,9 @@ export default function CommunityPage() {
     event.preventDefault();
     const trimmedInput = searchInput.trim();
     if (trimmedInput.startsWith("#")) {
-      setHashtagFilter(trimmedInput.substring(1));
+      const normalizedFilter = normalizeHashtagValue(trimmedInput);
+      setHashtagFilter(normalizedFilter);
+      setSearchInput(normalizedFilter ? normalizeHashtag(normalizedFilter) : "");
       setSearchFilter("");
     } else {
       setSearchFilter(trimmedInput);
@@ -434,8 +451,10 @@ export default function CommunityPage() {
   };
 
   const handleTopicSelect = (topic: string) => {
-    setSearchInput(`#${topic}`);
-    setHashtagFilter(topic);
+    const normalizedTopic = normalizeHashtagValue(topic);
+    if (!normalizedTopic) return;
+    setSearchInput(normalizeHashtag(normalizedTopic));
+    setHashtagFilter(normalizedTopic);
     setSearchFilter("");
   };
 
@@ -450,16 +469,16 @@ export default function CommunityPage() {
 
     posts.forEach(post => {
       post.hashtags?.forEach(tag => {
-        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+        const normalizedTag = normalizeHashtagValue(tag);
+        if (!normalizedTag) return;
+        counts.set(normalizedTag, (counts.get(normalizedTag) ?? 0) + 1);
       });
     });
 
-    const fromPosts = Array.from(counts.entries())
+    return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6)
       .map(([tag, count]) => ({ tag, count }));
-
-    return fromPosts.length > 0 ? fromPosts : QUICK_TOPICS.map(tag => ({ tag, count: 0 }));
   }, [posts]);
 
   const isInitialLoading = isLoading && posts.length === 0 && !loadError;
@@ -487,10 +506,13 @@ export default function CommunityPage() {
             onPostCreated={() => fetchPosts(0, hashtagFilter, searchFilter, true)}
           />
 
-          <div className="flex items-center justify-between px-1 pt-0.5">
-            <div>
-              <h2 className="text-base font-bold text-slate-950">Bài viết mới nhất</h2>
-              <p className="mt-0.5 text-sm font-medium text-slate-600">Những chia sẻ mới từ cộng đồng học tập.</p>
+          <div className="flex items-center justify-between px-2 pt-2 pb-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-orange-500" />
+              <div>
+                <h2 className="text-base font-extrabold text-slate-900">Bài viết mới nhất</h2>
+                <p className="text-[13px] font-medium text-slate-500">Những chia sẻ mới từ cộng đồng học tập.</p>
+              </div>
             </div>
             {(hashtagFilter || searchFilter) && (
               <button
@@ -525,8 +547,8 @@ export default function CommunityPage() {
                 </button>
               )}
               {!hasMore && posts.length > 0 && !isLoading && !loadError && (
-                <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-500 shadow-sm ring-1 ring-slate-200">
-                  Bạn đã xem hết tin hôm nay
+                <span className="mt-3 text-center text-[13.5px] font-medium text-slate-400">
+                  ✓ Bạn đã xem hết bài hôm nay
                 </span>
               )}
               {!hasMore && posts.length === 0 && !isLoading && !loadError && (

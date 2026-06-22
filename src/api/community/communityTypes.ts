@@ -6,6 +6,7 @@ export interface CommunityPostUser {
   fullName: string;
   avatarObjectKey?: string;
   avatarUrl?: string | null;
+  allTimeRank?: number;
 }
 
 export interface CommunityPost {

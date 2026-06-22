@@ -13,22 +13,12 @@ import type { CommunityPost } from "../../../../api/community/communityTypes";
 import communityService from "../../../../api/community/communityService";
 import { getStoredUserId } from "../../../../api/auth/authService";
 import { CommentSection } from "./CommentSection";
-
+import { RankBadge } from "./RankBadge";
+import { normalizeHashtagList, parseHashtags } from "../communityHashtags";
 interface PostCardProps {
   post: CommunityPost;
   onPostUpdated: (updatedPost: CommunityPost) => void;
   onPostDeleted?: (postId: string) => void;
-}
-
-function parseHashtags(input: string): string[] {
-  return Array.from(
-    new Set(
-      input
-        .split(/[\s,]+/)
-        .map((tag) => tag.replace(/^#+/, "").trim())
-        .filter(Boolean),
-    ),
-  );
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -40,7 +30,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   const [isLiking, setIsLiking] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
-  const [editHashtags, setEditHashtags] = useState((post.hashtags ?? []).join(" "));
+  const [editHashtags, setEditHashtags] = useState(normalizeHashtagList(post.hashtags).join(" "));
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -48,6 +38,12 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   const [isReporting, setIsReporting] = useState(false);
 
   const isAuthor = getStoredUserId() === post.author.userId;
+  const displayContent = String(post.content ?? "").trim();
+  const normalizedHashtags = React.useMemo(() => normalizeHashtagList(post.hashtags), [post.hashtags]);
+  const isShortPost = displayContent.length < 80;
+  const canSaveEdit = editContent.trim().length > 0 || parseHashtags(editHashtags).length > 0;
+
+  if (!displayContent && normalizedHashtags.length === 0) return null;
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -101,14 +97,16 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
 
   const startEditing = () => {
     setEditContent(post.content);
-    setEditHashtags((post.hashtags ?? []).join(" "));
+    setEditHashtags(normalizeHashtagList(post.hashtags).join(" "));
     setIsEditing(true);
   };
 
   const handleSaveEdit = async () => {
     const content = editContent.trim();
-    if (!content) {
-      toast.error("Nội dung bài viết không được để trống");
+    const parsedHashtags = parseHashtags(editHashtags);
+
+    if (!content && parsedHashtags.length === 0) {
+      toast.error("Nội dung bài viết hoặc hashtag không được để trống");
       return;
     }
 
@@ -116,7 +114,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
     try {
       const updated = await communityService.updatePost(post.postId, {
         content,
-        hashtags: parseHashtags(editHashtags),
+        hashtags: parsedHashtags,
       });
       onPostUpdated(updated);
       setIsEditing(false);
@@ -159,9 +157,9 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   };
 
   return (
-    <article className="overflow-hidden rounded-[18px] border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.06)] transition duration-200 hover:border-slate-300 hover:shadow-[0_14px_38px_rgba(15,23,42,0.09)]">
-      <div className="p-5 sm:p-6">
-        <div className="mb-4 flex items-start justify-between gap-3">
+    <article className="overflow-hidden rounded-[18px] border border-slate-200/80 bg-white shadow-[0_4px_16px_rgba(15,23,42,0.04)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+      <div className="p-4 sm:p-5">
+        <div className="mb-3 flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3.5">
             <Avatar className="h-11 w-11 shrink-0">
               <AvatarImage src={post.author.avatarUrl ?? undefined} />
@@ -174,9 +172,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
                 <h3 className="truncate text-[15px] font-bold text-slate-950">
                   {post.author.fullName}
                 </h3>
-                <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-500">
-                  Learner
-                </span>
+                <RankBadge rank={post.author.allTimeRank} />
               </div>
               <p className="mt-0.5 text-[12px] font-medium text-slate-500">
                 {timeAgo(post.createdAt)}
@@ -260,7 +256,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
               <button
                 type="button"
                 onClick={handleSaveEdit}
-                disabled={isSaving || !editContent.trim()}
+                disabled={isSaving || !canSaveEdit}
                 className="flex h-9 items-center gap-1.5 rounded-full bg-[#FF6B00] px-4 text-sm font-bold text-white transition hover:bg-[#ea580c] disabled:opacity-50"
               >
                 {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
@@ -268,19 +264,22 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            <p className="whitespace-pre-wrap text-[15px] leading-[1.72] text-[#0F172A]">
-              {post.content}
-            </p>
+          <div className={isShortPost ? "space-y-2.5" : "space-y-4"}>
+            {displayContent && (
+              <p className="whitespace-pre-wrap break-words text-[15px] leading-[1.7] text-[#0F172A] [overflow-wrap:anywhere]">
+                {displayContent}
+              </p>
+            )}
 
-            {post.hashtags && post.hashtags.length > 0 && (
+            {normalizedHashtags.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {post.hashtags.map((tag: string) => (
+                {normalizedHashtags.map((tag: string) => (
                   <span
                     key={tag}
-                    className="rounded-full bg-orange-50/60 px-2.5 py-1 text-xs font-bold text-slate-700 ring-1 ring-orange-100/40 transition hover:bg-orange-50 hover:text-[#D95B00]"
+                    title={tag}
+                    className="inline-flex max-w-[160px] items-center truncate rounded-lg bg-slate-100/60 px-3 py-1.5 text-[13px] font-medium text-slate-600"
                   >
-                    #{tag}
+                    <span className="truncate">{tag}</span>
                   </span>
                 ))}
               </div>
@@ -288,42 +287,45 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
           </div>
         )}
 
-        <div className="mt-5 flex items-center justify-between border-b border-slate-100 pb-2.5 text-xs font-medium text-slate-500">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-50 text-[#D95B00] ring-1 ring-orange-100">
-              <Heart className="h-3 w-3 fill-current" />
-            </span>
+        <div className={`${isShortPost ? "mt-2.5 pb-2.5" : "mt-3 pb-3"} flex items-center justify-between border-b border-slate-100 text-[13px] font-medium text-slate-500`}>
+          <div className="flex items-center gap-1.5">
+            <Heart className="h-4 w-4 text-slate-400" />
             <span>{post.likeCount} lượt thích</span>
           </div>
           <button
             type="button"
             onClick={() => setShowComments(true)}
-            className="transition hover:text-slate-900"
+            className="transition hover:text-slate-700"
           >
             {post.commentCount} bình luận
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-1 pt-2">
+        <div className="flex items-center justify-between gap-1 pt-1.5">
           <button
             type="button"
             onClick={handleLike}
-            className={`flex min-h-9 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition duration-150 active:scale-[0.98] ${
+            className={`group flex h-10 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
               post.likedByMe
-                ? "bg-orange-50/80 text-[#D95B00]"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                ? "bg-orange-50/70 text-[#FF6B00] hover:bg-orange-50"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
             }`}
           >
-            <Heart className={`h-4 w-4 transition-transform duration-150 ${post.likedByMe ? "scale-110 fill-current" : ""}`} />
+            <motion.div
+              animate={post.likedByMe ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <Heart className={`h-[18px] w-[18px] ${post.likedByMe ? "fill-current" : ""}`} />
+            </motion.div>
             Thích
           </button>
 
           <button
             type="button"
             onClick={() => setShowComments(!showComments)}
-            className="flex min-h-9 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-500 transition duration-150 hover:bg-slate-50 hover:text-slate-800 active:scale-[0.98]"
+            className="group flex h-10 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-500 transition-all duration-150 hover:bg-slate-50 hover:text-slate-700 active:scale-[0.98]"
           >
-            <MessageCircle className="h-4 w-4" />
+            <MessageCircle className="h-[18px] w-[18px]" />
             Bình luận
           </button>
 
@@ -331,9 +333,9 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
             type="button"
             disabled
             title="Đang phát triển"
-            className="flex min-h-9 cursor-not-allowed items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-400"
+            className="flex h-10 flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-400"
           >
-            <Share2 className="h-4 w-4" />
+            <Share2 className="h-[18px] w-[18px]" />
             Chia sẻ
           </button>
         </div>

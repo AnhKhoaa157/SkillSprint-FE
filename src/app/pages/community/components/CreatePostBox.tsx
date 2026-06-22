@@ -8,7 +8,10 @@ import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
 import communityService from "../../../../api/community/communityService";
 import { getStoredUserProfile } from "../../../../api/auth/authService";
+import { RankBadge } from "./RankBadge";
 import meService from "../../../../api/utilities/meService";
+import pointService from "../../../../api/learning/pointService";
+import { normalizeHashtag, parseHashtags } from "../communityHashtags";
 
 interface CreatePostBoxProps {
   onPostCreated: () => void;
@@ -18,6 +21,7 @@ interface CreatePostBoxProps {
 interface CreatePostModalProps extends CreatePostBoxProps {
   avatarUrl?: string;
   displayName: string;
+  allTimeRank: number | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -28,9 +32,20 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-function getFirstName(fullName?: string) {
+function getComposerName(fullName?: string) {
   const parts = fullName?.trim().split(/\s+/).filter(Boolean) ?? [];
-  return parts.length > 0 ? parts[parts.length - 1] : "Khoa";
+  if (parts.length === 0) return "";
+
+  const lastPart = parts[parts.length - 1].toLowerCase();
+  if (parts.length > 1 && ["hacker", "learner", "student", "user", "admin"].includes(lastPart)) {
+    return parts.slice(0, Math.min(2, parts.length - 1)).join(" ");
+  }
+
+  return parts[0];
+}
+
+function getComposerPrompt(name: string) {
+  return name ? `${name} ơi, hôm nay bạn học được gì?` : "Hôm nay bạn học được gì?";
 }
 
 export function CreatePostBox({ onPostCreated, openSignal = 0 }: CreatePostBoxProps) {
@@ -39,14 +54,21 @@ export function CreatePostBox({ onPostCreated, openSignal = 0 }: CreatePostBoxPr
 
 export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePostBoxProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
   const currentUser = getStoredUserProfile();
-  const displayName = currentUser?.fullName || "Chí Dân Hacker";
-  const firstName = getFirstName(displayName);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
+  const [displayName, setDisplayName] = useState<string>(currentUser?.fullName?.trim() || "");
+  const [allTimeRank, setAllTimeRank] = useState<number | null>(null);
+
+  const composerName = getComposerName(displayName);
+  const composerPrompt = getComposerPrompt(composerName);
 
   useEffect(() => {
     meService.getMe().then(me => {
       if (me.avatarUrl) setAvatarUrl(me.avatarUrl);
+      if (me.fullName) setDisplayName(me.fullName);
+    }).catch(() => {});
+    pointService.getMeSummary().then(summary => {
+      setAllTimeRank(summary.allTimeRank);
     }).catch(() => {});
   }, []);
 
@@ -64,7 +86,7 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
           <Avatar className="h-11 w-11 shrink-0">
             <AvatarImage src={avatarUrl} />
             <AvatarFallback className="bg-orange-50 text-sm font-bold text-[#FF6B00]">
-              {displayName.charAt(0)}
+              {displayName.charAt(0) || "S"}
             </AvatarFallback>
           </Avatar>
 
@@ -74,9 +96,9 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
               event.stopPropagation();
               setIsModalOpen(true);
             }}
-            className="min-w-0 flex-1 rounded-full bg-[#EEF1F5] px-4 py-3.5 text-left text-[15px] font-semibold text-slate-700 transition group-hover:bg-white group-hover:text-slate-900 group-hover:ring-1 group-hover:ring-orange-100 hover:bg-white focus:outline-none focus:ring-2 focus:ring-orange-200"
+            className="min-w-0 flex-1 rounded-full bg-slate-100 px-4 py-3.5 text-left text-[15px] font-semibold text-slate-700 transition-all border border-transparent group-hover:bg-slate-50 group-hover:text-slate-900 group-hover:border-orange-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-200 shadow-sm"
           >
-            {firstName} ơi, bạn đang nghĩ gì thế?
+            {composerPrompt}
           </button>
 
           <div className="hidden items-center gap-2 sm:flex">
@@ -126,17 +148,19 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
         onPostCreated={onPostCreated}
         avatarUrl={avatarUrl}
         displayName={displayName}
+        allTimeRank={allTimeRank}
       />
     </>
   );
 }
 
-export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, displayName }: CreatePostModalProps) {
+export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, displayName, allTimeRank }: CreatePostModalProps) {
   const [content, setContent] = useState("");
   const [hashtags, setHashtags] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const modalRef = useRef<HTMLFormElement>(null);
-  const firstName = getFirstName(displayName);
+  const composerPrompt = getComposerPrompt(getComposerName(displayName));
+  const parsedPreviewHashtags = parseHashtags(hashtags);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -177,18 +201,15 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
     e?.preventDefault();
 
     const trimmedContent = content.trim();
-    if (!trimmedContent) {
-      toast.error("Vui lòng nhập nội dung bài viết");
+    const parsedHashtags = parseHashtags(hashtags);
+
+    if (!trimmedContent && parsedHashtags.length === 0) {
+      toast.error("Vui lòng nhập nội dung hoặc hashtag cho bài viết");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const parsedHashtags = hashtags
-        .split(/[\s,]+/)
-        .map(tag => tag.startsWith("#") ? tag.substring(1) : tag)
-        .filter(tag => tag.length > 0);
-
       const post = await communityService.createPost({
         content: trimmedContent,
         hashtags: parsedHashtags
@@ -211,18 +232,18 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
     }
   };
 
-  const canSubmit = content.trim().length > 0 && !isSubmitting;
+  const canSubmit = (content.trim().length > 0 || parsedPreviewHashtags.length > 0) && !isSubmitting;
   const isNearLimit = content.length >= MAX_CONTENT_LENGTH * 0.9;
 
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-[4px] sm:items-center sm:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.16 }}
+          transition={{ duration: 0.2 }}
           onMouseDown={onClose}
         >
           <motion.form
@@ -256,15 +277,13 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
                 <Avatar className="h-11 w-11 shrink-0">
                   <AvatarImage src={avatarUrl} />
                   <AvatarFallback className="bg-orange-50 text-sm font-bold text-[#FF6B00]">
-                    {displayName.charAt(0)}
+                    {displayName.charAt(0) || "S"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-sm font-bold text-slate-950">{displayName}</p>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500">
-                      Learner
-                    </span>
+                    <RankBadge rank={allTimeRank} />
                   </div>
                   <p className="mt-0.5 text-xs font-medium text-slate-500">Chia sẻ với cộng đồng</p>
                 </div>
@@ -275,7 +294,7 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
                   autoFocus
                   value={content}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
-                  placeholder={`${firstName} ơi, bạn đang nghĩ gì thế?`}
+                  placeholder={composerPrompt}
                   className="min-h-[160px] resize-none border-0 bg-transparent px-0 text-[16px] leading-7 text-slate-900 shadow-none placeholder:text-slate-400 focus-visible:ring-0"
                   maxLength={MAX_CONTENT_LENGTH}
                 />
@@ -294,6 +313,23 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
                     className="h-10 rounded-full border-slate-200 bg-white pl-9 text-sm shadow-none focus-visible:ring-orange-200"
                   />
                 </div>
+
+                {parsedPreviewHashtags.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {parsedPreviewHashtags.map((tag) => {
+                      const label = normalizeHashtag(tag);
+                      return (
+                        <span
+                          key={tag}
+                          title={label}
+                          className="inline-flex max-w-[160px] items-center truncate rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200"
+                        >
+                          <span className="truncate">{label}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
