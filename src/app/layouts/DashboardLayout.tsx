@@ -243,6 +243,8 @@ function getNotifMeta(type: string): NotifMeta {
       return { iconType:"shield", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Hệ thống", labelColor:OG, itemBg:CARD, leftBorderColor:OG };
     case "SYSTEM_WARNING":
       return { iconType:"shield", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Hệ thống", labelColor:OG, itemBg:CARD, leftBorderColor:OG };
+    case "CONTENT_MODERATION":
+      return { iconType:"alert", iconBg:"#FEF2F2", iconBorder:"#FECACA", iconColor:"#DC2626", label:"Kiểm duyệt cộng đồng", labelColor:"#DC2626", itemBg:"#FFF5F5", leftBorderColor:"#EF4444" };
     default:
       return { iconType:"bell", iconBg:"#EFF6FF", iconBorder:"#BFDBFE", iconColor:"#2563EB", label:"Thông báo", labelColor:"#2563EB", itemBg:CARD };
   }
