@@ -9,6 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../../../components/ui/dialog";
+import { Input } from "../../../../components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../../components/ui/dropdown-menu";
 import { Button } from "../../../../components/ui/button";
 import { Textarea } from "../../../../components/ui/textarea";
 import {
@@ -25,6 +33,7 @@ import {
   Search,
   ShieldAlert,
   Trash2,
+  MoreHorizontal,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -182,64 +191,7 @@ function AuthorCell({ author }: { author: CommunityAuthorResponse | null }) {
   );
 }
 
-function ActionButton({
-  children,
-  onClick,
-  disabled,
-  tone = "neutral",
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  tone?: "neutral" | "success" | "danger" | "warning";
-}) {
-  const toneClass = {
-    neutral: "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
-    success: "border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
-    danger: "border-red-100 bg-red-50 text-red-700 hover:bg-red-100",
-    warning: "border-amber-100 bg-amber-50 text-amber-700 hover:bg-amber-100",
-  }[tone];
 
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`inline-flex h-8 items-center gap-1.5 rounded-xl border px-3 text-xs font-extrabold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${toneClass}`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function SelectField<T extends string>({
-  value,
-  onChange,
-  options,
-  label,
-}: {
-  value: T;
-  onChange: (value: T) => void;
-  options: Array<{ value: T; label: string }>;
-  label: string;
-}) {
-  return (
-    <label className="flex min-w-[170px] flex-col gap-1 text-[11px] font-black uppercase tracking-widest text-slate-400">
-      {label}
-      <select
-        value={value}
-        onChange={(event: React.ChangeEvent<HTMLSelectElement>) => onChange(event.target.value as T)}
-        className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold normal-case tracking-normal text-slate-700 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
-      >
-        {options.map(option => (
-          <option key={option.value || "all"} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
 export default function AdminCommunityModeration({ isDashboard = false }: AdminCommunityModerationProps) {
   const [activeTab, setActiveTab] = useState<CommunityTab>("posts");
@@ -505,10 +457,10 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
               </p>
             </div>
           </div>
-          <ActionButton onClick={() => reload(page)} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => reload(page)} disabled={loading}>
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             Làm mới
-          </ActionButton>
+          </Button>
         </div>
       )}
 
@@ -557,15 +509,59 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
                 </form>
               )}
               {activeTab === "posts" && (
-                <SelectField label="Trạng thái" value={postStatus} onChange={setPostStatus} options={POST_STATUS_OPTIONS} />
+                                <Select value={postStatus} onValueChange={(val) => setPostStatus(val as any)}>
+                  <SelectTrigger className="h-10 w-[160px] rounded-xl border-slate-200 bg-white font-medium focus:ring-[#FF6B00]">
+                    <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {POST_STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value || "all"} value={opt.value || "all"}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
               {activeTab === "comments" && (
-                <SelectField label="Trạng thái" value={commentStatus} onChange={setCommentStatus} options={COMMENT_STATUS_OPTIONS} />
+                                <Select value={commentStatus} onValueChange={(val) => setCommentStatus(val as any)}>
+                  <SelectTrigger className="h-10 w-[160px] rounded-xl border-slate-200 bg-white font-medium focus:ring-[#FF6B00]">
+                    <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMMENT_STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value || "all"} value={opt.value || "all"}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
               {activeTab === "reports" && (
                 <>
-                  <SelectField label="Report" value={reportStatus} onChange={setReportStatus} options={REPORT_STATUS_OPTIONS} />
-                  <SelectField label="Loại nội dung" value={reportTarget} onChange={setReportTarget} options={REPORT_TARGET_OPTIONS} />
+                                  <Select value={reportStatus} onValueChange={(val) => setReportStatus(val as any)}>
+                  <SelectTrigger className="h-10 w-[160px] rounded-xl border-slate-200 bg-white font-medium focus:ring-[#FF6B00]">
+                    <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REPORT_STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value || "all"} value={opt.value || "all"}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                                  <Select value={reportTarget} onValueChange={(val) => setReportTarget(val as any)}>
+                  <SelectTrigger className="h-10 w-[160px] rounded-xl border-slate-200 bg-white font-medium focus:ring-[#FF6B00]">
+                    <SelectValue placeholder="Loại nội dung" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REPORT_TARGET_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value || "all"} value={opt.value || "all"}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 </>
               )}
             </div>
@@ -605,13 +601,30 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
                     </div>
                     {post.adminNote && <p className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">Ghi chú: {post.adminNote}</p>}
                   </div>
-                  <div className="flex flex-wrap content-start gap-2 xl:justify-end">
-                    <ActionButton disabled={actionId === post.postId || post.status === "APPROVED"} tone="success" onClick={() => updatePostStatus(post, "APPROVED")}>
-                      <CheckCircle2 size={13} /> Duyệt
-                    </ActionButton>
-                    <ActionButton disabled={actionId === post.postId || post.status === "HIDDEN"} tone="danger" onClick={() => updatePostStatus(post, "HIDDEN")}>
-                      <EyeOff size={13} /> Ẩn
-                    </ActionButton>
+                  <div className="flex items-center justify-end gap-2 shrink-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem 
+                          disabled={actionId === post.postId || post.status === "APPROVED"}
+                          onClick={() => updatePostStatus(post, "APPROVED")}
+                          className="text-emerald-600 font-medium cursor-pointer"
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" /> Duyệt bài
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          disabled={actionId === post.postId || post.status === "HIDDEN"}
+                          onClick={() => updatePostStatus(post, "HIDDEN")}
+                          className="text-red-600 font-medium cursor-pointer"
+                        >
+                          <EyeOff className="mr-2 h-4 w-4" /> Ẩn bài viết
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
@@ -636,13 +649,30 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
                     </div>
                     {comment.adminNote && <p className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">Ghi chú: {comment.adminNote}</p>}
                   </div>
-                  <div className="flex flex-wrap content-start gap-2 xl:justify-end">
-                    <ActionButton disabled={actionId === comment.commentId || comment.status === "VISIBLE"} tone="success" onClick={() => updateCommentStatus(comment, "VISIBLE")}>
-                      <CheckCircle2 size={13} /> Hiển thị
-                    </ActionButton>
-                    <ActionButton disabled={actionId === comment.commentId || comment.status === "HIDDEN"} tone="danger" onClick={() => updateCommentStatus(comment, "HIDDEN")}>
-                      <EyeOff size={13} /> Ẩn
-                    </ActionButton>
+                  <div className="flex items-center justify-end gap-2 shrink-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem 
+                          disabled={actionId === comment.commentId || comment.status === "VISIBLE"}
+                          onClick={() => updateCommentStatus(comment, "VISIBLE")}
+                          className="text-emerald-600 font-medium cursor-pointer"
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" /> Hiển thị
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          disabled={actionId === comment.commentId || comment.status === "HIDDEN"}
+                          onClick={() => updateCommentStatus(comment, "HIDDEN")}
+                          className="text-red-600 font-medium cursor-pointer"
+                        >
+                          <EyeOff className="mr-2 h-4 w-4" /> Ẩn bình luận
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
@@ -676,13 +706,30 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
                     </div>
                     {report.adminNote && <p className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">Ghi chú: {report.adminNote}</p>}
                   </div>
-                  <div className="flex flex-wrap content-start gap-2 xl:justify-end">
-                    <ActionButton disabled={actionId === report.reportId || report.status === "REVIEWED"} tone="success" onClick={() => updateReportStatus(report, "REVIEWED")}>
-                      <CheckCircle2 size={13} /> Đã xử lý
-                    </ActionButton>
-                    <ActionButton disabled={actionId === report.reportId || report.status === "DISMISSED"} tone="neutral" onClick={() => updateReportStatus(report, "DISMISSED")}>
-                      <AlertTriangle size={13} /> Bỏ qua
-                    </ActionButton>
+                  <div className="flex items-center justify-end gap-2 shrink-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem 
+                          disabled={actionId === report.reportId || report.status === "REVIEWED"}
+                          onClick={() => updateReportStatus(report, "REVIEWED")}
+                          className="text-emerald-600 font-medium cursor-pointer"
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" /> Đã xử lý
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          disabled={actionId === report.reportId || report.status === "DISMISSED"}
+                          onClick={() => updateReportStatus(report, "DISMISSED")}
+                          className="text-slate-600 font-medium cursor-pointer"
+                        >
+                          <AlertTriangle className="mr-2 h-4 w-4" /> Bỏ qua
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
@@ -741,12 +788,12 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
               {totalItems.toLocaleString("vi-VN")} mục · Trang {page + 1}/{totalPages}
             </p>
             <div className="flex gap-2">
-              <ActionButton disabled={loading || page <= 0} onClick={() => reload(Math.max(0, page - 1))}>
+              <Button variant="outline" size="sm" disabled={loading || page <= 0} onClick={() => reload(Math.max(0, page - 1))}>
                 Trước
-              </ActionButton>
-              <ActionButton disabled={loading || page + 1 >= totalPages} onClick={() => reload(page + 1)}>
+              </Button>
+              <Button variant="outline" size="sm" disabled={loading || page + 1 >= totalPages} onClick={() => reload(page + 1)}>
                 Sau
-              </ActionButton>
+              </Button>
             </div>
           </div>
         )}
