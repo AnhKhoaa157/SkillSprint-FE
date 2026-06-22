@@ -55,7 +55,7 @@ interface RightPanelProps extends SidebarProps {
 
 function DevelopmentBadge() {
   return (
-    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-normal text-slate-500">
+    <span className="rounded-full bg-slate-100/80 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-normal text-slate-500">
       Đang phát triển
     </span>
   );
@@ -68,14 +68,14 @@ function Sidebar({ onTopicSelect }: SidebarProps) {
         <nav className="space-y-1">
           <Link
             to="/app/community"
-            className="flex h-11 items-center gap-3 rounded-2xl bg-orange-50 px-3 text-[15px] font-semibold text-[#D95B00] ring-1 ring-orange-100/70"
+            className="flex h-11 items-center gap-3 rounded-2xl bg-[#FFF3E8] px-3 text-[15px] font-semibold text-[#C84A00] ring-1 ring-orange-100/80"
           >
             <Home className="h-5 w-5" />
             Bảng tin
           </Link>
           <Link
             to="/app/community/rooms"
-            className="flex h-11 items-center gap-3 rounded-2xl px-3 text-[15px] font-semibold text-slate-700 transition hover:bg-white hover:text-slate-950"
+            className="flex h-11 items-center gap-3 rounded-2xl px-3 text-[15px] font-semibold text-slate-800 transition hover:bg-white hover:text-slate-950 hover:shadow-sm"
           >
             <MessageSquare className="h-5 w-5 text-slate-500" />
             Phòng chat
@@ -103,14 +103,14 @@ function Sidebar({ onTopicSelect }: SidebarProps) {
         </nav>
 
         <section className="border-t border-slate-200 pt-4">
-          <h2 className="px-3 text-sm font-bold text-slate-500">Lối tắt</h2>
+          <h2 className="px-3 text-sm font-bold text-slate-600">Lối tắt</h2>
           <div className="mt-2 space-y-1">
             {QUICK_TOPICS.map(topic => (
               <button
                 key={topic}
                 type="button"
                 onClick={() => onTopicSelect(topic)}
-                className="flex h-10 w-full items-center rounded-xl px-3 text-left text-[15px] font-semibold text-slate-700 transition hover:bg-white hover:text-slate-950"
+                className="flex h-10 w-full items-center rounded-xl px-3 text-left text-[15px] font-semibold text-slate-700 transition hover:bg-white hover:text-[#D95B00] hover:shadow-sm"
               >
                 <span className="mr-2 text-slate-400">#</span>
                 {topic}
@@ -161,7 +161,7 @@ function CommunityHeader({
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
           placeholder="Tìm kiếm trong cộng đồng"
-          className="h-10 rounded-full border-0 bg-[#F3F4F6] pl-11 pr-11 text-[15px] shadow-none placeholder:text-slate-400 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-200"
+          className="h-10 rounded-full border-0 bg-[#F3F4F6] pl-11 pr-11 text-[15px] shadow-none placeholder:text-slate-500 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-200"
         />
         {(hashtagFilter || searchFilter) && (
           <button
@@ -253,7 +253,7 @@ function RightPanel({ postsCount, trendingHashtags, onTopicSelect }: RightPanelP
   return (
     <aside className="hidden xl:block">
       <div className="sticky top-5 space-y-4">
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold text-slate-700">Đang nổi bật</h2>
             <TrendingUp className="h-4 w-4 text-slate-400" />
@@ -267,7 +267,7 @@ function RightPanel({ postsCount, trendingHashtags, onTopicSelect }: RightPanelP
                 className="flex w-full items-center justify-between rounded-xl px-2 py-2.5 text-left transition hover:bg-slate-50"
               >
                 <span className="min-w-0 truncate text-sm font-semibold text-slate-900">#{item.tag}</span>
-                <span className="ml-3 shrink-0 text-xs font-medium text-slate-400">
+                <span className="ml-3 shrink-0 text-xs font-medium text-slate-500">
                   {item.count > 0 ? `${item.count} bài` : "gợi ý"}
                 </span>
               </button>
@@ -275,7 +275,7 @@ function RightPanel({ postsCount, trendingHashtags, onTopicSelect }: RightPanelP
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold text-slate-700">Hoạt động</h2>
             <Bell className="h-4 w-4 text-slate-400" />
@@ -285,20 +285,20 @@ function RightPanel({ postsCount, trendingHashtags, onTopicSelect }: RightPanelP
               <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#D95B00]" />
               <div>
                 <p className="text-sm font-semibold text-slate-900">Feed học tập đang mở</p>
-                <p className="mt-0.5 text-xs leading-5 text-slate-500">{postsCount} bài đã tải trong phiên này</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-600">{postsCount} bài đã tải trong phiên này</p>
               </div>
             </div>
             <div className="flex gap-3">
               <Users className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
               <div>
                 <p className="text-sm font-semibold text-slate-900">Cùng nhau học tốt hơn</p>
-                <p className="mt-0.5 text-xs leading-5 text-slate-500">Đặt câu hỏi rõ ràng, phản hồi tử tế</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-600">Đặt câu hỏi rõ ràng, phản hồi tử tế</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <div className="mb-3 flex items-center gap-2">
             <BookOpenCheck className="h-4 w-4 text-slate-400" />
             <h2 className="text-sm font-bold text-slate-700">Quy tắc cộng đồng</h2>
@@ -469,7 +469,7 @@ export default function CommunityPage() {
       <div className="mx-auto grid w-full max-w-[1320px] grid-cols-1 gap-4 px-3 pb-24 pt-4 sm:px-5 lg:max-w-[780px] xl:max-w-[1320px] xl:grid-cols-[250px_minmax(0,720px)_292px]">
         <Sidebar onTopicSelect={handleTopicSelect} />
 
-        <main className="min-w-0 space-y-4 xl:mx-auto xl:w-full">
+        <main className="min-w-0 space-y-3 xl:mx-auto xl:w-full">
           <CommunityHeader
             hashtagFilter={hashtagFilter}
             searchFilter={searchFilter}
@@ -487,10 +487,10 @@ export default function CommunityPage() {
             onPostCreated={() => fetchPosts(0, hashtagFilter, searchFilter, true)}
           />
 
-          <div className="flex items-center justify-between px-1 pt-1">
+          <div className="flex items-center justify-between px-1 pt-0.5">
             <div>
               <h2 className="text-base font-bold text-slate-950">Bài viết mới nhất</h2>
-              <p className="mt-0.5 text-sm text-slate-500">Những chia sẻ mới từ cộng đồng học tập.</p>
+              <p className="mt-0.5 text-sm font-medium text-slate-600">Những chia sẻ mới từ cộng đồng học tập.</p>
             </div>
             {(hashtagFilter || searchFilter) && (
               <button
