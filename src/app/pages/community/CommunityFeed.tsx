@@ -26,29 +26,29 @@ import { normalizeHashtag, normalizeHashtagValue } from "./communityHashtags";
 
 const PAGE_SIZE = 10;
 const LOAD_ERROR_TOAST_ID = "community-feed-load-error";
-const QUICK_TOPICS = ["reactjs", "springboot", "cors", "debug", "phongvan"];
 
 interface TopicItem {
   tag: string;
   count: number;
 }
 
-interface SidebarProps {
+interface TopicSelectProps {
   onTopicSelect: (topic: string) => void;
 }
 
-interface CommunityHeaderProps extends SidebarProps {
+interface CommunityHeaderProps extends TopicSelectProps {
   hashtagFilter: string;
   searchFilter: string;
   searchInput: string;
   postsCount: number;
   topicsCount: number;
+  trendingHashtags: TopicItem[];
   setSearchInput: (value: string) => void;
   onSearchSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   onClearFilters: () => void;
 }
 
-interface RightPanelProps extends SidebarProps {
+interface RightPanelProps extends TopicSelectProps {
   postsCount: number;
   trendingHashtags: TopicItem[];
 }
@@ -61,9 +61,7 @@ function DevelopmentBadge() {
   );
 }
 
-function Sidebar({ onTopicSelect }: SidebarProps) {
-  const quickTopics = QUICK_TOPICS.map(normalizeHashtagValue).filter(Boolean);
-
+function Sidebar() {
   return (
     <aside className="hidden xl:block">
       <div className="sticky top-5 space-y-5">
@@ -104,21 +102,6 @@ function Sidebar({ onTopicSelect }: SidebarProps) {
           </button>
         </nav>
 
-        <section className="border-t border-slate-200 pt-4">
-          <h2 className="px-3 text-sm font-bold text-slate-600">Lối tắt</h2>
-          <div className="mt-2 space-y-1">
-            {quickTopics.map(topic => (
-              <button
-                key={topic}
-                type="button"
-                onClick={() => onTopicSelect(topic)}
-                className="flex h-10 w-full items-center rounded-xl px-3 text-left text-[15px] font-semibold text-slate-700 transition hover:bg-white hover:text-[#D95B00] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200"
-              >
-                <span className="max-w-[180px] truncate">{normalizeHashtag(topic)}</span>
-              </button>
-            ))}
-          </div>
-        </section>
       </div>
     </aside>
   );
@@ -130,13 +113,15 @@ function CommunityHeader({
   searchInput,
   postsCount,
   topicsCount,
+  trendingHashtags,
   setSearchInput,
   onSearchSubmit,
   onClearFilters,
   onTopicSelect,
 }: CommunityHeaderProps) {
   const activeFilterLabel = hashtagFilter ? normalizeHashtag(hashtagFilter) : searchFilter;
-  const quickTopics = QUICK_TOPICS.map(normalizeHashtagValue).filter(Boolean);
+  const headerTopics = trendingHashtags.map((item) => normalizeHashtagValue(item.tag)).filter(Boolean);
+  const showTopicRow = headerTopics.length > 0 || Boolean(hashtagFilter || searchFilter);
 
   return (
     <section className="relative overflow-hidden rounded-[20px] border border-orange-100/50 bg-gradient-to-br from-white via-orange-50/30 to-amber-50/40 p-5 shadow-[0_8px_30px_rgba(255,107,0,0.04)]">
@@ -179,30 +164,32 @@ function CommunityHeader({
         )}
       </form>
 
-      <div className="mt-2.5 flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {quickTopics.map(topic => (
-          <button
-            key={topic}
-            type="button"
-            onClick={() => onTopicSelect(topic)}
-            className={`inline-flex h-8 max-w-[160px] shrink-0 items-center rounded-full px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 ${
-              hashtagFilter === topic
-                ? "bg-[#FF6B00] text-white shadow-sm shadow-orange-500/20"
-                : "bg-[#F3F4F6] text-slate-700 hover:bg-orange-50 hover:text-[#D95B00]"
-            }`}
-          >
-            <span className="truncate">{normalizeHashtag(topic)}</span>
-          </button>
-        ))}
-        {(hashtagFilter || searchFilter) && (
-          <span className="inline-flex h-8 min-w-0 shrink-0 items-center gap-2 rounded-full bg-orange-50 px-3 text-sm font-semibold text-[#D95B00] ring-1 ring-orange-100">
-            <span className="max-w-[160px] truncate">{activeFilterLabel}</span>
-            <button type="button" onClick={onClearFilters} title="Xóa lọc" aria-label="Xóa bộ lọc">
-              <X className="h-3.5 w-3.5" />
+      {showTopicRow && (
+        <div className="mt-2.5 flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {headerTopics.map(topic => (
+            <button
+              key={topic}
+              type="button"
+              onClick={() => onTopicSelect(topic)}
+              className={`inline-flex h-8 max-w-[160px] shrink-0 items-center rounded-full px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 ${
+                hashtagFilter === topic
+                  ? "bg-[#FF6B00] text-white shadow-sm shadow-orange-500/20"
+                  : "bg-[#F3F4F6] text-slate-700 hover:bg-orange-50 hover:text-[#D95B00]"
+              }`}
+            >
+              <span className="truncate">{normalizeHashtag(topic)}</span>
             </button>
-          </span>
-        )}
-      </div>
+          ))}
+          {(hashtagFilter || searchFilter) && (
+            <span className="inline-flex h-8 min-w-0 shrink-0 items-center gap-2 rounded-full bg-orange-50 px-3 text-sm font-semibold text-[#D95B00] ring-1 ring-orange-100">
+              <span className="max-w-[160px] truncate">{activeFilterLabel}</span>
+              <button type="button" onClick={onClearFilters} title="Xóa lọc" aria-label="Xóa bộ lọc">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -486,7 +473,7 @@ export default function CommunityPage() {
   return (
     <div className="min-h-screen bg-[#F5F6F8] text-slate-950">
       <div className="mx-auto grid w-full max-w-[1320px] grid-cols-1 gap-4 px-3 pb-24 pt-4 sm:px-5 lg:max-w-[780px] xl:max-w-[1320px] xl:grid-cols-[250px_minmax(0,720px)_292px]">
-        <Sidebar onTopicSelect={handleTopicSelect} />
+        <Sidebar />
 
         <main className="min-w-0 space-y-3 xl:mx-auto xl:w-full">
           <CommunityHeader
@@ -495,6 +482,7 @@ export default function CommunityPage() {
             searchInput={searchInput}
             postsCount={posts.length}
             topicsCount={trendingHashtags.length}
+            trendingHashtags={trendingHashtags}
             setSearchInput={setSearchInput}
             onSearchSubmit={handleSearchSubmit}
             onClearFilters={clearFilters}
