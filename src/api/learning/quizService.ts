@@ -69,11 +69,18 @@ export interface QuizAttemptResponse {
  * Returns null when no quiz exists yet for this step (404).
  */
 async function getCurrent(stepId: string): Promise<QuizResponse | null> {
-  const res = await requestJson<QuizResponse>(
-    `/api/roadmap-steps/${stepId}/quiz/current`,
-    { method: "GET" },
-  );
-  return res.data ?? null;
+  try {
+    const res = await requestJson<QuizResponse>(
+      `/api/roadmap-steps/${stepId}/quiz/current`,
+      { method: "GET" },
+    );
+    return res.data ?? null;
+  } catch (error: any) {
+    if (error?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 /**
