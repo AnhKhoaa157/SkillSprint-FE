@@ -391,21 +391,20 @@ export default function Roadmap() {
         try {
           currentRoadmap = await roadmapService.getRoadmap(activeWorkspaceId);
         } catch (err: any) {
-          if (err?.status === 404 || String(err?.message || "").includes("404") || String(err || "").includes("404")) {
-            const shouldAutoGenerate = (location.state as any)?.autoGenerate;
-            if (shouldAutoGenerate) {
-              if (mounted) setGenerating(true);
-              try {
-                await roadmapService.generateRoadmap(activeWorkspaceId);
-              } catch (genErr) {
-                console.warn("Auto-generate trigger failed", genErr);
-              }
-              currentRoadmap = await roadmapService.getRoadmap(activeWorkspaceId).catch(() => null);
-            } else {
-              currentRoadmap = null;
+          throw err;
+        }
+
+        // If roadmap is null (not found), check if we should auto-generate
+        if (!currentRoadmap) {
+          const shouldAutoGenerate = (location.state as any)?.autoGenerate;
+          if (shouldAutoGenerate) {
+            if (mounted) setGenerating(true);
+            try {
+              await roadmapService.generateRoadmap(activeWorkspaceId);
+            } catch (genErr) {
+              console.warn("Auto-generate trigger failed", genErr);
             }
-          } else {
-            throw err;
+            currentRoadmap = await roadmapService.getRoadmap(activeWorkspaceId).catch(() => null);
           }
         }
 
