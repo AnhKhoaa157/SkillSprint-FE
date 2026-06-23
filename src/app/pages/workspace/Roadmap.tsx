@@ -12,6 +12,7 @@ import {
   CircleHelp,
   CalendarDays,
   Clock3,
+  ExternalLink,
   FileText,
   Layers3,
   LoaderCircle,
@@ -25,6 +26,7 @@ import {
   ArrowUpRight,
   ChevronRight,
 } from "lucide-react";
+import materialService, { type UploadedMaterialResponse } from "../../../api/learning/materialService";
 import AiTutorChat from "./AiTutorChat";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
@@ -243,6 +245,9 @@ export default function Roadmap() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
   const activeWorkspaceId = workspaceId || selectedWorkspaceId;
 
+  const [materials, setMaterials] = useState<UploadedMaterialResponse[]>([]);
+  const [viewingMaterialId, setViewingMaterialId] = useState<string | null>(null);
+
   useEffect(() => {
     if (roadmapData) {
       const roadmapId = toText(roadmapData.roadmapId) || toText(roadmapData.id);
@@ -370,6 +375,22 @@ export default function Roadmap() {
     }
   }, [isRoadmapComplete, roadmapKey, isClaiming, isClaimed, activeWorkspaceId]);
 
+  const handleViewMaterial = async (materialId: string) => {
+    if (!activeWorkspaceId || !materialId) return;
+    try {
+      setViewingMaterialId(materialId);
+      const detail = await materialService.getMaterialDetail(activeWorkspaceId, materialId);
+      if (detail.viewUrl) {
+        window.open(detail.viewUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        toast.error('Không thể lấy đường dẫn tài liệu');
+      }
+    } catch {
+      toast.error('Lỗi khi mở tài liệu');
+    } finally {
+      setViewingMaterialId(null);
+    }
+  };
 
   const roadmapTitle = toText(roadmapData?.title) || "Roadmap học tập";
   const roadmapDescription = toText(roadmapData?.description) || "Lộ trình học tập theo workspace đã xác nhận.";
@@ -413,11 +434,13 @@ export default function Roadmap() {
         }
 
         const taskResult = await calendarService.getCalendarTasks(activeWorkspaceId).catch(() => []);
+        const materialsResult = await materialService.getWorkspaceMaterials(activeWorkspaceId).catch(() => []);
 
         if (!mounted) return;
 
         setRoadmapData(currentRoadmap);
         setTasks(taskResult || []);
+        setMaterials(materialsResult || []);
       } catch (err: any) {
         if (!mounted) return;
         if (!roadmapData) setError(err?.message || "Không thể tải dữ liệu tự động");
@@ -570,32 +593,28 @@ export default function Roadmap() {
             )}
           </div>
 
-          <div className="flex mt-4 rounded-xl bg-slate-50 border border-slate-100 p-1 gap-1">
-            <button
-              type="button"
+          <div className="flex border-b border-slate-100 p-2 gap-2">
+            <button 
               onClick={() => setDetailTab("overview")}
-              className={`flex-1 py-2 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                detailTab === "overview"
-                  ? "bg-white text-[#FF7E21] shadow-sm border border-orange-100/60"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-white/60"
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                detailTab === "overview" ? "bg-orange-50 text-[#FF7E21] shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
               }`}
             >
+              <BookOpenCheck className="w-4 h-4" />
               Tổng quan
             </button>
-            <button
-              type="button"
+            <button 
               onClick={() => setDetailTab("resources")}
-              className={`flex-1 py-2 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                detailTab === "resources"
-                  ? "bg-white text-[#FF7E21] shadow-sm border border-orange-100/60"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-white/60"
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                detailTab === "resources" ? "bg-orange-50 text-[#FF7E21] shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
               }`}
             >
-              <span>Tài nguyên</span>
-              <span className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                detailTab === "resources" ? "bg-orange-50 text-[#FF7E21]" : "bg-slate-200 text-slate-500"
+              <Layers3 className="w-4 h-4" />
+              Tài nguyên
+              <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+                detailTab === "resources" ? "bg-orange-100 text-[#FF7E21]" : "bg-slate-100 text-slate-500"
               }`}>
-                {stepResources.length}
+                {(stepResources.length || 0) + (materials.length || 0)}
               </span>
             </button>
             <button
@@ -742,6 +761,46 @@ export default function Roadmap() {
                 <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center shadow-sm">
                   <FileText className="mx-auto h-7 w-7 text-slate-350" />
                   <p className="mt-2 text-xs font-medium text-slate-400">Chưa có tài liệu cho module này.</p>
+                </div>
+              )}
+
+              {/* Workspace Materials */}
+              {materials.length > 0 && (
+                <div className="mt-8 border-t border-slate-100 pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText size={16} className="text-indigo-500" />
+                    <div>
+                      <h3 className="text-xs font-extrabold tracking-tight text-slate-800">Tài liệu tham khảo</h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Từ Workspace của bạn</p>
+                    </div>
+                  </div>
+                  <div className="grid gap-3">
+                    {materials.map((m) => {
+                      const jobStatus = m.processingJob?.status ?? m.processingStatus ?? m.uploadStatus ?? null;
+                      const isDone = String(jobStatus || "").toUpperCase() === "COMPLETED";
+                      return (
+                        <div key={m.materialId} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-white hover:border-indigo-200 hover:shadow-sm transition-all">
+                          <div className="shrink-0 h-9 w-9 rounded-lg bg-indigo-50 border border-indigo-100/50 flex items-center justify-center text-indigo-500">
+                            <FileText className="h-4.5 w-4.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold text-slate-800">{m.fileName || m.originalFileName || "Tài liệu"}</p>
+                          </div>
+                          {isDone && m.fileUrl && (
+                            <button 
+                              type="button" 
+                              onClick={() => handleViewMaterial(m.materialId!)} 
+                              disabled={viewingMaterialId === m.materialId} 
+                              title="Xem tài liệu" 
+                              className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 disabled:opacity-50 transition"
+                            >
+                              {viewingMaterialId === m.materialId ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
