@@ -72,6 +72,20 @@ function UserAvatar({ name, url, className = "w-8.5 h-8.5" }: { name?: string | 
   );
 }
 
+function parseInlineFormatting(text: string) {
+  const regex = /(\*\*.*?\*\*|\*.*?\*)/g;
+  const parts = text.split(regex);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    return <React.Fragment key={i}>{part}</React.Fragment>;
+  });
+}
+
 function MessageContent({ content, isHidden }: { content: string; isHidden: boolean }) {
   if (isHidden) {
     return <span className="text-slate-400 italic line-through">Tin nhắn đã bị ẩn bởi kiểm duyệt viên</span>;
@@ -107,7 +121,7 @@ function MessageContent({ content, isHidden }: { content: string; isHidden: bool
   }
 
   if (parts.length === 0) {
-    return <span className="whitespace-pre-wrap break-words">{content}</span>;
+    return <span className="whitespace-pre-wrap break-words">{parseInlineFormatting(content)}</span>;
   }
 
   return (
@@ -137,7 +151,7 @@ function MessageContent({ content, isHidden }: { content: string; isHidden: bool
         }
         return (
           <span key={idx} className="whitespace-pre-wrap break-words inline-block w-full text-slate-700">
-            {part.value}
+            {parseInlineFormatting(part.value)}
           </span>
         );
       })}
