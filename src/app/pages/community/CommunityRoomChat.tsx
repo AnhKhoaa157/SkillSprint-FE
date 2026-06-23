@@ -9,7 +9,7 @@ import { Input } from "../../components/ui/input";
 import { AnimatePresence, motion } from "motion/react";
 
 import communityRoomService from "../../../api/community/communityRoomService";
-import { getCurrentSubscription } from "../../../api/billing/subscriptionsService";
+import { useSubscription } from "../../../hooks/useSubscription";
 import { useCommunityChatSocket } from "../../hooks/useCommunityChatSocket";
 import type { 
   CommunityRoomResponse, 
@@ -17,7 +17,7 @@ import type {
   CommunityPinResponse,
   CommunityChatMessageResponse,
 } from "../../../api/community/communityRoomTypes";
-import { getStoredAuthSession } from "../../../api/auth/authService";
+import { getStoredUserId } from "../../../api/auth/authService";
 
 const UPGRADE_REQUIRED_MESSAGE = "Vui lòng nâng cấp gói để sử dụng tính năng này";
 const UPGRADE_REQUIRED_TOAST_ID = "community-chat-upgrade-required";
@@ -182,11 +182,7 @@ function decodeJwtUserId(token: string): string | null {
 export default function CommunityRoomChat() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const currentUserId = React.useMemo(() => {
-    const session = getStoredAuthSession();
-    if (!session) return null;
-    return decodeJwtUserId(session.accessToken);
-  }, []);
+  const currentUserId = React.useMemo(() => getStoredUserId(), []);
 
   const [room, setRoom] = useState<CommunityRoomResponse | null>(null);
   const [members, setMembers] = useState<CommunityRoomMemberResponse[]>([]);
@@ -210,29 +206,28 @@ export default function CommunityRoomChat() {
   const [createPinModalOpen, setCreatePinModalOpen] = useState(false);
   const [newPin, setNewPin] = useState({ title: "", content: "", linkUrl: "" });
 
+  const { planId, loading: subscriptionLoading } = useSubscription();
+
   const isModerator = React.useMemo(() => {
-    if (!currentUserId || !members.length) return false;
-    const currentMember = members.find(m => m.user?.userId === currentUserId);
-    return currentMember?.role === "OWNER" || currentMember?.role === "MODERATOR";
-  }, [currentUserId, members]);
-
-
+    if (!room) return false;
+    return room.myRole === "OWNER" || room.myRole === "MODERATOR";
+  }, [room]);
 
   useEffect(() => {
-    if (!roomId) return;
-    loadRoomData();
-  }, [roomId]);
+    if (subscriptionLoading) return;
+    if (planId === "FREE") {
+      toast.error(UPGRADE_REQUIRED_MESSAGE, { id: UPGRADE_REQUIRED_TOAST_ID });
+      navigate("/app/community/rooms");
+      return;
+    }
+    if (roomId) {
+      loadRoomData();
+    }
+  }, [roomId, planId, subscriptionLoading]);
 
   const loadRoomData = async () => {
     try {
       setLoading(true);
-      const subscription = await getCurrentSubscription();
-      if (subscription.plan?.planType === "FREE") {
-        toast.error(UPGRADE_REQUIRED_MESSAGE, { id: UPGRADE_REQUIRED_TOAST_ID });
-        navigate("/app/community/rooms");
-        return;
-      }
-
       const [roomData, msgHistory, membersData, pinsData, myRoomsData] = await Promise.all([
         communityRoomService.getRoom(roomId!),
         communityRoomService.getMessageHistory(roomId!, 0, 50),
@@ -430,7 +425,7 @@ export default function CommunityRoomChat() {
     }
   };
 
-  if (loading || !room) {
+  if (subscriptionLoading || loading || !room) {
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-slate-50">
         <div className="text-center">
@@ -632,15 +627,17 @@ export default function CommunityRoomChat() {
                     {/* Hover menu */}
                     <div className="absolute right-6 -top-3.5 opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-20 flex items-center bg-white border border-slate-200/80 shadow-md rounded-xl p-1 gap-0.5">
 
-                      <button 
-                        type="button" 
-                        onClick={() => setInputMessage(prev => prev ? `@${msg.sender?.fullName} ${prev}` : `@${msg.sender?.fullName} `)}
-                        className="p-1.5 hover:bg-slate-100 hover:text-slate-800 rounded-md text-slate-500 transition flex items-center justify-center"
-                        title="Trả lời"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                      </button>
-                      {!isMe && (
+                      {msg.sender && (
+                        <button 
+                          type="button" 
+                          onClick={() => setInputMessage(prev => prev ? `@${msg.sender?.fullName} ${prev}` : `@${msg.sender?.fullName} `)}
+                          className="p-1.5 hover:bg-slate-100 hover:text-slate-800 rounded-md text-slate-500 transition flex items-center justify-center"
+                          title="Trả lời"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {msg.sender && !isMe && (
                         <button
                           type="button"
                           onClick={() => handleReportMessage(msg)}
@@ -681,15 +678,17 @@ export default function CommunityRoomChat() {
                   {/* Hover menu */}
                   <div className="absolute right-6 -top-3.5 opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-20 flex items-center bg-white border border-slate-200/80 shadow-md rounded-xl p-1 gap-0.5">
 
-                    <button 
-                      type="button" 
-                      onClick={() => setInputMessage(prev => prev ? `@${msg.sender?.fullName} ${prev}` : `@${msg.sender?.fullName} `)}
-                      className="p-1.5 hover:bg-slate-100 hover:text-slate-800 rounded-md text-slate-500 transition flex items-center justify-center"
-                      title="Trả lời"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                    </button>
-                    {!isMe && (
+                    {msg.sender && (
+                      <button 
+                        type="button" 
+                        onClick={() => setInputMessage(prev => prev ? `@${msg.sender?.fullName} ${prev}` : `@${msg.sender?.fullName} `)}
+                        className="p-1.5 hover:bg-slate-100 hover:text-slate-800 rounded-md text-slate-500 transition flex items-center justify-center"
+                        title="Trả lời"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {msg.sender && !isMe && (
                       <button
                         type="button"
                         onClick={() => handleReportMessage(msg)}
@@ -916,13 +915,15 @@ export default function CommunityRoomChat() {
                     
                     {isModerator && member.user?.userId !== currentUserId && member.role !== "OWNER" && (
                       <div className="flex flex-wrap justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          type="button"
-                          className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-50"
-                          onClick={() => handleToggleModerator(member)}
-                        >
-                          {member.role === "MODERATOR" ? "Hạ quyền" : "Mod"}
-                        </button>
+                        {room?.myRole === "OWNER" && (
+                          <button
+                            type="button"
+                            className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-50"
+                            onClick={() => handleToggleModerator(member)}
+                          >
+                            {member.role === "MODERATOR" ? "Hạ quyền" : "Mod"}
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-amber-600 hover:bg-amber-50"
