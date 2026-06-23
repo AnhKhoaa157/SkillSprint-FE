@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { Send, Users, Pin, ArrowLeft, Loader2, UserPlus, Shield, Lock, ShieldAlert, Hash, X, Plus, ExternalLink, Trash2, Smile, Bold, Italic, Code, Paperclip, Flag, EyeOff } from "lucide-react";
+import { Send, Users, Pin, ArrowLeft, Loader2, UserPlus, Shield, Lock, ShieldAlert, Hash, X, Plus, ExternalLink, Trash2, Smile, Bold, Italic, Code, Paperclip, Flag, EyeOff, MoreHorizontal, VolumeX, Ban, Unlock, UserMinus } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../components/ui/dropdown-menu";
 import { AnimatePresence, motion } from "motion/react";
 
 import communityRoomService from "../../../api/community/communityRoomService";
@@ -914,47 +915,59 @@ export default function CommunityRoomChat() {
                     </div>
                     
                     {isModerator && member.user?.userId !== currentUserId && member.role !== "OWNER" && (
-                      <div className="flex flex-wrap justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        {room?.myRole === "OWNER" && (
-                          <button
-                            type="button"
-                            className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-50"
-                            onClick={() => handleToggleModerator(member)}
-                          >
-                            {member.role === "MODERATOR" ? "Hạ quyền" : "Mod"}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-amber-600 hover:bg-amber-50"
-                          onClick={() => handleMuteMember(member.user?.userId || "")}
-                        >
-                          Mute
-                        </button>
-                        {member.bannedAt ? (
-                          <button
-                            type="button"
-                            className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-emerald-600 hover:bg-emerald-50"
-                            onClick={() => handleUnbanMember(member.user?.userId || "")}
-                          >
-                            Unban
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-rose-600 hover:bg-rose-50"
-                            onClick={() => handleBanMember(member.user?.userId || "")}
-                          >
-                            Ban
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-rose-700 hover:bg-rose-50"
-                          onClick={() => handleKickMember(member.user?.userId || "")}
-                        >
-                          Trục xuất
-                        </button>
+                      <div className="opacity-0 transition-opacity group-hover:opacity-100">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-md min-w-[160px]">
+                            {room?.myRole === "OWNER" && (
+                              <DropdownMenuItem 
+                                onClick={() => handleToggleModerator(member)}
+                                className="cursor-pointer font-medium text-blue-600 focus:bg-blue-50 focus:text-blue-700 text-xs py-2"
+                              >
+                                <Shield className="w-3.5 h-3.5 mr-2" />
+                                {member.role === "MODERATOR" ? "Hạ quyền kiểm duyệt" : "Cấp quyền kiểm duyệt"}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              onClick={() => handleMuteMember(member.user?.userId || "")}
+                              className="cursor-pointer font-medium text-amber-600 focus:bg-amber-50 focus:text-amber-700 text-xs py-2"
+                            >
+                              <VolumeX className="w-3.5 h-3.5 mr-2" />
+                              Mute thành viên
+                            </DropdownMenuItem>
+                            {member.bannedAt ? (
+                              <DropdownMenuItem 
+                                onClick={() => handleUnbanMember(member.user?.userId || "")}
+                                className="cursor-pointer font-medium text-emerald-600 focus:bg-emerald-50 focus:text-emerald-700 text-xs py-2"
+                              >
+                                <Unlock className="w-3.5 h-3.5 mr-2" />
+                                Bỏ Ban thành viên
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem 
+                                onClick={() => handleBanMember(member.user?.userId || "")}
+                                className="cursor-pointer font-medium text-rose-600 focus:bg-rose-50 focus:text-rose-700 text-xs py-2"
+                              >
+                                <Ban className="w-3.5 h-3.5 mr-2" />
+                                Ban thành viên
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              onClick={() => handleKickMember(member.user?.userId || "")}
+                              className="cursor-pointer font-medium text-rose-700 focus:bg-rose-100 focus:text-rose-800 text-xs py-2"
+                            >
+                              <UserMinus className="w-3.5 h-3.5 mr-2" />
+                              Trục xuất khỏi phòng
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     )}
                   </div>
