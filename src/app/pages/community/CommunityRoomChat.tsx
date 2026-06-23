@@ -1015,7 +1015,9 @@ export default function CommunityRoomChat() {
                         <Pin className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" /> {pin.title}
                       </h4>
                       
-                      <p className="text-[11px] leading-relaxed text-slate-500 mt-2 whitespace-pre-wrap font-normal">{pin.content}</p>
+                      <div className="text-[11px] leading-relaxed text-slate-500 mt-2 whitespace-pre-wrap font-normal">
+                        <MessageContent content={pin.content} isHidden={false} />
+                      </div>
                       
                       {pin.linkUrl && (
                         <a 
