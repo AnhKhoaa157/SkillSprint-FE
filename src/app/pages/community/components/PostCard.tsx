@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import { Bookmark, Flag, Heart, MessageCircle, MoreHorizontal, Pencil, Share2, Trash, X } from "lucide-react";
+import {
+  Bookmark, Flag, Heart, MessageCircle, MoreHorizontal,
+  Pencil, Share2, Trash, X, ThumbsUp,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "../../../components/ui/dropdown-menu";
 import type { CommunityPost } from "../../../../api/community/communityTypes";
 import communityService from "../../../../api/community/communityService";
@@ -22,12 +22,7 @@ interface PostCardProps {
 
 function parseHashtags(input: string): string[] {
   return Array.from(
-    new Set(
-      input
-        .split(/[\s,]+/)
-        .map((tag) => tag.replace(/^#+/, "").trim())
-        .filter(Boolean),
-    ),
+    new Set(input.split(/[\s,]+/).map(tag => tag.replace(/^#+/, "").trim()).filter(Boolean)),
   );
 }
 
@@ -52,89 +47,51 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   const handleLike = async () => {
     if (isLiking) return;
     setIsLiking(true);
-
     const isCurrentlyLiked = post.likedByMe;
     const previousLikeCount = post.likeCount;
-
-    onPostUpdated({
-      ...post,
-      likedByMe: !isCurrentlyLiked,
-      likeCount: isCurrentlyLiked ? Math.max(0, previousLikeCount - 1) : previousLikeCount + 1
-    });
-
+    onPostUpdated({ ...post, likedByMe: !isCurrentlyLiked, likeCount: isCurrentlyLiked ? Math.max(0, previousLikeCount - 1) : previousLikeCount + 1 });
     try {
-      const updatedServerPost = isCurrentlyLiked
+      const updated = isCurrentlyLiked
         ? await communityService.unlikePost(post.postId)
         : await communityService.likePost(post.postId);
-      onPostUpdated(updatedServerPost);
+      onPostUpdated(updated);
     } catch (error: unknown) {
-      onPostUpdated({
-        ...post,
-        likedByMe: isCurrentlyLiked,
-        likeCount: previousLikeCount
-      });
+      onPostUpdated({ ...post, likedByMe: isCurrentlyLiked, likeCount: previousLikeCount });
       toast.error(getErrorMessage(error, "Không thể thực hiện thao tác"));
-    } finally {
-      setIsLiking(false);
-    }
+    } finally { setIsLiking(false); }
   };
 
   const handleReport = async () => {
     const reason = reportReason.trim();
-    if (!reason) {
-      toast.error("Vui lòng nhập lý do báo cáo");
-      return;
-    }
-
+    if (!reason) { toast.error("Vui lòng nhập lý do báo cáo"); return; }
     setIsReporting(true);
     try {
       await communityService.reportPost(post.postId, { reason });
-      toast.success("Đã gửi báo cáo vi phạm. Quản trị viên sẽ xem xét.");
-      setReportReason("");
-      setIsReportOpen(false);
+      toast.success("Đã gửi báo cáo. Quản trị viên sẽ xem xét.");
+      setReportReason(""); setIsReportOpen(false);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Không thể gửi báo cáo"));
-    } finally {
-      setIsReporting(false);
-    }
+    } finally { setIsReporting(false); }
   };
 
-  const startEditing = () => {
-    setEditContent(post.content);
-    setEditHashtags((post.hashtags ?? []).join(" "));
-    setIsEditing(true);
-  };
+  const startEditing = () => { setEditContent(post.content); setEditHashtags((post.hashtags ?? []).join(" ")); setIsEditing(true); };
 
   const handleSaveEdit = async () => {
     const content = editContent.trim();
-    if (!content) {
-      toast.error("Nội dung bài viết không được để trống");
-      return;
-    }
-
+    if (!content) { toast.error("Nội dung bài viết không được để trống"); return; }
     setIsSaving(true);
     try {
-      const updated = await communityService.updatePost(post.postId, {
-        content,
-        hashtags: parseHashtags(editHashtags),
-      });
+      const updated = await communityService.updatePost(post.postId, { content, hashtags: parseHashtags(editHashtags) });
       onPostUpdated(updated);
       setIsEditing(false);
-      if (updated.status === "PENDING_MODERATION") {
-        toast.info("Bài viết đã chỉnh sửa chứa từ khóa nhạy cảm và đang chờ duyệt.");
-      } else {
-        toast.success("Đã cập nhật bài viết");
-      }
+      toast.success(updated.status === "PENDING_MODERATION" ? "Bài viết đang chờ duyệt." : "Đã cập nhật bài viết");
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Không thể cập nhật bài viết"));
-    } finally {
-      setIsSaving(false);
-    }
+    } finally { setIsSaving(false); }
   };
 
   const handleDelete = async () => {
     if (!window.confirm("Bạn có chắc muốn xóa bài viết này?")) return;
-
     setIsDeleting(true);
     try {
       await communityService.deletePost(post.postId);
@@ -149,8 +106,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   const timeAgo = (dateStr: string) => {
     const d = new Date(dateStr);
     const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
+    const diffMins = Math.floor((now.getTime() - d.getTime()) / 60000);
     if (diffMins < 1) return "Vừa xong";
     if (diffMins < 60) return `${diffMins} phút trước`;
     const diffHrs = Math.floor(diffMins / 60);
@@ -159,127 +115,91 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   };
 
   return (
-    <article className="overflow-hidden rounded-[18px] border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.06)] transition duration-200 hover:border-slate-300 hover:shadow-[0_14px_38px_rgba(15,23,42,0.09)]">
-      <div className="p-5 sm:p-6">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3.5">
-            <Avatar className="h-11 w-11 shrink-0">
+    <article className="overflow-hidden rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-2 sm:gap-3 px-3 sm:px-5 pt-3.5 sm:pt-4 pb-2.5 sm:pb-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          {/* Avatar */}
+          <div className="relative shrink-0">
+            <Avatar className="h-9 w-9 sm:h-11 sm:w-11 ring-2 ring-white shadow-md">
               <AvatarImage src={post.author.avatarUrl ?? undefined} />
-              <AvatarFallback className="bg-slate-100 text-sm font-bold text-slate-700">
+              <AvatarFallback className="bg-gradient-to-br from-[#FF6B00] to-orange-400 text-[13px] sm:text-[15px] font-black text-white">
                 {post.author.fullName.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="truncate text-[15px] font-bold text-slate-950">
-                  {post.author.fullName}
-                </h3>
-                <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-500">
-                  Learner
-                </span>
-              </div>
-              <p className="mt-0.5 text-[12px] font-medium text-slate-500">
-                {timeAgo(post.createdAt)}
-              </p>
-            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full bg-emerald-400 border-2 border-white" />
           </div>
 
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled
-              title="Đang phát triển"
-              aria-label="Lưu bài viết đang phát triển"
-              className="flex h-9 w-9 cursor-not-allowed items-center justify-center rounded-full text-slate-300"
-            >
-              <Bookmark className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsReportOpen(true)}
-              title="Báo cáo vi phạm"
-              aria-label="Báo cáo vi phạm"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-500"
-            >
-              <Flag className="h-4 w-4" />
-            </button>
-            {isAuthor && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    title="Tùy chọn"
-                    aria-label="Tùy chọn bài viết"
-                    disabled={isDeleting}
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={startEditing}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Chỉnh sửa
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-600" onClick={handleDelete}>
-                    <Trash className="mr-2 h-4 w-4" />
-                    Xóa bài viết
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+          {/* Author info */}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[14px] font-bold text-slate-900 leading-tight">{post.author.fullName}</span>
+              <span className="inline-flex items-center rounded-[4px] bg-[#FF6B00] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white leading-none">
+                Học viên
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">{timeAgo(post.createdAt)}</p>
           </div>
         </div>
 
+        {/* Actions */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button type="button" onClick={() => setIsReportOpen(v => !v)} title="Báo cáo"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-300 hover:bg-red-50 hover:text-red-500 transition">
+            <Flag className="h-3.5 w-3.5" />
+          </button>
+          {isAuthor && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" disabled={isDeleting}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-slate-300 hover:bg-slate-100 hover:text-slate-700 transition disabled:opacity-50">
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-lg min-w-[140px]">
+                <DropdownMenuItem onClick={startEditing} className="cursor-pointer text-[13px] font-semibold text-slate-700 focus:bg-slate-50">
+                  <Pencil className="mr-2 h-4 w-4 text-slate-500" /> Chỉnh sửa
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDelete} className="cursor-pointer text-[13px] font-semibold text-red-600 focus:bg-red-50">
+                  <Trash className="mr-2 h-4 w-4 text-red-500" /> Xóa bài viết
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      <div className="px-3 sm:px-5 pb-3">
         {isEditing ? (
-          <div className="space-y-3">
-            <textarea
-              value={editContent}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditContent(e.target.value)}
-              rows={4}
-              className="w-full resize-y rounded-2xl border border-slate-200 bg-slate-50 p-3 text-[15px] leading-7 text-slate-900 outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-2 focus:ring-orange-100"
-              placeholder="Bạn đang nghĩ gì?"
-              disabled={isSaving}
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <textarea value={editContent} onChange={e => setEditContent(e.target.value)} rows={4}
+              className="w-full resize-y rounded-xl border border-slate-200 bg-white p-3 text-[14px] leading-relaxed text-slate-800 outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/10"
+              placeholder="Bạn đang nghĩ gì?" disabled={isSaving}
             />
-            <input
-              value={editHashtags}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditHashtags(e.target.value)}
-              className="w-full rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-2 focus:ring-orange-100"
-              placeholder="Hashtag, ví dụ: react springboot"
-              disabled={isSaving}
+            <input value={editHashtags} onChange={e => setEditHashtags(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 outline-none transition focus:border-[#FF6B00]"
+              placeholder="Hashtag, ví dụ: react springboot" disabled={isSaving}
             />
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                disabled={isSaving}
-                className="flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-bold text-slate-500 transition hover:bg-slate-100 disabled:opacity-50"
-              >
-                <X className="h-4 w-4" /> Hủy
+              <button type="button" onClick={() => setIsEditing(false)} disabled={isSaving}
+                className="h-8 rounded-full px-4 text-[12px] font-bold text-slate-500 hover:bg-slate-100 transition disabled:opacity-50">
+                Hủy
               </button>
-              <button
-                type="button"
-                onClick={handleSaveEdit}
-                disabled={isSaving || !editContent.trim()}
-                className="flex h-9 items-center gap-1.5 rounded-full bg-[#FF6B00] px-4 text-sm font-bold text-white transition hover:bg-[#ea580c] disabled:opacity-50"
-              >
+              <button type="button" onClick={handleSaveEdit} disabled={isSaving || !editContent.trim()}
+                className="h-8 rounded-full bg-[#FF6B00] px-5 text-[12px] font-bold text-white hover:bg-[#e85f00] transition disabled:opacity-50">
                 {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
               </button>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            <p className="whitespace-pre-wrap text-[15px] leading-[1.72] text-[#0F172A]">
-              {post.content}
-            </p>
-
+          <div className="space-y-3">
+            <p className="whitespace-pre-wrap text-[14px] leading-[1.75] text-slate-800">{post.content}</p>
             {post.hashtags && post.hashtags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {post.hashtags.map((tag: string) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-orange-50/60 px-2.5 py-1 text-xs font-bold text-slate-700 ring-1 ring-orange-100/40 transition hover:bg-orange-50 hover:text-[#D95B00]"
-                  >
+                  <span key={tag}
+                    className="inline-flex items-center rounded-full bg-[#FF6B00]/8 border border-[#FF6B00]/20 px-2.5 py-0.5 text-[12px] font-semibold text-[#FF6B00] cursor-pointer hover:bg-[#FF6B00]/15 transition">
                     #{tag}
                   </span>
                 ))}
@@ -287,134 +207,101 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
             )}
           </div>
         )}
+      </div>
 
-        <div className="mt-5 flex items-center justify-between border-b border-slate-100 pb-2.5 text-xs font-medium text-slate-500">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-50 text-[#D95B00] ring-1 ring-orange-100">
-              <Heart className="h-3 w-3 fill-current" />
-            </span>
-            <span>{post.likeCount} lượt thích</span>
+      {/* ── Stats bar — Facebook style ── */}
+      {(post.likeCount > 0 || post.commentCount > 0) && (
+        <div className="mx-3 sm:mx-5 flex items-center justify-between border-t border-slate-100 py-2 text-[12px] text-slate-500">
+          <div className="flex items-center gap-1.5">
+            {post.likeCount > 0 && (
+              <>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#FF6B00] shadow-sm">
+                  <ThumbsUp className="h-3 w-3 fill-current text-white" />
+                </span>
+                <span className="font-medium">{post.likeCount}</span>
+              </>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={() => setShowComments(true)}
-            className="transition hover:text-slate-900"
-          >
-            {post.commentCount} bình luận
-          </button>
+          {post.commentCount > 0 && (
+            <button type="button" onClick={() => setShowComments(!showComments)}
+              className="font-medium hover:underline hover:text-slate-700 transition">
+              {post.commentCount} bình luận
+            </button>
+          )}
         </div>
+      )}
 
-        <div className="grid grid-cols-3 gap-1 pt-2">
-          <button
-            type="button"
-            onClick={handleLike}
-            className={`flex min-h-9 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition duration-150 active:scale-[0.98] ${
+      {/* ── Action bar — Facebook style ── */}
+      <div className="mx-2 sm:mx-4 border-t border-slate-100">
+        <div className="grid grid-cols-3 py-0.5">
+          <motion.button type="button" whileTap={{ scale: 0.93 }} onClick={handleLike}
+            className={`flex h-9 sm:h-10 items-center justify-center gap-1.5 sm:gap-2 rounded-xl text-[12px] sm:text-[13px] font-bold transition-all duration-150 ${
               post.likedByMe
-                ? "bg-orange-50/80 text-[#D95B00]"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-            }`}
-          >
-            <Heart className={`h-4 w-4 transition-transform duration-150 ${post.likedByMe ? "scale-110 fill-current" : ""}`} />
+                ? "text-[#FF6B00]"
+                : "text-slate-500 hover:bg-slate-50 hover:text-[#FF6B00]"
+            }`}>
+            <ThumbsUp className={`h-4.5 w-4.5 transition-transform ${post.likedByMe ? "fill-current scale-110" : ""}`} />
             Thích
-          </button>
+          </motion.button>
 
-          <button
-            type="button"
-            onClick={() => setShowComments(!showComments)}
-            className="flex min-h-9 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-500 transition duration-150 hover:bg-slate-50 hover:text-slate-800 active:scale-[0.98]"
-          >
-            <MessageCircle className="h-4 w-4" />
+          <motion.button type="button" whileTap={{ scale: 0.93 }} onClick={() => setShowComments(!showComments)}
+            className={`flex h-10 items-center justify-center gap-2 rounded-xl text-[13px] font-bold transition-all duration-150 ${
+              showComments ? "text-[#FF6B00]" : "text-slate-500 hover:bg-slate-50 hover:text-[#FF6B00]"
+            }`}>
+            <MessageCircle className="h-4.5 w-4.5" />
             Bình luận
-          </button>
+          </motion.button>
 
-          <button
-            type="button"
-            disabled
-            title="Đang phát triển"
-            className="flex min-h-9 cursor-not-allowed items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-400"
-          >
-            <Share2 className="h-4 w-4" />
+          <button type="button" disabled title="Đang phát triển"
+            className="flex h-10 cursor-not-allowed items-center justify-center gap-2 rounded-xl text-[13px] font-bold text-slate-300">
+            <Share2 className="h-4.5 w-4.5" />
             Chia sẻ
           </button>
         </div>
+      </div>
 
-        <AnimatePresence>
-          {isReportOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.15 }}
-              className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"
-            >
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h4 className="text-sm font-bold text-slate-950">Báo cáo bài viết</h4>
-                  <p className="mt-0.5 text-xs text-slate-500">Cho quản trị viên biết vấn đề bạn thấy.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsReportOpen(false);
-                    setReportReason("");
-                  }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-white hover:text-slate-700"
-                  aria-label="Đóng báo cáo"
-                >
-                  <X className="h-4 w-4" />
+      {/* ── Report form ── */}
+      <AnimatePresence>
+        {isReportOpen && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <div className="mx-5 mb-3 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[13px] font-bold text-slate-800">Báo cáo bài viết</p>
+                <button type="button" onClick={() => { setIsReportOpen(false); setReportReason(""); }}
+                  className="h-6 w-6 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-slate-700 transition">
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <textarea
-                value={reportReason}
-                onChange={(event) => setReportReason(event.target.value)}
-                rows={3}
-                placeholder="Nhập lý do báo cáo..."
-                disabled={isReporting}
-                className="w-full resize-none rounded-2xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#FF6B00] focus:ring-2 focus:ring-orange-100 disabled:opacity-60"
+              <textarea value={reportReason} onChange={e => setReportReason(e.target.value)} rows={2}
+                placeholder="Nhập lý do báo cáo..." disabled={isReporting}
+                className="w-full resize-none rounded-xl border border-slate-200 bg-white p-3 text-[13px] text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/10 disabled:opacity-60"
               />
-              <div className="mt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsReportOpen(false);
-                    setReportReason("");
-                  }}
-                  disabled={isReporting}
-                  className="h-9 rounded-full px-4 text-sm font-bold text-slate-500 transition hover:bg-white disabled:opacity-50"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  onClick={handleReport}
-                  disabled={isReporting || !reportReason.trim()}
-                  className="inline-flex h-9 items-center justify-center rounded-full bg-[#FF6B00] px-4 text-sm font-bold text-white transition hover:bg-[#EA580C] disabled:bg-slate-200 disabled:text-slate-400"
-                >
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => { setIsReportOpen(false); setReportReason(""); }}
+                  className="text-[12px] font-bold text-slate-500 hover:text-slate-700 transition">Hủy</button>
+                <button type="button" onClick={handleReport} disabled={isReporting || !reportReason.trim()}
+                  className="rounded-full bg-[#FF6B00] px-4 py-1.5 text-[12px] font-bold text-white hover:bg-[#e85f00] transition disabled:opacity-50">
                   {isReporting ? "Đang gửi..." : "Gửi báo cáo"}
                 </button>
               </div>
-            </motion.div>
-          )}
+            </div>
+          </motion.div>
+        )}
 
-          {showComments && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-3">
-                <CommentSection
-                  postId={post.postId}
-                  initialCommentCount={post.commentCount}
-                  onCommentAdded={() => onPostUpdated({ ...post, commentCount: post.commentCount + 1 })}
-                  onCommentDeleted={() => onPostUpdated({ ...post, commentCount: Math.max(0, post.commentCount - 1) })}
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+        {/* ── Comments ── */}
+        {showComments && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+            <div className="border-t border-slate-100 px-5 py-4">
+              <CommentSection
+                postId={post.postId}
+                initialCommentCount={post.commentCount}
+                onCommentAdded={() => onPostUpdated({ ...post, commentCount: post.commentCount + 1 })}
+                onCommentDeleted={() => onPostUpdated({ ...post, commentCount: Math.max(0, post.commentCount - 1) })}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </article>
   );
 }

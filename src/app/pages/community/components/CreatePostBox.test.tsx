@@ -35,7 +35,7 @@ vi.mock("sonner", () => ({
 
 async function openComposer() {
   await userEvent.click(screen.getByRole("button", { name: /User ơi, bạn đang nghĩ gì thế/i }));
-  return screen.findByText("Tạo bài viết");
+  return screen.findByText("Tạo bài viết thảo luận");
 }
 
 describe("CreatePostBox", () => {
@@ -64,7 +64,7 @@ describe("CreatePostBox", () => {
     await openComposer();
 
     expect(screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Thêm hashtag: React, SpringBoot...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Thêm các hashtag (ví dụ: React, SpringBoot...)")).toBeInTheDocument();
 
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
     expect(submitBtn).toBeDisabled();
@@ -100,7 +100,7 @@ describe("CreatePostBox", () => {
     await openComposer();
 
     const textarea = screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?");
-    const hashtagInput = screen.getByPlaceholderText("Thêm hashtag: React, SpringBoot...");
+    const hashtagInput = screen.getByPlaceholderText("Thêm các hashtag (ví dụ: React, SpringBoot...)");
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
 
     await userEvent.type(textarea, "Hello world");
@@ -113,9 +113,9 @@ describe("CreatePostBox", () => {
     });
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith("Đã đăng sprint của bạn 🚀");
+      expect(toast.success).toHaveBeenCalledWith("Đã đăng bài chia sẻ thành công 🚀");
       expect(mockOnPostCreated).toHaveBeenCalled();
-      expect(screen.queryByText("Tạo bài viết")).not.toBeInTheDocument();
+      expect(screen.queryByText("Tạo bài viết thảo luận")).not.toBeInTheDocument();
     });
   });
 
@@ -164,7 +164,7 @@ describe("CreatePostBox", () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("API Error");
       expect(mockOnPostCreated).not.toHaveBeenCalled();
-      expect(screen.getByText("Tạo bài viết")).toBeInTheDocument();
+      expect(screen.getByText("Tạo bài viết thảo luận")).toBeInTheDocument();
     });
   });
 });
