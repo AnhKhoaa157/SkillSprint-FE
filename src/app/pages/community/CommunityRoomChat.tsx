@@ -23,6 +23,29 @@ import { getStoredUserId } from "../../../api/auth/authService";
 const UPGRADE_REQUIRED_MESSAGE = "Vui lòng nâng cấp gói để sử dụng tính năng này";
 const UPGRADE_REQUIRED_TOAST_ID = "community-chat-upgrade-required";
 
+type ActionDialog =
+  | {
+      type: "confirm";
+      title: string;
+      description?: string;
+      confirmLabel?: string;
+      destructive?: boolean;
+      resolve: (confirmed: boolean) => void;
+    }
+  | {
+      type: "prompt";
+      title: string;
+      description?: string;
+      label: string;
+      placeholder?: string;
+      defaultValue?: string;
+      inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+      multiline?: boolean;
+      confirmLabel?: string;
+      destructive?: boolean;
+      resolve: (value: string | null) => void;
+    };
+
 function UserAvatar({ name, url, className = "w-8.5 h-8.5" }: { name?: string | null; url?: string | null; className?: string }) {
   const [isError, setIsError] = useState(false);
   
@@ -206,6 +229,8 @@ export default function CommunityRoomChat() {
 
   const [createPinModalOpen, setCreatePinModalOpen] = useState(false);
   const [newPin, setNewPin] = useState({ title: "", content: "", linkUrl: "" });
+  const [actionDialog, setActionDialog] = useState<ActionDialog | null>(null);
+  const [actionDialogValue, setActionDialogValue] = useState("");
 
   const { planId, loading: subscriptionLoading } = useSubscription();
 
@@ -262,8 +287,48 @@ export default function CommunityRoomChat() {
     setInputMessage("");
   };
 
+  const askConfirm = (dialog: Omit<Extract<ActionDialog, { type: "confirm" }>, "type" | "resolve">) =>
+    new Promise<boolean>((resolve) => {
+      setActionDialog({ ...dialog, type: "confirm", resolve });
+    });
+
+  const askPrompt = (dialog: Omit<Extract<ActionDialog, { type: "prompt" }>, "type" | "resolve">) =>
+    new Promise<string | null>((resolve) => {
+      setActionDialogValue(dialog.defaultValue || "");
+      setActionDialog({ ...dialog, type: "prompt", resolve });
+    });
+
+  const closeActionDialog = () => {
+    if (actionDialog?.type === "confirm") {
+      actionDialog.resolve(false);
+    } else {
+      actionDialog?.resolve(null);
+    }
+    setActionDialog(null);
+    setActionDialogValue("");
+  };
+
+  const submitActionDialog = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!actionDialog) return;
+
+    if (actionDialog.type === "confirm") {
+      actionDialog.resolve(true);
+    } else {
+      actionDialog.resolve(actionDialogValue);
+    }
+    setActionDialog(null);
+    setActionDialogValue("");
+  };
+
   const handleLeaveRoom = async () => {
-    if (!confirm("Bạn muốn rời khỏi phòng này?")) return;
+    const confirmed = await askConfirm({
+      title: "Rời khỏi phòng?",
+      description: "Bạn sẽ không còn thấy tin nhắn mới trong phòng chat này.",
+      confirmLabel: "Rời phòng",
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     try {
       await communityRoomService.leaveRoom(roomId!);
@@ -306,7 +371,14 @@ export default function CommunityRoomChat() {
   };
 
   const handleDeletePin = async (pinId: string) => {
-    if (!confirm("Bạn có chắc chắn muốn gỡ ghim này?")) return;
+    const confirmed = await askConfirm({
+      title: "Gỡ tin ghim?",
+      description: "Tin ghim sẽ bị xóa khỏi khu vực ghim của phòng chat.",
+      confirmLabel: "Gỡ ghim",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     try {
       await communityRoomService.deletePin(roomId!, pinId);
       toast.success("Đã gỡ ghim thành công!");
@@ -336,7 +408,14 @@ export default function CommunityRoomChat() {
   };
 
   const handleReportMessage = async (message: CommunityChatMessageResponse) => {
-    const reason = window.prompt("Nhập lý do báo cáo tin nhắn này:");
+    const reason = await askPrompt({
+      title: "Báo cáo tin nhắn",
+      description: "Lý do báo cáo giúp kiểm duyệt viên xử lý tin nhắn chính xác hơn.",
+      label: "Lý do báo cáo",
+      placeholder: "Nhập lý do báo cáo tin nhắn này",
+      multiline: true,
+      confirmLabel: "Gửi báo cáo",
+    });
     const trimmedReason = reason?.trim();
     if (!trimmedReason) return;
 
@@ -353,7 +432,13 @@ export default function CommunityRoomChat() {
   };
 
   const handleHideMessage = async (message: CommunityChatMessageResponse) => {
-    if (!confirm("Ẩn tin nhắn này khỏi phòng chat?")) return;
+    const confirmed = await askConfirm({
+      title: "Ẩn tin nhắn?",
+      description: "Tin nhắn này sẽ bị ẩn khỏi phòng chat với tất cả thành viên.",
+      confirmLabel: "Ẩn tin nhắn",
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     try {
       const updated = await communityRoomService.hideMessage(message.roomId, message.messageId, {
@@ -367,7 +452,14 @@ export default function CommunityRoomChat() {
   };
 
   const handleKickMember = async (memberId: string) => {
-    if (!confirm("Bạn có chắc muốn trục xuất thành viên này khỏi phòng?")) return;
+    const confirmed = await askConfirm({
+      title: "Trục xuất thành viên?",
+      description: "Thành viên này sẽ bị xóa khỏi phòng chat hiện tại.",
+      confirmLabel: "Trục xuất",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     try {
       await communityRoomService.kickMember(roomId!, memberId);
       toast.success("Trục xuất thành viên thành công");
@@ -378,7 +470,15 @@ export default function CommunityRoomChat() {
   };
 
   const handleMuteMember = async (memberId: string) => {
-    const value = window.prompt("Nhập số phút mute thành viên:", "60");
+    const value = await askPrompt({
+      title: "Mute thành viên",
+      description: "Nhập thời lượng mute bằng phút.",
+      label: "Số phút mute",
+      placeholder: "60",
+      defaultValue: "60",
+      inputMode: "numeric",
+      confirmLabel: "Mute",
+    });
     const muteDurationMinutes = Number(value);
     if (!Number.isFinite(muteDurationMinutes) || muteDurationMinutes <= 0) return;
 
@@ -392,7 +492,14 @@ export default function CommunityRoomChat() {
   };
 
   const handleBanMember = async (memberId: string) => {
-    if (!confirm("Cấm thành viên này khỏi phòng?")) return;
+    const confirmed = await askConfirm({
+      title: "Ban thành viên?",
+      description: "Thành viên này sẽ bị cấm tham gia phòng chat.",
+      confirmLabel: "Ban",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     try {
       const updated = await communityRoomService.banMember(roomId!, memberId);
       setMembers((prev) => prev.map((member) => (member.user?.userId === memberId ? updated : member)));
@@ -1064,6 +1171,84 @@ export default function CommunityRoomChat() {
  
       {/* MODALS SECTION */}
       <AnimatePresence>
+        {/* Action Modal */}
+        {actionDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-955/60 p-4 backdrop-blur-xs"
+            onMouseDown={closeActionDialog}
+          >
+            <motion.form
+              initial={{ scale: 0.95, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 8 }}
+              onSubmit={submitActionDialog}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 border border-slate-100 relative"
+            >
+              <div className={`absolute top-0 left-0 right-0 h-1 ${actionDialog.destructive ? "bg-rose-500" : "bg-[#FF6B00]"}`} />
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">{actionDialog.title}</h3>
+                  {actionDialog.description && (
+                    <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">
+                      {actionDialog.description}
+                    </p>
+                  )}
+                </div>
+                <button type="button" onClick={closeActionDialog} className="text-slate-400 hover:text-slate-655 transition">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {actionDialog.type === "prompt" && (
+                <div className="mt-4">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-405 mb-1">
+                    {actionDialog.label}
+                  </label>
+                  {actionDialog.multiline ? (
+                    <textarea
+                      autoFocus
+                      value={actionDialogValue}
+                      onChange={(e) => setActionDialogValue(e.target.value)}
+                      placeholder={actionDialog.placeholder}
+                      rows={4}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-850 outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-orange-100"
+                    />
+                  ) : (
+                    <Input
+                      autoFocus
+                      value={actionDialogValue}
+                      onChange={(e) => setActionDialogValue(e.target.value)}
+                      placeholder={actionDialog.placeholder}
+                      inputMode={actionDialog.inputMode}
+                      className="h-10 rounded-xl border-slate-200 focus-visible:ring-1 focus-visible:ring-[#FF6B00]"
+                    />
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 mt-6">
+                <Button type="button" variant="ghost" onClick={closeActionDialog} className="rounded-xl text-slate-500 hover:bg-slate-50 font-semibold text-xs h-9">
+                  Hủy
+                </Button>
+                <Button
+                  type="submit"
+                  className={`rounded-xl font-semibold text-white text-xs h-9 px-5 ${
+                    actionDialog.destructive
+                      ? "bg-rose-600 hover:bg-rose-700"
+                      : "bg-[#FF6B00] hover:bg-[#e85f00]"
+                  }`}
+                >
+                  {actionDialog.confirmLabel || "Xác nhận"}
+                </Button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+
         {/* Invite Modal */}
         {inviteModalOpen && (
           <motion.div 
