@@ -232,7 +232,7 @@ export default function CommunityRoomChat() {
         communityRoomService.getRoom(roomId!),
         communityRoomService.getMessageHistory(roomId!, 0, 50),
         communityRoomService.getMembers(roomId!, 0, 100),
-        communityRoomService.getPins(roomId!),
+        communityRoomService.getPins(roomId!).catch(() => []),
         communityRoomService.getMyRooms(0, 15).catch(() => ({ items: [] }))
       ]);
 
