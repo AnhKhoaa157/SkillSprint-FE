@@ -107,6 +107,7 @@ export interface CreateCommunityPinRequest {
   itemType: "ANNOUNCEMENT" | "DOCUMENT_URL" | "MESSAGE";
   title: string;
   content: string;
+  messageId?: string;
   linkUrl?: string;
 }
 
