@@ -221,7 +221,9 @@ export default function CoursePlayer() {
   const [showStudyAheadModal, setShowStudyAheadModal] = useState(false);
   const [studyAheadDate, setStudyAheadDate] = useState<string>(() => new Date().toLocaleDateString("sv-SE"));
   const [isRescheduling, setIsRescheduling] = useState(false);
-  const [sideTab, setSideTab] = useState<"pomodoro" | "quiz">("pomodoro");
+  const [sideTab, setSideTab] = useState<"pomodoro" | "quiz">(() => {
+    return searchParams.get("tab") === "quiz" ? "quiz" : "pomodoro";
+  });
   const { planId, rawPlanType, refresh: refreshSubscription } = useSubscription();
   const isPremiumMember = planId === "PREMIUM";
   // PricingModal speaks plan *slugs*; map our NormalizedPlanId to its vocabulary.
@@ -1126,8 +1128,10 @@ export default function CoursePlayer() {
                       </div>
                     </div>
                     <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {resources.length > 0 ? (
-                        resources.map((resource, index) => {
+                      {resources.filter(r => r.title !== "Tài liệu gốc liên quan").length > 0 ? (
+                        resources
+                          .filter(r => r.title !== "Tài liệu gốc liên quan")
+                          .map((resource, index) => {
                           const isQuizResource = resource.platform === "SKILLSPRINT" && resource.title?.includes("Bài tập thực hành");
                           return (
                             <a
@@ -1174,7 +1178,7 @@ export default function CoursePlayer() {
                         <div className="flex items-center gap-2 mb-4">
                           <FileText size={16} className="text-indigo-500" />
                           <div>
-                            <h3 className="text-xs font-extrabold tracking-tight text-slate-800">Tài liệu tham khảo</h3>
+                            <h3 className="text-xs font-extrabold tracking-tight text-slate-800">Tài liệu gốc</h3>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Từ Workspace của bạn</p>
                           </div>
                         </div>
