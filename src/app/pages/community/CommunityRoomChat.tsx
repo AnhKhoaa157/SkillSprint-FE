@@ -197,8 +197,7 @@ export default function CommunityRoomChat() {
     return currentMember?.role === "OWNER" || currentMember?.role === "MODERATOR";
   }, [currentUserId, members]);
 
-  // Reactions state
-  const [reactions, setReactions] = useState<Record<string, Array<{ emoji: string; count: number; active: boolean }>>>({});
+
 
   useEffect(() => {
     if (!roomId) return;
@@ -316,39 +315,7 @@ export default function CommunityRoomChat() {
     }
   };
 
-  const handleToggleReaction = (messageId: string, emoji: string) => {
-    setReactions(prev => {
-      const current = prev[messageId] || [
-        { emoji: "👍", count: 2, active: false },
-        { emoji: "❤️", count: 1, active: false },
-        { emoji: "🔥", count: 3, active: false },
-      ];
-      const updated = current.map(r => {
-        if (r.emoji === emoji) {
-          return {
-            ...r,
-            count: r.active ? r.count - 1 : r.count + 1,
-            active: !r.active,
-          };
-        }
-        return r;
-      });
-      return { ...prev, [messageId]: updated };
-    });
-  };
 
-  const getMsgReactions = (msgId: string, idx: number) => {
-    const key = msgId || String(idx);
-    if (!reactions[key]) {
-      const initial = [
-        { emoji: "👍", count: Math.floor(Math.abs(Math.sin(idx)) * 4) + 1, active: false },
-        { emoji: "❤️", count: Math.floor(Math.abs(Math.cos(idx)) * 2), active: false },
-        { emoji: "🔥", count: Math.floor(Math.abs(Math.sin(idx * 2)) * 3), active: false },
-      ].filter(r => r.count > 0);
-      return initial;
-    }
-    return reactions[key];
-  };
 
   // Rich text formatting helper
   const insertFormat = (type: "bold" | "italic" | "code") => {
@@ -516,22 +483,7 @@ export default function CommunityRoomChat() {
                   <div key={msg.messageId || idx} className="group/msg relative flex justify-start items-start px-6 py-1 hover:bg-slate-50/50 transition-colors duration-100">
                     {/* Hover menu */}
                     <div className="absolute right-6 -top-3.5 opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-20 flex items-center bg-white border border-slate-200/80 shadow-md rounded-xl p-1 gap-0.5">
-                      <button 
-                        type="button" 
-                        onClick={() => handleToggleReaction(msg.messageId || String(idx), "👍")}
-                        className="p-1 hover:bg-slate-100 hover:text-orange-600 rounded-md text-xs transition"
-                        title="Thích"
-                      >
-                        👍
-                      </button>
-                      <button 
-                        type="button" 
-                        onClick={() => handleToggleReaction(msg.messageId || String(idx), "🔥")}
-                        className="p-1 hover:bg-slate-100 hover:text-orange-600 rounded-md text-xs transition"
-                        title="Tuyệt vời"
-                      >
-                        🔥
-                      </button>
+
                       <button 
                         type="button" 
                         onClick={() => setInputMessage(prev => prev ? `@${msg.sender?.fullName} ${prev}` : `@${msg.sender?.fullName} `)}
@@ -550,25 +502,7 @@ export default function CommunityRoomChat() {
                     <div className="flex-1 min-w-0 pl-3">
                       <MessageContent content={msg.content} isHidden={!!isHidden} />
                       
-                      {/* Emoji Reactions */}
-                      {!isHidden && (
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {getMsgReactions(msg.messageId || String(idx), idx).map((react) => (
-                            <button
-                              key={react.emoji}
-                              onClick={() => handleToggleReaction(msg.messageId || String(idx), react.emoji)}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-black transition-all ${
-                                react.active
-                                  ? "bg-orange-50 border-[#FF6B00]/30 text-[#FF6B00]"
-                                  : "bg-white border-slate-200 hover:border-slate-350 text-slate-500 hover:text-slate-700"
-                              }`}
-                            >
-                              <span>{react.emoji}</span>
-                              <span>{react.count}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+
                     </div>
                   </div>
                 );
@@ -578,22 +512,7 @@ export default function CommunityRoomChat() {
                 <div key={msg.messageId || idx} className="group/msg relative flex justify-start items-start px-6 py-2 hover:bg-slate-50/50 transition-colors duration-100">
                   {/* Hover menu */}
                   <div className="absolute right-6 -top-3.5 opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-20 flex items-center bg-white border border-slate-200/80 shadow-md rounded-xl p-1 gap-0.5">
-                    <button 
-                      type="button" 
-                      onClick={() => handleToggleReaction(msg.messageId || String(idx), "👍")}
-                      className="p-1 hover:bg-slate-100 hover:text-orange-600 rounded-md text-xs transition"
-                      title="Thích"
-                    >
-                      👍
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => handleToggleReaction(msg.messageId || String(idx), "🔥")}
-                      className="p-1 hover:bg-slate-100 hover:text-orange-600 rounded-md text-xs transition"
-                      title="Tuyệt vời"
-                    >
-                      🔥
-                    </button>
+
                     <button 
                       type="button" 
                       onClick={() => setInputMessage(prev => prev ? `@${msg.sender?.fullName} ${prev}` : `@${msg.sender?.fullName} `)}
@@ -605,23 +524,21 @@ export default function CommunityRoomChat() {
                     {isModerator && (
                       <button 
                         type="button" 
-                        onClick={() => {
-                          const mockPinObj: CommunityPinResponse = {
-                            pinId: `mock-pin-${Date.now()}`,
-                            roomId: roomId || "mock-room",
-                            title: `Tin nhắn từ ${msg.sender?.fullName || "Người dùng"}`,
-                            content: msg.content,
-                            linkUrl: null,
-                            sortOrder: 0,
-                            createdAt: new Date().toISOString(),
-                            pinnedBy: {
-                              userId: "mock-user-owner",
-                              fullName: "Vũ Chí Bảo",
-                              avatarUrl: null
-                            }
-                          };
-                          setPins(prev => [mockPinObj, ...prev]);
-                          toast.success("Đã ghim tin nhắn này!");
+                        onClick={async () => {
+                          try {
+                            const requestPayload = {
+                              itemType: "MESSAGE",
+                              title: `Tin nhắn từ ${msg.sender?.fullName || "Người dùng"}`,
+                              content: msg.content,
+                            } as any;
+                            await communityRoomService.createPin(roomId!, requestPayload);
+                            toast.success("Đã ghim tin nhắn này!");
+                            // Reload pins
+                            const pinsData = await communityRoomService.getPins(roomId!);
+                            setPins(pinsData);
+                          } catch (err: any) {
+                            toast.error(err.message || "Lỗi khi ghim");
+                          }
                         }}
                         className="p-1.5 hover:bg-slate-105 hover:text-[#FF6B00] rounded-md text-slate-500 transition flex items-center justify-center"
                         title="Ghim"
@@ -647,25 +564,7 @@ export default function CommunityRoomChat() {
                     </div>
                     <MessageContent content={msg.content} isHidden={!!isHidden} />
                     
-                    {/* Emoji Reactions */}
-                    {!isHidden && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {getMsgReactions(msg.messageId || String(idx), idx).map((react) => (
-                          <button
-                            key={react.emoji}
-                            onClick={() => handleToggleReaction(msg.messageId || String(idx), react.emoji)}
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-black transition-all ${
-                              react.active
-                                ? "bg-orange-50 border-[#FF6B00]/30 text-[#FF6B00]"
-                                : "bg-white border-slate-200 hover:border-slate-350 text-slate-500 hover:text-slate-700"
-                            }`}
-                          >
-                            <span>{react.emoji}</span>
-                            <span>{react.count}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+
                   </div>
                 </div>
               );
