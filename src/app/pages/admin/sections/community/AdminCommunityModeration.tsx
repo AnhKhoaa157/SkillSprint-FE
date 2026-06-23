@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -33,6 +33,13 @@ import {
   Search,
   ShieldAlert,
   Trash2,
+  ThumbsUp,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  FileText,
+  BarChart3,
   MoreHorizontal,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -67,11 +74,11 @@ type AdminCommunityModerationProps = {
   isDashboard?: boolean;
 };
 
-const TABS: Array<{ id: CommunityTab; label: string; icon: LucideIcon }> = [
-  { id: "posts", label: "Bài viết", icon: ShieldAlert },
-  { id: "comments", label: "Bình luận", icon: MessageCircle },
-  { id: "reports", label: "Báo cáo", icon: Flag },
-  { id: "blacklist", label: "Từ khóa cấm", icon: Ban },
+const TABS: Array<{ id: CommunityTab; label: string; icon: LucideIcon; desc: string }> = [
+  { id: "posts", label: "Bài viết", icon: FileText, desc: "Kiểm duyệt bài đăng" },
+  { id: "comments", label: "Bình luận", icon: MessageCircle, desc: "Kiểm duyệt bình luận" },
+  { id: "reports", label: "Báo cáo", icon: Flag, desc: "Xử lý vi phạm" },
+  { id: "blacklist", label: "Từ khóa cấm", icon: Ban, desc: "Quản lý từ khóa" },
 ];
 
 const POST_STATUS_OPTIONS: Array<{ value: "" | CommunityPostStatus; label: string }> = [
@@ -124,17 +131,6 @@ const REPORT_STATUS_LABELS: Record<ContentReportStatus, string> = {
   DISMISSED: "Bỏ qua",
 };
 
-const STATUS_CLASSES: Record<string, string> = {
-  APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  VISIBLE: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  PENDING_MODERATION: "bg-amber-50 text-amber-700 border-amber-100",
-  PENDING: "bg-amber-50 text-amber-700 border-amber-100",
-  HIDDEN: "bg-red-50 text-red-700 border-red-100",
-  DELETED: "bg-slate-100 text-slate-600 border-slate-200",
-  REVIEWED: "bg-blue-50 text-blue-700 border-blue-100",
-  DISMISSED: "bg-slate-100 text-slate-600 border-slate-200",
-};
-
 function formatDate(value?: string | null): string {
   if (!value) return "Chưa có";
   const date = new Date(value);
@@ -156,43 +152,116 @@ function initials(author: CommunityAuthorResponse | null): string {
   return authorName(author).charAt(0).toUpperCase();
 }
 
-function excerpt(value: string, max = 180): string {
+function excerpt(value: string, max = 200): string {
   const normalized = value.replace(/\s+/g, " ").trim();
   return normalized.length > max ? `${normalized.slice(0, max)}...` : normalized;
 }
 
+/* ── Status Badge ── */
 function StatusBadge({ label, status }: { label: string; status: string }) {
+  const cfg: Record<string, string> = {
+    APPROVED: "bg-emerald-500 text-white",
+    VISIBLE: "bg-emerald-500 text-white",
+    PENDING_MODERATION: "bg-amber-500 text-white",
+    PENDING: "bg-amber-500 text-white",
+    HIDDEN: "bg-rose-500 text-white",
+    DELETED: "bg-slate-400 text-white",
+    REVIEWED: "bg-blue-500 text-white",
+    DISMISSED: "bg-slate-400 text-white",
+  };
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-black ${STATUS_CLASSES[status] ?? "bg-slate-50 text-slate-600 border-slate-200"}`}>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-sm ${cfg[status] ?? "bg-slate-400 text-white"}`}>
       {label}
     </span>
   );
 }
 
+/* ── Author Cell ── */
 function AuthorCell({ author }: { author: CommunityAuthorResponse | null }) {
   return (
-    <div className="flex min-w-0 items-center gap-3">
+    <div className="flex min-w-0 items-center gap-2.5">
       {author?.avatarUrl ? (
         <img
           src={author.avatarUrl}
           alt={authorName(author)}
-          className="h-9 w-9 shrink-0 rounded-xl border border-slate-100 object-cover"
+          className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white shadow"
         />
       ) : (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FF6B00] to-orange-500 text-sm font-black text-white">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FF6B00] to-orange-400 text-xs font-black text-white shadow">
           {initials(author)}
         </div>
       )}
       <div className="min-w-0">
-        <p className="truncate text-sm font-extrabold text-slate-800">{authorName(author)}</p>
-        {author?.email && <p className="truncate text-xs font-semibold text-slate-400">{author.email}</p>}
+        <p className="truncate text-[13px] font-bold text-slate-800 leading-tight">{authorName(author)}</p>
+        {author?.email && <p className="truncate text-[11px] text-slate-400 mt-px">{author.email}</p>}
       </div>
     </div>
   );
 }
 
+/* ── Action Button ── */
+function ActionButton({
+  children,
+  onClick,
+  disabled,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  tone?: "neutral" | "success" | "danger" | "warning";
+}) {
+  const styles: Record<string, string> = {
+    neutral: "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200",
+    success: "bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20",
+    danger: "bg-rose-500 text-white hover:bg-rose-600 shadow-lg shadow-rose-500/20",
+    warning: "bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20",
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3 text-[11px] font-bold transition-all duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${styles[tone]}`}
+    >
+      {children}
+    </button>
+  );
+}
 
+/* ── Select Field ── */
+function SelectField<T extends string>({
+  value,
+  onChange,
+  options,
+  label,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: Array<{ value: T; label: string }>;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
+      <select
+        value={value}
+        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(e.target.value as T)}
+        className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700 outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/15 cursor-pointer min-w-[160px]"
+      >
+        {options.map(opt => (
+          <option key={opt.value || "all"} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
+/* ══════════════════════════════════════════════
+   Main Component
+══════════════════════════════════════════════ */
 export default function AdminCommunityModeration({ isDashboard = false }: AdminCommunityModerationProps) {
   const [activeTab, setActiveTab] = useState<CommunityTab>("posts");
   const [search, setSearch] = useState("");
@@ -298,13 +367,37 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
   }, [activeTab, postStatus, commentStatus, reportStatus, reportTarget]);
 
   const stats = useMemo(() => {
-    const pendingPosts = posts.filter(item => item.status === "PENDING_MODERATION").length;
-    const pendingComments = comments.filter(item => item.status === "PENDING_MODERATION").length;
-    const pendingReports = reports.filter(item => item.status === "PENDING").length;
+    const pendingContent = posts.filter(p => p.status === "PENDING_MODERATION").length
+      + comments.filter(c => c.status === "PENDING_MODERATION").length;
+    const pendingReports = reports.filter(r => r.status === "PENDING").length;
     return [
-      { label: "Chờ duyệt trên trang", value: pendingPosts + pendingComments, accent: "text-amber-600" },
-      { label: "Report chờ xử lý", value: pendingReports, accent: "text-red-600" },
-      { label: "Từ khóa cấm", value: blacklist.length, accent: "text-slate-900" },
+      {
+        label: "Nội dung chờ duyệt",
+        value: pendingContent,
+        icon: ShieldAlert,
+        color: "from-amber-50 to-amber-100/50 border-amber-200",
+        iconBg: "bg-amber-500",
+        accent: "text-amber-600",
+        pulse: pendingContent > 0,
+      },
+      {
+        label: "Báo cáo chờ xử lý",
+        value: pendingReports,
+        icon: AlertTriangle,
+        color: "from-rose-50 to-rose-100/50 border-rose-200",
+        iconBg: "bg-rose-500",
+        accent: "text-rose-600",
+        pulse: pendingReports > 0,
+      },
+      {
+        label: "Từ khóa đang chặn",
+        value: blacklist.length,
+        icon: Ban,
+        color: "from-slate-50 to-slate-100/50 border-slate-200",
+        iconBg: "bg-slate-600",
+        accent: "text-slate-700",
+        pulse: false,
+      },
     ];
   }, [blacklist.length, comments, posts, reports]);
 
@@ -436,364 +529,502 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
     reload(0);
   };
 
-  const pageTitle = "Kiểm duyệt cộng đồng";
+  /* ── Left border color by status ── */
+  const postBorder = (status: CommunityPostStatus) => ({
+    PENDING_MODERATION: "border-l-amber-400",
+    APPROVED: "border-l-emerald-400",
+    HIDDEN: "border-l-rose-400",
+    DELETED: "border-l-slate-300",
+  }[status] ?? "border-l-slate-200");
+
+  const commentBorder = (status: PostCommentStatus) => ({
+    PENDING_MODERATION: "border-l-amber-400",
+    VISIBLE: "border-l-emerald-400",
+    HIDDEN: "border-l-rose-400",
+    DELETED: "border-l-slate-300",
+  }[status] ?? "border-l-slate-200");
+
+  const reportBorder = (status: ContentReportStatus) => ({
+    PENDING: "border-l-amber-400",
+    REVIEWED: "border-l-blue-400",
+    DISMISSED: "border-l-slate-300",
+  }[status] ?? "border-l-slate-200");
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`mx-auto max-w-7xl space-y-6 font-sans ${isDashboard ? "p-0" : "px-4 py-8"}`}
+      transition={{ duration: 0.3 }}
+      className={`mx-auto max-w-7xl space-y-5 font-sans ${isDashboard ? "p-0" : "px-4 py-8"}`}
     >
+      {/* ── Page Header (standalone mode only) ── */}
       {!isDashboard && (
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-[#FF6B00] shadow-[0_12px_30px_-18px_rgba(255,107,0,0.5)]">
-              <ShieldAlert size={22} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF6B00] text-white shadow-lg shadow-[#FF6B00]/30">
+              <ShieldAlert size={20} />
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">{pageTitle}</h1>
-              <p className="mt-0.5 text-sm font-medium text-slate-500">
-                Duyệt bài viết, bình luận, report và từ khóa nhạy cảm trong cộng đồng.
-              </p>
+              <h1 className="text-lg font-black text-slate-900">Kiểm duyệt cộng đồng</h1>
+              <p className="text-xs text-slate-400 font-medium">Duyệt nội dung · Xử lý vi phạm · Quản lý từ khóa</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => reload(page)} disabled={loading}>
+          <button
+            type="button"
+            onClick={() => reload(page)}
+            disabled={loading}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95 disabled:opacity-50"
+          >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             Làm mới
-          </Button>
+          </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {stats.map(stat => (
-          <div key={stat.label} className="rounded-3xl border border-white/80 bg-white/90 p-4 shadow-[0_14px_36px_-28px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/60">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{stat.label}</p>
-            <p className={`mt-1 text-2xl font-black ${stat.accent}`}>{stat.value.toLocaleString("vi-VN")}</p>
-          </div>
-        ))}
+      {/* ── KPI Stats ── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <motion.div
+              key={stat.label}
+              whileHover={{ y: -2, boxShadow: "0 8px 30px rgba(0,0,0,0.08)" }}
+              transition={{ duration: 0.2 }}
+              className={`relative overflow-hidden rounded-2xl border bg-gradient-to-br ${stat.color} p-5`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">{stat.label}</p>
+                  <p className={`text-3xl font-black ${stat.accent}`}>{stat.value.toLocaleString("vi-VN")}</p>
+                  {stat.pulse && stat.value > 0 && (
+                    <p className="mt-1.5 text-[10px] font-semibold text-slate-400 flex items-center gap-1">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      Cần xử lý ngay
+                    </p>
+                  )}
+                </div>
+                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.iconBg} text-white shadow-lg`}>
+                  <Icon size={20} />
+                </div>
+              </div>
+              {/* decorative */}
+              <div className="absolute -right-4 -bottom-4 opacity-5">
+                <Icon size={80} />
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-white/80 bg-white/95 shadow-[0_18px_50px_-34px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/70">
-        <div className="border-b border-slate-100 bg-slate-50/70 p-3">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 sm:flex">
-              {TABS.map(tab => {
-                const Icon = tab.icon;
-                const active = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-extrabold transition ${
-                      active ? "bg-white text-[#FF6B00] shadow-sm" : "text-slate-500 hover:bg-white/70 hover:text-slate-800"
-                    }`}
-                  >
-                    <Icon size={14} />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
+      {/* ── Main Panel ── */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-              {(activeTab === "posts" || activeTab === "comments") && (
-                <form onSubmit={handleSearchSubmit} className="relative min-w-[240px]">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={search}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)}
-                    placeholder="Tìm nội dung hoặc tác giả"
-                    className="h-10 w-full rounded-2xl border border-slate-200 bg-white pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
-                  />
-                </form>
-              )}
-              {activeTab === "posts" && (
-                                <Select value={postStatus} onValueChange={(val) => setPostStatus(val as any)}>
-                  <SelectTrigger className="h-10 w-[160px] rounded-xl border-slate-200 bg-white font-medium focus:ring-[#FF6B00]">
-                    <SelectValue placeholder="Trạng thái" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {POST_STATUS_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value || "all"} value={opt.value || "all"}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {activeTab === "comments" && (
-                                <Select value={commentStatus} onValueChange={(val) => setCommentStatus(val as any)}>
-                  <SelectTrigger className="h-10 w-[160px] rounded-xl border-slate-200 bg-white font-medium focus:ring-[#FF6B00]">
-                    <SelectValue placeholder="Trạng thái" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COMMENT_STATUS_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value || "all"} value={opt.value || "all"}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {activeTab === "reports" && (
-                <>
-                                  <Select value={reportStatus} onValueChange={(val) => setReportStatus(val as any)}>
-                  <SelectTrigger className="h-10 w-[160px] rounded-xl border-slate-200 bg-white font-medium focus:ring-[#FF6B00]">
-                    <SelectValue placeholder="Trạng thái" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {REPORT_STATUS_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value || "all"} value={opt.value || "all"}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                                  <Select value={reportTarget} onValueChange={(val) => setReportTarget(val as any)}>
-                  <SelectTrigger className="h-10 w-[160px] rounded-xl border-slate-200 bg-white font-medium focus:ring-[#FF6B00]">
-                    <SelectValue placeholder="Loại nội dung" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {REPORT_TARGET_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value || "all"} value={opt.value || "all"}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                </>
-              )}
-            </div>
+        {/* Tab bar + filters */}
+        <div className="border-b border-slate-100 bg-slate-50/60 px-4 pt-4 pb-0">
+          {/* Tabs */}
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {TABS.map(tab => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`relative flex items-center gap-2 px-4 py-3 text-[12px] font-bold transition-all whitespace-nowrap border-b-2 ${
+                    active
+                      ? "border-[#FF6B00] text-[#FF6B00]"
+                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-200"
+                  }`}
+                >
+                  <Icon size={14} />
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="min-h-[420px]">
+        {/* Filter row */}
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-white px-4 py-3">
+          {(activeTab === "posts" || activeTab === "comments") && (
+            <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[220px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                value={search}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                placeholder="Tìm kiếm nội dung hoặc tác giả..."
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 text-[12px] font-medium outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-2 focus:ring-[#FF6B00]/10"
+              />
+            </form>
+          )}
+
+          {activeTab === "posts" && (
+            <SelectField label="Trạng thái" value={postStatus} onChange={setPostStatus} options={POST_STATUS_OPTIONS} />
+          )}
+          {activeTab === "comments" && (
+            <SelectField label="Trạng thái" value={commentStatus} onChange={setCommentStatus} options={COMMENT_STATUS_OPTIONS} />
+          )}
+          {activeTab === "reports" && (
+            <>
+              <SelectField label="Trạng thái" value={reportStatus} onChange={setReportStatus} options={REPORT_STATUS_OPTIONS} />
+              <SelectField label="Loại nội dung" value={reportTarget} onChange={setReportTarget} options={REPORT_TARGET_OPTIONS} />
+            </>
+          )}
+
+          <div className="ml-auto flex items-center gap-2">
+            {activeTab !== "blacklist" && (
+              <span className="text-[11px] font-semibold text-slate-400">
+                <BarChart3 size={12} className="inline mr-1" />
+                {totalItems.toLocaleString("vi-VN")} mục
+              </span>
+            )}
+            {isDashboard && (
+              <button
+                type="button"
+                onClick={() => reload(page)}
+                disabled={loading}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition active:scale-95 disabled:opacity-50"
+              >
+                <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                Làm mới
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Content area */}
+        <div className="min-h-[420px] p-4">
+
+          {/* Loading state */}
           {loading && (
-            <div className="flex min-h-[320px] items-center justify-center text-slate-400">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Đang tải dữ liệu...
+            <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 text-slate-400">
+              <Loader2 className="h-8 w-8 animate-spin text-[#FF6B00]" />
+              <p className="text-sm font-medium">Đang tải dữ liệu...</p>
             </div>
           )}
 
+          {/* ── POSTS ── */}
           {!loading && activeTab === "posts" && (
-            <div className="divide-y divide-slate-100">
-              {posts.map(post => (
-                <div key={post.postId} className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_230px]">
-                  <div className="min-w-0 space-y-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <AuthorCell author={post.author} />
-                      <StatusBadge status={post.status} label={POST_STATUS_LABELS[post.status]} />
-                    </div>
-                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">{excerpt(post.content)}</p>
-                    {post.hashtags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {post.hashtags.map(tag => (
-                          <span key={tag} className="rounded-full bg-orange-50 px-2 py-1 text-[11px] font-bold text-[#FF6B00]">#{tag}</span>
-                        ))}
+            <div className="space-y-3">
+              <AnimatePresence>
+                {posts.map((post, idx) => (
+                  <motion.div
+                    key={post.postId}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.2, delay: idx * 0.04 }}
+                    className={`flex gap-4 rounded-xl border border-slate-200 border-l-4 ${postBorder(post.status)} bg-white p-4 hover:border-slate-300 hover:shadow-sm transition-all duration-200 xl:flex-row flex-col`}
+                  >
+                    {/* Left: content */}
+                    <div className="flex-1 min-w-0 space-y-3">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <AuthorCell author={post.author} />
+                        <StatusBadge status={post.status} label={POST_STATUS_LABELS[post.status]} />
                       </div>
-                    )}
-                    <div className="flex flex-wrap gap-3 text-xs font-semibold text-slate-400">
-                      <span>{post.likeCount} lượt thích</span>
-                      <span>{post.commentCount} bình luận</span>
-                      <span>{post.reportCount} báo cáo</span>
-                      <span>{formatDate(post.createdAt)}</span>
+
+                      <p className="text-[13px] leading-relaxed text-slate-600 break-words">{excerpt(post.content)}</p>
+
+                      {post.hashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {post.hashtags.map(tag => (
+                            <span key={tag} className="rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-bold text-[#FF6B00]">#{tag}</span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-slate-400">
+                        <span className="flex items-center gap-1"><ThumbsUp size={11} /> {post.likeCount} thích</span>
+                        <span>·</span>
+                        <span className="flex items-center gap-1"><MessageCircle size={11} /> {post.commentCount} bình luận</span>
+                        {post.reportCount > 0 && (
+                          <>
+                            <span>·</span>
+                            <span className="flex items-center gap-1 text-rose-500 font-bold">
+                              <AlertTriangle size={11} /> {post.reportCount} báo cáo
+                            </span>
+                          </>
+                        )}
+                        <span>·</span>
+                        <span className="flex items-center gap-1"><Clock size={11} /> {formatDate(post.createdAt)}</span>
+                      </div>
+
+                      {post.adminNote && (
+                        <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-[12px] text-amber-800">
+                          <span className="font-bold">Ghi chú admin:</span> {post.adminNote}
+                        </div>
+                      )}
                     </div>
-                    {post.adminNote && <p className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">Ghi chú: {post.adminNote}</p>}
-                  </div>
-                  <div className="flex items-center justify-end gap-2 shrink-0">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem 
-                          disabled={actionId === post.postId || post.status === "APPROVED"}
-                          onClick={() => updatePostStatus(post, "APPROVED")}
-                          className="text-emerald-600 font-medium cursor-pointer"
-                        >
-                          <CheckCircle2 className="mr-2 h-4 w-4" /> Duyệt bài
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          disabled={actionId === post.postId || post.status === "HIDDEN"}
-                          onClick={() => updatePostStatus(post, "HIDDEN")}
-                          className="text-red-600 font-medium cursor-pointer"
-                        >
-                          <EyeOff className="mr-2 h-4 w-4" /> Ẩn bài viết
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
+
+                    {/* Right: actions */}
+                    <div className="flex flex-row xl:flex-col gap-2 xl:w-36 shrink-0 xl:justify-start">
+                      <ActionButton
+                        disabled={actionId === post.postId || post.status === "APPROVED"}
+                        tone="success"
+                        onClick={() => updatePostStatus(post, "APPROVED")}
+                      >
+                        <CheckCircle2 size={12} /> Duyệt
+                      </ActionButton>
+                      <ActionButton
+                        disabled={actionId === post.postId || post.status === "HIDDEN"}
+                        tone="danger"
+                        onClick={() => updatePostStatus(post, "HIDDEN")}
+                      >
+                        <EyeOff size={12} /> Ẩn bài
+                      </ActionButton>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
               {posts.length === 0 && <EmptyState />}
             </div>
           )}
 
+          {/* ── COMMENTS ── */}
           {!loading && activeTab === "comments" && (
-            <div className="divide-y divide-slate-100">
-              {comments.map(comment => (
-                <div key={comment.commentId} className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_230px]">
-                  <div className="min-w-0 space-y-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <AuthorCell author={comment.author} />
-                      <StatusBadge status={comment.status} label={COMMENT_STATUS_LABELS[comment.status]} />
+            <div className="space-y-3">
+              <AnimatePresence>
+                {comments.map((comment, idx) => (
+                  <motion.div
+                    key={comment.commentId}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.2, delay: idx * 0.04 }}
+                    className={`flex gap-4 rounded-xl border border-slate-200 border-l-4 ${commentBorder(comment.status)} bg-white p-4 hover:border-slate-300 hover:shadow-sm transition-all duration-200 xl:flex-row flex-col`}
+                  >
+                    <div className="flex-1 min-w-0 space-y-3">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <AuthorCell author={comment.author} />
+                        <StatusBadge status={comment.status} label={COMMENT_STATUS_LABELS[comment.status]} />
+                      </div>
+
+                      <p className="text-[13px] leading-relaxed text-slate-600 break-words">{excerpt(comment.content)}</p>
+
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-slate-400">
+                        <span className="flex items-center gap-1 rounded-md bg-slate-50 border border-slate-200 px-2 py-0.5">
+                          <Hash size={10} /> Bài: {comment.postId.slice(0, 8)}...
+                        </span>
+                        {comment.reportCount > 0 && (
+                          <span className="flex items-center gap-1 text-rose-500 font-bold">
+                            <AlertTriangle size={11} /> {comment.reportCount} báo cáo
+                          </span>
+                        )}
+                        <span>·</span>
+                        <span className="flex items-center gap-1"><Clock size={11} /> {formatDate(comment.createdAt)}</span>
+                      </div>
+
+                      {comment.adminNote && (
+                        <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-[12px] text-amber-800">
+                          <span className="font-bold">Ghi chú admin:</span> {comment.adminNote}
+                        </div>
+                      )}
                     </div>
-                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">{excerpt(comment.content)}</p>
-                    <div className="flex flex-wrap gap-3 text-xs font-semibold text-slate-400">
-                      <span>Post ID: {comment.postId}</span>
-                      <span>{comment.reportCount} báo cáo</span>
-                      <span>{formatDate(comment.createdAt)}</span>
+
+                    <div className="flex flex-row xl:flex-col gap-2 xl:w-36 shrink-0">
+                      <ActionButton
+                        disabled={actionId === comment.commentId || comment.status === "VISIBLE"}
+                        tone="success"
+                        onClick={() => updateCommentStatus(comment, "VISIBLE")}
+                      >
+                        <CheckCircle2 size={12} /> Hiển thị
+                      </ActionButton>
+                      <ActionButton
+                        disabled={actionId === comment.commentId || comment.status === "HIDDEN"}
+                        tone="danger"
+                        onClick={() => updateCommentStatus(comment, "HIDDEN")}
+                      >
+                        <EyeOff size={12} /> Ẩn đi
+                      </ActionButton>
                     </div>
-                    {comment.adminNote && <p className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">Ghi chú: {comment.adminNote}</p>}
-                  </div>
-                  <div className="flex items-center justify-end gap-2 shrink-0">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem 
-                          disabled={actionId === comment.commentId || comment.status === "VISIBLE"}
-                          onClick={() => updateCommentStatus(comment, "VISIBLE")}
-                          className="text-emerald-600 font-medium cursor-pointer"
-                        >
-                          <CheckCircle2 className="mr-2 h-4 w-4" /> Hiển thị
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          disabled={actionId === comment.commentId || comment.status === "HIDDEN"}
-                          onClick={() => updateCommentStatus(comment, "HIDDEN")}
-                          className="text-red-600 font-medium cursor-pointer"
-                        >
-                          <EyeOff className="mr-2 h-4 w-4" /> Ẩn bình luận
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
               {comments.length === 0 && <EmptyState />}
             </div>
           )}
 
+          {/* ── REPORTS ── */}
           {!loading && activeTab === "reports" && (
-            <div className="divide-y divide-slate-100">
-              {reports.map(report => (
-                <div key={report.reportId} className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_250px]">
-                  <div className="min-w-0 space-y-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <AuthorCell author={report.reporter} />
-                      <StatusBadge status={report.status} label={REPORT_STATUS_LABELS[report.status]} />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-red-100 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-700">{report.targetType}</span>
-                      <button
-                        type="button"
-                        onClick={() => copyTargetId(report.targetId)}
-                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 transition hover:bg-slate-200"
-                      >
-                        <Copy size={11} /> {report.targetId}
-                      </button>
-                    </div>
-                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">{excerpt(report.reason || "Không có lý do")}</p>
-                    <div className="flex flex-wrap gap-3 text-xs font-semibold text-slate-400">
-                      <span>Tạo: {formatDate(report.createdAt)}</span>
-                      <span>Xử lý: {formatDate(report.reviewedAt)}</span>
-                    </div>
-                    {report.adminNote && <p className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">Ghi chú: {report.adminNote}</p>}
-                  </div>
-                  <div className="flex items-center justify-end gap-2 shrink-0">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem 
+            <div className="space-y-3">
+              <AnimatePresence>
+                {reports.map((report, idx) => {
+                  const typeStyles: Record<string, string> = {
+                    POST: "bg-blue-50 text-blue-700 border-blue-200",
+                    COMMENT: "bg-purple-50 text-purple-700 border-purple-200",
+                    MESSAGE: "bg-slate-50 text-slate-700 border-slate-200",
+                  };
+                  return (
+                    <motion.div
+                      key={report.reportId}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      transition={{ duration: 0.2, delay: idx * 0.04 }}
+                      className={`flex gap-4 rounded-xl border border-slate-200 border-l-4 ${reportBorder(report.status)} bg-white p-4 hover:border-slate-300 hover:shadow-sm transition-all duration-200 xl:flex-row flex-col`}
+                    >
+                      <div className="flex-1 min-w-0 space-y-3">
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <AuthorCell author={report.reporter} />
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 rounded-md px-2 py-0.5">Người báo cáo</span>
+                          </div>
+                          <StatusBadge status={report.status} label={REPORT_STATUS_LABELS[report.status]} />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${typeStyles[report.targetType] ?? "bg-slate-50 text-slate-600 border-slate-200"}`}>
+                            {report.targetType}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copyTargetId(report.targetId)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-500 hover:bg-slate-100 transition active:scale-95"
+                          >
+                            <Copy size={9} /> ID: {report.targetId.slice(0, 10)}...
+                          </button>
+                        </div>
+
+                        <div className="rounded-lg bg-rose-50 border border-rose-200 p-3">
+                          <p className="text-[10px] font-bold text-rose-600 flex items-center gap-1 mb-1.5">
+                            <Flag size={11} /> Lý do báo cáo:
+                          </p>
+                          <p className="text-[13px] text-slate-700 leading-relaxed">{excerpt(report.reason || "Không có lý do chi tiết")}</p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-3 text-[11px] font-medium text-slate-400">
+                          <span className="flex items-center gap-1"><Clock size={11} /> {formatDate(report.createdAt)}</span>
+                          {report.reviewedAt && (
+                            <span className="flex items-center gap-1 text-blue-500">
+                              <CheckCircle2 size={11} /> Đã xử lý: {formatDate(report.reviewedAt)}
+                            </span>
+                          )}
+                        </div>
+
+                        {report.adminNote && (
+                          <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-[12px] text-amber-800">
+                            <span className="font-bold">Ghi chú admin:</span> {report.adminNote}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-row xl:flex-col gap-2 xl:w-36 shrink-0">
+                        <ActionButton
                           disabled={actionId === report.reportId || report.status === "REVIEWED"}
+                          tone="success"
                           onClick={() => updateReportStatus(report, "REVIEWED")}
-                          className="text-emerald-600 font-medium cursor-pointer"
                         >
-                          <CheckCircle2 className="mr-2 h-4 w-4" /> Đã xử lý
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
+                          <CheckCircle2 size={12} /> Xử lý xong
+                        </ActionButton>
+                        <ActionButton
                           disabled={actionId === report.reportId || report.status === "DISMISSED"}
+                          tone="neutral"
                           onClick={() => updateReportStatus(report, "DISMISSED")}
-                          className="text-slate-600 font-medium cursor-pointer"
                         >
-                          <AlertTriangle className="mr-2 h-4 w-4" /> Bỏ qua
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
+                          <AlertTriangle size={12} /> Bỏ qua
+                        </ActionButton>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
               {reports.length === 0 && <EmptyState />}
             </div>
           )}
 
+          {/* ── BLACKLIST ── */}
           {!loading && activeTab === "blacklist" && (
-            <div className="p-4">
-              <form onSubmit={addKeyword} className="mb-4 flex flex-col gap-3 rounded-2xl border border-orange-100 bg-orange-50/50 p-3 sm:flex-row sm:items-center">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#FF6B00]">
-                  <Hash size={18} />
+            <div className="space-y-5">
+              {/* Add keyword form */}
+              <form
+                onSubmit={addKeyword}
+                className="flex flex-col gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 sm:flex-row sm:items-center"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FF6B00] text-white shadow-md shadow-[#FF6B00]/25">
+                  <Hash size={16} />
                 </div>
                 <input
                   value={newKeyword}
-                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setNewKeyword(event.target.value)}
-                  placeholder="Nhập từ khóa nhạy cảm cần chặn"
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyword(e.target.value)}
+                  placeholder="Nhập từ khóa nhạy cảm cần chặn..."
                   maxLength={100}
-                  className="h-10 min-w-0 flex-1 rounded-2xl border border-orange-100 bg-white px-3 text-sm font-semibold outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
+                  className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-medium outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/10"
                 />
                 <button
                   type="submit"
                   disabled={actionId === "blacklist:add" || !newKeyword.trim()}
-                  className="inline-flex h-10 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 px-4 text-xs font-extrabold text-amber-700 transition hover:bg-amber-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#FF6B00] px-4 text-[12px] font-bold text-white shadow-md shadow-[#FF6B00]/25 hover:bg-[#e85f00] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 shrink-0"
                 >
-                  Thêm từ khóa
+                  <Plus size={13} /> Thêm từ khóa
                 </button>
               </form>
 
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {blacklist.map(item => (
-                  <div key={item.wordId} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-extrabold text-slate-800">{item.keyword}</p>
-                      <p className="text-xs font-semibold text-slate-400">{formatDate(item.createdAt)}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => deleteKeyword(item)}
-                      disabled={actionId === `blacklist:${item.wordId}`}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+              {/* Keyword grid */}
+              <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+                <AnimatePresence>
+                  {blacklist.map((item, idx) => (
+                    <motion.div
+                      key={item.wordId}
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.92 }}
+                      transition={{ duration: 0.18, delay: idx * 0.02 }}
+                      className="group flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 hover:border-[#FF6B00]/30 hover:shadow-sm transition-all duration-200"
                     >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                ))}
+                      <div className="min-w-0 flex items-center gap-2.5">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                          <Ban size={13} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-bold text-slate-800">{item.keyword}</p>
+                          <p className="text-[10px] text-slate-400 flex items-center gap-0.5 mt-0.5">
+                            <Clock size={9} /> {formatDate(item.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteKeyword(item)}
+                        disabled={actionId === `blacklist:${item.wordId}`}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all duration-150 active:scale-90 disabled:opacity-40"
+                        title="Xóa từ khóa"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
-              {blacklist.length === 0 && <EmptyState label="Chưa có từ khóa cấm nào." />}
+              {blacklist.length === 0 && <EmptyState label="Chưa có từ khóa nào bị chặn." />}
             </div>
           )}
         </div>
 
+        {/* ── Pagination ── */}
         {activeTab !== "blacklist" && (
-          <div className="flex flex-col gap-3 border-t border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-bold text-slate-400">
-              {totalItems.toLocaleString("vi-VN")} mục · Trang {page + 1}/{totalPages}
+          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-3">
+            <p className="text-[11px] font-semibold text-slate-400">
+              Trang {page + 1} / {totalPages} · {totalItems.toLocaleString("vi-VN")} mục
             </p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={loading || page <= 0} onClick={() => reload(Math.max(0, page - 1))}>
-                Trước
-              </Button>
-              <Button variant="outline" size="sm" disabled={loading || page + 1 >= totalPages} onClick={() => reload(page + 1)}>
-                Sau
-              </Button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={loading || page <= 0}
+                onClick={() => reload(Math.max(0, page - 1))}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span className="min-w-[2rem] text-center text-[12px] font-bold text-slate-600">{page + 1}</span>
+              <button
+                type="button"
+                disabled={loading || page + 1 >= totalPages}
+                onClick={() => reload(page + 1)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+              >
+                <ChevronRight size={14} />
+              </button>
             </div>
           </div>
         )}
@@ -844,13 +1075,17 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
   );
 }
 
-function EmptyState({ label = "Không có dữ liệu phù hợp." }: { label?: string }) {
+/* ── Empty State ── */
+function EmptyState({ label = "Không có nội dung nào cần kiểm duyệt." }: { label?: string }) {
   return (
-    <div className="flex min-h-[220px] flex-col items-center justify-center gap-2 p-8 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-        <ShieldAlert size={22} />
+    <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
+        <ShieldAlert size={24} className="text-slate-400" />
       </div>
-      <p className="text-sm font-bold text-slate-500">{label}</p>
+      <div>
+        <p className="text-[13px] font-bold text-slate-500">{label}</p>
+        <p className="text-[11px] text-slate-400 mt-1">Tất cả nội dung đều đã được xử lý.</p>
+      </div>
     </div>
   );
 }

@@ -20,7 +20,7 @@ import type {
 const BASE_URL = "/api/community/rooms";
 
 export const communityRoomService = {
-  // Rooms
+  // ── Rooms ───────────────────────────────────────────────────────────────
   createRoom: async (data: CreateCommunityRoomRequest): Promise<CommunityRoomResponse> => {
     const response = await skillSprintApiClient.post<ApiResponse<CommunityRoomResponse>>(BASE_URL, data);
     return extractApiData(response);
@@ -30,16 +30,15 @@ export const communityRoomService = {
     page: number = 0,
     size: number = 10,
     mode?: string,
-    search?: string
+    search?: string,
   ): Promise<PageableResponse<CommunityRoomResponse>> => {
     const params = new URLSearchParams();
     params.append("page", page.toString());
     params.append("size", size.toString());
     if (mode) params.append("mode", mode);
     if (search) params.append("search", search);
-
     const response = await skillSprintApiClient.get<ApiResponse<PageableResponse<CommunityRoomResponse>>>(
-      `${BASE_URL}?${params.toString()}`
+      `${BASE_URL}?${params.toString()}`,
     );
     return extractApiData(response);
   },
@@ -48,9 +47,8 @@ export const communityRoomService = {
     const params = new URLSearchParams();
     params.append("page", page.toString());
     params.append("size", size.toString());
-
     const response = await skillSprintApiClient.get<ApiResponse<PageableResponse<CommunityRoomResponse>>>(
-      `${BASE_URL}/me?${params.toString()}`
+      `${BASE_URL}/me?${params.toString()}`,
     );
     return extractApiData(response);
   },
@@ -80,15 +78,15 @@ export const communityRoomService = {
     return extractApiData(response);
   },
 
-  // Members
+  // ── Members ─────────────────────────────────────────────────────────────
   getMembers: async (
     roomId: string,
     page: number = 0,
-    size: number = 10
+    size: number = 10,
   ): Promise<PageableResponse<CommunityRoomMemberResponse>> => {
     const params = new URLSearchParams({ page: page.toString(), size: size.toString() });
     const response = await skillSprintApiClient.get<ApiResponse<PageableResponse<CommunityRoomMemberResponse>>>(
-      `${BASE_URL}/${roomId}/members?${params.toString()}`
+      `${BASE_URL}/${roomId}/members?${params.toString()}`,
     );
     return extractApiData(response);
   },
@@ -96,11 +94,11 @@ export const communityRoomService = {
   updateMemberRole: async (
     roomId: string,
     targetUserId: string,
-    data: UpdateCommunityRoomMemberRoleRequest
+    data: UpdateCommunityRoomMemberRoleRequest,
   ): Promise<CommunityRoomMemberResponse> => {
     const response = await skillSprintApiClient.patch<ApiResponse<CommunityRoomMemberResponse>>(
       `${BASE_URL}/${roomId}/members/${targetUserId}/role`,
-      data
+      data,
     );
     return extractApiData(response);
   },
@@ -108,39 +106,41 @@ export const communityRoomService = {
   muteMember: async (
     roomId: string,
     targetUserId: string,
-    data: MuteCommunityRoomMemberRequest
+    data: MuteCommunityRoomMemberRequest,
   ): Promise<CommunityRoomMemberResponse> => {
     const response = await skillSprintApiClient.patch<ApiResponse<CommunityRoomMemberResponse>>(
       `${BASE_URL}/${roomId}/members/${targetUserId}/mute`,
-      data
+      data,
     );
     return extractApiData(response);
   },
 
   kickMember: async (roomId: string, targetUserId: string): Promise<void> => {
-    const response = await skillSprintApiClient.delete<ApiResponse<void>>(`${BASE_URL}/${roomId}/members/${targetUserId}`);
+    const response = await skillSprintApiClient.delete<ApiResponse<void>>(
+      `${BASE_URL}/${roomId}/members/${targetUserId}`,
+    );
     return extractApiData(response);
   },
 
   banMember: async (roomId: string, targetUserId: string): Promise<CommunityRoomMemberResponse> => {
     const response = await skillSprintApiClient.patch<ApiResponse<CommunityRoomMemberResponse>>(
-      `${BASE_URL}/${roomId}/members/${targetUserId}/ban`
+      `${BASE_URL}/${roomId}/members/${targetUserId}/ban`,
     );
     return extractApiData(response);
   },
 
   unbanMember: async (roomId: string, targetUserId: string): Promise<CommunityRoomMemberResponse> => {
     const response = await skillSprintApiClient.patch<ApiResponse<CommunityRoomMemberResponse>>(
-      `${BASE_URL}/${roomId}/members/${targetUserId}/unban`
+      `${BASE_URL}/${roomId}/members/${targetUserId}/unban`,
     );
     return extractApiData(response);
   },
 
-  // Invites
+  // ── Invites ─────────────────────────────────────────────────────────────
   inviteMember: async (roomId: string, data: CreateCommunityRoomInviteRequest): Promise<CommunityRoomInviteResponse> => {
     const response = await skillSprintApiClient.post<ApiResponse<CommunityRoomInviteResponse>>(
       `${BASE_URL}/${roomId}/invites`,
-      data
+      data,
     );
     return extractApiData(response);
   },
@@ -148,34 +148,34 @@ export const communityRoomService = {
   getMyInvites: async (page: number = 0, size: number = 10): Promise<PageableResponse<CommunityRoomInviteResponse>> => {
     const params = new URLSearchParams({ page: page.toString(), size: size.toString() });
     const response = await skillSprintApiClient.get<ApiResponse<PageableResponse<CommunityRoomInviteResponse>>>(
-      `${BASE_URL}/invites?${params.toString()}`
+      `${BASE_URL}/invites?${params.toString()}`,
     );
     return extractApiData(response);
   },
 
   acceptInvite: async (inviteId: string): Promise<CommunityRoomResponse> => {
     const response = await skillSprintApiClient.post<ApiResponse<CommunityRoomResponse>>(
-      `${BASE_URL}/invites/${inviteId}/accept`
+      `${BASE_URL}/invites/${inviteId}/accept`,
     );
     return extractApiData(response);
   },
 
   declineInvite: async (inviteId: string): Promise<CommunityRoomInviteResponse> => {
     const response = await skillSprintApiClient.post<ApiResponse<CommunityRoomInviteResponse>>(
-      `${BASE_URL}/invites/${inviteId}/decline`
+      `${BASE_URL}/invites/${inviteId}/decline`,
     );
     return extractApiData(response);
   },
 
-  // Messages
+  // ── Messages ─────────────────────────────────────────────────────────────
   getMessageHistory: async (
     roomId: string,
     page: number = 0,
-    size: number = 30
+    size: number = 30,
   ): Promise<PageableResponse<CommunityChatMessageResponse>> => {
     const params = new URLSearchParams({ page: page.toString(), size: size.toString() });
     const response = await skillSprintApiClient.get<ApiResponse<PageableResponse<CommunityChatMessageResponse>>>(
-      `${BASE_URL}/${roomId}/messages?${params.toString()}`
+      `${BASE_URL}/${roomId}/messages?${params.toString()}`,
     );
     return extractApiData(response);
   },
@@ -183,11 +183,11 @@ export const communityRoomService = {
   hideMessage: async (
     roomId: string,
     messageId: string,
-    data: HideCommunityChatMessageRequest
+    data: HideCommunityChatMessageRequest,
   ): Promise<CommunityChatMessageResponse> => {
     const response = await skillSprintApiClient.patch<ApiResponse<CommunityChatMessageResponse>>(
       `${BASE_URL}/${roomId}/messages/${messageId}/hide`,
-      data
+      data,
     );
     return extractApiData(response);
   },
@@ -195,16 +195,16 @@ export const communityRoomService = {
   reportMessage: async (
     roomId: string,
     messageId: string,
-    data: CreateContentReportRequest
-  ): Promise<any> => {
-    const response = await skillSprintApiClient.post<ApiResponse<any>>(
+    data: CreateContentReportRequest,
+  ): Promise<void> => {
+    const response = await skillSprintApiClient.post<ApiResponse<void>>(
       `${BASE_URL}/${roomId}/messages/${messageId}/report`,
-      data
+      data,
     );
     return extractApiData(response);
   },
 
-  // Pins
+  // ── Pins ─────────────────────────────────────────────────────────────────
   getPins: async (roomId: string): Promise<CommunityPinResponse[]> => {
     const response = await skillSprintApiClient.get<ApiResponse<CommunityPinResponse[]>>(`${BASE_URL}/${roomId}/pins`);
     return extractApiData(response);
@@ -213,7 +213,7 @@ export const communityRoomService = {
   createPin: async (roomId: string, data: CreateCommunityPinRequest): Promise<CommunityPinResponse> => {
     const response = await skillSprintApiClient.post<ApiResponse<CommunityPinResponse>>(
       `${BASE_URL}/${roomId}/pins`,
-      data
+      data,
     );
     return extractApiData(response);
   },
@@ -226,7 +226,7 @@ export const communityRoomService = {
   reorderPins: async (roomId: string, data: ReorderCommunityPinsRequest): Promise<CommunityPinResponse[]> => {
     const response = await skillSprintApiClient.patch<ApiResponse<CommunityPinResponse[]>>(
       `${BASE_URL}/${roomId}/pins/reorder`,
-      data
+      data,
     );
     return extractApiData(response);
   },

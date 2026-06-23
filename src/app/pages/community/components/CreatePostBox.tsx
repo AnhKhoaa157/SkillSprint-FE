@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Clapperboard, Hash, Image, Lightbulb, Paperclip, Send, Sparkles, Video, X } from "lucide-react";
+import { Clapperboard, Hash, Image, Lightbulb, Loader2, Paperclip, Send, Sparkles, Video, X } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Textarea } from "../../../components/ui/textarea";
 import { Input } from "../../../components/ui/input";
@@ -80,63 +80,66 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
     <>
       <section
         onClick={() => setIsModalOpen(true)}
-        className="group cursor-pointer rounded-[18px] border border-slate-200/80 bg-white p-[18px] shadow-[0_8px_26px_rgba(15,23,42,0.065)] transition duration-200 hover:border-orange-200 hover:shadow-[0_14px_34px_rgba(15,23,42,0.095)]"
+        className="group cursor-pointer rounded-3xl border border-white bg-white/90 p-4.5 shadow-[0_12px_36px_rgba(0,0,0,0.02),0_1px_3px_rgba(0,0,0,0.01)] backdrop-blur-xl transition-all duration-300 hover:border-slate-200/85 hover:shadow-[0_20px_48px_rgba(0,0,0,0.04)]"
       >
-        <div className="flex min-h-14 items-center gap-3">
-          <Avatar className="h-11 w-11 shrink-0">
-            <AvatarImage src={avatarUrl} />
-            <AvatarFallback className="bg-orange-50 text-sm font-bold text-[#FF6B00]">
-              {displayName.charAt(0) || "S"}
-            </AvatarFallback>
-          </Avatar>
-
+        <div className="flex items-center gap-3.5">
+          <div className="relative shrink-0">
+            <div className="absolute -inset-0.5 rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#FF8A00] opacity-40 blur-[1px] group-hover:opacity-90 transition duration-300" />
+            <Avatar className="relative h-10 w-10 border-2 border-white">
+              <AvatarImage src={avatarUrl} />
+              <AvatarFallback className="bg-orange-50 text-sm font-black text-[#FF6B00]">
+                {displayName.charAt(0) || "S"}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+ 
           <button
             type="button"
             onClick={(event) => {
               event.stopPropagation();
               setIsModalOpen(true);
             }}
-            className="min-w-0 flex-1 rounded-full bg-slate-100 px-4 py-3.5 text-left text-[15px] font-semibold text-slate-700 transition-all border border-transparent group-hover:bg-slate-50 group-hover:text-slate-900 group-hover:border-orange-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-200 shadow-sm"
+            className="min-w-0 flex-1 rounded-full bg-slate-50/70 border border-slate-200/50 px-5 py-2.5 text-left text-xs font-bold text-slate-400 transition-all duration-300 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-500 focus:outline-none"
           >
             {composerPrompt}
           </button>
-
-          <div className="hidden items-center gap-2 sm:flex">
+ 
+          <div className="hidden items-center gap-1.5 sm:flex">
             <button
               type="button"
-              title="Video"
-              aria-label="Thêm video"
+              title="Đăng video"
+              aria-label="Đăng video"
               onClick={(event) => {
                 event.stopPropagation();
                 setIsModalOpen(true);
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition group-hover:bg-slate-50 hover:bg-orange-50 hover:text-[#D95B00]"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-all duration-300 hover:bg-slate-100 hover:text-rose-500 active:scale-95"
             >
-              <Video className="h-[18px] w-[18px]" />
+              <Video className="h-4.5 w-4.5" />
             </button>
             <button
               type="button"
-              title="Hình ảnh"
-              aria-label="Thêm hình ảnh"
+              title="Đăng ảnh"
+              aria-label="Đăng ảnh"
               onClick={(event) => {
                 event.stopPropagation();
                 setIsModalOpen(true);
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition group-hover:bg-slate-50 hover:bg-orange-50 hover:text-[#D95B00]"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-all duration-300 hover:bg-slate-100 hover:text-emerald-500 active:scale-95"
             >
-              <Image className="h-[18px] w-[18px]" />
+              <Image className="h-4.5 w-4.5" />
             </button>
             <button
               type="button"
-              title="Media"
-              aria-label="Thêm media"
+              title="Chia sẻ ý tưởng"
+              aria-label="Chia sẻ ý tưởng"
               onClick={(event) => {
                 event.stopPropagation();
                 setIsModalOpen(true);
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition group-hover:bg-slate-50 hover:bg-orange-50 hover:text-[#D95B00]"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-all duration-300 hover:bg-slate-100 hover:text-sky-500 active:scale-95"
             >
-              <Clapperboard className="h-[18px] w-[18px]" />
+              <Lightbulb className="h-4.5 w-4.5" />
             </button>
           </div>
         </div>
@@ -218,7 +221,7 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
       if (post.status === "PENDING_MODERATION") {
         toast.info("Bài viết của bạn đang chờ quản trị viên duyệt.", { duration: 5000 });
       } else {
-        toast.success("Đã đăng sprint của bạn 🚀");
+        toast.success("Đã đăng bài chia sẻ thành công 🚀");
       }
 
       setContent("");
@@ -239,7 +242,7 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-[4px] sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -253,28 +256,31 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-post-title"
-            className="max-h-[92vh] w-full overflow-hidden rounded-t-[18px] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:max-w-[560px] sm:rounded-[18px]"
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+            className="relative max-h-[92vh] w-full overflow-hidden rounded-t-3xl bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[540px] sm:rounded-3xl border border-slate-100"
+            initial={{ opacity: 0, y: 15, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+            exit={{ opacity: 0, y: 15, scale: 0.97 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
           >
-            <div className="relative flex h-14 items-center justify-center border-b border-slate-100 px-12">
-              <h2 id="create-post-title" className="text-base font-bold text-slate-950">Tạo bài viết</h2>
+            {/* Top orange gradient accent strip */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#FF6B00] via-[#FF8A00] to-[#FFB800]" />
+
+            <div className="relative flex h-14 items-center justify-center border-b border-slate-100 px-12 mt-1">
+              <h2 id="create-post-title" className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Tạo bài viết thảo luận</h2>
               <button
                 type="button"
                 onClick={onClose}
-                className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 hover:text-slate-950"
+                className="absolute right-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-slate-50 border border-slate-200/50 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                 title="Đóng"
                 aria-label="Đóng modal tạo bài viết"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4.5 w-4.5" />
               </button>
             </div>
 
-            <div className="max-h-[calc(92vh-112px)] overflow-y-auto px-4 py-4 sm:px-5">
+            <div className="max-h-[calc(92vh-120px)] overflow-y-auto px-5 py-5">
               <div className="flex items-center gap-3">
-                <Avatar className="h-11 w-11 shrink-0">
+                <Avatar className="h-11 w-11 shrink-0 border border-slate-150 shadow-xs">
                   <AvatarImage src={avatarUrl} />
                   <AvatarFallback className="bg-orange-50 text-sm font-bold text-[#FF6B00]">
                     {displayName.charAt(0) || "S"}
@@ -285,7 +291,7 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
                     <p className="truncate text-sm font-bold text-slate-950">{displayName}</p>
                     <RankBadge rank={allTimeRank} />
                   </div>
-                  <p className="mt-0.5 text-xs font-medium text-slate-500">Chia sẻ với cộng đồng</p>
+                  <p className="mt-0.5 text-[10px] font-semibold text-slate-400">Chia sẻ công khai với cộng đồng</p>
                 </div>
               </div>
 
@@ -298,31 +304,31 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
                   className="min-h-[160px] resize-none border-0 bg-transparent px-0 text-[16px] leading-7 text-slate-900 shadow-none placeholder:text-slate-400 focus-visible:ring-0"
                   maxLength={MAX_CONTENT_LENGTH}
                 />
-                <div className={`mt-2 text-right text-xs font-semibold ${isNearLimit ? "text-[#D95B00]" : "text-slate-400"}`}>
+                <div className={`mt-2 text-right text-[10px] font-bold tracking-wide ${isNearLimit ? "text-[#FF6B00]" : "text-slate-400"}`}>
                   {content.length}/{MAX_CONTENT_LENGTH}
                 </div>
               </div>
 
-              <div className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50/70 p-3">
+              <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 ring-1 ring-slate-200/50">
                 <div className="relative">
-                  <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 font-bold" />
                   <Input
                     value={hashtags}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHashtags(e.target.value)}
-                    placeholder="Thêm hashtag: React, SpringBoot..."
-                    className="h-10 rounded-full border-slate-200 bg-white pl-9 text-sm shadow-none focus-visible:ring-orange-200"
+                    placeholder="Thêm các hashtag (ví dụ: React, SpringBoot...)"
+                    className="h-10 rounded-xl border border-slate-200 bg-white pl-8 text-xs font-semibold shadow-none outline-none focus-visible:border-[#FF6B00] focus-visible:ring-1 focus-visible:ring-orange-100"
                   />
                 </div>
 
                 {parsedPreviewHashtags.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {parsedPreviewHashtags.map((tag) => {
                       const label = normalizeHashtag(tag);
                       return (
                         <span
                           key={tag}
                           title={label}
-                          className="inline-flex max-w-[160px] items-center truncate rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200"
+                          className="inline-flex max-w-[140px] items-center truncate rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600 border border-slate-200/60 shadow-xs"
                         >
                           <span className="truncate">{label}</span>
                         </span>
@@ -331,35 +337,35 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
                   </div>
                 )}
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
-                    <Sparkles className="h-3.5 w-3.5 text-[#FF6B00]" />
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 border border-slate-200/60 shadow-xs">
+                    <Sparkles className="h-3 w-3 text-[#FF6B00]" />
                     Sprint note
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
-                    <Lightbulb className="h-3.5 w-3.5 text-emerald-600" />
-                    Mẹo học tập
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 border border-slate-200/60 shadow-xs">
+                    <Lightbulb className="h-3 w-3 text-emerald-500" />
+                    Chia sẻ mẹo
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
-                    <Paperclip className="h-3.5 w-3.5 text-slate-500" />
-                    Thêm ảnh/video
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 border border-slate-200/60 shadow-xs">
+                    <Paperclip className="h-3 w-3 text-blue-500" />
+                    Đính kèm tài liệu
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="border-t border-slate-100 p-4">
+            <div className="border-t border-slate-100 p-4 bg-slate-50/30">
               <Button
                 type="submit"
                 disabled={!canSubmit}
-                className="h-11 w-full rounded-full bg-[#FF6B00] text-sm font-bold text-white shadow-sm shadow-orange-500/20 transition hover:bg-[#ea580c] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                className="h-10 w-full rounded-full bg-gradient-to-r from-[#FF6B00] via-[#FF8A00] to-[#FF9F00] text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/35 transition active:scale-[0.98] disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none"
               >
                 {isSubmitting ? (
-                  <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3.5 w-3.5 mr-1.5" />
                 )}
-                Đăng bài
+                Đăng bài viết chia sẻ
               </Button>
             </div>
           </motion.form>

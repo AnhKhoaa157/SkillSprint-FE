@@ -18,10 +18,10 @@ export interface AdminCommunityPageResponse<T> {
 
 export interface CommunityAuthorResponse {
   userId: string;
-  email: string;
-  fullName: string;
-  avatarObjectKey: string | null;
-  avatarUrl: string | null;
+  email?: string | null;
+  fullName?: string | null;
+  avatarObjectKey?: string | null;
+  avatarUrl?: string | null;
   allTimeRank?: number;
 }
 

@@ -79,7 +79,17 @@ function decodeBase64Url(input: string): string {
   const padding = normalized.length % 4;
   const padded = padding ? `${normalized}${"=".repeat(4 - padding)}` : normalized;
 
-  return atob(padded);
+  const binStr = atob(padded);
+  try {
+    return decodeURIComponent(
+      binStr
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+  } catch {
+    return binStr;
+  }
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
