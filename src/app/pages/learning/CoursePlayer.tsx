@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import studySessionService from "../../../api/learning/studySessionService";
 import type { StudySessionDetailResponse } from "../../../api/learning/studySessionService";
+import materialService, { type UploadedMaterialResponse } from "../../../api/learning/materialService";
 import quizService from "../../../api/learning/quizService";
 import roadmapService from "../../../api/learning/roadmapService";
 import type { QuizAttemptResponse } from "../../../api/learning/quizService";
@@ -203,6 +204,9 @@ export default function CoursePlayer() {
   const [showQuiz, setShowQuiz] = useState(false);
   const [quizStatus, setQuizStatus] = useState<"idle" | "passed" | "failed">("idle");
 
+  const [materials, setMaterials] = useState<UploadedMaterialResponse[]>([]);
+  const [viewingMaterialId, setViewingMaterialId] = useState<string | null>(null);
+
   const [isSubActionLoading, setIsSubActionLoading] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleTaskInfo, setRescheduleTaskInfo] = useState<{
@@ -282,6 +286,7 @@ export default function CoursePlayer() {
       setDetail(null);
       setIsLoading(false);
       setError(null);
+      setMaterials([]);
       return;
     }
 
@@ -294,11 +299,19 @@ export default function CoursePlayer() {
       .then((response) => {
         if (cancelled) return;
         setDetail(response);
+        if (response.task?.workspaceId) {
+          materialService.getWorkspaceMaterials(response.task.workspaceId)
+            .then(mats => {
+              if (!cancelled) setMaterials(mats);
+            })
+            .catch(console.error);
+        }
       })
       .catch((err: unknown) => {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Không thể tải dữ liệu phiên học.");
         setDetail(null);
+        setMaterials([]);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -1149,11 +1162,67 @@ export default function CoursePlayer() {
                           );
                         })
                       ) : (
-                        <div className="rounded-xl border border-slate-100 bg-slate-50/40 p-4 text-xs text-slate-400 italic md:col-span-2 xl:col-span-3">
-                          Chưa có tài nguyên bổ trợ cho phiên học này.
+                        <div className="col-span-full rounded-xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center">
+                          <p className="text-xs font-semibold text-slate-400">Không có tài nguyên đính kèm</p>
                         </div>
                       )}
                     </div>
+
+                    {/* Workspace Materials */}
+                    {materials.length > 0 && (
+                      <div className="mt-8 border-t border-slate-100 pt-6">
+                        <div className="flex items-center gap-2 mb-4">
+                          <FileText size={16} className="text-indigo-500" />
+                          <div>
+                            <h3 className="text-xs font-extrabold tracking-tight text-slate-800">Tài liệu tham khảo</h3>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Từ Workspace của bạn</p>
+                          </div>
+                        </div>
+                        <div className="grid gap-3">
+                          {materials.map((m) => {
+                            const jobStatus = m.processingJob?.status ?? m.processingStatus ?? m.uploadStatus ?? null;
+                            const isDone = String(jobStatus || "").toUpperCase() === "COMPLETED";
+                            return (
+                              <div key={m.materialId} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-white hover:border-indigo-200 hover:shadow-sm transition-all">
+                                <div className="shrink-0 h-9 w-9 rounded-lg bg-indigo-50 border border-indigo-100/50 flex items-center justify-center text-indigo-500">
+                                  <FileText className="h-4.5 w-4.5" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-xs font-bold text-slate-800">{m.fileName || m.originalFileName || "Tài liệu"}</p>
+                                </div>
+                                {isDone && m.fileUrl && (
+                                  <button 
+                                    type="button" 
+                                    onClick={async () => {
+                                      const wsId = task?.workspaceId;
+                                      if (!wsId || !m.materialId) return;
+                                      try {
+                                        setViewingMaterialId(m.materialId);
+                                        const det = await materialService.getMaterialDetail(wsId, m.materialId);
+                                        if (det.viewUrl) {
+                                          window.open(det.viewUrl, '_blank', 'noopener,noreferrer');
+                                        } else {
+                                          toast.error('Không thể lấy đường dẫn tài liệu');
+                                        }
+                                      } catch {
+                                        toast.error('Lỗi khi mở tài liệu');
+                                      } finally {
+                                        setViewingMaterialId(null);
+                                      }
+                                    }} 
+                                    disabled={viewingMaterialId === m.materialId} 
+                                    title="Xem tài liệu" 
+                                    className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 disabled:opacity-50 transition"
+                                  >
+                                    {viewingMaterialId === m.materialId ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </article>
                 </div>
               </>
