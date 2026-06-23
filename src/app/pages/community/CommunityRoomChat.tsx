@@ -720,7 +720,7 @@ export default function CommunityRoomChat() {
             </div>
           ) : (
             messages.map((msg, idx) => {
-              const isMe = msg.sender?.userId === currentUserId || msg.sender?.userId === "mock-user-owner";
+              const isMe = msg.sender?.userId === currentUserId;
               const isHidden = msg.hidden;
               
               // Discord/Slack grouping logic

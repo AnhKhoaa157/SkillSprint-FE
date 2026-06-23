@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { createSepayPayment, getPaymentDetail } from "../../../api/billing/sepayPaymentService";
 import { getMe } from "../../../api/utilities/meService";
 import type { SepayPaymentCreateResponse, CreateSepayPaymentRequest } from "../../../api/core/skillSprintModels";
-import { listSubscriptionPlans, STATIC_FALLBACK_PLANS, formatPlanPrice, isFeatureEnabled, resolvePlanFeatures, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/admin/adminSubscriptionPlansService";
+import { listSubscriptionPlans, formatPlanPrice, isFeatureEnabled, resolvePlanFeatures, type PublicPlanResponse, type PublicPlanFeature } from "../../../api/admin/adminSubscriptionPlansService";
 
 const F = "'Plus Jakarta Sans','Inter',sans-serif";
 const OG = "#FF6B00";
@@ -15,11 +15,8 @@ const OG = "#FF6B00";
 export type PlanId = "FREE" | "SKILL_BUILDER" | "PREMIUM";
 
 /**
- * Normalized view-model for a pricing card. The SINGLE SOURCE OF TRUTH is the BE
- * `listSubscriptionPlans()` response. The shared STATIC_FALLBACK_PLANS (from the
- * service) is used only while the request is in flight or if the API returns
- * nothing — purely to avoid layout flicker. Once real data arrives it REPLACES
- * the fallback (never appended).
+ * Normalized view-model for a pricing card. The single source of truth is the BE
+ * `listSubscriptionPlans()` response.
  */
 interface DisplayPlan {
   planId: string;              // BE UUID, or a synthetic "__*" key for fallback plans
@@ -30,7 +27,7 @@ interface DisplayPlan {
   features: PublicPlanFeature[]; // featureName + enabled
   benefits: string[];          // marketing bullet strings (jsonb string[] on the plan)
   isFree: boolean;
-  synthetic: boolean;          // true for fallback plans → pay via planType, not planId
+  synthetic: boolean;
 }
 
 function toDisplayPlan(p: PublicPlanResponse): DisplayPlan {
@@ -247,8 +244,7 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     pollingRef.current = setInterval(doPollingCheck, POLL_INTERVAL_MS);
   }, [doPollingCheck]);
 
-  // ── Single source of truth: BE plans, sorted by price; static only as fallback ──
-  const displayPlans: DisplayPlan[] = (availablePlans.length > 0 ? availablePlans : STATIC_FALLBACK_PLANS)
+  const displayPlans: DisplayPlan[] = availablePlans
     .map(toDisplayPlan)
     .sort((a, b) => a.monthlyPrice - b.monthlyPrice);
 
@@ -283,7 +279,6 @@ export function PricingModal({ isOpen, onClose, onSuccess, initialPlan = "premiu
     setErrorStep(null);
 
     try {
-      // Prefer the BE UUID; synthetic fallback plans pay via the legacy planType enum.
       const payload: CreateSepayPaymentRequest = plan.synthetic
         ? { planType: isTopTier ? "PREMIUM" : "SKILL_BUILDER" }
         : { planId: plan.planId };

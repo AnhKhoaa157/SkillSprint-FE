@@ -9,14 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../../../components/ui/dialog";
-import { Input } from "../../../../components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../../../../components/ui/dropdown-menu";
 import { Button } from "../../../../components/ui/button";
 import { Textarea } from "../../../../components/ui/textarea";
 import {
@@ -40,7 +32,6 @@ import {
   Plus,
   FileText,
   BarChart3,
-  MoreHorizontal,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {

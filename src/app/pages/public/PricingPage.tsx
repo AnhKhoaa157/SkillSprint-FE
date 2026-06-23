@@ -11,7 +11,6 @@ import { PublicNavbar } from "../components/PublicNavbar";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   listSubscriptionPlans,
-  STATIC_FALLBACK_PLANS,
   formatPlanPrice,
   resolvePlanFeatures,
   type PublicPlanResponse
@@ -115,8 +114,8 @@ export default function UltraPremiumPricingPage() {
     let isMounted = true;
     setLoadingPlans(true);
     listSubscriptionPlans()
-      .then(data => { if (isMounted) setPlans(data.length > 0 ? data : STATIC_FALLBACK_PLANS); })
-      .catch(() => { if (isMounted) setPlans(STATIC_FALLBACK_PLANS); })
+      .then(data => { if (isMounted) setPlans(data); })
+      .catch(() => { if (isMounted) setPlans([]); })
       .finally(() => { if (isMounted) setLoadingPlans(false); });
     return () => { isMounted = false; };
   }, []);
