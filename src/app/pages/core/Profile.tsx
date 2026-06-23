@@ -681,19 +681,18 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
     career_premium: paidPlans[1] ?? null,
   };
 
-  // Dynamic plan names from BE; fall back to static label if not loaded yet
+  // Dynamic plan names from BE; use generic UI labels only when metadata is not loaded.
   const planLabel: Record<PlanId,string> = {
     starter:        planByKey.starter?.planName        ?? "Starter",
     skill_builder:  planByKey.skill_builder?.planName  ?? "Skill Builder",
     career_premium: planByKey.career_premium?.planName ?? "Career Premium",
   };
 
-  // Dynamic price labels from BE via the shared localization utility ("89.000 đ" /
-  // "Miễn phí"); fall back to static if plans not loaded yet.
+  // Dynamic price labels from BE via the shared localization utility.
   const planDisplayPrice: Record<PlanId,string> = {
-    starter:        "Miễn phí",
-    skill_builder:  planByKey.skill_builder  ? formatPlanPrice(planByKey.skill_builder.monthlyPrice, planByKey.skill_builder.currency)   : "89.000 đ",
-    career_premium: planByKey.career_premium ? formatPlanPrice(planByKey.career_premium.monthlyPrice, planByKey.career_premium.currency) : "199.000 đ",
+    starter:        planByKey.starter ? formatPlanPrice(planByKey.starter.monthlyPrice, planByKey.starter.currency) : "Chưa có dữ liệu",
+    skill_builder:  planByKey.skill_builder  ? formatPlanPrice(planByKey.skill_builder.monthlyPrice, planByKey.skill_builder.currency) : "Chưa có dữ liệu",
+    career_premium: planByKey.career_premium ? formatPlanPrice(planByKey.career_premium.monthlyPrice, planByKey.career_premium.currency) : "Chưa có dữ liệu",
   };
   const planPriceSub: Record<PlanId,string|null> = {
     starter:        null,
@@ -701,16 +700,10 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
     career_premium: "/ tháng",
   };
 
-  // Dynamic feature lists from BE (featureName + enabled); fall back to static if not loaded
-  const staticStarterFeatures: PublicPlanFeature[] = [
-    { featureKey: "fallback_roadmaps", featureName: "Tối đa 3 lộ trình" },
-    { featureKey: "fallback_pomodoro", featureName: "Công cụ Pomodoro cơ bản" },
-    { featureKey: "fallback_community", featureName: "Tham gia cộng đồng" },
-  ];
   // Resolve via the shared normalizer so BE naming/shape drift (features /
   // planFeatures / featureList; string or object elements) doesn't blank the list.
   const planFeatureList: Record<PlanId,PublicPlanFeature[]> = {
-    starter:        planByKey.starter        ? resolvePlanFeatures(planByKey.starter)        : staticStarterFeatures,
+    starter:        resolvePlanFeatures(planByKey.starter),
     skill_builder:  resolvePlanFeatures(planByKey.skill_builder),
     career_premium: resolvePlanFeatures(planByKey.career_premium),
   };

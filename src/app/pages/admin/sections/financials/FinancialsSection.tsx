@@ -3,10 +3,7 @@ import { motion } from "motion/react";
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
-  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -46,11 +43,6 @@ export function Sparkline({ data, color, width = 80, height = 28 }: { data: numb
   );
 }
 
-const UNIT_ECON_DATA = [
-  { label: "CAC", value: 40000, fill: "#475569" },
-  { label: "LTV", value: 408000, fill: "#FF6B00" },
-];
-
 /* ─────────────────────────────────────────────────────────
    Hàm Helper format tiền tệ chuẩn Việt Nam
 ───────────────────────────────────────────────────────── */
@@ -89,18 +81,6 @@ function CustomTooltip({ active, payload, label }: any) {
         </p>
       ))}
     </div>
-  );
-}
-
-function UnitEconBar(props: any) {
-  const { x, y, width, height, label } = props;
-  const isLTV = label === "LTV";
-  return (
-    <rect x={x} y={y} width={width} height={height}
-      fill={isLTV ? ACCENT : "#94A3B8"}
-      rx={6} ry={6}
-      style={{ filter: isLTV ? "drop-shadow(0 0 10px rgba(255,107,0,0.45))" : "none" }}
-    />
   );
 }
 

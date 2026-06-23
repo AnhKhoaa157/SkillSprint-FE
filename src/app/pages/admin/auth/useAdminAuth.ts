@@ -18,7 +18,7 @@ import { PW_RULES, scorePassword, type View } from "./config";
  */
 export function useAdminAuth() {
   // ── Login state ──────────────────────────────────────────────────────────────
-  const [email, setEmail] = useState("admin@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [showPwd, setShowPwd] = useState(false);
