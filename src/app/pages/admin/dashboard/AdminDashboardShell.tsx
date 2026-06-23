@@ -7,7 +7,6 @@ import AdminHealth from "../sections/health";
 import AdminFeedback from "../sections/feedback";
 import AdminUsers from "../sections/users";
 import FinancialsView from "../sections/financials";
-import { USER_GROWTH_DATA } from "../sections/financials/mocks";
 import PaymentsView from "../sections/payments";
 import SubscriptionPlansView from "../sections/subscriptionPlans";
 import AdminSystemSection from "../sections/system/AdminSystemSection";
@@ -15,30 +14,6 @@ import AdminLeaderboard from "../sections/leaderboard";
 import AdminCommunityModeration from "../sections/community/AdminCommunityModeration";
 import AdminCommunityRooms from "../sections/community/AdminCommunityRooms";
 import healthService from "../../../../api/system/healthService";
-
-function toCsv(rows: Record<string, string | number>[]) {
-  if (!rows.length) return "";
-  const headers = Object.keys(rows[0]);
-  const escapeCell = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
-  const lines = [headers.join(",")];
-  rows.forEach((row) => {
-    lines.push(headers.map((h) => escapeCell(row[h] ?? "")).join(","));
-  });
-  return lines.join("\n");  
-}
-
-function downloadCsv(filename: string, rows: Record<string, string | number>[]) {
-  const csv = toCsv(rows);
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  URL.revokeObjectURL(url);
-}
 
 /** Navbar profile avatar. Renders a strictly square, cropped circular image and
  *  falls back to the styled initial circle on a missing/broken source. Keeping the
@@ -136,14 +111,7 @@ export default function AdminDashboard() {
 
   const handleExport = () => {
     if (activeNav === "financials") {
-      downloadCsv("admin-financials.csv", USER_GROWTH_DATA.map((point) => ({
-        week: point.week,
-        total: point.total,
-        organic: point.organic,
-        paid: point.paid,
-        referral: point.referral,
-      })));
-      setActionMessage("Đã xuất dữ liệu Tài chính.");
+      setActionMessage("Xuất CSV tài chính chờ nối dữ liệu thật từ API.");
       return;
     }
 
