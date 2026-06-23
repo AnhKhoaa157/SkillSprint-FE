@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   Search, Plus, Users, Hash, Shield, MessageSquare, Lock, ArrowLeft,
-  Compass, Star, Sparkles, Calendar, Flame, MailCheck, X,
+  Compass, Star, Sparkles, Calendar, CalendarDays, Flame, MailCheck, X,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
