@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MoreHorizontal, Pencil, Send, Trash, X } from "lucide-react";
+import { Flag, MoreHorizontal, Pencil, Send, Trash, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
 import { Input } from "../../../components/ui/input";
 import { toast } from "sonner";
@@ -32,6 +32,7 @@ export function CommentSection({ postId, initialCommentCount, onCommentAdded, on
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [reportingId, setReportingId] = useState<string | null>(null);
 
   const currentUser = getStoredUserProfile();
   const currentUserId = getStoredUserId();
@@ -126,6 +127,22 @@ export function CommentSection({ postId, initialCommentCount, onCommentAdded, on
     }
   };
 
+  const handleReport = async (commentId: string) => {
+    const reason = window.prompt("Nhập lý do báo cáo bình luận này:");
+    const trimmedReason = reason?.trim();
+    if (!trimmedReason) return;
+
+    setReportingId(commentId);
+    try {
+      await communityService.reportComment(commentId, { reason: trimmedReason });
+      toast.success("Đã gửi báo cáo bình luận");
+    } catch (err: any) {
+      toast.error(err.message || "Không thể báo cáo bình luận");
+    } finally {
+      setReportingId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <form onSubmit={handleSubmit} className="flex items-center gap-3">
@@ -200,6 +217,18 @@ export function CommentSection({ postId, initialCommentCount, onCommentAdded, on
                       {comment.content}
                     </p>
                   </div>
+
+                  {currentUserId !== comment.author.userId && (
+                    <button
+                      type="button"
+                      disabled={reportingId === comment.commentId}
+                      onClick={() => handleReport(comment.commentId)}
+                      className="mt-1.5 flex h-7 w-7 items-center justify-center rounded-full text-slate-400 opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 disabled:opacity-40"
+                      title="Báo cáo bình luận"
+                    >
+                      <Flag className="h-3.5 w-3.5" />
+                    </button>
+                  )}
 
                   {currentUserId === comment.author.userId && (
                     <DropdownMenu>

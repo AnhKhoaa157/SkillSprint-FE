@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   Search, Plus, Users, Hash, Shield, MessageSquare, Lock, ArrowLeft,
@@ -12,12 +12,43 @@ import { vi } from "date-fns/locale";
 import { motion, AnimatePresence } from "motion/react";
 
 import communityRoomService from "../../../api/community/communityRoomService";
+import { getCurrentSubscription } from "../../../api/billing/subscriptionsService";
 import type {
   CommunityRoomResponse,
   CommunityRoomMode,
   CommunityRoomInviteResponse,
   CreateCommunityRoomRequest
 } from "../../../api/community/communityRoomTypes";
+
+const UPGRADE_REQUIRED_MESSAGE = "Vui lòng nâng cấp gói để sử dụng tính năng này";
+const UPGRADE_REQUIRED_TOAST_ID = "community-rooms-upgrade-required";
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function isUpgradeRequiredError(error: unknown): boolean {
+  const maybeError = error as { status?: number; response?: { status?: number }; message?: string };
+  const status = maybeError?.status ?? maybeError?.response?.status;
+  const message = String(maybeError?.message ?? "").toLowerCase();
+
+  return (
+    status === 402 ||
+    status === 403 ||
+    message.includes("nâng cấp") ||
+    message.includes("nang cap") ||
+    message.includes("upgrade")
+  );
+}
+
+function showCommunityRoomsError(error: unknown, fallback: string): void {
+  if (isUpgradeRequiredError(error)) {
+    toast.error(UPGRADE_REQUIRED_MESSAGE, { id: UPGRADE_REQUIRED_TOAST_ID });
+    return;
+  }
+
+  toast.error(getErrorMessage(error, fallback));
+}
 
 /* ── Room banner gradients ── */
 const ROOM_PALETTES = [
@@ -51,7 +82,7 @@ function CreateRoomModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onCl
       toast.success("Tạo phòng thành công!");
       onSuccess(); onClose();
     } catch (err: any) {
-      toast.error(err.message || "Không thể tạo phòng");
+      showCommunityRoomsError(err, "Không thể tạo phòng");
     } finally { setLoading(false); }
   };
 
@@ -216,7 +247,38 @@ export default function CommunityRooms() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const didMountSearchEffect = useRef(false);
+  const [subscriptionChecked, setSubscriptionChecked] = useState(false);
+  const [isFreePlan, setIsFreePlan] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let active = true;
+
+    getCurrentSubscription()
+      .then((subscription) => {
+        if (!active) return;
+        const free = subscription.plan?.planType === "FREE";
+        setIsFreePlan(free);
+        if (free) {
+          setRooms([]);
+          setPendingInvites([]);
+          setHasMore(false);
+          setLoading(false);
+          toast.error(UPGRADE_REQUIRED_MESSAGE, { id: UPGRADE_REQUIRED_TOAST_ID });
+        }
+      })
+      .catch(() => {
+        if (active) setIsFreePlan(false);
+      })
+      .finally(() => {
+        if (active) setSubscriptionChecked(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const fetchInvites = async () => {
     try {
@@ -224,7 +286,7 @@ export default function CommunityRooms() {
       const res = await communityRoomService.getMyInvites(0, 20);
       setPendingInvites(res.items.filter((invite) => invite.status === "PENDING"));
     } catch (err: any) {
-      toast.error(err.message || "Không thể tải lời mời phòng");
+      showCommunityRoomsError(err, "Không thể tải lời mời phòng");
     } finally {
       setInvitesLoading(false);
     }
@@ -240,31 +302,45 @@ export default function CommunityRooms() {
       if (isLoadMore) { setRooms(prev => [...prev, ...res.items]); } else { setRooms(res.items); }
       setPage(res.page); setHasMore(!res.last);
     } catch (err: any) {
-      toast.error(err.message || "Lỗi tải danh sách phòng");
+      if (!isLoadMore) setRooms([]);
+      setHasMore(false);
+      showCommunityRoomsError(err, "Lỗi tải danh sách phòng");
     } finally { setLoading(false); }
   };
 
   useEffect(() => {
+    if (!subscriptionChecked || isFreePlan) return;
     fetchRooms();
     if (activeTab === "MY_ROOMS") {
       fetchInvites();
     }
-  }, [activeTab, modeFilter]);
+  }, [activeTab, modeFilter, subscriptionChecked, isFreePlan]);
 
   useEffect(() => {
+    if (!didMountSearchEffect.current) {
+      didMountSearchEffect.current = true;
+      return;
+    }
+    if (!subscriptionChecked || isFreePlan || activeTab !== "DISCOVER") return;
+
     const delay = setTimeout(() => {
       fetchRooms();
     }, 500);
     return () => clearTimeout(delay);
-  }, [search]);
+  }, [activeTab, search, subscriptionChecked, isFreePlan]);
 
   const handleJoinRoom = async (roomId: string) => {
+    if (isFreePlan) {
+      toast.error(UPGRADE_REQUIRED_MESSAGE, { id: UPGRADE_REQUIRED_TOAST_ID });
+      return;
+    }
+
     try {
       await communityRoomService.joinRoom(roomId);
       toast.success("Đã tham gia phòng");
       navigate(`/app/community/rooms/${roomId}`);
     } catch (err: any) {
-      toast.error(err.message || "Không thể tham gia phòng");
+      showCommunityRoomsError(err, "Không thể tham gia phòng");
     }
   };
 
@@ -277,7 +353,7 @@ export default function CommunityRooms() {
       window.dispatchEvent(new Event("community-room-invites-changed"));
       navigate(`/app/community/rooms/${acceptedRoom.roomId}`);
     } catch (err: any) {
-      toast.error(err.message || "Không thể chấp nhận lời mời");
+      showCommunityRoomsError(err, "Không thể chấp nhận lời mời");
     } finally {
       setInviteActionId(null);
     }
@@ -291,11 +367,42 @@ export default function CommunityRooms() {
       setPendingInvites((prev) => prev.filter((invite) => invite.inviteId !== inviteId));
       window.dispatchEvent(new Event("community-room-invites-changed"));
     } catch (err: any) {
-      toast.error(err.message || "Không thể từ chối lời mời");
+      showCommunityRoomsError(err, "Không thể từ chối lời mời");
     } finally {
       setInviteActionId(null);
     }
   };
+
+  if (subscriptionChecked && isFreePlan) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/app/community")} className="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-full shrink-0 transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Phòng Cộng Đồng</h1>
+              <p className="text-slate-500 text-sm mt-1 font-medium">Khám phá và tham gia các không gian học tập chung</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-orange-100 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B00]">
+            <Lock className="h-6 w-6" />
+          </div>
+          <h2 className="text-lg font-extrabold text-slate-900">Phòng cộng đồng dành cho gói nâng cấp</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
+            Vui lòng nâng cấp gói để tạo phòng, tham gia phòng và sử dụng chat realtime.
+          </p>
+          <Button onClick={() => navigate("/app/community")} className="mt-5 rounded-full bg-slate-900 px-6 text-white hover:bg-slate-800">
+            Quay lại bảng tin
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
