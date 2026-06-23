@@ -100,13 +100,20 @@ export async function generateRoadmap(workspaceId: string): Promise<GenerateRoad
  * Trả về null nếu backend trả 200 nhưng data = null (chưa generate).
  */
 export async function getMyRoadmap(workspaceId: string): Promise<RoadmapResponse | null> {
-  const res = await requestJson<RoadmapResponse>(`/api/workspaces/${workspaceId}/roadmaps/current`, {
-    method: "GET",
-  });
+  try {
+    const res = await requestJson<RoadmapResponse>(`/api/workspaces/${workspaceId}/roadmaps/current`, {
+      method: "GET",
+    });
 
-  if (!res.data) return null;
+    if (!res.data) return null;
 
-  return res.data;
+    return res.data;
+  } catch (error: any) {
+    if (error?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 // 👇 Alias export — MUST be declared BELOW the actual function to avoid hoisting issues.
