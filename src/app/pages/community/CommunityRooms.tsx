@@ -12,7 +12,7 @@ import { vi } from "date-fns/locale";
 import { motion, AnimatePresence } from "motion/react";
 
 import communityRoomService from "../../../api/community/communityRoomService";
-import { getCurrentSubscription } from "../../../api/billing/subscriptionsService";
+import { useSubscription } from "../../../hooks/useSubscription";
 import type {
   CommunityRoomResponse,
   CommunityRoomMode,
@@ -248,37 +248,20 @@ export default function CommunityRooms() {
   const [hasMore, setHasMore] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const didMountSearchEffect = useRef(false);
-  const [subscriptionChecked, setSubscriptionChecked] = useState(false);
-  const [isFreePlan, setIsFreePlan] = useState(false);
+  const { planId, loading: subscriptionLoading } = useSubscription();
+  const isFreePlan = planId === "FREE";
+  const subscriptionChecked = !subscriptionLoading;
   const navigate = useNavigate();
 
   useEffect(() => {
-    let active = true;
-
-    getCurrentSubscription()
-      .then((subscription) => {
-        if (!active) return;
-        const free = subscription.plan?.planType === "FREE";
-        setIsFreePlan(free);
-        if (free) {
-          setRooms([]);
-          setPendingInvites([]);
-          setHasMore(false);
-          setLoading(false);
-          toast.error(UPGRADE_REQUIRED_MESSAGE, { id: UPGRADE_REQUIRED_TOAST_ID });
-        }
-      })
-      .catch(() => {
-        if (active) setIsFreePlan(false);
-      })
-      .finally(() => {
-        if (active) setSubscriptionChecked(true);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+    if (subscriptionChecked && isFreePlan) {
+      setRooms([]);
+      setPendingInvites([]);
+      setHasMore(false);
+      setLoading(false);
+      toast.error(UPGRADE_REQUIRED_MESSAGE, { id: UPGRADE_REQUIRED_TOAST_ID });
+    }
+  }, [subscriptionChecked, isFreePlan]);
 
   const fetchInvites = async () => {
     try {
