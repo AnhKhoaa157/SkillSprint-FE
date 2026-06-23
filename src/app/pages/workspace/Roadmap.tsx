@@ -717,20 +717,32 @@ export default function Roadmap() {
               <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <FileCheck className="h-4.5 w-4.5 text-[#FF7E21]" /> Tài nguyên học tập chính thức
               </div>
-              {stepResources.length > 0 ? (
+              {stepResources.filter(r => !toText(r.title)?.includes("Tài liệu gốc liên quan")).length > 0 ? (
                 <div className="grid gap-3.5">
-                  {stepResources.map((resource, resourceIndex) => {
+                  {stepResources
+                    .filter(r => !toText(r.title)?.includes("Tài liệu gốc liên quan"))
+                    .map((resource, resourceIndex) => {
+                    const titleStr = toText(resource.title);
+                    const isQuizResource = titleStr?.includes("Bài tập thực hành");
                     const meta = getResourceMeta(resource);
                     const ResourceIcon = meta.icon;
-                    const hasUrl = Boolean(toText(resource.url));
+                    const matchedTask = tasks.find((t) => t.roadmapStepId === getStepKey(step));
+                    const hasUrl = Boolean(toText(resource.url)) || isQuizResource;
 
                     return (
                       <a
-                        key={`panel-${step.id}-${resourceIndex}-${toText(resource.title) || "res"}`}
-                        href={toText(resource.url) || "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => { if (!hasUrl) e.preventDefault(); }}
+                        key={`panel-${step.id}-${resourceIndex}-${titleStr || "res"}`}
+                        href={isQuizResource && matchedTask?.taskId ? `/app/learning/course?taskId=${matchedTask.taskId}&tab=quiz` : (toText(resource.url) || "#")}
+                        target={isQuizResource ? undefined : "_blank"}
+                        rel={isQuizResource ? undefined : "noreferrer"}
+                        onClick={(e) => { 
+                          if (isQuizResource && matchedTask?.taskId) {
+                            e.preventDefault();
+                            navigate(`/app/learning/course?taskId=${matchedTask.taskId}&tab=quiz`);
+                          } else if (!toText(resource.url)) {
+                            e.preventDefault();
+                          } 
+                        }}
                         className={`group flex items-start gap-3.5 rounded-xl border border-slate-200/80 bg-white p-4 transition-all duration-200 ${
                           hasUrl ? 'hover:border-orange-200 hover:shadow-[0_4px_16px_rgba(255,126,33,0.04)] cursor-pointer' : 'cursor-default'
                         }`}
@@ -770,7 +782,7 @@ export default function Roadmap() {
                   <div className="flex items-center gap-2 mb-4">
                     <FileText size={16} className="text-indigo-500" />
                     <div>
-                      <h3 className="text-xs font-extrabold tracking-tight text-slate-800">Tài liệu tham khảo</h3>
+                      <h3 className="text-xs font-extrabold tracking-tight text-slate-800">Tài liệu gốc</h3>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Từ Workspace của bạn</p>
                     </div>
                   </div>
