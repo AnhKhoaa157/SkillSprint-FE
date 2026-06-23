@@ -186,7 +186,7 @@ export default function CommunityRoomChat() {
 
   // Modals state
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteUserId, setInviteUserId] = useState("");
 
   const [createPinModalOpen, setCreatePinModalOpen] = useState(false);
   const [newPin, setNewPin] = useState({ title: "", content: "", linkUrl: "" });
@@ -244,10 +244,10 @@ export default function CommunityRoomChat() {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await communityRoomService.inviteMember(roomId!, { inviteeEmail: inviteEmail });
+      await communityRoomService.inviteMember(roomId!, { inviteeUserId: inviteUserId });
       toast.success("Đã gửi lời mời tham gia phòng!");
       setInviteModalOpen(false);
-      setInviteEmail("");
+      setInviteUserId("");
     } catch (err: any) {
       toast.error(err.message || "Lỗi khi mời thành viên");
     }
@@ -923,20 +923,20 @@ export default function CommunityRoomChat() {
             >
               <div className="absolute top-0 left-0 right-0 h-1 bg-[#FF6B00]" />
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-slate-900">Mới thành viên</h3>
+                <h3 className="text-base font-bold text-slate-900">Mời thành viên</h3>
                 <button type="button" onClick={() => setInviteModalOpen(false)} className="text-slate-400 hover:text-slate-655 transition">
                   <X className="w-4 h-4" />
                 </button>
               </div>
               <form onSubmit={handleInvite} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-405 mb-1">Email người tham gia</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-405 mb-1">User ID người được mời</label>
                   <Input
                     required
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="user@example.com"
+                    type="text"
+                    value={inviteUserId}
+                    onChange={(e) => setInviteUserId(e.target.value)}
+                    placeholder="Nhập User ID"
                     className="h-10 rounded-xl border-slate-200 focus-visible:ring-1 focus-visible:ring-[#FF6B00]"
                   />
                 </div>

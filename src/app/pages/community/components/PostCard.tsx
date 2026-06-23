@@ -13,18 +13,14 @@ import type { CommunityPost } from "../../../../api/community/communityTypes";
 import communityService from "../../../../api/community/communityService";
 import { getStoredUserId } from "../../../../api/auth/authService";
 import { CommentSection } from "./CommentSection";
-
+import { RankBadge } from "./RankBadge";
+import { normalizeHashtagList, parseHashtags } from "../communityHashtags";
 interface PostCardProps {
   post: CommunityPost;
   onPostUpdated: (updatedPost: CommunityPost) => void;
   onPostDeleted?: (postId: string) => void;
 }
 
-function parseHashtags(input: string): string[] {
-  return Array.from(
-    new Set(input.split(/[\s,]+/).map(tag => tag.replace(/^#+/, "").trim()).filter(Boolean)),
-  );
-}
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -35,7 +31,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   const [isLiking, setIsLiking] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
-  const [editHashtags, setEditHashtags] = useState((post.hashtags ?? []).join(" "));
+  const [editHashtags, setEditHashtags] = useState(normalizeHashtagList(post.hashtags).join(" "));
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -43,6 +39,12 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   const [isReporting, setIsReporting] = useState(false);
 
   const isAuthor = getStoredUserId() === post.author.userId;
+  const displayContent = String(post.content ?? "").trim();
+  const normalizedHashtags = React.useMemo(() => normalizeHashtagList(post.hashtags), [post.hashtags]);
+  const isShortPost = displayContent.length < 80;
+  const canSaveEdit = editContent.trim().length > 0 || parseHashtags(editHashtags).length > 0;
+
+  if (!displayContent && normalizedHashtags.length === 0) return null;
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -74,14 +76,27 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
     } finally { setIsReporting(false); }
   };
 
-  const startEditing = () => { setEditContent(post.content); setEditHashtags((post.hashtags ?? []).join(" ")); setIsEditing(true); };
+  const startEditing = () => {
+    setEditContent(post.content);
+    setEditHashtags(normalizeHashtagList(post.hashtags).join(" "));
+    setIsEditing(true);
+  };
 
   const handleSaveEdit = async () => {
     const content = editContent.trim();
-    if (!content) { toast.error("Nội dung bài viết không được để trống"); return; }
+    const parsedHashtags = parseHashtags(editHashtags);
+
+    if (!content && parsedHashtags.length === 0) {
+      toast.error("Nội dung bài viết hoặc hashtag không được để trống");
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const updated = await communityService.updatePost(post.postId, { content, hashtags: parseHashtags(editHashtags) });
+      const updated = await communityService.updatePost(post.postId, {
+        content,
+        hashtags: parsedHashtags,
+      });
       onPostUpdated(updated);
       setIsEditing(false);
       toast.success(updated.status === "PENDING_MODERATION" ? "Bài viết đang chờ duyệt." : "Đã cập nhật bài viết");
@@ -115,62 +130,57 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   };
 
   return (
-    <article className="overflow-hidden rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-2 sm:gap-3 px-3 sm:px-5 pt-3.5 sm:pt-4 pb-2.5 sm:pb-3">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          {/* Avatar */}
-          <div className="relative shrink-0">
-            <Avatar className="h-9 w-9 sm:h-11 sm:w-11 ring-2 ring-white shadow-md">
+    <article className="overflow-hidden rounded-[18px] border border-slate-200/80 bg-white shadow-[0_4px_16px_rgba(15,23,42,0.04)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+      <div className="p-4 sm:p-5">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <Avatar className="h-11 w-11 shrink-0">
               <AvatarImage src={post.author.avatarUrl ?? undefined} />
               <AvatarFallback className="bg-gradient-to-br from-[#FF6B00] to-orange-400 text-[13px] sm:text-[15px] font-black text-white">
                 {post.author.fullName.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full bg-emerald-400 border-2 border-white" />
-          </div>
-
-          {/* Author info */}
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[14px] font-bold text-slate-900 leading-tight">{post.author.fullName}</span>
-              <span className="inline-flex items-center rounded-[4px] bg-[#FF6B00] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white leading-none">
-                Học viên
-              </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="truncate text-[15px] font-bold text-slate-950">
+                  {post.author.fullName}
+                </h3>
+                <RankBadge rank={post.author.allTimeRank} />
+              </div>
+              <p className="mt-0.5 text-[12px] font-medium text-slate-500">
+                {timeAgo(post.createdAt)}
+              </p>
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">{timeAgo(post.createdAt)}</p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button type="button" onClick={() => setIsReportOpen(v => !v)} title="Báo cáo"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-300 hover:bg-red-50 hover:text-red-500 transition">
+              <Flag className="h-3.5 w-3.5" />
+            </button>
+            {isAuthor && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" disabled={isDeleting}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-slate-300 hover:bg-slate-100 hover:text-slate-700 transition disabled:opacity-50">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-lg min-w-[140px]">
+                  <DropdownMenuItem onClick={startEditing} className="cursor-pointer text-[13px] font-semibold text-slate-700 focus:bg-slate-50">
+                    <Pencil className="mr-2 h-4 w-4 text-slate-500" /> Chỉnh sửa
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDelete} className="cursor-pointer text-[13px] font-semibold text-red-600 focus:bg-red-50">
+                    <Trash className="mr-2 h-4 w-4 text-red-500" /> Xóa bài viết
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-0.5 shrink-0">
-          <button type="button" onClick={() => setIsReportOpen(v => !v)} title="Báo cáo"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-300 hover:bg-red-50 hover:text-red-500 transition">
-            <Flag className="h-3.5 w-3.5" />
-          </button>
-          {isAuthor && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button type="button" disabled={isDeleting}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-slate-300 hover:bg-slate-100 hover:text-slate-700 transition disabled:opacity-50">
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-lg min-w-[140px]">
-                <DropdownMenuItem onClick={startEditing} className="cursor-pointer text-[13px] font-semibold text-slate-700 focus:bg-slate-50">
-                  <Pencil className="mr-2 h-4 w-4 text-slate-500" /> Chỉnh sửa
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="cursor-pointer text-[13px] font-semibold text-red-600 focus:bg-red-50">
-                  <Trash className="mr-2 h-4 w-4 text-red-500" /> Xóa bài viết
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </div>
-
-      {/* ── Content ── */}
-      <div className="px-3 sm:px-5 pb-3">
+        {/* ── Content ── */}
         {isEditing ? (
           <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <textarea value={editContent} onChange={e => setEditContent(e.target.value)} rows={4}
@@ -186,23 +196,31 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
                 className="h-8 rounded-full px-4 text-[12px] font-bold text-slate-500 hover:bg-slate-100 transition disabled:opacity-50">
                 Hủy
               </button>
-              <button type="button" onClick={handleSaveEdit} disabled={isSaving || !editContent.trim()}
-                className="h-8 rounded-full bg-[#FF6B00] px-5 text-[12px] font-bold text-white hover:bg-[#e85f00] transition disabled:opacity-50">
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={isSaving || !canSaveEdit}
+                className="flex h-9 items-center gap-1.5 rounded-full bg-[#FF6B00] px-4 text-sm font-bold text-white transition hover:bg-[#ea580c] disabled:opacity-50"
+              >
                 {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
               </button>
             </div>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="whitespace-pre-wrap text-[14px] leading-[1.75] text-slate-800">{post.content}</p>
+            <p className="whitespace-pre-wrap text-[14px] leading-[1.75] text-slate-805 break-words">{post.content}</p>
             {post.hashtags && post.hashtags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {post.hashtags.map((tag: string) => (
-                  <span key={tag}
-                    className="inline-flex items-center rounded-full bg-[#FF6B00]/8 border border-[#FF6B00]/20 px-2.5 py-0.5 text-[12px] font-semibold text-[#FF6B00] cursor-pointer hover:bg-[#FF6B00]/15 transition">
-                    #{tag}
-                  </span>
-                ))}
+                {post.hashtags.map((tag: string) => {
+                  const cleaned = tag.replace(/^#+/, "").trim();
+                  if (!cleaned) return null;
+                  return (
+                    <span key={tag}
+                      className="inline-flex items-center rounded-full bg-[#FF6B00]/10 border border-[#FF6B00]/20 px-2.5 py-0.5 text-[12px] font-semibold text-[#FF6B00] cursor-pointer hover:bg-[#FF6B00]/20 transition">
+                      #{cleaned}
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>

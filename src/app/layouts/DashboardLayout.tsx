@@ -215,7 +215,7 @@ function toRelativeTime(dateStr: string): string {
   }
 }
 
-type NotifIconType = "check" | "alert" | "calendar" | "zap" | "bell" | "shield" | "info";
+type NotifIconType = "check" | "alert" | "calendar" | "zap" | "bell" | "shield" | "info" | "user";
 type NotifMeta = {
   iconType: NotifIconType;
   iconBg: string; iconBorder: string; iconColor: string;
@@ -237,10 +237,14 @@ function getNotifMeta(type: string): NotifMeta {
       return { iconType:"alert", iconBg:"#FEF2F2", iconBorder:"#FECACA", iconColor:"#DC2626", label:"Quá hạn", labelColor:"#DC2626", itemBg:"#FFF5F5", leftBorderColor:"#EF4444" };
     case "AI_SCHEDULE_READY":
       return { iconType:"zap", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"AI Lịch học", labelColor:OG, itemBg:CARD };
+    case "COMMUNITY_ROOM_INVITE":
+      return { iconType:"user", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Cộng đồng", labelColor:OG, itemBg:"#FFF7ED", leftBorderColor:OG };
     case "SYSTEM_INFO":
       return { iconType:"shield", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Hệ thống", labelColor:OG, itemBg:CARD, leftBorderColor:OG };
     case "SYSTEM_WARNING":
       return { iconType:"shield", iconBg:"#FFF7ED", iconBorder:"#FED7AA", iconColor:OG, label:"Hệ thống", labelColor:OG, itemBg:CARD, leftBorderColor:OG };
+    case "CONTENT_MODERATION":
+      return { iconType:"alert", iconBg:"#FEF2F2", iconBorder:"#FECACA", iconColor:"#DC2626", label:"Kiểm duyệt cộng đồng", labelColor:"#DC2626", itemBg:"#FFF5F5", leftBorderColor:"#EF4444" };
     default:
       return { iconType:"bell", iconBg:"#EFF6FF", iconBorder:"#BFDBFE", iconColor:"#2563EB", label:"Thông báo", labelColor:"#2563EB", itemBg:CARD };
   }
@@ -535,11 +539,18 @@ export default function DashboardLayout() {
                           meta.iconType === "zap"      ? <Zap             size={15} color={meta.iconColor}/> :
                           meta.iconType === "shield"   ? <Shield          size={15} color={meta.iconColor}/> :
                           meta.iconType === "info"     ? <Info            size={15} color={meta.iconColor}/> :
+                          meta.iconType === "user"     ? <User            size={15} color={meta.iconColor}/> :
                                                          <Bell            size={15} color={meta.iconColor}/>;
                         return (
                           <div
                             key={notif.notificationId}
-                            onClick={() => { if (!notif.read) void markAsRead(notif.notificationId); }}
+                            onClick={() => {
+                              if (!notif.read) void markAsRead(notif.notificationId);
+                              if (notif.type === "COMMUNITY_ROOM_INVITE") {
+                                setNotifOpen(false);
+                                navigate("/app/community/rooms");
+                              }
+                            }}
                             style={{
                               padding:"12px 15px",
                               borderBottom:`1px solid ${BDR}`,

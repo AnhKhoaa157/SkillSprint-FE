@@ -7,8 +7,9 @@ import type { CommunityPost } from "../../../api/community/communityTypes";
 import { toast } from "sonner";
 import {
   Hash, Home, MessageSquare, RefreshCw, Search, TrendingUp,
-  X, Pencil, ChevronDown, BookOpenCheck, CircleCheck, Flame, Users,
+  X, Pencil, ChevronDown, BookOpenCheck, CircleCheck, Flame, Users, Bell, Bookmark, CalendarDays, Sparkles
 } from "lucide-react";
+import { normalizeHashtag, normalizeHashtagValue } from "./communityHashtags";
 
 const PAGE_SIZE = 10;
 const LOAD_ERROR_TOAST_ID = "community-feed-load-error";
@@ -27,7 +28,6 @@ function Sidebar({ onTopicSelect, activeHashtag }: SidebarProps) {
   return (
     <aside className="hidden xl:flex flex-col w-[248px] shrink-0">
       <div className="sticky top-6 space-y-2">
-        {/* Navigation card */}
         <div className="overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-sm">
           <div className="px-4 py-3 border-b border-slate-100">
             <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Cộng đồng</p>
@@ -46,7 +46,6 @@ function Sidebar({ onTopicSelect, activeHashtag }: SidebarProps) {
           </nav>
         </div>
 
-        {/* Topic channels — Discord-style */}
         <div className="overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-sm">
           <button type="button" onClick={() => setTopicsOpen(v => !v)}
             className="flex w-full items-center justify-between px-4 py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -88,7 +87,6 @@ function RightPanel({ trendingHashtags, onTopicSelect }: RightPanelProps) {
   return (
     <aside className="hidden xl:flex flex-col w-[248px] shrink-0">
       <div className="sticky top-6 space-y-3">
-        {/* Trending */}
         <div className="overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-sm">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -103,7 +101,7 @@ function RightPanel({ trendingHashtags, onTopicSelect }: RightPanelProps) {
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="text-[11px] font-black text-slate-400 w-5 shrink-0 text-right">#{idx + 1}</span>
                   <div className="min-w-0">
-                    <p className="text-[13px] font-bold text-slate-800 truncate">#{item.tag}</p>
+                    <p className="text-[13px] font-bold text-slate-800 truncate">{normalizeHashtag(item.tag)}</p>
                     {item.count > 0 && (
                       <p className="text-[11px] text-slate-400">{item.count} bài viết</p>
                     )}
@@ -115,14 +113,13 @@ function RightPanel({ trendingHashtags, onTopicSelect }: RightPanelProps) {
           </div>
         </div>
 
-        {/* Community rules */}
         <div className="overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-sm">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
             <BookOpenCheck className="h-4 w-4 text-slate-500" />
             <p className="text-[12px] font-black text-slate-700">Nội quy cộng đồng</p>
           </div>
           <div className="p-4 space-y-3">
-            {["Đặt câu hỏi rõ ràng, chi tiết.", "Tôn trọng và lịch sự với nhau.", "Dùng hashtag phù hợp."].map((rule, i) => (
+            {["Đặt câu hỏi rõ ràng, chi tiết.", "Tôn trọng và lịch sự với nhau.", "Dùng hashtag phù hợp."].map((rule) => (
               <div key={rule} className="flex items-start gap-2.5">
                 <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                 <p className="text-[12px] text-slate-600 leading-snug">{rule}</p>
@@ -257,27 +254,60 @@ export default function CommunityPage() {
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedInput = searchInput.trim();
-    if (trimmedInput.startsWith("#")) { setHashtagFilter(trimmedInput.substring(1)); setSearchFilter(""); }
-    else { setSearchFilter(trimmedInput); setHashtagFilter(""); }
+    if (trimmedInput.startsWith("#")) {
+      const normalizedFilter = normalizeHashtagValue(trimmedInput);
+      setHashtagFilter(normalizedFilter);
+      setSearchInput(normalizedFilter ? normalizeHashtag(normalizedFilter) : "");
+      setSearchFilter("");
+    } else {
+      setSearchFilter(trimmedInput);
+      setHashtagFilter("");
+    }
   };
 
-  const handlePostUpdated = (updatedPost: CommunityPost) =>
-    setPosts(prev => prev.map(p => p.postId === updatedPost.postId ? updatedPost : p));
-  const handlePostDeleted = (postId: string) =>
-    setPosts(prev => prev.filter(p => p.postId !== postId));
+  const handlePostUpdated = (updatedPost: CommunityPost) => {
+    setPosts(prev => prev.map(post => post.postId === updatedPost.postId ? updatedPost : post));
+  };
+
+  const handlePostDeleted = (postId: string) => {
+    setPosts(prev => prev.filter(post => post.postId !== postId));
+  };
+
   const handleRetry = () => {
     const isInitialLoad = posts.length === 0;
     fetchPosts(isInitialLoad ? 0 : page + 1, hashtagFilter, searchFilter, isInitialLoad);
   };
+  
   const handleTopicSelect = (topic: string) => {
-    setSearchInput(`#${topic}`); setHashtagFilter(topic); setSearchFilter("");
+    const normalizedTopic = normalizeHashtagValue(topic);
+    if (!normalizedTopic) return;
+    setSearchInput(normalizeHashtag(normalizedTopic));
+    setHashtagFilter(normalizedTopic);
+    setSearchFilter("");
   };
-  const clearFilters = () => { setSearchInput(""); setHashtagFilter(""); setSearchFilter(""); };
+  
+  const clearFilters = () => {
+    setSearchInput("");
+    setHashtagFilter("");
+    setSearchFilter("");
+  };
 
   const trendingHashtags = React.useMemo(() => {
     const counts = new Map<string, number>();
-    posts.forEach(post => post.hashtags?.forEach(tag => counts.set(tag, (counts.get(tag) ?? 0) + 1)));
-    const fromPosts = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([tag, count]) => ({ tag, count }));
+
+    posts.forEach(post => {
+      post.hashtags?.forEach(tag => {
+        const normalizedTag = normalizeHashtagValue(tag);
+        if (!normalizedTag) return;
+        counts.set(normalizedTag, (counts.get(normalizedTag) ?? 0) + 1);
+      });
+    });
+
+    const fromPosts = Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([tag, count]) => ({ tag, count }));
+
     return fromPosts.length > 0 ? fromPosts : QUICK_TOPICS.map(tag => ({ tag, count: 0 }));
   }, [posts]);
 
@@ -291,7 +321,6 @@ export default function CommunityPage() {
         <Sidebar onTopicSelect={handleTopicSelect} activeHashtag={hashtagFilter} />
 
         <main className="min-w-0 space-y-3">
-          {/* Feed header */}
           <div className="overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-sm">
             <div className="px-4 py-4 flex flex-col gap-3">
               <div className="flex items-center justify-between">
@@ -301,7 +330,6 @@ export default function CommunityPage() {
                   </h1>
                   <p className="mt-0.5 text-[11px] sm:text-[12px] text-slate-400">Thảo luận công nghệ & chia sẻ kiến thức</p>
                 </div>
-                {/* Mobile: compact filter + search row */}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {(hashtagFilter || searchFilter) && (
@@ -325,13 +353,11 @@ export default function CommunityPage() {
             </div>
           </div>
 
-          {/* Create post */}
           <CreatePostBox
             openSignal={composerOpenSignal}
             onPostCreated={() => fetchPosts(0, hashtagFilter, searchFilter, true)}
           />
 
-          {/* Feed label */}
           {(hashtagFilter || searchFilter) && (
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
@@ -347,7 +373,6 @@ export default function CommunityPage() {
             </div>
           )}
 
-          {/* Posts */}
           <div className="flex flex-col gap-3">
             {isInitialLoading && [0, 1, 2].map(i => <SkeletonPost key={i} />)}
             {!isInitialLoading && posts.map(post => (

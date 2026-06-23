@@ -25,6 +25,12 @@ vi.mock("../../../../api/utilities/meService", () => ({
   },
 }));
 
+vi.mock("../../../../api/learning/pointService", () => ({
+  default: {
+    getMeSummary: vi.fn(() => Promise.resolve({ allTimeRank: null })),
+  },
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -34,8 +40,8 @@ vi.mock("sonner", () => ({
 }));
 
 async function openComposer() {
-  await userEvent.click(screen.getByRole("button", { name: /User ơi, bạn đang nghĩ gì thế/i }));
-  return screen.findByText("Tạo bài viết thảo luận");
+  await userEvent.click(screen.getByRole("button", { name: /Test ơi, hôm nay bạn học được gì/i }));
+  return screen.findByText(/Tạo bài viết/i);
 }
 
 describe("CreatePostBox", () => {
@@ -59,12 +65,12 @@ describe("CreatePostBox", () => {
   it("should render collapsed composer and open modal with disabled submit button", async () => {
     render(<CreatePostBox onPostCreated={mockOnPostCreated} />);
 
-    expect(screen.getByRole("button", { name: /User ơi, bạn đang nghĩ gì thế/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Test ơi, hôm nay bạn học được gì/i })).toBeInTheDocument();
 
     await openComposer();
 
-    expect(screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Thêm các hashtag (ví dụ: React, SpringBoot...)")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Test ơi, hôm nay bạn học được gì?")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Thêm.*hashtag.*React/i)).toBeInTheDocument();
 
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
     expect(submitBtn).toBeDisabled();
@@ -75,7 +81,7 @@ describe("CreatePostBox", () => {
 
     await openComposer();
 
-    const textarea = screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?");
+    const textarea = screen.getByPlaceholderText("Test ơi, hôm nay bạn học được gì?");
     await userEvent.type(textarea, "Hôm nay tôi học được React Testing Library!");
 
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
@@ -99,8 +105,8 @@ describe("CreatePostBox", () => {
 
     await openComposer();
 
-    const textarea = screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?");
-    const hashtagInput = screen.getByPlaceholderText("Thêm các hashtag (ví dụ: React, SpringBoot...)");
+    const textarea = screen.getByPlaceholderText("Test ơi, hôm nay bạn học được gì?");
+    const hashtagInput = screen.getByPlaceholderText(/Thêm.*hashtag.*React/i);
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
 
     await userEvent.type(textarea, "Hello world");
@@ -136,7 +142,7 @@ describe("CreatePostBox", () => {
 
     await openComposer();
 
-    const textarea = screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?");
+    const textarea = screen.getByPlaceholderText("Test ơi, hôm nay bạn học được gì?");
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
 
     await userEvent.type(textarea, "Sensitive content");
@@ -155,7 +161,7 @@ describe("CreatePostBox", () => {
 
     await openComposer();
 
-    const textarea = screen.getByPlaceholderText("User ơi, bạn đang nghĩ gì thế?");
+    const textarea = screen.getByPlaceholderText("Test ơi, hôm nay bạn học được gì?");
     const submitBtn = screen.getByRole("button", { name: /đăng bài/i });
 
     await userEvent.type(textarea, "Hello world");

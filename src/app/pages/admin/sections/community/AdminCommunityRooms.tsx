@@ -16,7 +16,9 @@ import {
   Eye,
   Pin,
   Trash2,
+  MoreHorizontal,
 } from "lucide-react";
+
 import {
   getAdminCommunityRooms,
   updateAdminCommunityRoomStatus,
@@ -33,6 +35,25 @@ import type {
   CommunityAuthorResponse,
   CommunityPinResponse,
 } from "../../../../../api/admin/adminCommunityTypes";
+
+import { Input } from "../../../../components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
+import { Button } from "../../../../components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../../components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../../components/ui/dialog";
+import { Textarea } from "../../../../components/ui/textarea";
 
 const PAGE_SIZE = 10;
 const MSG_PAGE_SIZE = 30;
@@ -211,6 +232,24 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
   const [pins, setPins] = useState<CommunityPinResponse[]>([]);
   const [loadingPins, setLoadingPins] = useState(false);
 
+  // Dialog State
+  const [noteDialog, setNoteDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    onConfirm: (note: string) => void;
+  }>({ isOpen: false, title: "", onConfirm: () => {} });
+  const [noteText, setNoteText] = useState("");
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+
+  const closeNoteDialog = () => setNoteDialog(prev => ({ ...prev, isOpen: false }));
+  const closeConfirmDialog = () => setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+
   const loadRooms = useCallback(
     async (pageToLoad = page) => {
       setLoading(true);
@@ -270,17 +309,23 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
   }, []);
 
   const deletePin = async (pin: CommunityPinResponse) => {
-    if (!window.confirm("Bạn có chắc muốn xóa mục ghim này?")) return;
-    setActionId(pin.pinId);
-    try {
-      await deleteAdminCommunityRoomPin(pin.roomId, pin.pinId);
-      setPins((prev) => prev.filter((item) => item.pinId !== pin.pinId));
-      toast.success("Đã xóa mục ghim");
-    } catch (error) {
-      toast.error((error as Error).message || "Không thể xóa mục ghim");
-    } finally {
-      setActionId(null);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: "Xóa mục ghim",
+      message: "Bạn có chắc muốn xóa mục ghim này?",
+      onConfirm: async () => {
+        setActionId(pin.pinId);
+        try {
+          await deleteAdminCommunityRoomPin(pin.roomId, pin.pinId);
+          setPins((prev) => prev.filter((item) => item.pinId !== pin.pinId));
+          toast.success("Đã xóa mục ghim");
+        } catch (error) {
+          toast.error((error as Error).message || "Không thể xóa mục ghim");
+        } finally {
+          setActionId(null);
+        }
+      }
+    });
   };
 
   const openRoomDrawer = (room: CommunityRoomResponse) => {
@@ -294,41 +339,45 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
     setPins([]);
   };
 
-  const promptNote = (title: string): string | null => {
-    const note = window.prompt(title, "");
-    if (note === null) return null;
-    return note.trim();
+  const updateRoomStatus = (room: CommunityRoomResponse, newStatus: CommunityRoomStatus) => {
+    setNoteText("");
+    setNoteDialog({
+      isOpen: true,
+      title: "Ghi chú cho thay đổi trạng thái phòng:",
+      onConfirm: async (note) => {
+        setActionId(room.roomId);
+        try {
+          const updated = await updateAdminCommunityRoomStatus(room.roomId, { status: newStatus, adminNote: note || undefined });
+          setRooms((prev) => prev.map((item) => (item.roomId === updated.roomId ? updated : item)));
+          if (selectedRoom?.roomId === updated.roomId) setSelectedRoom(updated);
+          toast.success("Đã cập nhật trạng thái phòng");
+        } catch (error) {
+          toast.error((error as Error).message || "Không thể cập nhật trạng thái phòng");
+        } finally {
+          setActionId(null);
+        }
+      }
+    });
   };
 
-  const updateRoomStatus = async (room: CommunityRoomResponse, newStatus: CommunityRoomStatus) => {
-    const note = promptNote("Ghi chú cho thay đổi trạng thái phòng:");
-    if (note === null) return;
-    setActionId(room.roomId);
-    try {
-      const updated = await updateAdminCommunityRoomStatus(room.roomId, { status: newStatus, adminNote: note || undefined });
-      setRooms((prev) => prev.map((item) => (item.roomId === updated.roomId ? updated : item)));
-      if (selectedRoom?.roomId === updated.roomId) setSelectedRoom(updated);
-      toast.success("Đã cập nhật trạng thái phòng");
-    } catch (error) {
-      toast.error((error as Error).message || "Không thể cập nhật trạng thái phòng");
-    } finally {
-      setActionId(null);
-    }
-  };
-
-  const hideMessage = async (msg: CommunityChatMessageResponse, hidden: boolean) => {
-    const note = promptNote(`Ghi chú khi ${hidden ? "ẩn" : "hiển thị lại"} tin nhắn:`);
-    if (note === null) return;
-    setActionId(msg.messageId);
-    try {
-      const updated = await hideAdminCommunityRoomMessage(msg.roomId, msg.messageId, { hidden, adminNote: note || undefined });
-      setMessages((prev) => prev.map((item) => (item.messageId === updated.messageId ? updated : item)));
-      toast.success(`Đã ${hidden ? "ẩn" : "hiển thị lại"} tin nhắn`);
-    } catch (error) {
-      toast.error((error as Error).message || "Không thể cập nhật tin nhắn");
-    } finally {
-      setActionId(null);
-    }
+  const hideMessage = (msg: CommunityChatMessageResponse, hidden: boolean) => {
+    setNoteText("");
+    setNoteDialog({
+      isOpen: true,
+      title: `Ghi chú khi ${hidden ? "ẩn" : "hiển thị lại"} tin nhắn:`,
+      onConfirm: async (note) => {
+        setActionId(msg.messageId);
+        try {
+          const updated = await hideAdminCommunityRoomMessage(msg.roomId, msg.messageId, { hidden, adminNote: note || undefined });
+          setMessages((prev) => prev.map((item) => (item.messageId === updated.messageId ? updated : item)));
+          toast.success(`Đã ${hidden ? "ẩn" : "hiển thị lại"} tin nhắn`);
+        } catch (error) {
+          toast.error((error as Error).message || "Không thể cập nhật tin nhắn");
+        } finally {
+          setActionId(null);
+        }
+      }
+    });
   };
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -402,6 +451,10 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
                         </div>
                         <StatusBadge status={room.status} label={ROOM_STATUS_LABELS[room.status]} />
                       </div>
+                      
+                      {room.description && (
+                        <p className="truncate text-sm text-slate-500">{room.description}</p>
+                      )}
 
                       <AuthorCell author={room.owner} label="Sáng lập:" />
 
@@ -417,6 +470,11 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
                         <span>•</span>
                         <span>Cập nhật: {formatDate(room.updatedAt)}</span>
                       </div>
+
+                      <div className="mt-3">
+                        <AuthorCell author={room.owner} label="Chủ phòng:" />
+                      </div>
+
                       {room.adminNote && (
                         <div className="rounded-xl bg-amber-50/50 border border-amber-100/50 px-3.5 py-2 text-xs text-slate-600 leading-relaxed">
                           <span className="font-bold text-amber-800">Ghi chú của Admin:</span> {room.adminNote}
@@ -508,13 +566,14 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
                   <h2 className="text-base font-bold text-slate-900">Kiểm duyệt nội dung chat</h2>
                   <p className="truncate text-xs font-medium text-slate-400 mt-0.5">{selectedRoom.name}</p>
                 </div>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={closeRoomDrawer}
-                  className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  className="rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                 >
-                  <X size={20} />
-                </button>
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -530,13 +589,13 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
                   ) : pins.length === 0 ? (
                     <p className="py-1 text-xs font-medium text-slate-400">Phòng chưa có mục ghim nào.</p>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {pins.map((pin) => (
                         <div
                           key={pin.pinId}
                           className="flex items-start justify-between gap-2.5 rounded-lg border border-slate-150 bg-white p-3 shadow-xs"
                         >
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             {pin.title && (
                               <p className="truncate text-xs font-semibold text-slate-800">{pin.title}</p>
                             )}
@@ -548,7 +607,6 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
                             </p>
                           </div>
                           <button
-                            type="button"
                             onClick={() => deletePin(pin)}
                             disabled={actionId === pin.pinId}
                             title="Xóa mục ghim"
@@ -631,18 +689,24 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
                     Trang {msgPage + 1}/{msgTotalPages}
                   </p>
                   <div className="flex gap-2">
-                    <ActionButton
+                    <Button
+                      variant="outline"
+                      size="sm"
                       disabled={loadingMessages || msgPage <= 0}
                       onClick={() => loadMessages(selectedRoom.roomId, Math.max(0, msgPage - 1))}
+                      className="h-8 rounded-lg"
                     >
                       Trước
-                    </ActionButton>
-                    <ActionButton
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       disabled={loadingMessages || msgPage + 1 >= msgTotalPages}
                       onClick={() => loadMessages(selectedRoom.roomId, msgPage + 1)}
+                      className="h-8 rounded-lg"
                     >
                       Sau
-                    </ActionButton>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -650,6 +714,48 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
           </div>
         )}
       </AnimatePresence>
+
+      <Dialog open={noteDialog.isOpen} onOpenChange={(open) => !open && closeNoteDialog()}>
+        <DialogContent className="bg-white text-slate-900 border-slate-200 shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 font-semibold">{noteDialog.title}</DialogTitle>
+            <DialogDescription className="text-slate-500">Ghi chú này sẽ được lưu lại trong lịch sử kiểm duyệt.</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Nhập ghi chú của bạn (không bắt buộc)..."
+            className="min-h-[100px] bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-[#FF6B00]"
+          />
+          <DialogFooter>
+            <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 bg-white" onClick={closeNoteDialog}>Hủy</Button>
+            <Button className="bg-[#FF6B00] text-white hover:bg-[#EA580C] border-none" onClick={() => {
+              noteDialog.onConfirm(noteText.trim());
+              closeNoteDialog();
+            }}>
+              Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmDialog.isOpen} onOpenChange={(open) => !open && closeConfirmDialog()}>
+        <DialogContent className="bg-white text-slate-900 border-slate-200 shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 font-semibold">{confirmDialog.title}</DialogTitle>
+            <DialogDescription className="text-slate-500">{confirmDialog.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 bg-white" onClick={closeConfirmDialog}>Hủy</Button>
+            <Button variant="destructive" className="bg-red-600 text-white hover:bg-red-700 border-none" onClick={() => {
+              confirmDialog.onConfirm();
+              closeConfirmDialog();
+            }}>
+              Xóa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,6 +2,24 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../../components/ui/dialog";
+import { Input } from "../../../../components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../../components/ui/dropdown-menu";
+import { Button } from "../../../../components/ui/button";
+import { Textarea } from "../../../../components/ui/textarea";
+import {
   AlertTriangle,
   Ban,
   CheckCircle2,
@@ -22,6 +40,7 @@ import {
   Plus,
   FileText,
   BarChart3,
+  MoreHorizontal,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -382,55 +401,81 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
     ];
   }, [blacklist.length, comments, posts, reports]);
 
-  const promptNote = (title: string): string | null => {
-    const note = window.prompt(title, "");
-    if (note === null) return null;
-    return note.trim();
+  const [noteDialog, setNoteDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    onConfirm: (note: string) => void;
+  }>({ isOpen: false, title: "", onConfirm: () => {} });
+  const [noteText, setNoteText] = useState("");
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+
+  const closeNoteDialog = () => setNoteDialog(prev => ({ ...prev, isOpen: false }));
+  const closeConfirmDialog = () => setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+
+  const updatePostStatus = (post: CommunityPostResponse, status: CommunityPostStatus) => {
+    setNoteText("");
+    setNoteDialog({
+      isOpen: true,
+      title: "Ghi chú cho thay đổi trạng thái bài viết:",
+      onConfirm: async (note) => {
+        setActionId(post.postId);
+        try {
+          const updated = await updateAdminCommunityPostStatus(post.postId, { status, adminNote: note || undefined });
+          setPosts(prev => prev.map(item => item.postId === updated.postId ? updated : item));
+          toast.success("Đã cập nhật trạng thái bài viết");
+        } catch (error) {
+          toast.error((error as Error).message || "Không thể cập nhật bài viết");
+        } finally {
+          setActionId(null);
+        }
+      }
+    });
   };
 
-  const updatePostStatus = async (post: CommunityPostResponse, status: CommunityPostStatus) => {
-    const note = promptNote("Ghi chú cho thay đổi trạng thái bài viết:");
-    if (note === null) return;
-    setActionId(post.postId);
-    try {
-      const updated = await updateAdminCommunityPostStatus(post.postId, { status, adminNote: note || undefined });
-      setPosts(prev => prev.map(item => item.postId === updated.postId ? updated : item));
-      toast.success("Đã cập nhật trạng thái bài viết");
-    } catch (error) {
-      toast.error((error as Error).message || "Không thể cập nhật bài viết");
-    } finally {
-      setActionId(null);
-    }
+  const updateCommentStatus = (comment: PostCommentResponse, status: PostCommentStatus) => {
+    setNoteText("");
+    setNoteDialog({
+      isOpen: true,
+      title: "Ghi chú cho thay đổi trạng thái bình luận:",
+      onConfirm: async (note) => {
+        setActionId(comment.commentId);
+        try {
+          const updated = await updateAdminCommunityCommentStatus(comment.commentId, { status, adminNote: note || undefined });
+          setComments(prev => prev.map(item => item.commentId === updated.commentId ? updated : item));
+          toast.success("Đã cập nhật trạng thái bình luận");
+        } catch (error) {
+          toast.error((error as Error).message || "Không thể cập nhật bình luận");
+        } finally {
+          setActionId(null);
+        }
+      }
+    });
   };
 
-  const updateCommentStatus = async (comment: PostCommentResponse, status: PostCommentStatus) => {
-    const note = promptNote("Ghi chú cho thay đổi trạng thái bình luận:");
-    if (note === null) return;
-    setActionId(comment.commentId);
-    try {
-      const updated = await updateAdminCommunityCommentStatus(comment.commentId, { status, adminNote: note || undefined });
-      setComments(prev => prev.map(item => item.commentId === updated.commentId ? updated : item));
-      toast.success("Đã cập nhật trạng thái bình luận");
-    } catch (error) {
-      toast.error((error as Error).message || "Không thể cập nhật bình luận");
-    } finally {
-      setActionId(null);
-    }
-  };
-
-  const updateReportStatus = async (report: ContentReportResponse, status: ContentReportStatus) => {
-    const note = promptNote("Ghi chú xử lý báo cáo:");
-    if (note === null) return;
-    setActionId(report.reportId);
-    try {
-      const updated = await updateAdminCommunityReportStatus(report.reportId, { status, adminNote: note || undefined });
-      setReports(prev => prev.map(item => item.reportId === updated.reportId ? updated : item));
-      toast.success("Đã cập nhật trạng thái báo cáo");
-    } catch (error) {
-      toast.error((error as Error).message || "Không thể cập nhật báo cáo");
-    } finally {
-      setActionId(null);
-    }
+  const updateReportStatus = (report: ContentReportResponse, status: ContentReportStatus) => {
+    setNoteText("");
+    setNoteDialog({
+      isOpen: true,
+      title: "Ghi chú xử lý báo cáo:",
+      onConfirm: async (note) => {
+        setActionId(report.reportId);
+        try {
+          const updated = await updateAdminCommunityReportStatus(report.reportId, { status, adminNote: note || undefined });
+          setReports(prev => prev.map(item => item.reportId === updated.reportId ? updated : item));
+          toast.success("Đã cập nhật trạng thái báo cáo");
+        } catch (error) {
+          toast.error((error as Error).message || "Không thể cập nhật báo cáo");
+        } finally {
+          setActionId(null);
+        }
+      }
+    });
   };
 
   const addKeyword = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -450,18 +495,24 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
     }
   };
 
-  const deleteKeyword = async (item: BlacklistKeywordResponse) => {
-    if (!window.confirm(`Xóa từ khóa "${item.keyword}" khỏi blacklist?`)) return;
-    setActionId(`blacklist:${item.wordId}`);
-    try {
-      await deleteAdminCommunityBlacklistKeyword(item.wordId);
-      setBlacklist(prev => prev.filter(kw => kw.wordId !== item.wordId));
-      toast.success("Đã xóa từ khóa cấm");
-    } catch (error) {
-      toast.error((error as Error).message || "Không thể xóa từ khóa");
-    } finally {
-      setActionId(null);
-    }
+  const deleteKeyword = (item: BlacklistKeywordResponse) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Xác nhận xóa",
+      message: `Xóa từ khóa "${item.keyword}" khỏi blacklist?`,
+      onConfirm: async () => {
+        setActionId(`blacklist:${item.wordId}`);
+        try {
+          await deleteAdminCommunityBlacklistKeyword(item.wordId);
+          setBlacklist(prev => prev.filter(keyword => keyword.wordId !== item.wordId));
+          toast.success("Đã xóa từ khóa cấm");
+        } catch (error) {
+          toast.error((error as Error).message || "Không thể xóa từ khóa");
+        } finally {
+          setActionId(null);
+        }
+      }
+    });
   };
 
   const copyTargetId = async (targetId: string) => {
@@ -978,6 +1029,48 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
           </div>
         )}
       </div>
+
+      <Dialog open={noteDialog.isOpen} onOpenChange={(open) => !open && closeNoteDialog()}>
+        <DialogContent className="bg-white text-slate-900 border-slate-200 shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 font-semibold">{noteDialog.title}</DialogTitle>
+            <DialogDescription className="text-slate-500">Ghi chú này sẽ được lưu lại trong lịch sử kiểm duyệt.</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Nhập ghi chú của bạn (không bắt buộc)..."
+            className="min-h-[100px] bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-[#FF6B00]"
+          />
+          <DialogFooter>
+            <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 bg-white" onClick={closeNoteDialog}>Hủy</Button>
+            <Button className="bg-[#FF6B00] text-white hover:bg-[#EA580C] border-none" onClick={() => {
+              noteDialog.onConfirm(noteText.trim());
+              closeNoteDialog();
+            }}>
+              Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmDialog.isOpen} onOpenChange={(open) => !open && closeConfirmDialog()}>
+        <DialogContent className="bg-white text-slate-900 border-slate-200 shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 font-semibold">{confirmDialog.title}</DialogTitle>
+            <DialogDescription className="text-slate-500">{confirmDialog.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 bg-white" onClick={closeConfirmDialog}>Hủy</Button>
+            <Button variant="destructive" className="bg-red-600 text-white hover:bg-red-700 border-none" onClick={() => {
+              confirmDialog.onConfirm();
+              closeConfirmDialog();
+            }}>
+              Xóa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
