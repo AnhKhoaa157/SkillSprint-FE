@@ -403,6 +403,10 @@ export default function Roadmap() {
               await roadmapService.generateRoadmap(activeWorkspaceId);
             } catch (genErr) {
               console.warn("Auto-generate trigger failed", genErr);
+              if (mounted) {
+                setGenerating(false);
+                toast.error((genErr as Error).message || "Không thể khởi tạo lộ trình học tập");
+              }
             }
             currentRoadmap = await roadmapService.getRoadmap(activeWorkspaceId).catch(() => null);
           }
