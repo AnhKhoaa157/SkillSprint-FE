@@ -74,6 +74,12 @@ type AdminCommunityModerationProps = {
   isDashboard?: boolean;
 };
 
+type ModerationStats = {
+  pendingContent: number;
+  pendingReports: number;
+  blockedKeywords: number;
+};
+
 const TABS: Array<{ id: CommunityTab; label: string; icon: LucideIcon; desc: string }> = [
   { id: "posts", label: "Bài viết", icon: FileText, desc: "Kiểm duyệt bài đăng" },
   { id: "comments", label: "Bình luận", icon: MessageCircle, desc: "Kiểm duyệt bình luận" },
@@ -279,6 +285,30 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
   const [newKeyword, setNewKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [moderationStats, setModerationStats] = useState<ModerationStats>({
+    pendingContent: 0,
+    pendingReports: 0,
+    blockedKeywords: 0,
+  });
+
+  const loadModerationStats = useCallback(async () => {
+    try {
+      const [pendingPosts, pendingComments, pendingReports, blockedKeywords] = await Promise.all([
+        getAdminCommunityPosts({ status: "PENDING_MODERATION", page: 0, size: 1 }),
+        getAdminCommunityComments({ status: "PENDING_MODERATION", page: 0, size: 1 }),
+        getAdminCommunityReports({ status: "PENDING", page: 0, size: 1 }),
+        getAdminCommunityBlacklist(),
+      ]);
+
+      setModerationStats({
+        pendingContent: pendingPosts.totalItems + pendingComments.totalItems,
+        pendingReports: pendingReports.totalItems,
+        blockedKeywords: blockedKeywords.length,
+      });
+    } catch (error) {
+      console.warn("Unable to load community moderation stats", error);
+    }
+  }, []);
 
   const loadPosts = useCallback(async (pageToLoad = page) => {
     setLoading(true);
@@ -343,8 +373,9 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
   const loadBlacklist = useCallback(async () => {
     setLoading(true);
     try {
-      setBlacklist(await getAdminCommunityBlacklist());
-      setTotalItems(0);
+      const keywords = await getAdminCommunityBlacklist();
+      setBlacklist(keywords);
+      setTotalItems(keywords.length);
       setTotalPages(1);
       setPage(0);
     } catch (error) {
@@ -366,32 +397,33 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
     reload(0);
   }, [activeTab, postStatus, commentStatus, reportStatus, reportTarget]);
 
+  useEffect(() => {
+    loadModerationStats();
+  }, [loadModerationStats]);
+
   const stats = useMemo(() => {
-    const pendingContent = posts.filter(p => p.status === "PENDING_MODERATION").length
-      + comments.filter(c => c.status === "PENDING_MODERATION").length;
-    const pendingReports = reports.filter(r => r.status === "PENDING").length;
     return [
       {
         label: "Nội dung chờ duyệt",
-        value: pendingContent,
+        value: moderationStats.pendingContent,
         icon: ShieldAlert,
         color: "from-amber-50 to-amber-100/50 border-amber-200",
         iconBg: "bg-amber-500",
         accent: "text-amber-600",
-        pulse: pendingContent > 0,
+        pulse: moderationStats.pendingContent > 0,
       },
       {
         label: "Báo cáo chờ xử lý",
-        value: pendingReports,
+        value: moderationStats.pendingReports,
         icon: AlertTriangle,
         color: "from-rose-50 to-rose-100/50 border-rose-200",
         iconBg: "bg-rose-500",
         accent: "text-rose-600",
-        pulse: pendingReports > 0,
+        pulse: moderationStats.pendingReports > 0,
       },
       {
         label: "Từ khóa đang chặn",
-        value: blacklist.length,
+        value: moderationStats.blockedKeywords,
         icon: Ban,
         color: "from-slate-50 to-slate-100/50 border-slate-200",
         iconBg: "bg-slate-600",
@@ -399,7 +431,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
         pulse: false,
       },
     ];
-  }, [blacklist.length, comments, posts, reports]);
+  }, [moderationStats]);
 
   const [noteDialog, setNoteDialog] = useState<{
     isOpen: boolean;
@@ -428,6 +460,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
         try {
           const updated = await updateAdminCommunityPostStatus(post.postId, { status, adminNote: note || undefined });
           setPosts(prev => prev.map(item => item.postId === updated.postId ? updated : item));
+          loadModerationStats();
           toast.success("Đã cập nhật trạng thái bài viết");
         } catch (error) {
           toast.error((error as Error).message || "Không thể cập nhật bài viết");
@@ -448,6 +481,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
         try {
           const updated = await updateAdminCommunityCommentStatus(comment.commentId, { status, adminNote: note || undefined });
           setComments(prev => prev.map(item => item.commentId === updated.commentId ? updated : item));
+          loadModerationStats();
           toast.success("Đã cập nhật trạng thái bình luận");
         } catch (error) {
           toast.error((error as Error).message || "Không thể cập nhật bình luận");
@@ -468,6 +502,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
         try {
           const updated = await updateAdminCommunityReportStatus(report.reportId, { status, adminNote: note || undefined });
           setReports(prev => prev.map(item => item.reportId === updated.reportId ? updated : item));
+          loadModerationStats();
           toast.success("Đã cập nhật trạng thái báo cáo");
         } catch (error) {
           toast.error((error as Error).message || "Không thể cập nhật báo cáo");
@@ -486,6 +521,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
     try {
       const created = await addAdminCommunityBlacklistKeyword({ keyword });
       setBlacklist(prev => [created, ...prev]);
+      setModerationStats(prev => ({ ...prev, blockedKeywords: prev.blockedKeywords + 1 }));
       setNewKeyword("");
       toast.success("Đã thêm từ khóa cấm");
     } catch (error) {
@@ -505,6 +541,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
         try {
           await deleteAdminCommunityBlacklistKeyword(item.wordId);
           setBlacklist(prev => prev.filter(keyword => keyword.wordId !== item.wordId));
+          setModerationStats(prev => ({ ...prev, blockedKeywords: Math.max(0, prev.blockedKeywords - 1) }));
           toast.success("Đã xóa từ khóa cấm");
         } catch (error) {
           toast.error((error as Error).message || "Không thể xóa từ khóa");
@@ -527,6 +564,11 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     reload(0);
+  };
+
+  const refreshCurrentView = () => {
+    loadModerationStats();
+    reload(page);
   };
 
   /* ── Left border color by status ── */
@@ -571,7 +613,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
           </div>
           <button
             type="button"
-            onClick={() => reload(page)}
+            onClick={refreshCurrentView}
             disabled={loading}
             className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95 disabled:opacity-50"
           >
@@ -682,7 +724,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
             {isDashboard && (
               <button
                 type="button"
-                onClick={() => reload(page)}
+                onClick={refreshCurrentView}
                 disabled={loading}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition active:scale-95 disabled:opacity-50"
               >

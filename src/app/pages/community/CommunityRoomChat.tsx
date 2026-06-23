@@ -735,16 +735,7 @@ export default function CommunityRoomChat() {
                     {/* Hover menu */}
                     <div className="absolute right-6 -top-3.5 opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-20 flex items-center bg-white border border-slate-200/80 shadow-md rounded-xl p-1 gap-0.5">
 
-                      {msg.sender && (
-                        <button 
-                          type="button" 
-                          onClick={() => setInputMessage(prev => prev ? `@${msg.sender?.fullName} ${prev}` : `@${msg.sender?.fullName} `)}
-                          className="p-1.5 hover:bg-slate-100 hover:text-slate-800 rounded-md text-slate-500 transition flex items-center justify-center"
-                          title="Trả lời"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+
                       {msg.sender && !isMe && (
                         <button
                           type="button"
@@ -786,16 +777,7 @@ export default function CommunityRoomChat() {
                   {/* Hover menu */}
                   <div className="absolute right-6 -top-3.5 opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-20 flex items-center bg-white border border-slate-200/80 shadow-md rounded-xl p-1 gap-0.5">
 
-                    {msg.sender && (
-                      <button 
-                        type="button" 
-                        onClick={() => setInputMessage(prev => prev ? `@${msg.sender?.fullName} ${prev}` : `@${msg.sender?.fullName} `)}
-                        className="p-1.5 hover:bg-slate-100 hover:text-slate-800 rounded-md text-slate-500 transition flex items-center justify-center"
-                        title="Trả lời"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+
                     {msg.sender && !isMe && (
                       <button
                         type="button"
