@@ -530,6 +530,7 @@ export default function CommunityRoomChat() {
                               itemType: "MESSAGE",
                               title: `Tin nhắn từ ${msg.sender?.fullName || "Người dùng"}`,
                               content: msg.content,
+                              messageId: msg.messageId,
                             } as any;
                             await communityRoomService.createPin(roomId!, requestPayload);
                             toast.success("Đã ghim tin nhắn này!");
