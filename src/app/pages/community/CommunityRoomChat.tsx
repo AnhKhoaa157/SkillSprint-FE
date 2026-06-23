@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { Send, Users, Pin, ArrowLeft, Loader2, UserPlus, Shield, Lock, ShieldAlert, Hash, X, Plus, ExternalLink, Trash2, Smile, Bold, Italic, Code, Paperclip } from "lucide-react";
+import { Send, Users, Pin, ArrowLeft, Loader2, UserPlus, Shield, Lock, ShieldAlert, Hash, X, Plus, ExternalLink, Trash2, Smile, Bold, Italic, Code, Paperclip, Flag, EyeOff } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
@@ -9,13 +9,18 @@ import { Input } from "../../components/ui/input";
 import { AnimatePresence, motion } from "motion/react";
 
 import communityRoomService from "../../../api/community/communityRoomService";
+import { getCurrentSubscription } from "../../../api/billing/subscriptionsService";
 import { useCommunityChatSocket } from "../../hooks/useCommunityChatSocket";
 import type { 
   CommunityRoomResponse, 
   CommunityRoomMemberResponse, 
   CommunityPinResponse,
+  CommunityChatMessageResponse,
 } from "../../../api/community/communityRoomTypes";
 import { getStoredAuthSession } from "../../../api/auth/authService";
+
+const UPGRADE_REQUIRED_MESSAGE = "Vui lòng nâng cấp gói để sử dụng tính năng này";
+const UPGRADE_REQUIRED_TOAST_ID = "community-chat-upgrade-required";
 
 function UserAvatar({ name, url, className = "w-8.5 h-8.5" }: { name?: string | null; url?: string | null; className?: string }) {
   const [isError, setIsError] = useState(false);
@@ -195,7 +200,7 @@ export default function CommunityRoomChat() {
   const [activeTab, setActiveTab] = useState<"MEMBERS" | "PINS">("MEMBERS");
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
-  const { connected, error, messages, sendMessage, setInitialMessages } = useCommunityChatSocket(roomId || null);
+  const { connected, error, messages, sendMessage, setInitialMessages, updateLocalMessage } = useCommunityChatSocket(roomId || null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Modals state
@@ -221,6 +226,13 @@ export default function CommunityRoomChat() {
   const loadRoomData = async () => {
     try {
       setLoading(true);
+      const subscription = await getCurrentSubscription();
+      if (subscription.plan?.planType === "FREE") {
+        toast.error(UPGRADE_REQUIRED_MESSAGE, { id: UPGRADE_REQUIRED_TOAST_ID });
+        navigate("/app/community/rooms");
+        return;
+      }
+
       const [roomData, msgHistory, membersData, pinsData, myRoomsData] = await Promise.all([
         communityRoomService.getRoom(roomId!),
         communityRoomService.getMessageHistory(roomId!, 0, 50),
@@ -252,6 +264,18 @@ export default function CommunityRoomChat() {
     if (!inputMessage.trim()) return;
     sendMessage(inputMessage.trim());
     setInputMessage("");
+  };
+
+  const handleLeaveRoom = async () => {
+    if (!confirm("Bạn muốn rời khỏi phòng này?")) return;
+
+    try {
+      await communityRoomService.leaveRoom(roomId!);
+      toast.success("Đã rời khỏi phòng");
+      navigate("/app/community/rooms");
+    } catch (err: any) {
+      toast.error(err.message || "Không thể rời khỏi phòng");
+    }
   };
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -296,6 +320,56 @@ export default function CommunityRoomChat() {
     }
   };
 
+  const handleMovePin = async (pinId: string, direction: "up" | "down") => {
+    const currentIndex = pins.findIndex((pin) => pin.pinId === pinId);
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= pins.length) return;
+
+    const nextPins = [...pins];
+    [nextPins[currentIndex], nextPins[targetIndex]] = [nextPins[targetIndex], nextPins[currentIndex]];
+    setPins(nextPins);
+
+    try {
+      const updated = await communityRoomService.reorderPins(roomId!, { pinIds: nextPins.map((pin) => pin.pinId) });
+      setPins(updated);
+      toast.success("Đã sắp xếp lại tin ghim");
+    } catch (err: any) {
+      setPins(pins);
+      toast.error(err.message || "Không thể sắp xếp tin ghim");
+    }
+  };
+
+  const handleReportMessage = async (message: CommunityChatMessageResponse) => {
+    const reason = window.prompt("Nhập lý do báo cáo tin nhắn này:");
+    const trimmedReason = reason?.trim();
+    if (!trimmedReason) return;
+
+    try {
+      await communityRoomService.reportMessage(message.roomId, message.messageId, {
+        targetType: "MESSAGE",
+        targetId: message.messageId,
+        reason: trimmedReason,
+      });
+      toast.success("Đã gửi báo cáo tin nhắn");
+    } catch (err: any) {
+      toast.error(err.message || "Không thể báo cáo tin nhắn");
+    }
+  };
+
+  const handleHideMessage = async (message: CommunityChatMessageResponse) => {
+    if (!confirm("Ẩn tin nhắn này khỏi phòng chat?")) return;
+
+    try {
+      const updated = await communityRoomService.hideMessage(message.roomId, message.messageId, {
+        hidden: true,
+      });
+      updateLocalMessage(updated);
+      toast.success("Đã ẩn tin nhắn");
+    } catch (err: any) {
+      toast.error(err.message || "Không thể ẩn tin nhắn");
+    }
+  };
+
   const handleKickMember = async (memberId: string) => {
     if (!confirm("Bạn có chắc muốn trục xuất thành viên này khỏi phòng?")) return;
     try {
@@ -304,6 +378,55 @@ export default function CommunityRoomChat() {
       setMembers(members.filter(m => m.user?.userId !== memberId));
     } catch (err: any) {
       toast.error(err.message || "Lỗi khi trục xuất thành viên");
+    }
+  };
+
+  const handleMuteMember = async (memberId: string) => {
+    const value = window.prompt("Nhập số phút mute thành viên:", "60");
+    const muteDurationMinutes = Number(value);
+    if (!Number.isFinite(muteDurationMinutes) || muteDurationMinutes <= 0) return;
+
+    try {
+      const updated = await communityRoomService.muteMember(roomId!, memberId, { muteDurationMinutes });
+      setMembers((prev) => prev.map((member) => (member.user?.userId === memberId ? updated : member)));
+      toast.success("Đã mute thành viên");
+    } catch (err: any) {
+      toast.error(err.message || "Không thể mute thành viên");
+    }
+  };
+
+  const handleBanMember = async (memberId: string) => {
+    if (!confirm("Cấm thành viên này khỏi phòng?")) return;
+    try {
+      const updated = await communityRoomService.banMember(roomId!, memberId);
+      setMembers((prev) => prev.map((member) => (member.user?.userId === memberId ? updated : member)));
+      toast.success("Đã cấm thành viên");
+    } catch (err: any) {
+      toast.error(err.message || "Không thể cấm thành viên");
+    }
+  };
+
+  const handleUnbanMember = async (memberId: string) => {
+    try {
+      const updated = await communityRoomService.unbanMember(roomId!, memberId);
+      setMembers((prev) => prev.map((member) => (member.user?.userId === memberId ? updated : member)));
+      toast.success("Đã gỡ cấm thành viên");
+    } catch (err: any) {
+      toast.error(err.message || "Không thể gỡ cấm thành viên");
+    }
+  };
+
+  const handleToggleModerator = async (member: CommunityRoomMemberResponse) => {
+    const targetUserId = member.user?.userId;
+    if (!targetUserId) return;
+
+    const nextRole = member.role === "MODERATOR" ? "MEMBER" : "MODERATOR";
+    try {
+      const updated = await communityRoomService.updateMemberRole(roomId!, targetUserId, { role: nextRole });
+      setMembers((prev) => prev.map((item) => (item.user?.userId === targetUserId ? updated : item)));
+      toast.success(nextRole === "MODERATOR" ? "Đã cấp quyền kiểm duyệt" : "Đã hạ quyền thành viên");
+    } catch (err: any) {
+      toast.error(err.message || "Không thể đổi vai trò thành viên");
     }
   };
 
@@ -446,6 +569,16 @@ export default function CommunityRoomChat() {
             </div>
           </div>
           
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleLeaveRoom}
+              className="hidden h-9 rounded-xl border-red-100 bg-red-50 text-xs font-bold text-red-600 hover:bg-red-100 md:inline-flex"
+            >
+              Rời phòng
+            </Button>
+
           {/* Mobile Right Sidebar Toggle */}
           <div className="lg:hidden flex gap-2">
             <Button 
@@ -464,6 +597,7 @@ export default function CommunityRoomChat() {
             >
               <Pin className="w-4 h-4" />
             </Button>
+          </div>
           </div>
         </div>
  
@@ -506,6 +640,26 @@ export default function CommunityRoomChat() {
                       >
                         <Send className="w-3.5 h-3.5" />
                       </button>
+                      {!isMe && (
+                        <button
+                          type="button"
+                          onClick={() => handleReportMessage(msg)}
+                          className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-md text-slate-500 transition flex items-center justify-center"
+                          title="Báo cáo"
+                        >
+                          <Flag className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {isModerator && !isHidden && (
+                        <button
+                          type="button"
+                          onClick={() => handleHideMessage(msg)}
+                          className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-md text-slate-500 transition flex items-center justify-center"
+                          title="Ẩn tin nhắn"
+                        >
+                          <EyeOff className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
 
                     <div className="w-8.5 shrink-0 flex justify-end pr-2.5 opacity-0 group-hover/msg:opacity-100 transition-opacity">
@@ -535,6 +689,26 @@ export default function CommunityRoomChat() {
                     >
                       <Send className="w-3.5 h-3.5" />
                     </button>
+                    {!isMe && (
+                      <button
+                        type="button"
+                        onClick={() => handleReportMessage(msg)}
+                        className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-md text-slate-500 transition flex items-center justify-center"
+                        title="Báo cáo"
+                      >
+                        <Flag className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {isModerator && !isHidden && (
+                      <button
+                        type="button"
+                        onClick={() => handleHideMessage(msg)}
+                        className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-md text-slate-500 transition flex items-center justify-center"
+                        title="Ẩn tin nhắn"
+                      >
+                        <EyeOff className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {isModerator && (
                       <button 
                         type="button" 
@@ -741,13 +915,46 @@ export default function CommunityRoomChat() {
                     </div>
                     
                     {isModerator && member.user?.userId !== currentUserId && member.role !== "OWNER" && (
-                      <button 
-                        type="button" 
-                        className="opacity-0 group-hover:opacity-100 h-7 px-2.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition duration-200 border border-transparent hover:border-rose-100" 
-                        onClick={() => handleKickMember(member.user?.userId || "")}
-                      >
-                        Trục xuất
-                      </button>
+                      <div className="flex flex-wrap justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button
+                          type="button"
+                          className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-50"
+                          onClick={() => handleToggleModerator(member)}
+                        >
+                          {member.role === "MODERATOR" ? "Hạ quyền" : "Mod"}
+                        </button>
+                        <button
+                          type="button"
+                          className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-amber-600 hover:bg-amber-50"
+                          onClick={() => handleMuteMember(member.user?.userId || "")}
+                        >
+                          Mute
+                        </button>
+                        {member.bannedAt ? (
+                          <button
+                            type="button"
+                            className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-emerald-600 hover:bg-emerald-50"
+                            onClick={() => handleUnbanMember(member.user?.userId || "")}
+                          >
+                            Unban
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-rose-600 hover:bg-rose-50"
+                            onClick={() => handleBanMember(member.user?.userId || "")}
+                          >
+                            Ban
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="h-7 rounded-lg px-2 text-[9px] font-black uppercase tracking-wider text-rose-700 hover:bg-rose-50"
+                          onClick={() => handleKickMember(member.user?.userId || "")}
+                        >
+                          Trục xuất
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -771,17 +978,37 @@ export default function CommunityRoomChat() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {pins.map(pin => (
+                  {pins.map((pin, pinIndex) => (
                     <div key={pin.pinId} className="relative group overflow-hidden bg-white border border-slate-200/60 p-4 rounded-xl transition-all duration-200 hover:border-slate-300 hover:shadow-xs">
                       {isModerator && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeletePin(pin.pinId)}
-                          className="absolute right-2 top-2 p-1.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-slate-50 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                          title="Gỡ ghim"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() => handleMovePin(pin.pinId, "up")}
+                            disabled={pinIndex === 0}
+                            className="rounded-full px-1.5 py-1 text-[10px] font-black text-slate-400 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-30"
+                            title="Đưa lên"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMovePin(pin.pinId, "down")}
+                            disabled={pinIndex === pins.length - 1}
+                            className="rounded-full px-1.5 py-1 text-[10px] font-black text-slate-400 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-30"
+                            title="Đưa xuống"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePin(pin.pinId)}
+                            className="p-1.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-slate-50"
+                            title="Gỡ ghim"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       )}
                       
                       <h4 className="font-bold text-xs text-slate-800 pr-6 flex items-center gap-1.5">
