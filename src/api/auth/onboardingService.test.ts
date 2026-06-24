@@ -98,5 +98,38 @@ describe("onboardingService", () => {
       });
       expect(result).toEqual(mockResponse.data);
     });
+
+    it("keeps fewer-than-three selected days and slots in the payload", async () => {
+      // Regression: 1-2 selected days/slots must not be dropped or treated as empty.
+      const mockResponse = {
+        success: true,
+        code: 200,
+        message: "ok",
+        data: { profileId: "profile-1", workspaceId: "workspace-1" },
+      };
+      vi.mocked(requestJson).mockResolvedValue(mockResponse as any);
+
+      await upsertOnboardingProfile("workspace-1", {
+        targetGoal: "Learn React",
+        confidence: "HIGH",
+        preferredDays: ["THURSDAY"],
+        preferredTimeSlots: ["20:00-22:00"],
+      });
+
+      let body = JSON.parse(vi.mocked(requestJson).mock.calls[0][1]!.body as string);
+      expect(body.preferredDays).toEqual(["THURSDAY"]);
+      expect(body.preferredTimeSlots).toEqual(["20:00-22:00"]);
+
+      await upsertOnboardingProfile("workspace-1", {
+        targetGoal: "Learn React",
+        confidence: "HIGH",
+        preferredDays: ["THURSDAY", "FRIDAY"],
+        preferredTimeSlots: ["20:00-22:00"],
+      });
+
+      body = JSON.parse(vi.mocked(requestJson).mock.calls[1][1]!.body as string);
+      expect(body.preferredDays).toEqual(["THURSDAY", "FRIDAY"]);
+      expect(body.preferredTimeSlots).toEqual(["20:00-22:00"]);
+    });
   });
 });
