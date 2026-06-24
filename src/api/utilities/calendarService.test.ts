@@ -55,6 +55,25 @@ describe("calendarService", () => {
         calendarService.generateCalendarSchedule(mockWorkspaceId, { preferredDays: [] })
       ).rejects.toThrow("Generate failed");
     });
+
+    it("surfaces the backend capacity-insufficient message unchanged", async () => {
+      // On a 400, apiClient throws an Error carrying the backend envelope message verbatim.
+      // The capacity message must reach the caller and must NOT be the old study-days message.
+      const capacityMessage =
+        "Số ngày học và khung giờ bạn chọn chưa đủ để xếp hết lộ trình trong thời hạn. " +
+        "Vui lòng chọn thêm ngày học, thêm khung giờ, tăng số giờ học mỗi tuần hoặc kéo dài thời hạn hoàn thành";
+      const error: any = new Error(capacityMessage);
+      error.status = 400;
+      vi.mocked(requestJson).mockRejectedValueOnce(error);
+
+      const thrown = await calendarService
+        .generateCalendarSchedule(mockWorkspaceId, { preferredDays: ["THURSDAY"] as any })
+        .then(() => null, (e: any) => e);
+
+      expect(thrown).toBeInstanceOf(Error);
+      expect(thrown.message).toBe(capacityMessage);
+      expect(thrown.message).not.toBe("Cần chọn ít nhất một ngày học trong tuần");
+    });
   });
 
   describe("getCalendarTasks", () => {
