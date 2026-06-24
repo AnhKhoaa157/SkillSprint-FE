@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, LoaderCircle, RefreshCw, Sparkles, Check, PlayCircle, CalendarClock, X, BookOpen, Clock3, Search, CalendarPlus, Layers3 } from "lucide-react";
 import AIScheduleModal from "../../components/modals/AIScheduleModal";
+import EditWorkspaceConfigModal from "../../components/modals/EditWorkspaceConfigModal";
 import useOnboardingProfile from "../../hooks/useOnboardingProfile";
 import workspaceService, { type WorkspaceResponse } from "../../../api/utilities/workspaceService";
 import calendarService, { type CalendarTaskResponse, type GenerateCalendarRequest, type WeekDay } from "../../../api/utilities/calendarService";
@@ -178,6 +179,7 @@ export default function StudyCalendar() {
   const [calendarTasks, setCalendarTasks] = useState<CalendarTaskResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [editConfigModalOpen, setEditConfigModalOpen] = useState(false);
   const [lastScheduleSeed, setLastScheduleSeed] = useState<ScheduleSeedConfig | null>(null);
   const [rescheduleTask, setRescheduleTask] = useState<CalendarTaskResponse | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState("");
@@ -465,6 +467,16 @@ export default function StudyCalendar() {
 
           <button
             type="button"
+            onClick={() => setEditConfigModalOpen(true)}
+            disabled={!selectedWorkspaceId}
+            className={`inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-[0.98] ${!selectedWorkspaceId ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            <Clock size={14} className="text-[#FF7E21]" />
+            Khung giờ học
+          </button>
+
+          <button
+            type="button"
             onClick={() => {
               setCreateTaskDate(toDateKey(cursor));
               setCreateTaskModalOpen(true);
@@ -534,8 +546,17 @@ export default function StudyCalendar() {
       )}
 
       {error && (
-        <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
-          {error}
+        <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm flex flex-wrap items-center justify-between gap-4">
+          <div className="flex-1 font-medium">{error}</div>
+          {selectedWorkspaceId && (
+            <button
+              type="button"
+              onClick={() => setEditConfigModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-white px-3.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer shadow-sm shrink-0"
+            >
+              Cập nhật khung giờ
+            </button>
+          )}
         </div>
       )}
 
@@ -698,6 +719,20 @@ export default function StudyCalendar() {
         subjectTitle={selectedWorkspace?.name || "Kế hoạch học tập"}
         currentPhase={1}
         initialConfig={scheduleSeed}
+      />
+
+      <EditWorkspaceConfigModal
+        isOpen={editConfigModalOpen}
+        onClose={() => setEditConfigModalOpen(false)}
+        workspaceId={selectedWorkspaceId}
+        workspaceName={selectedWorkspace?.name}
+        initialConfig={onboardingProfile}
+        onSaved={async () => {
+          setEditConfigModalOpen(false);
+          toast.success("Cập nhật cấu hình học tập thành công");
+          await fetchOnboardingProfile();
+          void reloadCalendarTasks();
+        }}
       />
 
       {/* Reschedule task modal */}
