@@ -442,75 +442,93 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
             {!loading && (
               <div className="divide-y divide-slate-100">
                 {rooms.map((room) => (
-                  <div key={room.roomId} className="grid gap-4 p-5 hover:bg-slate-50/40 transition duration-150 xl:grid-cols-[minmax(0,1fr)_300px]">
-                    <div className="min-w-0 space-y-3">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <h3 className="truncate text-base font-bold text-slate-900">{room.name}</h3>
-                          <p className="truncate text-xs font-medium text-slate-400 mt-0.5">{room.description || "Không có mô tả."}</p>
-                        </div>
+                  <div key={room.roomId} className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 hover:bg-slate-50/40 transition duration-150">
+                    <div className="min-w-0 flex-1 space-y-2.5">
+                      {/* Tên phòng, Chế độ và Trạng thái */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-sm font-black text-slate-800 mr-1">{room.name}</h3>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">
+                          {room.mode === "PUBLIC" ? <Users size={10} /> : <Lock size={10} />}
+                          {ROOM_MODE_LABELS[room.mode]}
+                        </span>
                         <StatusBadge status={room.status} label={ROOM_STATUS_LABELS[room.status]} />
                       </div>
                       
-                      {room.description && (
-                        <p className="truncate text-sm text-slate-500">{room.description}</p>
-                      )}
+                      {/* Mô tả */}
+                      <p className="text-xs font-semibold text-slate-400">
+                        {room.description || <span className="italic text-slate-300">Không có mô tả.</span>}
+                      </p>
 
-                      <AuthorCell author={room.owner} label="Sáng lập:" />
+                      {/* Thông tin Chủ phòng & Thống kê */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-bold text-slate-400">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-400">Chủ phòng:</span>
+                          {room.owner?.avatarUrl ? (
+                            <img
+                              src={room.owner.avatarUrl}
+                              alt={authorName(room.owner)}
+                              className="h-5 w-5 rounded-full object-cover border border-slate-150"
+                            />
+                          ) : (
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-[#FF6B00] to-orange-500 text-[8px] font-bold text-white">
+                              {initials(room.owner)}
+                            </div>
+                          )}
+                          <span className="text-slate-800">{authorName(room.owner)}</span>
+                          {room.owner?.email && (
+                            <span className="text-[10px] font-semibold text-slate-400">({room.owner.email})</span>
+                          )}
+                        </div>
 
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] font-bold text-slate-400">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
-                          {room.mode === "PUBLIC" ? <Users size={11} /> : <Lock size={11} />}
-                          {ROOM_MODE_LABELS[room.mode]}
-                        </span>
-                        <span>•</span>
+                        <span className="text-slate-200">•</span>
                         <span>{room.memberCount} / {room.maxMembers} thành viên</span>
-                        <span>•</span>
+                        
+                        <span className="text-slate-200">•</span>
                         <span className="text-red-500">{room.reportCount} báo cáo</span>
-                        <span>•</span>
+                        
+                        <span className="text-slate-200">•</span>
                         <span>Cập nhật: {formatDate(room.updatedAt)}</span>
                       </div>
 
-                      <div className="mt-3">
-                        <AuthorCell author={room.owner} label="Chủ phòng:" />
-                      </div>
-
+                      {/* Ghi chú Admin nếu có */}
                       {room.adminNote && (
-                        <div className="rounded-xl bg-amber-50/50 border border-amber-100/50 px-3.5 py-2 text-xs text-slate-600 leading-relaxed">
+                        <div className="rounded-xl bg-amber-50/50 border border-amber-100/50 px-3 py-1.5 text-xs text-slate-600 leading-relaxed max-w-2xl">
                           <span className="font-bold text-amber-800">Ghi chú của Admin:</span> {room.adminNote}
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col gap-2 xl:items-end xl:justify-start">
+
+                    {/* Bộ nút thao tác quản lý */}
+                    <div className="flex flex-row md:flex-col items-start md:items-end justify-between md:justify-center gap-2 shrink-0 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
                       <div className="flex flex-wrap gap-1.5">
                         <ActionButton
                           disabled={actionId === room.roomId || room.status === "ACTIVE"}
                           tone="success"
                           onClick={() => updateRoomStatus(room, "ACTIVE")}
                         >
-                          <CheckCircle2 size={13} /> Hoạt động
+                          <CheckCircle2 size={12} /> Hoạt động
                         </ActionButton>
                         <ActionButton
                           disabled={actionId === room.roomId || room.status === "LOCKED"}
                           tone="warning"
                           onClick={() => updateRoomStatus(room, "LOCKED")}
                         >
-                          <Lock size={13} /> Khóa
+                          <Lock size={12} /> Khóa
                         </ActionButton>
                         <ActionButton
                           disabled={actionId === room.roomId || room.status === "HIDDEN"}
                           tone="danger"
                           onClick={() => updateRoomStatus(room, "HIDDEN")}
                         >
-                          <EyeOff size={13} /> Ẩn
+                          <EyeOff size={12} /> Ẩn
                         </ActionButton>
                       </div>
                       <button
                         type="button"
                         onClick={() => openRoomDrawer(room)}
-                        className="mt-2 inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-orange-50/50 border border-orange-100/40 px-4 text-xs font-semibold text-[#FF6B00] transition hover:bg-orange-100"
+                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-orange-50/50 border border-orange-100/40 px-3.5 text-[11px] font-bold text-[#FF6B00] transition hover:bg-orange-100"
                       >
-                        <MessageSquare size={13} /> Kiểm duyệt nội dung chat
+                        <MessageSquare size={12} /> Kiểm duyệt nội dung chat
                       </button>
                     </div>
                   </div>
