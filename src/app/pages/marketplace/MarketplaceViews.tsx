@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router";
-import { ArrowLeft, BookOpen, CheckCircle2, Clock3, Coins, LoaderCircle, Search, Send, ShoppingBag, Sparkles, Star, Trophy, WalletCards, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent as ReactFormEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
+import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, Clock3, Coins, FileQuestion, LoaderCircle, RefreshCw, Search, Send, ShoppingBag, Sparkles, Star, Trophy, WalletCards, X } from "lucide-react";
 import { toast } from "sonner";
 import { marketplaceService } from "../../../api/marketplace";
 import type { ChallengeResult, ChallengeSession, CreatorMarketplaceItem, MarketplaceItemDetail, MarketplaceQuestion, MarketplaceReview, MarketplaceWallet, PurchasedMarketplacePack, PurchasedPackDetail } from "../../../api/marketplace";
@@ -66,11 +66,69 @@ function Confirm({ open, title, text, button, busy, disabled, close, submit }: {
 
 function Card({ item }: { item: PurchasedMarketplacePack }) { return <Link to={`/marketplace/items/${item.itemId}`} className="flex min-h-64 flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-violet-300 hover:shadow-lg"><div className="flex justify-between gap-3"><span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">{item.subject}</span><span className="flex items-center gap-1 text-sm"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{item.averageRating.toFixed(1)}</span></div><h2 className="mt-5 text-xl font-black">{item.title}</h2><p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-500">{item.description}</p><p className="mt-4 text-xs text-slate-500">{item.creatorName} · {item.chapterCount} chương · {item.quizCount} quiz · {item.questionCount} câu hỏi</p><div className="mt-auto flex items-center justify-between pt-5"><Coin value={item.priceCoins} /><span className="text-sm font-bold text-violet-700">Xem gói</span></div></Link>; }
 
-export function MarketplaceCatalog() {
+function MarketplaceCatalogLegacy() {
   const [items, setItems] = useState<PurchasedMarketplacePack[]>([]); const [input, setInput] = useState(""); const [subject, setSubject] = useState(""); const [loading, setLoading] = useState(true); const [failed, setFailed] = useState(false);
   const load = useCallback(async () => { setLoading(true); setFailed(false); try { setItems(await marketplaceService.listItems(subject || undefined)); } catch { setFailed(true); } finally { setLoading(false); } }, [subject]);
   useEffect(() => { void load(); }, [load]);
   return <Shell><section className="rounded-3xl bg-gradient-to-br from-violet-700 to-blue-600 p-7 text-white sm:p-10"><p className="text-sm font-bold text-violet-100">SKILLSPRINT MARKETPLACE</p><h1 className="mt-2 max-w-2xl text-3xl font-black sm:text-4xl">Tìm bộ học liệu phù hợp với mục tiêu của bạn.</h1><form onSubmit={e => { e.preventDefault(); setSubject(input.trim()); }} className="mt-6 flex max-w-xl gap-2"><div className="relative flex-1"><Search className="absolute left-4 top-4 h-4 w-4 text-slate-400" /><input value={input} onChange={e => setInput(e.target.value)} placeholder="Lọc theo môn học" className="h-12 w-full rounded-xl pl-11 pr-3 text-sm text-slate-900 outline-none" /></div><button className="rounded-xl bg-slate-950 px-5 text-sm font-bold">Tìm</button></form></section><section className="mt-8"><div className="mb-5 flex justify-between gap-4"><div><h2 className="text-xl font-black">Gói học liệu</h2><p className="mt-1 text-sm text-slate-500">{subject ? `Môn học: ${subject}` : "Chọn một gói để xem trước nội dung."}</p></div>{subject && <button onClick={() => { setSubject(""); setInput(""); }} className="text-sm font-bold text-violet-700">Xóa lọc</button>}</div>{loading ? <Loading /> : failed ? <ErrorBox retry={load} /> : items.length === 0 ? <Empty title="Chưa có gói phù hợp" text="Hãy thử một môn học khác." /> : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{items.map(item => <Card key={item.itemId} item={item} />)}</div>}</section></Shell>;
+}
+
+function MarketplacePackCard({ item }: { item: PurchasedMarketplacePack }) {
+  return <Link to={`/marketplace/items/${item.itemId}`} className="group flex min-h-72 flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md">
+    <div className="flex items-start justify-between gap-3"><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00]">{item.subject}</span><span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-slate-600"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{item.averageRating.toFixed(1)} <span className="font-medium text-slate-400">({item.reviewCount})</span></span></div>
+    <h2 className="mt-4 line-clamp-2 text-lg font-black leading-6 text-slate-900 group-hover:text-[#C2410C]">{item.title}</h2>
+    <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">{item.description}</p>
+    <p className="mt-4 text-xs font-medium text-slate-500">Tạo bởi {item.creatorName}</p>
+    <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-2.5 text-center text-xs text-slate-600"><span><b className="block text-sm text-slate-900">{item.chapterCount}</b>chương</span><span><b className="block text-sm text-slate-900">{item.quizCount}</b>quiz</span><span><b className="block text-sm text-slate-900">{item.questionCount}</b>câu</span></div>
+    <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-4"><Coin value={item.priceCoins} /><span className="text-sm font-bold text-[#FF6B00]">Xem gói →</span></div>
+  </Link>;
+}
+
+function FeaturedMarketplacePackCard({ item }: { item: PurchasedMarketplacePack }) {
+  return <Link to={`/marketplace/items/${item.itemId}`} className="group grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-orange-200 hover:shadow-md md:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
+    <div className="p-6 sm:p-7"><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00]">{item.subject}</span><span className="text-xs font-semibold text-slate-500">Tạo bởi {item.creatorName}</span></div><h2 className="mt-4 text-2xl font-black leading-tight text-slate-900 group-hover:text-[#C2410C]">{item.title}</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{item.description}</p><div className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[#FF6B00]">Xem nội dung pack <span aria-hidden>→</span></div></div>
+    <div className="border-t border-slate-100 bg-slate-50 p-6 md:border-l md:border-t-0"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Tổng quan pack</p><div className="mt-4 grid grid-cols-3 gap-2 text-center"><div className="rounded-xl bg-white p-3"><b className="block text-lg text-slate-900">{item.chapterCount}</b><span className="text-xs text-slate-500">chương</span></div><div className="rounded-xl bg-white p-3"><b className="block text-lg text-slate-900">{item.quizCount}</b><span className="text-xs text-slate-500">quiz</span></div><div className="rounded-xl bg-white p-3"><b className="block text-lg text-slate-900">{item.questionCount}</b><span className="text-xs text-slate-500">câu hỏi</span></div></div><div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4"><span className="inline-flex items-center gap-1 text-sm font-bold text-slate-700"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{item.averageRating.toFixed(1)} ({item.reviewCount})</span><Coin value={item.priceCoins} /></div></div>
+  </Link>;
+}
+
+function MarketplaceCatalogSimple() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSubject = searchParams.get("subject") || "";
+  const [items, setItems] = useState<PurchasedMarketplacePack[]>([]);
+  const [input, setInput] = useState(initialSubject);
+  const [subject, setSubject] = useState(initialSubject);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const load = useCallback(async () => { setLoading(true); setFailed(false); try { setItems(await marketplaceService.listItems(subject || undefined)); } catch { setFailed(true); } finally { setLoading(false); } }, [subject]);
+  useEffect(() => { void load(); }, [load]);
+  const submitSearch = (event: ReactFormEvent) => { event.preventDefault(); const next = input.trim(); setSubject(next); setSearchParams(next ? { subject: next } : {}); };
+  const clearSearch = () => { setInput(""); setSubject(""); setSearchParams({}); };
+
+  return <Shell>
+    <section className="rounded-2xl bg-gradient-to-br from-violet-700 to-blue-600 px-6 py-6 text-white sm:px-8 sm:py-7"><div className="max-w-3xl"><p className="text-xs font-bold tracking-[0.12em] text-violet-100">SKILLSPRINT MARKETPLACE</p><h1 className="mt-2 text-2xl font-black leading-tight sm:text-3xl">Tìm bộ học liệu phù hợp với mục tiêu của bạn.</h1><p className="mt-2 text-sm text-white/80">Khám phá các Quiz Pack do Creator chia sẻ từ workspace thực tế.</p><form onSubmit={submitSearch} className="mt-5 flex max-w-2xl flex-col gap-2 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" /><input value={input} onChange={event => setInput(event.target.value)} placeholder="Tìm theo môn học" className="h-11 w-full rounded-xl bg-white pl-11 pr-3 text-sm text-slate-900 outline-none" /></div><button className="h-11 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white">Tìm</button></form></div></section>
+    <section className="mt-7"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black">Gói học liệu</h2><p className="mt-1 text-sm text-slate-500">{subject ? `Kết quả theo môn học: ${subject}` : "Chọn một gói để xem trước nội dung."}</p></div>{subject && <button type="button" onClick={clearSearch} className="rounded-lg border border-orange-200 px-3 py-2 text-sm font-bold text-[#FF6B00]">Xóa lọc</button>}</div>{loading ? <Loading /> : failed ? <ErrorBox retry={load} /> : items.length === 0 ? <Empty title="Chưa có gói phù hợp" text="Hãy thử một môn học khác." /> : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map(item => <MarketplacePackCard key={item.itemId} item={item} />)}</div>}</section>
+  </Shell>;
+}
+
+export function MarketplaceCatalog() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSubject = searchParams.get("subject") || "";
+  const [items, setItems] = useState<PurchasedMarketplacePack[]>([]);
+  const [input, setInput] = useState(initialSubject);
+  const [subject, setSubject] = useState(initialSubject);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const load = useCallback(async () => { setLoading(true); setFailed(false); try { setItems(await marketplaceService.listItems(subject || undefined)); } catch { setFailed(true); } finally { setLoading(false); } }, [subject]);
+  useEffect(() => { void load(); }, [load]);
+  const submitSearch = (event: ReactFormEvent) => { event.preventDefault(); const next = input.trim(); setSubject(next); setSearchParams(next ? { subject: next } : {}); };
+  const clearSearch = () => { setInput(""); setSubject(""); setSearchParams({}); };
+  const questionTotal = items.reduce((total, item) => total + item.questionCount, 0);
+
+  return <Shell>
+    <div className="mb-3 flex justify-end"><button type="button" onClick={() => void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm font-bold text-[#FF6B00] hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />Làm mới</button></div>
+    <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-violet-700 to-blue-600 text-white"><div className="grid gap-6 px-6 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_270px] lg:items-end lg:gap-10 lg:px-10 lg:py-9"><div><p className="text-xs font-bold tracking-[0.14em] text-violet-100">SKILLSPRINT MARKETPLACE</p><h1 className="mt-3 max-w-3xl text-3xl font-black leading-tight sm:text-4xl">Học đúng trọng tâm với Quiz Pack phù hợp.</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">Khám phá nội dung do Creator đóng gói từ workspace thực tế, xem trước trước khi quyết định mua.</p><form onSubmit={submitSearch} className="mt-6 flex max-w-2xl flex-col gap-2 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" /><input value={input} onChange={event => setInput(event.target.value)} placeholder="Tìm theo môn học" className="h-11 w-full rounded-xl bg-white pl-11 pr-3 text-sm text-slate-900 outline-none shadow-sm" /></div><button className="h-11 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white">Tìm pack</button></form></div><div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm"><div><p className="text-xs font-semibold text-white/70">Pack đang có</p><p className="mt-1 text-2xl font-black">{loading ? "–" : items.length}</p></div><div><p className="text-xs font-semibold text-white/70">Câu hỏi</p><p className="mt-1 text-2xl font-black">{loading ? "–" : questionTotal}</p></div><p className="col-span-2 border-t border-white/15 pt-3 text-xs leading-5 text-white/80">Mỗi pack có nội dung xem trước, đánh giá và bảng xếp hạng riêng.</p></div></div></section>
+    <section className="mt-8"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-[#FF6B00]">Khám phá</p><h2 className="mt-1 text-2xl font-black">Gói học liệu đang có</h2><p className="mt-1 text-sm text-slate-500">{subject ? `Kết quả theo môn học: ${subject}` : "Chọn một gói để xem trước nội dung và thử thách."}</p></div>{subject && <button type="button" onClick={clearSearch} className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm font-bold text-[#FF6B00]">Xóa lọc</button>}</div>{loading ? <Loading /> : failed ? <ErrorBox retry={load} /> : items.length === 0 ? <Empty title="Chưa có gói phù hợp" text="Hãy thử một môn học khác." /> : items.length === 1 ? <FeaturedMarketplacePackCard item={items[0]} /> : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{items.map(item => <MarketplacePackCard key={item.itemId} item={item} />)}</div>}</section>
+  </Shell>;
 }
 
 export function MarketplaceCatalogDashboard() {
@@ -105,6 +163,25 @@ function Questions({ questions, answers, select }: { questions: MarketplaceQuest
   </fieldset>)}</div>;
 }
 function Content({ chapters, questions, preview = false }: { chapters: MarketplaceItemDetail["chapters"]; questions: MarketplaceQuestion[]; preview?: boolean }) { return <section className="mt-7"><h2 className="text-xl font-black">{preview ? "Xem trước nội dung" : "Nội dung gói học"}</h2><div className="mt-3 space-y-3">{chapters.map((chapter, i) => <article key={chapter.chapterId} className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-xs font-bold uppercase tracking-wider text-violet-600">Chương {i + 1}</p><h3 className="mt-1 font-bold">{chapter.title}</h3>{chapter.summary && <p className="mt-2 text-sm leading-6 text-slate-600">{chapter.summary}</p>}</article>)}</div>{questions.length > 0 && <div className="mt-4 rounded-2xl bg-violet-50 p-5"><h3 className="font-black">{preview ? "Câu hỏi xem trước" : "Câu hỏi"}</h3><Questions questions={questions} /></div>}</section>; }
+
+function ContentModern({ chapters, questions, preview = false }: { chapters: MarketplaceItemDetail["chapters"]; questions: MarketplaceQuestion[]; preview?: boolean }) {
+  return <section className="mt-7"><div><h2 className="text-xl font-black">{preview ? "Xem trước nội dung" : "Nội dung gói học"}</h2><p className="mt-1 text-sm text-slate-500">{chapters.length} chương trong Quiz Pack</p></div>
+    <div className="mt-3 space-y-3">{chapters.map((chapter, index) => <details key={chapter.chapterId} className="group rounded-2xl border border-slate-200 bg-white" open={index === 0}><summary className="flex cursor-pointer list-none items-center gap-3 p-4 sm:p-5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-orange-50 text-xs font-black text-[#FF6B00]">{index + 1}</span><span className="min-w-0 flex-1"><span className="block text-xs font-bold uppercase tracking-wide text-slate-400">Chương {index + 1}</span><span className="mt-1 block font-bold text-slate-900">{chapter.title}</span></span><ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition group-open:rotate-180" /></summary>{chapter.summary && <p className="border-t border-slate-100 px-5 py-4 text-sm leading-6 text-slate-600">{chapter.summary}</p>}</details>)}</div>
+    {questions.length > 0 && <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50/70 p-5"><div className="flex items-center gap-2"><FileQuestion className="h-5 w-5 text-[#FF6B00]" /><h3 className="font-black">{preview ? "Câu hỏi xem trước" : "Câu hỏi"}</h3></div><p className="mt-1 text-sm text-slate-600">Chỉ hiển thị nội dung xem trước; đáp án đúng không được công khai.</p><Questions questions={questions} /></div>}
+  </section>;
+}
+
+function MarketplaceItemHeader({ item }: { item: MarketplaceItemDetail }) {
+  return <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <div className="border-b border-orange-100 bg-gradient-to-r from-orange-50 via-white to-amber-50 px-6 py-6 sm:px-8 sm:py-7">
+      <div className="flex flex-wrap items-center justify-between gap-3"><span className="rounded-full bg-orange-100 px-3 py-1.5 text-xs font-bold text-[#FF6B00]">{item.subject}</span><span className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-600"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{item.averageRating.toFixed(1)} <span className="font-medium text-slate-400">({item.reviewCount} đánh giá)</span></span></div>
+      <h1 className="mt-5 max-w-3xl text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl">{item.title}</h1>
+      <p className="mt-3 text-sm font-semibold text-slate-600">Tạo bởi <span className="text-slate-900">{item.creatorName}</span></p>
+      <p className="mt-5 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-slate-600">{item.description}</p>
+    </div>
+    <div className="grid grid-cols-3 divide-x divide-slate-100 bg-white text-center"><div className="px-3 py-4"><p className="text-lg font-black text-slate-900">{item.chapterCount}</p><p className="mt-0.5 text-xs text-slate-500">chương</p></div><div className="px-3 py-4"><p className="text-lg font-black text-slate-900">{item.quizCount}</p><p className="mt-0.5 text-xs text-slate-500">quiz</p></div><div className="px-3 py-4"><p className="text-lg font-black text-slate-900">{item.questionCount}</p><p className="mt-0.5 text-xs text-slate-500">câu hỏi</p></div></div>
+  </section>;
+}
 
 function MarketplaceItemPageLegacy() {
   const { itemId = "" } = useParams(); const go = useNavigate(); const [item, setItem] = useState<MarketplaceItemDetail | null>(null); const [board, setBoard] = useState<any[]>([]); const [reviews, setReviews] = useState<MarketplaceReview[]>([]); const [loading, setLoading] = useState(true); const [failed, setFailed] = useState(false); const [wallet, setWallet] = useState<MarketplaceWallet | null>(null); const [buyOpen, setBuyOpen] = useState(false); const [buying, setBuying] = useState(false); const [rating, setRating] = useState(0); const [comment, setComment] = useState(""); const [reviewOpen, setReviewOpen] = useState(false); const [reviewing, setReviewing] = useState(false);
@@ -168,8 +245,8 @@ export function MarketplaceItemPage() {
     <Link to="/marketplace" className="inline-flex items-center gap-1 text-sm font-bold text-violet-700"><ArrowLeft className="h-4 w-4" />Marketplace</Link>
     <div className="mt-5 grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div>
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"><span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">{item.subject}</span><h1 className="mt-4 text-3xl font-black">{item.title}</h1><p className="mt-2 text-sm text-slate-500">Bởi {item.creatorName}</p><p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-600">{item.description}</p><div className="mt-5 flex flex-wrap gap-4 text-sm text-slate-600"><span>{item.chapterCount} chương</span><span>{item.quizCount} quiz</span><span>{item.questionCount} câu hỏi</span><span className="flex gap-1"><Stars value={item.averageRating} />{item.averageRating.toFixed(1)} ({item.reviewCount})</span></div></section>
-        <Content chapters={item.chapters} questions={item.previewQuestions} preview />
+        <MarketplaceItemHeader item={item} />
+        <ContentModern chapters={item.chapters} questions={item.previewQuestions} preview />
         <div className="mt-7"><MarketplaceLeaderboardCard itemId={itemId} /></div>
         <section className="mt-7"><h2 className="text-xl font-black">Đánh giá</h2><div className="mt-3 space-y-3">{reviews.length ? reviews.map((review, index) => <article key={review.reviewId || index} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex justify-between"><b>{review.reviewerName}</b><Stars value={review.rating} /></div>{review.comment && <p className="mt-3 text-sm text-slate-600">{review.comment}</p>}<p className="mt-3 text-xs text-slate-400">{date(review.createdAt)}</p></article>) : <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500">Chưa có đánh giá.</p>}</div></section>
       </div>
