@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, NavLink, useLocation, Link, useNavigate, useMatch } from "react-router";
 import {
   LayoutDashboard, Map, Mic,
@@ -49,6 +49,9 @@ const CRUMBS: Record<string,string> = {
   "/app/profile":"Cài đặt",
   "/app/upgraded":"Sau nâng cấp",
   "/app/workspaces":"Workspaces",
+  "/app/marketplace":"Marketplace",
+  "/app/my-packs":"Gói học của tôi",
+  "/app/wallet":"Ví Coin",
 };
 
 type RoadmapSidebarWorkspace = {
@@ -300,6 +303,7 @@ export default function DashboardLayout() {
   const { notifications, unreadCount, markAsRead } = useNotificationSocket();
   const navigate = useNavigate();
   const loc   = useLocation();
+  const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pathname = loc.pathname.replace(/\/+$/, "") || "/";
   const isRoadmapPage = pathname === "/app/roadmap" || pathname.match(/^\/app\/workspaces\/[^\/]+\/roadmap$/);
   const workspaceIdMatch = pathname.match(/^\/app\/workspaces\/([^\/]+)\/roadmap$/);
@@ -311,6 +315,13 @@ export default function DashboardLayout() {
     if (loc.pathname === "/app/workspaces") crumb = CRUMBS["/app/workspaces"];
     else crumb = "Workspace";
   }
+  if (loc.pathname.startsWith("/app/marketplace/items/")) crumb = "Marketplace > Chi tiết Quiz Pack";
+  if (loc.pathname.startsWith("/app/my-packs/")) crumb = "Gói học của tôi > Học Quiz Pack";
+
+  useEffect(() => {
+    contentScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [loc.pathname]);
 
   useEffect(() => {
     listSubscriptionPlans().then(plans => {
@@ -398,7 +409,7 @@ export default function DashboardLayout() {
 
   return (
     <div style={{
-      display:"flex", height:"100vh", overflow:"hidden",
+      position:"fixed", inset:0, display:"flex", height:"100dvh", minHeight:0, overflow:"hidden",
       background:BG, fontFamily:F, color:T1,
     }}>
       <style>{`
@@ -426,7 +437,7 @@ export default function DashboardLayout() {
       />
 
       {/* ════════════════ MAIN AREA ════════════════ */}
-      <main style={{flex:1,display:"flex",flexDirection:"column",height:"100%",overflow:"hidden",minWidth:0}}>
+      <main style={{flex:1,display:"flex",flexDirection:"column",height:"100%",minHeight:0,overflow:"hidden",minWidth:0}}>
         {/* Header */}
         <header style={{
           display:"flex",alignItems:"center",justifyContent:"space-between",
@@ -614,7 +625,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Page content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-7 pb-24 md:pb-9">
+        <div ref={contentScrollRef} data-dashboard-scroll className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-7 pb-24 md:pb-9">
           <div style={{width:"100%"}}>
             <Outlet/>
           </div>
