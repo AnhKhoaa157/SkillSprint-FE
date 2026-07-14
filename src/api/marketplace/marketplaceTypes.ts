@@ -42,9 +42,10 @@ export interface MarketplaceItemDetail extends MarketplaceItemSummary {
 
 export interface MarketplaceLeaderboardEntry {
   rank: number;
-  learnerName: string;
+  userName: string;
   score: number;
-  durationSeconds?: number | null;
+  durationSeconds: number;
+  completedAt: string;
 }
 
 export interface MarketplaceReview {

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { ArrowLeft, BookOpen, CheckCircle2, Clock3, Coins, LoaderCircle, Search, Send, ShoppingBag, Sparkles, Star, Trophy, WalletCards, X } from "lucide-react";
 import { toast } from "sonner";
 import { marketplaceService } from "../../../api/marketplace";
 import type { ChallengeResult, ChallengeSession, CreatorMarketplaceItem, MarketplaceItemDetail, MarketplaceQuestion, MarketplaceReview, MarketplaceWallet, PurchasedMarketplacePack, PurchasedPackDetail } from "../../../api/marketplace";
 import workspaceService, { type WorkspaceResponse } from "../../../api/utilities/workspaceService";
+import MarketplaceLeaderboardCard from "../../components/marketplace/MarketplaceLeaderboardCard";
+import { refreshMarketplaceLeaderboard } from "../../../api/marketplace/useMarketplaceLeaderboard";
 
 const fmt = new Intl.NumberFormat("vi-VN");
 const date = (v?: string | null) => v ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(v)) : "—";
@@ -12,6 +14,9 @@ const message = (e: unknown) => e instanceof Error ? e.message : "Đã có lỗi
 
 function Shell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { itemId } = useParams<{ itemId: string }>();
+  const showLearningLeaderboard = Boolean(itemId && location.pathname.includes("/my-packs/"));
   const stayInDashboard = (event: ReactMouseEvent<HTMLDivElement>) => {
     const target = event.target as Element;
     const link = target.closest<HTMLAnchorElement>('a[href^="/marketplace"], a[href^="/my-packs"], a[href="/wallet"]');
@@ -21,7 +26,7 @@ function Shell({ children }: { children: ReactNode }) {
     navigate(`/app${href}`);
   };
 
-  return <div onClickCapture={stayInDashboard} className="skill-marketplace min-h-screen bg-slate-50 text-slate-900">
+  return <div onClickCapture={stayInDashboard} className="skill-marketplace min-h-0 bg-slate-50 text-slate-900">
     <style>{`
       .skill-marketplace .bg-violet-50 { background-color: #fff7ed !important; }
       .skill-marketplace .bg-violet-600 { background-color: #ff6b00 !important; }
@@ -48,7 +53,7 @@ function Shell({ children }: { children: ReactNode }) {
         <nav className="flex items-center gap-1 text-sm font-bold text-slate-600"><Link to="/marketplace" className="rounded-lg px-3 py-2 hover:bg-violet-50">Khám phá</Link><Link to="/my-packs" className="rounded-lg px-3 py-2 hover:bg-violet-50">Gói của tôi</Link><Link to="/wallet" className="rounded-lg p-2 hover:bg-violet-50" aria-label="Ví Coin"><WalletCards className="h-5 w-5" /></Link></nav>
       </div>
     </header>
-    <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6">{children}</main>
+    <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6">{children}{showLearningLeaderboard && <div className="mt-7"><MarketplaceLeaderboardCard itemId={itemId || ""} compact /></div>}</main>
   </div>;
 }
 
@@ -92,10 +97,16 @@ export function CreatorMarketplaceDashboard() {
   return <div className="[&>div>header]:hidden"><CreatorMarketplaceValidatedPage /></div>;
 }
 
-function Questions({ questions, answers, select }: { questions: MarketplaceQuestion[]; answers?: Record<string, string>; select?: (id: string, option: string) => void }) { return <div className="mt-4 space-y-4">{questions.map((q, i) => <fieldset key={q.questionId} className="rounded-xl border border-slate-200 bg-white p-4"><legend className="font-semibold">{i + 1}. {q.question}</legend><div className="mt-3 grid gap-2">{q.options.map(option => <label key={option.optionId} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm ${answers?.[q.questionId] === option.optionId ? "border-violet-500 bg-violet-50" : "border-slate-200"}`}><input type="radio" name={q.questionId} disabled={!select} checked={answers?.[q.questionId] === option.optionId} onChange={() => select?.(q.questionId, option.optionId)} /><span>{option.text}</span></label>)}</div></fieldset>)}</div>; }
+function Questions({ questions, answers, select }: { questions: MarketplaceQuestion[]; answers?: Record<string, string>; select?: (id: string, option: string) => void }) {
+  return <div className="mt-4 space-y-4">{questions.map((q, i) => <fieldset key={q.questionId} className="rounded-xl border border-slate-200 bg-white p-4">
+    <legend className="sr-only">Câu {i + 1}: {q.question}</legend>
+    <p className="font-semibold leading-6">{i + 1}. {q.question}</p>
+    <div className="mt-4 grid gap-2">{q.options.map(option => <label key={option.optionId} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm ${answers?.[q.questionId] === option.optionId ? "border-violet-500 bg-violet-50" : "border-slate-200"}`}><input type="radio" name={q.questionId} disabled={!select} checked={answers?.[q.questionId] === option.optionId} onChange={() => select?.(q.questionId, option.optionId)} /><span>{option.text}</span></label>)}</div>
+  </fieldset>)}</div>;
+}
 function Content({ chapters, questions, preview = false }: { chapters: MarketplaceItemDetail["chapters"]; questions: MarketplaceQuestion[]; preview?: boolean }) { return <section className="mt-7"><h2 className="text-xl font-black">{preview ? "Xem trước nội dung" : "Nội dung gói học"}</h2><div className="mt-3 space-y-3">{chapters.map((chapter, i) => <article key={chapter.chapterId} className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-xs font-bold uppercase tracking-wider text-violet-600">Chương {i + 1}</p><h3 className="mt-1 font-bold">{chapter.title}</h3>{chapter.summary && <p className="mt-2 text-sm leading-6 text-slate-600">{chapter.summary}</p>}</article>)}</div>{questions.length > 0 && <div className="mt-4 rounded-2xl bg-violet-50 p-5"><h3 className="font-black">{preview ? "Câu hỏi xem trước" : "Câu hỏi"}</h3><Questions questions={questions} /></div>}</section>; }
 
-export function MarketplaceItemPage() {
+function MarketplaceItemPageLegacy() {
   const { itemId = "" } = useParams(); const go = useNavigate(); const [item, setItem] = useState<MarketplaceItemDetail | null>(null); const [board, setBoard] = useState<any[]>([]); const [reviews, setReviews] = useState<MarketplaceReview[]>([]); const [loading, setLoading] = useState(true); const [failed, setFailed] = useState(false); const [wallet, setWallet] = useState<MarketplaceWallet | null>(null); const [buyOpen, setBuyOpen] = useState(false); const [buying, setBuying] = useState(false); const [rating, setRating] = useState(0); const [comment, setComment] = useState(""); const [reviewOpen, setReviewOpen] = useState(false); const [reviewing, setReviewing] = useState(false);
   const load = useCallback(async () => { setLoading(true); setFailed(false); try { const [a,b,c] = await Promise.all([marketplaceService.getItem(itemId), marketplaceService.getLeaderboard(itemId), marketplaceService.getReviews(itemId)]); setItem(a); setBoard(b); setReviews(c); const mine = c.find(r => r.mine); if (mine) { setRating(mine.rating); setComment(mine.comment || ""); } } catch { setFailed(true); } finally { setLoading(false); } }, [itemId]);
   useEffect(() => { void load(); }, [load]);
@@ -105,6 +116,68 @@ export function MarketplaceItemPage() {
   if (loading) return <Shell><Loading /></Shell>; if (failed || !item) return <Shell><ErrorBox retry={load} /></Shell>;
   const shortage = Math.max(0, item.priceCoins - (wallet?.balanceCoins ?? 0));
   return <Shell><Link to="/marketplace" className="inline-flex items-center gap-1 text-sm font-bold text-violet-700"><ArrowLeft className="h-4 w-4" />Marketplace</Link><div className="mt-5 grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]"><div><section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"><span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">{item.subject}</span><h1 className="mt-4 text-3xl font-black">{item.title}</h1><p className="mt-2 text-sm text-slate-500">Bởi {item.creatorName}</p><p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-600">{item.description}</p><div className="mt-5 flex flex-wrap gap-4 text-sm text-slate-600"><span>{item.chapterCount} chương</span><span>{item.quizCount} quiz</span><span>{item.questionCount} câu hỏi</span><span className="flex gap-1"><Stars value={item.averageRating} />{item.averageRating.toFixed(1)} ({item.reviewCount})</span></div></section><Content chapters={item.chapters} questions={item.previewQuestions} preview /><section className="mt-7"><h2 className="text-xl font-black">Top 10</h2><div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">{board.length ? board.slice(0,10).map((entry, i) => <div key={`${entry.learnerName}-${i}`} className="flex gap-3 border-b border-slate-100 p-4 last:border-0"><b className="text-violet-700">#{entry.rank ?? i + 1}</b><span className="flex-1 font-semibold">{entry.learnerName}</span><b>{entry.score} điểm</b></div>) : <p className="p-5 text-sm text-slate-500">Chưa có kết quả thử thách.</p>}</div></section><section className="mt-7"><h2 className="text-xl font-black">Đánh giá</h2><div className="mt-3 space-y-3">{reviews.length ? reviews.map((r, i) => <article key={r.reviewId || i} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex justify-between"><b>{r.reviewerName}</b><Stars value={r.rating} /></div>{r.comment && <p className="mt-3 text-sm text-slate-600">{r.comment}</p>}<p className="mt-3 text-xs text-slate-400">{date(r.createdAt)}</p></article>) : <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500">Chưa có đánh giá.</p>}</div></section></div><aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 lg:sticky lg:top-24"><p className="text-sm text-slate-500">Giá gói học liệu</p><p className="mt-2 text-2xl"><Coin value={item.priceCoins} /></p><button onClick={openBuy} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-black text-white"><Coins className="h-4 w-4" />Mua bằng Coin</button><div className="mt-6 border-t pt-5"><h2 className="font-black">Đánh giá của bạn</h2><div className="mt-3 flex">{[1,2,3,4,5].map(n => <button key={n} onClick={() => setRating(n)} aria-label={`${n} sao`}><Star className={`h-6 w-6 ${n <= rating ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} /></button>)}</div><textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Nhận xét (không bắt buộc)" className="mt-3 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm" /><button onClick={() => rating ? setReviewOpen(true) : toast.message("Chọn số sao trước khi gửi đánh giá.")} className="mt-3 rounded-xl border border-violet-200 px-4 py-2 text-sm font-bold text-violet-700">{reviews.some(r => r.mine) ? "Cập nhật đánh giá" : "Gửi đánh giá"}</button></div></aside></div><Confirm open={buyOpen} title="Xác nhận mua gói" text={wallet ? `Số dư: ${fmt.format(wallet.balanceCoins)} Coin.${shortage ? ` Còn thiếu ${fmt.format(shortage)} Coin. Ví Coin hiện được nạp bởi quản trị viên trong bản demo.` : " Coin sẽ được trừ khi xác nhận."}` : "Đang kiểm tra ví."} button="Xác nhận mua" busy={buying} close={() => setBuyOpen(false)} submit={buy} /><Confirm open={reviewOpen} title="Gửi đánh giá" text="Bạn xác nhận lưu đánh giá này?" button="Lưu đánh giá" busy={reviewing} close={() => setReviewOpen(false)} submit={saveReview} /></Shell>;
+}
+
+export function MarketplaceItemPage() {
+  const { itemId = "" } = useParams();
+  const go = useNavigate();
+  const [item, setItem] = useState<MarketplaceItemDetail | null>(null);
+  const [reviews, setReviews] = useState<MarketplaceReview[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [wallet, setWallet] = useState<MarketplaceWallet | null>(null);
+  const [buyOpen, setBuyOpen] = useState(false);
+  const [buying, setBuying] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setFailed(false);
+    try {
+      const [nextItem, nextReviews] = await Promise.all([marketplaceService.getItem(itemId), marketplaceService.getReviews(itemId)]);
+      setItem(nextItem);
+      setReviews(nextReviews);
+      const mine = nextReviews.find(review => review.mine);
+      if (mine) { setRating(mine.rating); setComment(mine.comment || ""); }
+    } catch { setFailed(true); } finally { setLoading(false); }
+  }, [itemId]);
+
+  useEffect(() => { void load(); }, [load]);
+  const openBuy = async () => { try { setWallet(await marketplaceService.getWallet()); setBuyOpen(true); } catch (error) { toast.error(message(error)); } };
+  const buy = async () => {
+    if (!item) return;
+    setBuying(true);
+    try { await marketplaceService.purchase(item.itemId); toast.success("Đã mua gói học liệu."); go(`/app/my-packs/${item.itemId}`); }
+    catch (error) { toast.error(message(error)); } finally { setBuying(false); }
+  };
+  const saveReview = async () => {
+    if (!item) return;
+    setReviewing(true);
+    try { await marketplaceService.review(item.itemId, { rating, comment: comment.trim() || undefined }); toast.success("Đã lưu đánh giá."); setReviewOpen(false); await load(); }
+    catch (error) { toast.error(message(error)); } finally { setReviewing(false); }
+  };
+
+  if (loading) return <Shell><Loading /></Shell>;
+  if (failed || !item) return <Shell><ErrorBox retry={load} /></Shell>;
+  const shortage = Math.max(0, item.priceCoins - (wallet?.balanceCoins ?? 0));
+
+  return <Shell>
+    <Link to="/marketplace" className="inline-flex items-center gap-1 text-sm font-bold text-violet-700"><ArrowLeft className="h-4 w-4" />Marketplace</Link>
+    <div className="mt-5 grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div>
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"><span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">{item.subject}</span><h1 className="mt-4 text-3xl font-black">{item.title}</h1><p className="mt-2 text-sm text-slate-500">Bởi {item.creatorName}</p><p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-600">{item.description}</p><div className="mt-5 flex flex-wrap gap-4 text-sm text-slate-600"><span>{item.chapterCount} chương</span><span>{item.quizCount} quiz</span><span>{item.questionCount} câu hỏi</span><span className="flex gap-1"><Stars value={item.averageRating} />{item.averageRating.toFixed(1)} ({item.reviewCount})</span></div></section>
+        <Content chapters={item.chapters} questions={item.previewQuestions} preview />
+        <div className="mt-7"><MarketplaceLeaderboardCard itemId={itemId} /></div>
+        <section className="mt-7"><h2 className="text-xl font-black">Đánh giá</h2><div className="mt-3 space-y-3">{reviews.length ? reviews.map((review, index) => <article key={review.reviewId || index} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex justify-between"><b>{review.reviewerName}</b><Stars value={review.rating} /></div>{review.comment && <p className="mt-3 text-sm text-slate-600">{review.comment}</p>}<p className="mt-3 text-xs text-slate-400">{date(review.createdAt)}</p></article>) : <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500">Chưa có đánh giá.</p>}</div></section>
+      </div>
+      <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 lg:sticky lg:top-24"><p className="text-sm text-slate-500">Giá gói học liệu</p><p className="mt-2 text-2xl"><Coin value={item.priceCoins} /></p><button onClick={openBuy} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-black text-white"><Coins className="h-4 w-4" />Mua bằng Coin</button><div className="mt-6 border-t pt-5"><h2 className="font-black">Đánh giá của bạn</h2><div className="mt-3 flex">{[1, 2, 3, 4, 5].map(number => <button key={number} onClick={() => setRating(number)} aria-label={`${number} sao`}><Star className={`h-6 w-6 ${number <= rating ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} /></button>)}</div><textarea value={comment} onChange={event => setComment(event.target.value)} placeholder="Nhận xét (không bắt buộc)" className="mt-3 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm" /><button onClick={() => rating ? setReviewOpen(true) : toast.message("Chọn số sao trước khi gửi đánh giá.")} className="mt-3 rounded-xl border border-violet-200 px-4 py-2 text-sm font-bold text-violet-700">{reviews.some(review => review.mine) ? "Cập nhật đánh giá" : "Gửi đánh giá"}</button></div></aside>
+    </div>
+    <Confirm open={buyOpen} title="Xác nhận mua gói" text={wallet ? `Số dư: ${fmt.format(wallet.balanceCoins)} Coin.${shortage ? ` Còn thiếu ${fmt.format(shortage)} Coin. Ví Coin hiện được nạp bởi quản trị viên trong bản demo.` : " Coin sẽ được trừ khi xác nhận."}` : "Đang kiểm tra ví."} button="Xác nhận mua" busy={buying} close={() => setBuyOpen(false)} submit={buy} />
+    <Confirm open={reviewOpen} title="Gửi đánh giá" text="Bạn xác nhận lưu đánh giá này?" button="Lưu đánh giá" busy={reviewing} close={() => setReviewOpen(false)} submit={saveReview} />
+  </Shell>;
 }
 
 export function MyPacksPage() {
@@ -118,6 +191,7 @@ function Timer({ expiresAt, expire }: { expiresAt: string; expire: () => void })
 
 export function MyPackLearningPage() {
   const { itemId = "" } = useParams(); const [pack, setPack] = useState<PurchasedPackDetail | null>(null); const [loading, setLoading] = useState(true); const [failed, setFailed] = useState(false); const [session, setSession] = useState<ChallengeSession | null>(null); const [answers, setAnswers] = useState<Record<string,string>>({}); const [expired, setExpired] = useState(false); const [confirm, setConfirm] = useState(false); const [submitting, setSubmitting] = useState(false); const [result, setResult] = useState<ChallengeResult | null>(null);
+  useEffect(() => { if (result) refreshMarketplaceLeaderboard(itemId); }, [itemId, result]);
   const load = useCallback(async () => { setLoading(true); setFailed(false); try { setPack(await marketplaceService.getMyPack(itemId)); } catch { setFailed(true); } finally { setLoading(false); } }, [itemId]); useEffect(() => { void load(); }, [load]);
   const start = async () => { try { const next = await marketplaceService.startChallenge(itemId); setSession(next); setAnswers({}); setResult(null); setExpired(false); toast.success("Đã bắt đầu Full Pack Challenge."); } catch (e) { toast.error(message(e)); } };
   const submit = async () => { if (!session) return; setSubmitting(true); try { const next = await marketplaceService.submitChallenge(itemId, { sessionId: session.sessionId, answers: session.questions.map(q => ({ questionId: q.questionId, selectedOptionId: answers[q.questionId] })) }); setResult(next); setSession(null); setConfirm(false); toast.success("Đã nộp bài."); } catch (e) { toast.error(message(e)); } finally { setSubmitting(false); } };
