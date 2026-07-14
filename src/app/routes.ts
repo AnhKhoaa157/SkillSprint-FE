@@ -1,5 +1,5 @@
 import React from "react";
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter, Navigate, useParams } from "react-router";
 import RootLayout from "./layouts/RootLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Roadmap from "./pages/workspace/Roadmap";
@@ -42,6 +42,9 @@ import FeedbackPage from "./pages/core/FeedbackPage";
 import CommunityFeed from "./pages/community/CommunityFeed";
 import CommunityRooms from "./pages/community/CommunityRooms";
 import CommunityRoomChat from "./pages/community/CommunityRoomChat";
+import { MarketplaceCatalog, MarketplaceCatalogDashboard, MarketplaceItemPage, MyPackLearningPage, MyPacksPage, WalletPage } from "./pages/marketplace/MarketplaceViews";
+import MarketplaceAdmin from "./pages/admin/MarketplaceAdmin";
+import { CreatorQuizPackCreate, CreatorQuizPackDashboard, CreatorQuizPackValidation } from "./pages/marketplace/CreatorQuizPackFlow";
 
 export const routeRegistry = {
   public: {
@@ -63,6 +66,14 @@ export const routeRegistry = {
     privacy: "/privacy",
     terms: "/terms",
     cookies: "/cookies",
+    marketplace: "/marketplace",
+    marketplaceItem: "/marketplace/items/:itemId",
+    myPacks: "/my-packs",
+    myPack: "/my-packs/:itemId",
+    wallet: "/wallet",
+    creatorMarketplace: "/creator/marketplace",
+    creatorMarketplaceCreate: "/creator/marketplace/create",
+    creatorMarketplaceValidation: "/creator/marketplace/:itemId/validation",
   },
   admin: {
     root: "/admin",
@@ -73,12 +84,17 @@ export const routeRegistry = {
     health: "health",
     feedback: "feedback",
     communityModeration: "community/moderation",
+    marketplace: "marketplace",
   },
   app: {
     root: "/app",
     syllabus: "syllabus",
     calendar: "calendar",
     matrix: "matrix",
+    marketplace: "marketplace",
+    creatorMarketplace: "creator/marketplace",
+    creatorMarketplaceCreate: "creator/marketplace/create",
+    creatorMarketplaceValidation: "creator/marketplace/:itemId/validation",
     workspaces: {
       list: "workspaces",
       new: "workspaces/new",
@@ -107,6 +123,10 @@ export const routeRegistry = {
 // Wrapper created without JSX to keep this file .ts-compatible.
 const ProtectedLayout = () => React.createElement(RequireAuth, null, React.createElement(DashboardLayout, null));
 const ProtectedAdminLayout = () => React.createElement(RequireAdminAuth, null, React.createElement(AdminLayout, null));
+const CreatorValidationRouteRedirect = () => {
+  const { itemId } = useParams<{ itemId: string }>();
+  return React.createElement(Navigate, { to: `/app/creator/marketplace/${itemId}/validation`, replace: true });
+};
 
 const { public: publicRoutes, admin: adminRoutes, app: appRoutes } = routeRegistry;
 
@@ -129,6 +149,14 @@ export const router = createBrowserRouter([
       { path: publicRoutes.privacy, Component: Privacy },
       { path: publicRoutes.terms, Component: Terms },
       { path: publicRoutes.cookies, Component: Cookies },
+      { path: publicRoutes.marketplace, Component: () => React.createElement(RequireAuth, null, React.createElement(MarketplaceCatalog)) },
+      { path: publicRoutes.marketplaceItem, Component: () => React.createElement(RequireAuth, null, React.createElement(MarketplaceItemPage)) },
+      { path: publicRoutes.myPacks, Component: () => React.createElement(RequireAuth, null, React.createElement(MyPacksPage)) },
+      { path: publicRoutes.myPack, Component: () => React.createElement(RequireAuth, null, React.createElement(MyPackLearningPage)) },
+      { path: publicRoutes.wallet, Component: () => React.createElement(RequireAuth, null, React.createElement(WalletPage)) },
+      { path: publicRoutes.creatorMarketplace, element: React.createElement(Navigate, { to: "/app/creator/marketplace", replace: true }) },
+      { path: publicRoutes.creatorMarketplaceCreate, element: React.createElement(Navigate, { to: "/app/creator/marketplace/create", replace: true }) },
+      { path: publicRoutes.creatorMarketplaceValidation, Component: CreatorValidationRouteRedirect },
       {
         path: adminRoutes.root,
         Component: ProtectedAdminLayout,
@@ -141,6 +169,7 @@ export const router = createBrowserRouter([
           { path: adminRoutes.health, Component: AdminHealth },
           { path: adminRoutes.feedback, Component: AdminFeedback },
           { path: adminRoutes.communityModeration, Component: AdminCommunityModeration },
+          { path: adminRoutes.marketplace, Component: MarketplaceAdmin },
         ],
       },
       { path: publicRoutes.course, Component: CoursePlayer },
@@ -154,6 +183,10 @@ export const router = createBrowserRouter([
           { path: appRoutes.syllabus, element: React.createElement(Navigate, { to: "/app/workspaces", replace: true }) },
           { path: appRoutes.calendar, Component: StudyCalendar },
           { path: appRoutes.matrix, Component: TaskMatrix },
+          { path: appRoutes.marketplace, Component: MarketplaceCatalogDashboard },
+          { path: appRoutes.creatorMarketplace, Component: CreatorQuizPackDashboard },
+          { path: appRoutes.creatorMarketplaceCreate, Component: CreatorQuizPackCreate },
+          { path: appRoutes.creatorMarketplaceValidation, Component: CreatorQuizPackValidation },
           { path: appRoutes.workspaces.list, Component: Workspaces },
           { path: appRoutes.workspaces.new, Component: WorkspacesNew },
           { path: appRoutes.workspaces.detail, Component: WorkspaceDetail },

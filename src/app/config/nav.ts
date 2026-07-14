@@ -9,6 +9,8 @@ import {
   MessageSquare,
   Zap,
   BarChart3,
+  Store,
+  PackagePlus,
 } from "lucide-react";
 
 export type NavIcon = typeof LayoutDashboard;
@@ -37,6 +39,8 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
     label: "Học tập & AI",
     items: [
+      { path: "/app/marketplace", label: "Marketplace", icon: Store, match: "prefix" },
+      { path: "/app/creator/marketplace", label: "Đóng gói Quiz", icon: PackagePlus, match: "prefix" },
       { path: "/app/workspaces", label: "Workspaces", icon: Map, badge: true, match: "prefix" },
       { path: "/app/roadmap", label: "Roadmap", icon: Zap, dynamicChildren: "workspaces" },
       { path: "/app/progress", label: "Tiến độ", icon: BarChart3 },
