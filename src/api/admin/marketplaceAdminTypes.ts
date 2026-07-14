@@ -12,6 +12,7 @@ export interface AdminMarketplaceListItem {
   questionCount: number;
   creatorValidationScore?: number | null;
   validationScore?: number | null;
+  reviewNote?: string | null;
   createdAt: string;
   status: AdminMarketplaceStatus;
 }

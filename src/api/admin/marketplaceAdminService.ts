@@ -1,5 +1,5 @@
 import { requestJson } from "../core/apiClient";
-import type { AdminMarketplaceChapter, AdminMarketplaceDetail, AdminMarketplaceDetailPayload, AdminMarketplaceListItem, UpdateAdminMarketplaceStatusRequest } from "./marketplaceAdminTypes";
+import type { AdminMarketplaceChapter, AdminMarketplaceDetail, AdminMarketplaceDetailPayload, AdminMarketplaceListItem, AdminMarketplaceStatus, UpdateAdminMarketplaceStatusRequest } from "./marketplaceAdminTypes";
 
 const BASE = "/api/admin/marketplace/items";
 
@@ -8,9 +8,12 @@ function requireData<T>(response: { data: T | null; message?: string }): T {
   return response.data;
 }
 
-export async function getPendingMarketplaceItems(): Promise<AdminMarketplaceListItem[]> {
-  return requireData(await requestJson<AdminMarketplaceListItem[]>(BASE));
+export async function getMarketplaceItems(status: AdminMarketplaceStatus = "PENDING_REVIEW"): Promise<AdminMarketplaceListItem[]> {
+  return requireData(await requestJson<AdminMarketplaceListItem[]>(`${BASE}?status=${encodeURIComponent(status)}`));
 }
+
+/** Kept for callers that only need the default moderation queue. */
+export const getPendingMarketplaceItems = () => getMarketplaceItems("PENDING_REVIEW");
 
 export async function getMarketplaceReviewDetail(itemId: string): Promise<AdminMarketplaceDetail> {
   return normalizeDetail(requireData(await requestJson<AdminMarketplaceDetailPayload>(`${BASE}/${encodeURIComponent(itemId)}`)));
