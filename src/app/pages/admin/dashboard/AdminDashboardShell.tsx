@@ -113,15 +113,7 @@ export default function AdminDashboard() {
   }, []);
 
   const handleExport = () => {
-    if (activeNav === "financials") {
-      setActionMessage("Xuất CSV tài chính chờ nối dữ liệu thật từ API.");
-      return;
-    }
-
-    if (activeNav === "payments") {
-      setActionMessage("Xuất CSV giao dịch: sử dụng nút Xuất trong tab Quản lý thanh toán.");
-      return;
-    }
+    setActionMessage("Xuất dữ liệu đang được phát triển.");
   };
 
   const handleSync = () => {
@@ -315,12 +307,9 @@ export default function AdminDashboard() {
               <div className="sr-only" aria-live="polite">{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</div>
             </button>
 
-            <button className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-              style={{ background: "rgba(255,107,0,0.07)", color: "#C2410C", border: "1px solid rgba(255,107,0,0.18)" }}
-              onMouseEnter={e => { e.currentTarget.style.color = "#9A3412"; e.currentTarget.style.background = "rgba(255,107,0,0.12)"; }}
-              onMouseLeave={e => { e.currentTarget.style.color = "#C2410C"; e.currentTarget.style.background = "rgba(255,107,0,0.07)"; }}
-              onClick={handleExport}>
-              <Download size={12} /> Xuất dữ liệu
+            <button disabled title="Tính năng đang phát triển" className="hidden md:flex cursor-not-allowed items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold opacity-55"
+              style={{ background: "#F8FAFC", color: "#64748B", border: "1px solid #E2E8F0" }}>
+              <Download size={12} /> Xuất dữ liệu <span className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-slate-500">Đang phát triển</span>
             </button>
 
             <button
