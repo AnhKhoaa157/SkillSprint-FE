@@ -123,12 +123,3 @@ export interface CreatorValidationResult extends CreatorMarketplaceItem {
   durationSeconds: number;
   completedAt: string;
 }
-
-export interface AdminMarketplaceItemDetail extends MarketplaceItemDetail {
-  status: MarketplaceStatus;
-  validationScore?: number | null;
-  reviewNote?: string | null;
-  createdAt?: string;
-  snapshot?: MarketplaceChapter[];
-  correctAnswers?: Array<{ questionId: string; correctOptionId: string }>;
-}

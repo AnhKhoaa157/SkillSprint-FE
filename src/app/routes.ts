@@ -42,7 +42,7 @@ import FeedbackPage from "./pages/core/FeedbackPage";
 import CommunityFeed from "./pages/community/CommunityFeed";
 import CommunityRooms from "./pages/community/CommunityRooms";
 import CommunityRoomChat from "./pages/community/CommunityRoomChat";
-import { MarketplaceCatalog, MarketplaceCatalogDashboard, MarketplaceItemPage, MyPackLearningPage, MyPacksPage, WalletPage } from "./pages/marketplace/MarketplaceViews";
+import { MarketplaceCatalogDashboard, MarketplaceItemPageDashboard, MyPackLearningPageDashboard, MyPacksPageDashboard, WalletPageDashboard } from "./pages/marketplace/MarketplaceViews";
 import MarketplaceAdmin from "./pages/admin/MarketplaceAdmin";
 import { CreatorQuizPackCreate, CreatorQuizPackDashboard, CreatorQuizPackValidation } from "./pages/marketplace/CreatorQuizPackFlow";
 
@@ -85,6 +85,7 @@ export const routeRegistry = {
     feedback: "feedback",
     communityModeration: "community/moderation",
     marketplace: "marketplace",
+    marketplaceDetail: "marketplace/:itemId",
   },
   app: {
     root: "/app",
@@ -95,6 +96,10 @@ export const routeRegistry = {
     creatorMarketplace: "creator/marketplace",
     creatorMarketplaceCreate: "creator/marketplace/create",
     creatorMarketplaceValidation: "creator/marketplace/:itemId/validation",
+    marketplaceItem: "marketplace/items/:itemId",
+    myPacks: "my-packs",
+    myPack: "my-packs/:itemId",
+    wallet: "wallet",
     workspaces: {
       list: "workspaces",
       new: "workspaces/new",
@@ -127,6 +132,14 @@ const CreatorValidationRouteRedirect = () => {
   const { itemId } = useParams<{ itemId: string }>();
   return React.createElement(Navigate, { to: `/app/creator/marketplace/${itemId}/validation`, replace: true });
 };
+const MarketplaceItemRouteRedirect = () => {
+  const { itemId } = useParams<{ itemId: string }>();
+  return React.createElement(Navigate, { to: `/app/marketplace/items/${itemId}`, replace: true });
+};
+const MyPackRouteRedirect = () => {
+  const { itemId } = useParams<{ itemId: string }>();
+  return React.createElement(Navigate, { to: `/app/my-packs/${itemId}`, replace: true });
+};
 
 const { public: publicRoutes, admin: adminRoutes, app: appRoutes } = routeRegistry;
 
@@ -149,11 +162,11 @@ export const router = createBrowserRouter([
       { path: publicRoutes.privacy, Component: Privacy },
       { path: publicRoutes.terms, Component: Terms },
       { path: publicRoutes.cookies, Component: Cookies },
-      { path: publicRoutes.marketplace, Component: () => React.createElement(RequireAuth, null, React.createElement(MarketplaceCatalog)) },
-      { path: publicRoutes.marketplaceItem, Component: () => React.createElement(RequireAuth, null, React.createElement(MarketplaceItemPage)) },
-      { path: publicRoutes.myPacks, Component: () => React.createElement(RequireAuth, null, React.createElement(MyPacksPage)) },
-      { path: publicRoutes.myPack, Component: () => React.createElement(RequireAuth, null, React.createElement(MyPackLearningPage)) },
-      { path: publicRoutes.wallet, Component: () => React.createElement(RequireAuth, null, React.createElement(WalletPage)) },
+      { path: publicRoutes.marketplace, element: React.createElement(Navigate, { to: "/app/marketplace", replace: true }) },
+      { path: publicRoutes.marketplaceItem, Component: MarketplaceItemRouteRedirect },
+      { path: publicRoutes.myPacks, element: React.createElement(Navigate, { to: "/app/my-packs", replace: true }) },
+      { path: publicRoutes.myPack, Component: MyPackRouteRedirect },
+      { path: publicRoutes.wallet, element: React.createElement(Navigate, { to: "/app/wallet", replace: true }) },
       { path: publicRoutes.creatorMarketplace, element: React.createElement(Navigate, { to: "/app/creator/marketplace", replace: true }) },
       { path: publicRoutes.creatorMarketplaceCreate, element: React.createElement(Navigate, { to: "/app/creator/marketplace/create", replace: true }) },
       { path: publicRoutes.creatorMarketplaceValidation, Component: CreatorValidationRouteRedirect },
@@ -170,6 +183,7 @@ export const router = createBrowserRouter([
           { path: adminRoutes.feedback, Component: AdminFeedback },
           { path: adminRoutes.communityModeration, Component: AdminCommunityModeration },
           { path: adminRoutes.marketplace, Component: MarketplaceAdmin },
+          { path: adminRoutes.marketplaceDetail, Component: MarketplaceAdmin },
         ],
       },
       { path: publicRoutes.course, Component: CoursePlayer },
@@ -184,6 +198,10 @@ export const router = createBrowserRouter([
           { path: appRoutes.calendar, Component: StudyCalendar },
           { path: appRoutes.matrix, Component: TaskMatrix },
           { path: appRoutes.marketplace, Component: MarketplaceCatalogDashboard },
+          { path: appRoutes.marketplaceItem, Component: MarketplaceItemPageDashboard },
+          { path: appRoutes.myPacks, Component: MyPacksPageDashboard },
+          { path: appRoutes.myPack, Component: MyPackLearningPageDashboard },
+          { path: appRoutes.wallet, Component: WalletPageDashboard },
           { path: appRoutes.creatorMarketplace, Component: CreatorQuizPackDashboard },
           { path: appRoutes.creatorMarketplaceCreate, Component: CreatorQuizPackCreate },
           { path: appRoutes.creatorMarketplaceValidation, Component: CreatorQuizPackValidation },

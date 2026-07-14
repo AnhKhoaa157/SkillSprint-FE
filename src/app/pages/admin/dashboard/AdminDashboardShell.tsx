@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3 } from "lucide-react";
+import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3, Store } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminHealth from "../sections/health";
@@ -13,6 +13,7 @@ import AdminSystemSection from "../sections/system/AdminSystemSection";
 import AdminLeaderboard from "../sections/leaderboard";
 import AdminCommunityModeration from "../sections/community/AdminCommunityModeration";
 import AdminCommunityRooms from "../sections/community/AdminCommunityRooms";
+import MarketplaceAdmin from "../MarketplaceAdmin";
 import healthService from "../../../../api/system/healthService";
 
 /** Navbar profile avatar. Renders a strictly square, cropped circular image and
@@ -48,7 +49,7 @@ function AdminNavAvatar({ avatarUrl, fullName }: { avatarUrl?: string; fullName?
 }
 
 export default function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions" | "system" | "leaderboard" | "community" | "communityRooms">("financials");
+  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions" | "system" | "leaderboard" | "community" | "communityRooms" | "marketplace">("financials");
   const [, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<{ fullName?: string; roles?: string[]; avatarUrl?: string } | null>(null);
@@ -66,6 +67,7 @@ export default function AdminDashboard() {
     { id: "subscriptions", label: "Gói dịch vụ",         icon: Layers      },
     { id: "feedback",      label: "Feedback người dùng", icon: MessageSquare },
     { id: "community",     label: "Kiểm duyệt cộng đồng", icon: ShieldAlert },
+    { id: "marketplace",   label: "Duyệt Quiz Pack", icon: Store },
     { id: "communityRooms", label: "Phòng cộng đồng", icon: Megaphone },
     { id: "system",        label: "Hệ thống & Cảnh báo", icon: ServerCog   },
   ] as const;
@@ -95,6 +97,7 @@ export default function AdminDashboard() {
     subscriptions: { title: "Gói dịch vụ",         sub: "Quản lý subscription plans · Tính năng · Nhật ký" },
     feedback:      { title: "Feedback người dùng", sub: "Xem và quản lý phản hồi từ người dùng" },
     community:     { title: "Kiểm duyệt cộng đồng", sub: "Duyệt bài viết · Bình luận · Report · Từ khóa cấm" },
+    marketplace:   { title: "Duyệt Quiz Pack", sub: "Kiểm tra nội dung và xuất bản Quiz Pack" },
     communityRooms: { title: "Quản lý Phòng Cộng Đồng", sub: "Danh sách phòng · Tin nhắn · Trạng thái" },
     system:        { title: "Hệ thống & Cảnh báo", sub: "Bảo trì hệ thống · Thông báo chung" },
   };
@@ -132,6 +135,7 @@ export default function AdminDashboard() {
     { id: "goto-financials", label: "Đi tới Tài chính", keywords: "finance revenue mrr", action: () => setActiveNav("financials") },
     { id: "goto-payments", label: "Đi tới Quản lý thanh toán", keywords: "payments transactions giao dịch thanh toán", action: () => setActiveNav("payments") },
     { id: "goto-system", label: "Đi tới Hệ thống & Cảnh báo", keywords: "system maintenance bảo trì trạng thái hệ thống vận hành thông báo announcements", action: () => setActiveNav("system") },
+    { id: "goto-marketplace", label: "Đi tới Duyệt Quiz Pack", keywords: "marketplace quiz pack duyệt xuất bản", action: () => setActiveNav("marketplace") },
     { id: "export", label: "Xuất dữ liệu màn hình hiện tại", keywords: "export csv download", action: handleExport },
     { id: "sync", label: "Đồng bộ dữ liệu admin", keywords: "sync refresh", action: handleSync },
   ];
@@ -377,6 +381,7 @@ export default function AdminDashboard() {
           {activeNav === "subscriptions" && <SubscriptionPlansView />}
           {activeNav === "feedback" && <AdminFeedback isDashboard={true} />}
           {activeNav === "community" && <AdminCommunityModeration isDashboard={true} />}
+          {activeNav === "marketplace" && <MarketplaceAdmin />}
           {activeNav === "communityRooms" && <AdminCommunityRooms isDashboard={true} />}
           {activeNav === "system" && (
             <AdminSystemSection />

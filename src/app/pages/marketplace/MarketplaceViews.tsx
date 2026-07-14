@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft, BookOpen, CheckCircle2, Clock3, Coins, LoaderCircle, Search, Send, ShoppingBag, Sparkles, Star, Trophy, WalletCards, X } from "lucide-react";
 import { toast } from "sonner";
@@ -11,7 +11,17 @@ const date = (v?: string | null) => v ? new Intl.DateTimeFormat("vi-VN", { dateS
 const message = (e: unknown) => e instanceof Error ? e.message : "Đã có lỗi xảy ra. Vui lòng thử lại.";
 
 function Shell({ children }: { children: ReactNode }) {
-  return <div className="skill-marketplace min-h-screen bg-slate-50 text-slate-900">
+  const navigate = useNavigate();
+  const stayInDashboard = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const target = event.target as Element;
+    const link = target.closest<HTMLAnchorElement>('a[href^="/marketplace"], a[href^="/my-packs"], a[href="/wallet"]');
+    const href = link?.getAttribute("href");
+    if (!href || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey) return;
+    event.preventDefault();
+    navigate(`/app${href}`);
+  };
+
+  return <div onClickCapture={stayInDashboard} className="skill-marketplace min-h-screen bg-slate-50 text-slate-900">
     <style>{`
       .skill-marketplace .bg-violet-50 { background-color: #fff7ed !important; }
       .skill-marketplace .bg-violet-600 { background-color: #ff6b00 !important; }
@@ -60,6 +70,22 @@ export function MarketplaceCatalog() {
 
 export function MarketplaceCatalogDashboard() {
   return <div className="[&>div>header]:hidden"><MarketplaceCatalog /></div>;
+}
+
+export function MarketplaceItemPageDashboard() {
+  return <div className="[&>div>header]:hidden"><MarketplaceItemPage /></div>;
+}
+
+export function MyPacksPageDashboard() {
+  return <div className="[&>div>header]:hidden"><MyPacksPage /></div>;
+}
+
+export function MyPackLearningPageDashboard() {
+  return <div className="[&>div>header]:hidden"><MyPackLearningPage /></div>;
+}
+
+export function WalletPageDashboard() {
+  return <div className="[&>div>header]:hidden"><WalletPage /></div>;
 }
 
 export function CreatorMarketplaceDashboard() {

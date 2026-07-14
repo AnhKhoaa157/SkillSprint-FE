@@ -1,6 +1,6 @@
 import { skillSprintApiClient, type ApiResponse } from "../core/skillSprintApiClient";
 import type {
-  AdminMarketplaceItemDetail, ChallengeResult, ChallengeSession, CreateMarketplaceItemRequest,
+  ChallengeResult, ChallengeSession, CreateMarketplaceItemRequest,
   CreatorMarketplaceItem, CreatorValidationRequest, CreatorValidationResult, MarketplaceItemDetail, MarketplaceItemSummary,
   MarketplaceLeaderboardEntry, MarketplaceReview, MarketplaceTransaction, MarketplaceWallet,
   PurchasedMarketplacePack, PurchasedPackDetail,
@@ -63,15 +63,6 @@ const marketplaceService = {
   },
   async submitForReview(itemId: string) {
     return unwrap((await skillSprintApiClient.post<ApiResponse<CreatorMarketplaceItem>>(`/api/marketplace/items/${itemId}/submit-review`)).data);
-  },
-  async getPendingAdminItems() {
-    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceItemSummary[]>>("/api/admin/marketplace/items/pending")).data);
-  },
-  async getAdminItem(itemId: string) {
-    return unwrap((await skillSprintApiClient.get<ApiResponse<AdminMarketplaceItemDetail>>(`/api/admin/marketplace/items/${itemId}`)).data);
-  },
-  async decideAdminReview(itemId: string, status: "PUBLISHED" | "REJECTED" | "SUSPENDED", reviewNote?: string) {
-    return unwrap((await skillSprintApiClient.post<ApiResponse<AdminMarketplaceItemDetail>>(`/api/admin/marketplace/items/${itemId}/review-decision`, { status, reviewNote })).data);
   },
 };
 
