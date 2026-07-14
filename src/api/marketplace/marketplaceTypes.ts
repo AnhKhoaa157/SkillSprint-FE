@@ -117,6 +117,43 @@ export interface CreatorValidationRequest {
   durationSeconds: number;
 }
 
+/**
+ * Immutable snapshot returned to the Creator for pack validation.
+ * Correct answers and explanations are deliberately absent from this DTO.
+ */
+export interface CreatorValidationOption {
+  optionId: string;
+  label: string;
+  text: string;
+  sequenceNo: number;
+}
+
+export interface CreatorValidationQuestion {
+  questionId: string;
+  type: string;
+  text: string;
+  sequenceNo: number;
+  options: CreatorValidationOption[];
+}
+
+export interface CreatorValidationChapter {
+  sequenceNo: number;
+  title: string;
+  summary: string | null;
+  quizTitle: string;
+  questions: CreatorValidationQuestion[];
+}
+
+export interface CreatorValidationPackResponse {
+  itemId: string;
+  sourceWorkspaceId: string;
+  title: string;
+  chapterCount: number;
+  quizCount: number;
+  questionCount: number;
+  chapters: CreatorValidationChapter[];
+}
+
 export interface CreatorValidationResult extends CreatorMarketplaceItem {
   score: number;
   correctCount: number;

@@ -1,7 +1,7 @@
 import { skillSprintApiClient, type ApiResponse } from "../core/skillSprintApiClient";
 import type {
   ChallengeResult, ChallengeSession, CreateMarketplaceItemRequest,
-  CreatorMarketplaceItem, CreatorValidationRequest, CreatorValidationResult, MarketplaceItemDetail, MarketplaceItemSummary,
+  CreatorMarketplaceItem, CreatorValidationPackResponse, CreatorValidationRequest, CreatorValidationResult, MarketplaceItemDetail, MarketplaceItemSummary,
   MarketplaceLeaderboardEntry, MarketplaceReview, MarketplaceTransaction, MarketplaceWallet,
   PurchasedMarketplacePack, PurchasedPackDetail,
 } from "./marketplaceTypes";
@@ -54,6 +54,12 @@ const marketplaceService = {
   },
   async createItem(request: CreateMarketplaceItemRequest) {
     return unwrap((await skillSprintApiClient.post<ApiResponse<CreatorMarketplaceItem>>("/api/marketplace/items", request)).data);
+  },
+  async getCreatorValidationSnapshot(itemId: string) {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<CreatorValidationPackResponse>>(`/api/marketplace/items/${itemId}/creator-validation`)).data);
+  },
+  async refreshCreatorSnapshot(itemId: string) {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<CreatorMarketplaceItem>>(`/api/marketplace/items/${itemId}/refresh-snapshot`)).data);
   },
   async validateCreator(itemId: string, request: CreatorValidationRequest) {
     if (request.answers.length === 0) {
