@@ -119,13 +119,14 @@ export interface CreatorValidationRequest {
 
 /**
  * Immutable snapshot returned to the Creator for pack validation.
- * Correct answers and explanations are deliberately absent from this DTO.
+ * Correct answers are included only for the ADMIN_DEFAULT validation tool.
  */
 export interface CreatorValidationOption {
   optionId: string;
   label: string;
   text: string;
   sequenceNo: number;
+  correct?: boolean | null;
 }
 
 export interface CreatorValidationQuestion {
