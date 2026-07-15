@@ -256,21 +256,26 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-post-title"
-            className="relative max-h-[92vh] w-full overflow-hidden rounded-t-3xl bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[540px] sm:rounded-3xl border border-slate-100"
+            className="relative max-h-[92vh] w-full overflow-hidden rounded-t-[2rem] border border-white bg-white shadow-[0_28px_90px_rgba(71,50,35,0.2)] sm:max-w-[620px] sm:rounded-[2rem]"
             initial={{ opacity: 0, y: 15, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 15, scale: 0.97 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
           >
-            {/* Top orange gradient accent strip */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#FF6B00] via-[#FF8A00] to-[#FFB800]" />
-
-            <div className="relative flex h-14 items-center justify-center border-b border-slate-100 px-12 mt-1">
-              <h2 id="create-post-title" className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Tạo bài viết thảo luận</h2>
+            <div className="relative flex items-start justify-between border-b border-slate-100 bg-[#FFFDFB] px-5 py-5 sm:px-6">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-2xl border border-orange-100 bg-[#FFF2EA] text-[#D9541E] shadow-[0_7px_18px_rgba(217,84,30,0.08)]">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#C84E20]">Cộng đồng SkillSprint</p>
+                  <h2 id="create-post-title" className="mt-0.5 text-base font-black tracking-[-0.02em] text-slate-900">Chia sẻ điều bạn vừa học</h2>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="absolute right-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-slate-50 border border-slate-200/50 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 active:scale-95"
                 title="Đóng"
                 aria-label="Đóng modal tạo bài viết"
               >
@@ -278,9 +283,9 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
               </button>
             </div>
 
-            <div className="max-h-[calc(92vh-120px)] overflow-y-auto px-5 py-5">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-11 w-11 shrink-0 border border-slate-150 shadow-xs">
+            <div className="max-h-[calc(92vh-136px)] overflow-y-auto px-5 py-5 sm:px-6">
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 px-3.5 py-3">
+                <Avatar className="h-10 w-10 shrink-0 border border-white shadow-sm">
                   <AvatarImage src={avatarUrl} />
                   <AvatarFallback className="bg-orange-50 text-sm font-bold text-[#FF6B00]">
                     {displayName.charAt(0) || "S"}
@@ -288,35 +293,39 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
                 </Avatar>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-sm font-bold text-slate-950">{displayName}</p>
+                    <p className="truncate text-sm font-bold text-slate-900">{displayName}</p>
                     <RankBadge rank={allTimeRank} />
                   </div>
-                  <p className="mt-0.5 text-[10px] font-semibold text-slate-400">Chia sẻ công khai với cộng đồng</p>
+                  <p className="mt-0.5 text-[10px] font-semibold text-slate-400">Bài viết sẽ được chia sẻ với cộng đồng</p>
                 </div>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-5">
                 <Textarea
                   autoFocus
                   value={content}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
                   placeholder={composerPrompt}
-                  className="min-h-[160px] resize-none border-0 bg-transparent px-0 text-[16px] leading-7 text-slate-900 shadow-none placeholder:text-slate-400 focus-visible:ring-0"
+                  className="min-h-[190px] resize-none border-0 bg-transparent px-0 text-[16px] leading-7 text-slate-800 shadow-none placeholder:text-slate-400 focus-visible:ring-0"
                   maxLength={MAX_CONTENT_LENGTH}
                 />
-                <div className={`mt-2 text-right text-[10px] font-bold tracking-wide ${isNearLimit ? "text-[#FF6B00]" : "text-slate-400"}`}>
+                <div className={`mt-2 text-right text-[10px] font-bold tabular-nums tracking-wide ${isNearLimit ? "text-[#D9541E]" : "text-slate-400"}`}>
                   {content.length}/{MAX_CONTENT_LENGTH}
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 ring-1 ring-slate-200/50">
+              <div className="mt-3 border-t border-slate-100 pt-4">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Hashtag & tuỳ chọn</label>
+                  <span className="text-[10px] font-medium text-slate-400">Giúp mọi người dễ tìm bài viết</span>
+                </div>
                 <div className="relative">
                   <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 font-bold" />
                   <Input
                     value={hashtags}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHashtags(e.target.value)}
                     placeholder="Thêm các hashtag (ví dụ: React, SpringBoot...)"
-                    className="h-10 rounded-xl border border-slate-200 bg-white pl-8 text-xs font-semibold shadow-none outline-none focus-visible:border-[#FF6B00] focus-visible:ring-1 focus-visible:ring-orange-100"
+                    className="h-11 rounded-xl border border-slate-200 bg-[#FBFCFD] pl-8 text-xs font-semibold shadow-none outline-none focus-visible:border-[#E9AE90] focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-orange-100"
                   />
                 </div>
 
@@ -328,7 +337,7 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
                         <span
                           key={tag}
                           title={label}
-                          className="inline-flex max-w-[140px] items-center truncate rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600 border border-slate-200/60 shadow-xs"
+                          className="inline-flex max-w-[140px] items-center truncate rounded-lg border border-orange-100 bg-[#FFF7F2] px-2.5 py-1 text-[10px] font-bold text-[#C84E20]"
                         >
                           <span className="truncate">{label}</span>
                         </span>
@@ -337,16 +346,16 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
                   </div>
                 )}
 
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 border border-slate-200/60 shadow-xs">
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 shadow-sm">
                     <Sparkles className="h-3 w-3 text-[#FF6B00]" />
                     Sprint note
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 border border-slate-200/60 shadow-xs">
+                  <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 shadow-sm">
                     <Lightbulb className="h-3 w-3 text-emerald-500" />
                     Chia sẻ mẹo
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 border border-slate-200/60 shadow-xs">
+                  <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 shadow-sm">
                     <Paperclip className="h-3 w-3 text-blue-500" />
                     Đính kèm tài liệu
                   </span>
@@ -354,11 +363,13 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, avatarUrl, dis
               </div>
             </div>
 
-            <div className="border-t border-slate-100 p-4 bg-slate-50/30">
+            <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-[#FFFDFC] px-5 py-4 sm:px-6">
+              <p className="hidden text-[10px] font-medium text-slate-400 sm:block">Hãy chia sẻ cụ thể để nhận được phản hồi hữu ích.</p>
+              <Button type="button" variant="ghost" onClick={onClose} className="h-10 rounded-xl px-3 text-xs font-bold text-slate-500 hover:bg-slate-100">Hủy</Button>
               <Button
                 type="submit"
                 disabled={!canSubmit}
-                className="h-10 w-full rounded-full bg-gradient-to-r from-[#FF6B00] via-[#FF8A00] to-[#FF9F00] text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/35 transition active:scale-[0.98] disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                className="h-10 rounded-xl bg-[#E45F2A] px-5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(228,95,42,0.2)] transition hover:bg-[#CF4F1F] hover:shadow-[0_10px_24px_rgba(228,95,42,0.26)] active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
               >
                 {isSubmitting ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-1.5" />

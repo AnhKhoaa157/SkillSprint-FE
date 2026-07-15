@@ -41,7 +41,7 @@ vi.mock("sonner", () => ({
 
 async function openComposer() {
   await userEvent.click(screen.getByRole("button", { name: /Test ơi, hôm nay bạn học được gì/i }));
-  return screen.findByText(/Tạo bài viết/i);
+  return screen.findByRole("dialog", { name: /Chia sẻ điều bạn vừa học/i });
 }
 
 describe("CreatePostBox", () => {
@@ -121,7 +121,7 @@ describe("CreatePostBox", () => {
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith("Đã đăng bài chia sẻ thành công 🚀");
       expect(mockOnPostCreated).toHaveBeenCalled();
-      expect(screen.queryByText("Tạo bài viết thảo luận")).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: /Chia sẻ điều bạn vừa học/i })).not.toBeInTheDocument();
     });
   });
 
@@ -170,7 +170,7 @@ describe("CreatePostBox", () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("API Error");
       expect(mockOnPostCreated).not.toHaveBeenCalled();
-      expect(screen.getByText("Tạo bài viết thảo luận")).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: /Chia sẻ điều bạn vừa học/i })).toBeInTheDocument();
     });
   });
 });

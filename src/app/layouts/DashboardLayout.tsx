@@ -306,6 +306,7 @@ export default function DashboardLayout() {
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pathname = loc.pathname.replace(/\/+$/, "") || "/";
   const isRoadmapPage = pathname === "/app/roadmap" || pathname.match(/^\/app\/workspaces\/[^\/]+\/roadmap$/);
+  const isCommunityRoomChat = /^\/app\/community\/rooms\/[^/]+$/.test(pathname);
   const workspaceIdMatch = pathname.match(/^\/app\/workspaces\/([^\/]+)\/roadmap$/);
   const dropdownWorkspaceId = workspaceIdMatch ? workspaceIdMatch[1] : (roadmapWorkspaces.length > 0 ? roadmapWorkspaces[0].id : "");
   
@@ -625,8 +626,8 @@ export default function DashboardLayout() {
         </header>
 
         {/* Page content */}
-        <div ref={contentScrollRef} data-dashboard-scroll className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-7 pb-24 md:pb-9">
-          <div style={{width:"100%"}}>
+        <div ref={contentScrollRef} data-dashboard-scroll className={isCommunityRoomChat ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-7 pb-24 md:pb-9"}>
+          <div className={isCommunityRoomChat ? "h-full w-full" : undefined} style={{width:"100%"}}>
             <Outlet/>
           </div>
         </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   Search, Plus, Users, Hash, Shield, MessageSquare, Lock, ArrowLeft,
-  Compass, Star, Sparkles, Calendar, CalendarDays, Flame, MailCheck, X,
+  Sparkles, Calendar, MailCheck, X,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -50,21 +50,6 @@ function showCommunityRoomsError(error: unknown, fallback: string): void {
   toast.error(getErrorMessage(error, fallback));
 }
 
-/* ── Room banner gradients ── */
-const ROOM_PALETTES = [
-  { bg: "from-[#FF6B00] to-[#FF9A3C]", light: "#FF6B00" },
-  { bg: "from-violet-500 to-purple-500",  light: "#8B5CF6" },
-  { bg: "from-emerald-500 to-teal-500",   light: "#10B981" },
-  { bg: "from-blue-500 to-indigo-500",    light: "#3B82F6" },
-  { bg: "from-rose-500 to-pink-500",      light: "#F43F5E" },
-  { bg: "from-amber-500 to-orange-400",   light: "#F59E0B" },
-  { bg: "from-cyan-500 to-sky-500",       light: "#06B6D4" },
-];
-
-function getRoomPalette(id: string) {
-  return ROOM_PALETTES[id.charCodeAt(0) % ROOM_PALETTES.length];
-}
-
 /* ── Create Room Modal ── */
 function CreateRoomModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onClose: () => void; onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -87,15 +72,19 @@ function CreateRoomModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="w-full max-w-lg overflow-hidden rounded-t-[2rem] border border-white bg-white shadow-[0_28px_90px_rgba(15,23,42,0.22)] sm:rounded-[2rem]">
+        <div className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-br from-orange-50/90 via-white to-white px-6 py-6">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-36 w-36 rounded-full bg-orange-100/70 blur-3xl" />
+          <button type="button" onClick={onClose} aria-label="Đóng" className="absolute right-5 top-5 z-10 grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" /></button>
+          <div className="relative flex items-center gap-3 pr-10">
+            <div className="grid h-11 w-11 place-items-center rounded-xl border border-orange-200 bg-white text-[#FF6B00] shadow-sm">
               <Plus className="w-5 h-5" />
             </div>
-            <h2 className="text-xl font-bold text-slate-800">Tạo phòng cộng đồng</h2>
+            <div><h2 className="text-xl font-black tracking-[-0.02em] text-slate-950">Tạo phòng cộng đồng</h2><p className="mt-1 text-xs text-slate-500">Thiết lập không gian học tập mới cho cộng đồng.</p></div>
           </div>
+        </div>
+        <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tên phòng <span className="text-rose-500">*</span></label>
@@ -104,13 +93,13 @@ function CreateRoomModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onCl
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="VD: Hội lập trình web"
-                className="h-11 rounded-xl border-slate-200 focus:border-orange-500 focus:ring-orange-500/20"
+                className="h-11 rounded-xl border-slate-200 bg-[#F8F9FA] font-semibold focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Mô tả</label>
               <textarea
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 transition-all resize-none"
+                className="w-full resize-none rounded-xl border border-slate-200 bg-[#F8F9FA] px-4 py-3 text-sm transition-all focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-100"
                 rows={3}
                 value={formData.description || ""}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -123,7 +112,7 @@ function CreateRoomModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onCl
                 <select
                   value={formData.mode}
                   onChange={(e) => setFormData({ ...formData, mode: e.target.value as CommunityRoomMode })}
-                  className="w-full h-11 rounded-xl border border-slate-200 px-3 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 cursor-pointer transition-all"
+                  className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-[#F8F9FA] px-3 text-sm font-semibold transition-all focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-100"
                 >
                   <option value="PUBLIC">Công khai</option>
                   <option value="INVITE_ONLY">Chỉ mời</option>
@@ -138,15 +127,15 @@ function CreateRoomModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onCl
                   max={500}
                   value={formData.maxMembers}
                   onChange={(e) => setFormData({ ...formData, maxMembers: parseInt(e.target.value) || 50 })}
-                  className="h-11 rounded-xl border-slate-200 focus:border-orange-500 focus:ring-orange-500/20"
+                  className="h-11 rounded-xl border-slate-200 bg-[#F8F9FA] font-semibold focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
-              <Button type="button" variant="ghost" onClick={onClose} disabled={loading} className="rounded-xl font-medium hover:bg-slate-100">
+            <div className="-mx-6 -mb-6 mt-7 flex justify-end gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="h-10 rounded-xl border-slate-200 bg-white px-4 text-xs font-bold hover:bg-slate-100">
                 Hủy
               </Button>
-              <Button type="submit" disabled={loading} className="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white rounded-xl shadow-md shadow-orange-500/20 font-semibold px-6">
+              <Button type="submit" disabled={loading} className="h-10 rounded-xl bg-[#FF6B00] px-5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(255,107,0,0.18)] transition hover:-translate-y-0.5 hover:bg-[#E85F00] active:translate-y-0">
                 {loading ? "Đang tạo..." : "Tạo phòng"}
               </Button>
             </div>
@@ -174,63 +163,57 @@ function ModeBadge({ mode }: { mode: CommunityRoomMode }) {
 
 /* ── Room Card ── */
 function RoomCard({ room, onJoin }: { room: CommunityRoomResponse; onJoin: (id: string) => void }) {
-  const pal = getRoomPalette(room.roomId);
   const initials = room.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
   const memberPct = Math.min(100, (room.memberCount / room.maxMembers) * 100);
 
   return (
-    <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-      <div className={`relative h-28 bg-gradient-to-br ${pal.bg} overflow-hidden`}>
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: "radial-gradient(circle, white 1.5px, transparent 1.5px)", backgroundSize: "18px 18px" }} />
-        <div className="absolute bottom-3 left-4 flex items-end gap-3">
-          <div className={`h-12 w-12 rounded-2xl border-[3px] border-white bg-gradient-to-br ${pal.bg} flex items-center justify-center text-[16px] font-black text-white shadow-lg`}>
-            {initials}
-          </div>
-          <div className="pb-0.5">
-            <h3 className="text-[14px] font-black text-white drop-shadow line-clamp-1" title={room.name}>{room.name}</h3>
-            <div className="mt-0.5"><ModeBadge mode={room.mode} /></div>
-          </div>
-        </div>
+    <motion.article layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
+      className="group relative flex min-h-[20rem] flex-col overflow-hidden rounded-[1.75rem] border border-white bg-white/90 p-5 shadow-[0_16px_45px_rgba(71,50,35,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-orange-100 hover:shadow-[0_24px_55px_rgba(71,50,35,0.09)]">
+      <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-orange-100/65 blur-3xl transition duration-500 group-hover:scale-125" />
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="grid h-12 w-12 place-items-center rounded-2xl border border-[#F5C5AF] bg-[#FFF0E8] text-sm font-black text-[#C84E20] shadow-[0_9px_22px_rgba(216,94,42,0.12)]">{initials || "SS"}</div>
+        <ModeBadge mode={room.mode} />
       </div>
 
-      <div className="flex flex-col flex-1 p-4">
-        <p className="text-[12px] text-slate-500 line-clamp-2 leading-relaxed flex-1 mb-3 min-h-[36px]">
+      <div className="relative mt-5 flex flex-1 flex-col">
+        <h3 className="line-clamp-1 text-lg font-black tracking-[-0.02em] text-slate-950 transition group-hover:text-[#E85F00]" title={room.name}>{room.name}</h3>
+        <p className="mt-2 line-clamp-2 min-h-[40px] flex-1 text-[12px] leading-5 text-slate-500">
           {room.description || "Không có mô tả chi tiết cho phòng cộng đồng này."}
         </p>
 
-        <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2">
-          <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {room.memberCount}/{room.maxMembers}</span>
-          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {format(new Date(room.createdAt), "dd/MM/yy")}</span>
+        <div className="mt-5 rounded-2xl border border-slate-100 bg-[#F8F9FA] p-3.5">
+          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+            <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-[#FF6B00]" /> <b className="text-slate-800">{room.memberCount}</b> / {room.maxMembers}</span>
+            <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-slate-400" /> {format(new Date(room.createdAt), "dd/MM/yyyy")}</span>
+          </div>
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-200/70">
+            <div className="h-full rounded-full bg-[#FF6B00] transition-all duration-500" style={{ width: `${memberPct}%` }} />
+          </div>
         </div>
 
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 mb-4">
-          <div className={`h-full rounded-full bg-gradient-to-r ${pal.bg} transition-all duration-500`}
-            style={{ width: `${memberPct}%` }} />
-        </div>
-
+        <div className="mt-4">
         {room.joined ? (
           <Link to={`/app/community/rooms/${room.roomId}`} className="block">
             <button type="button"
-              className={`w-full h-9 rounded-xl bg-gradient-to-r ${pal.bg} text-[12px] font-bold text-white shadow-sm hover:opacity-90 transition active:scale-95`}>
-              Vào phòng chat
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#E45F2A] text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(228,95,42,0.19)] transition hover:bg-[#CF4F1F] active:scale-[0.98]">
+              <MessageSquare className="h-4 w-4" /> Vào phòng chat
             </button>
           </Link>
         ) : room.banned ? (
-          <button disabled type="button" className="w-full h-9 rounded-xl bg-slate-100 text-[12px] font-bold text-slate-400 cursor-not-allowed">Đã bị cấm</button>
+          <button disabled type="button" className="h-11 w-full cursor-not-allowed rounded-xl bg-slate-100 text-[12px] font-bold text-slate-400">Đã bị cấm</button>
         ) : room.status === "LOCKED" ? (
-          <button disabled type="button" className="w-full h-9 rounded-xl bg-slate-100 text-[12px] font-bold text-slate-400 cursor-not-allowed">Đã khóa</button>
+          <button disabled type="button" className="h-11 w-full cursor-not-allowed rounded-xl bg-slate-100 text-[12px] font-bold text-slate-400">Đã khóa</button>
         ) : room.mode === "INVITE_ONLY" ? (
-          <button disabled type="button" className="w-full h-9 rounded-xl bg-slate-100 text-[12px] font-bold text-slate-400 cursor-not-allowed">Cần lời mời</button>
+          <button disabled type="button" className="h-11 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-white text-[12px] font-bold text-slate-500">Cần lời mời</button>
         ) : (
           <button type="button" onClick={() => onJoin(room.roomId)}
-            className="w-full h-9 rounded-xl border border-[#FF6B00]/30 bg-orange-50 text-[12px] font-bold text-[#FF6B00] hover:bg-[#FF6B00] hover:text-white transition-all duration-200 active:scale-95">
+            className="h-11 w-full rounded-xl bg-[#FF6B00] text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(255,107,0,0.16)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#E85F00] active:translate-y-0 active:scale-[0.98]">
             Tham gia phòng
           </button>
         )}
+        </div>
       </div>
-    </motion.div>
+    </motion.article>
   );
 }
 
@@ -388,21 +371,27 @@ export default function CommunityRooms() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/app/community")} className="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-full shrink-0 transition-colors">
+    <div className="relative isolate mx-auto min-h-screen max-w-7xl overflow-hidden rounded-[2rem] bg-[#F7F7F5] px-4 py-6 sm:px-6 sm:py-8">
+      <div className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(circle_at_12%_0%,rgba(255,237,223,0.85),transparent_28%),radial-gradient(circle_at_92%_22%,rgba(255,246,234,0.78),transparent_26%)]" />
+      <div className="pointer-events-none absolute inset-0 -z-10 opacity-25 [background-image:radial-gradient(rgba(255,107,0,0.16)_1px,transparent_1px)] [background-size:28px_28px] [mask-image:linear-gradient(to_bottom,black,transparent_48%)]" />
+      <section className="relative mb-6 overflow-hidden rounded-[2rem] border border-white bg-white/85 p-6 shadow-[0_22px_65px_rgba(71,50,35,0.07)] backdrop-blur-xl sm:p-8">
+        <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-orange-100/60 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-6 md:flex-row md:items-center">
+        <div className="flex items-start gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/app/community")} className="mt-0.5 shrink-0 rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-[#FF6B00]">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Phòng Cộng Đồng</h1>
-            <p className="text-slate-500 text-sm mt-1 font-medium">Khám phá và tham gia các không gian học tập chung</p>
+            <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.17em] text-[#FF6B00]"><Sparkles className="h-3 w-3" />Không gian học tập</div>
+            <h1 className="text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl">Phòng Cộng Đồng</h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">Tìm bạn đồng hành, trao đổi kiến thức và học cùng nhau theo thời gian thực.</p>
           </div>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white border-0 shadow-lg shadow-orange-500/25 rounded-full px-6 transition-all duration-300 hover:scale-105 hover:shadow-orange-500/40">
-          <Plus className="w-4 h-4 mr-2" /> Tạo phòng mới
+        <Button onClick={() => setIsModalOpen(true)} className="h-11 rounded-xl border-0 bg-[#FF6B00] px-5 text-white shadow-[0_10px_24px_rgba(255,107,0,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#E85F00] hover:shadow-[0_14px_30px_rgba(255,107,0,0.22)] active:translate-y-0">
+          <Plus className="mr-2 h-4 w-4" /> Tạo phòng mới
         </Button>
-      </div>
+        </div>
+      </section>
 
       {activeTab === "MY_ROOMS" && (invitesLoading || pendingInvites.length > 0) && (
         <section className="mb-8 rounded-3xl border border-orange-100 bg-white p-5 shadow-sm">
@@ -478,37 +467,38 @@ export default function CommunityRooms() {
         </section>
       )}
 
-      <div className="flex flex-col md:flex-row gap-6 mb-8 items-start md:items-center">
-        <div className="flex p-1.5 bg-slate-100/80 backdrop-blur rounded-2xl shrink-0 border border-slate-200/50">
+      <section className="mb-7 rounded-[1.75rem] border border-white bg-white/80 p-3 shadow-[0_16px_45px_rgba(71,50,35,0.055)] backdrop-blur-xl sm:p-4">
+      <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center">
+        <div className="flex shrink-0 rounded-2xl bg-slate-100/80 p-1.5">
           <button
             onClick={() => setActiveTab("MY_ROOMS")}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-xl transition-all duration-300 ${activeTab === "MY_ROOMS" ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/50"}`}
+            className={`flex-1 rounded-xl px-5 py-2.5 text-sm font-bold transition-all duration-300 ${activeTab === "MY_ROOMS" ? "bg-white text-[#FF6B00] shadow-sm ring-1 ring-slate-200/60" : "text-slate-500 hover:bg-white/60 hover:text-slate-900"}`}
           >
             Phòng của tôi
           </button>
           <button
             onClick={() => setActiveTab("DISCOVER")}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-xl transition-all duration-300 ${activeTab === "DISCOVER" ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/50"}`}
+            className={`flex-1 rounded-xl px-5 py-2.5 text-sm font-bold transition-all duration-300 ${activeTab === "DISCOVER" ? "bg-white text-[#FF6B00] shadow-sm ring-1 ring-slate-200/60" : "text-slate-500 hover:bg-white/60 hover:text-slate-900"}`}
           >
             Khám phá
           </button>
         </div>
 
         {activeTab === "DISCOVER" && (
-          <div className="flex flex-1 gap-3 w-full md:w-auto">
+          <div className="flex w-full flex-1 flex-col gap-3 sm:flex-row md:w-auto">
             <div className="relative flex-1 group">
               <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
               <Input
                 placeholder="Tìm kiếm phòng..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-11 h-12 rounded-2xl bg-white border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all shadow-sm"
+                className="h-11 rounded-xl border-slate-200 bg-[#F8F9FA] pl-11 font-semibold transition-all focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
               />
             </div>
             <select 
               value={modeFilter} 
               onChange={(e) => setModeFilter(e.target.value)} 
-              className="h-12 rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 bg-white shadow-sm focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all cursor-pointer min-w-[140px]"
+              className="h-11 min-w-[160px] cursor-pointer rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition-all focus:border-orange-500 focus:outline-none focus:ring-4 focus:ring-orange-100"
             >
               <option value="">Tất cả chế độ</option>
               <option value="PUBLIC">Công khai</option>
@@ -517,88 +507,35 @@ export default function CommunityRooms() {
           </div>
         )}
       </div>
+      </section>
 
       {loading && rooms.length === 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-56 bg-slate-100 animate-pulse rounded-2xl border border-slate-200/50" />
+            <div key={i} className="h-80 animate-pulse rounded-[1.75rem] border border-white bg-white/70 shadow-[0_14px_40px_rgba(71,50,35,0.04)]" />
           ))}
         </div>
       ) : rooms.length === 0 ? (
-        <div className="text-center py-24 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center">
-          <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-5">
-            <MessageSquare className="w-8 h-8 text-slate-300" />
+        <div className="relative flex flex-col items-center justify-center overflow-hidden rounded-[2rem] border border-orange-100 bg-white/80 px-6 py-16 text-center shadow-[0_20px_55px_rgba(71,50,35,0.06)]">
+          <div className="pointer-events-none absolute left-1/2 top-8 h-48 w-48 -translate-x-1/2 rounded-full bg-orange-100/70 blur-3xl" />
+          <div className="relative mb-5 grid h-16 w-16 place-items-center rounded-[1.35rem] border border-orange-200/70 bg-white text-[#FF6B00] shadow-[0_10px_28px_rgba(255,107,0,0.12)]">
+            <MessageSquare className="h-7 w-7" />
           </div>
-          <h3 className="text-xl font-bold text-slate-800">Không tìm thấy phòng nào</h3>
-          <p className="text-slate-500 mt-2 mb-8 max-w-sm">
+          <h3 className="relative text-xl font-black tracking-[-0.02em] text-slate-950">Không tìm thấy phòng nào</h3>
+          <p className="relative mb-7 mt-2 max-w-sm text-sm leading-6 text-slate-500">
             {activeTab === "MY_ROOMS" ? "Bạn chưa tham gia phòng cộng đồng nào. Hãy khám phá và tìm phòng phù hợp nhé!" : "Không có phòng nào khớp với tìm kiếm của bạn. Thử thay đổi từ khóa."}
           </p>
           {activeTab === "MY_ROOMS" && (
-            <Button onClick={() => setActiveTab("DISCOVER")} className="bg-slate-900 text-white rounded-full px-6 hover:bg-slate-800 shadow-md">
+            <Button onClick={() => setActiveTab("DISCOVER")} className="relative rounded-xl bg-slate-950 px-6 text-white shadow-md hover:bg-[#FF6B00]">
               Khám phá ngay
             </Button>
           )}
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {rooms.map((room) => (
-              <div key={room.roomId} className="group bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-orange-500/30 transition-all duration-300 flex flex-col relative overflow-hidden">
-                <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-orange-100/40 to-rose-100/40 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700 ease-out z-0"></div>
-                
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="flex justify-between items-start mb-4 gap-3">
-                    <h3 className="text-lg font-bold text-slate-900 line-clamp-1 leading-tight group-hover:text-orange-600 transition-colors" title={room.name}>
-                      {room.name}
-                    </h3>
-                    <div className="shrink-0">
-                      <ModeBadge mode={room.mode} />
-                    </div>
-                  </div>
-                  
-                  <p className="text-sm text-slate-600 line-clamp-2 mb-6 flex-1">
-                    {room.description || <span className="italic text-slate-400">Không có mô tả.</span>}
-                  </p>
-                  
-                  <div className="flex items-center text-[13px] font-medium text-slate-500 mb-6 gap-5 bg-slate-50 rounded-xl p-3 border border-slate-100">
-                    <span className="flex items-center gap-1.5" title="Số thành viên">
-                      <Users className="w-4 h-4 text-orange-500" />
-                      <span className="text-slate-700">{room.memberCount}</span> / {room.maxMembers}
-                    </span>
-                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                    <span className="flex items-center gap-1.5" title="Ngày tạo">
-                      <CalendarDays className="w-4 h-4 text-slate-400" />
-                      {format(new Date(room.createdAt), "dd/MM/yyyy")}
-                    </span>
-                  </div>
-                  
-                  <div className="mt-auto">
-                    {room.joined ? (
-                      <Link to={`/app/community/rooms/${room.roomId}`} className="block">
-                        <Button variant="outline" className="w-full text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700 rounded-xl font-bold h-11 transition-all">
-                          Vào phòng chat
-                        </Button>
-                      </Link>
-                    ) : room.banned ? (
-                      <Button disabled className="w-full bg-slate-100 text-slate-400 rounded-xl font-semibold h-11">
-                        <Shield className="w-4 h-4 mr-2" /> Đã bị cấm
-                      </Button>
-                    ) : room.status === "LOCKED" ? (
-                      <Button disabled className="w-full bg-slate-100 text-slate-400 rounded-xl font-semibold h-11">
-                        <Lock className="w-4 h-4 mr-2" /> Đã khóa
-                      </Button>
-                    ) : room.mode === "INVITE_ONLY" ? (
-                      <Button variant="outline" disabled className="w-full rounded-xl font-semibold h-11 text-slate-500">
-                        Cần lời mời
-                      </Button>
-                    ) : (
-                      <Button onClick={() => handleJoinRoom(room.roomId)} className="w-full bg-slate-900 text-white hover:bg-orange-500 rounded-xl font-bold h-11 transition-colors duration-300 shadow-md">
-                        Tham gia ngay
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <RoomCard key={room.roomId} room={room} onJoin={handleJoinRoom} />
             ))}
           </div>
           

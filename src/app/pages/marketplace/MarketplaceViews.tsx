@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent as ReactFormE
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, ChevronDown, Clock3, Coins, FileQuestion, LoaderCircle, RefreshCw, Search, Send, ShoppingBag, Sparkles, Star, Trophy, WalletCards, X } from "lucide-react";
 import { toast } from "sonner";
+import { motion, useReducedMotion } from "motion/react";
 import { marketplaceService } from "../../../api/marketplace";
 import type { ChallengeResult, ChallengeSession, CreatorMarketplaceItem, MarketplaceItemDetail, MarketplaceQuestion, MarketplaceReview, MarketplaceWallet, PurchasedMarketplacePack, PurchasedPackDetail } from "../../../api/marketplace";
 import workspaceService, { type WorkspaceResponse } from "../../../api/utilities/workspaceService";
@@ -116,6 +117,7 @@ function MarketplaceCatalogSimple() {
 }
 
 export function MarketplaceCatalog() {
+  const reduceMotion = useReducedMotion();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialSubject = searchParams.get("subject") || "";
   const [items, setItems] = useState<PurchasedMarketplacePack[]>([]);
@@ -133,7 +135,6 @@ export function MarketplaceCatalog() {
     <section className="group relative isolate overflow-hidden rounded-[2rem] border border-orange-100 bg-[#FFFEFC]/95 shadow-[0_24px_70px_rgba(15,23,42,0.09)] backdrop-blur-sm">
       <div className="pointer-events-none absolute -right-32 -top-40 -z-10 h-[28rem] w-[28rem] rounded-full bg-orange-200/55 blur-3xl transition duration-700 group-hover:scale-110" />
       <div className="pointer-events-none absolute bottom-0 left-1/3 -z-10 h-52 w-52 rounded-full bg-amber-100/70 blur-3xl" />
-      <button type="button" onClick={() => void load()} disabled={loading} className="absolute right-5 top-5 z-10 inline-flex h-10 items-center gap-2 rounded-xl border border-orange-200 bg-white/90 px-3 text-xs font-bold text-[#FF6B00] shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:bg-orange-50 hover:shadow-md active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:right-7 sm:top-7"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /><span className="hidden sm:inline">Làm mới</span></button>
       <div className="grid gap-8 px-6 py-8 sm:px-9 sm:py-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(260px,0.65fr)] lg:items-end lg:gap-12 lg:px-12 lg:py-12">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/80 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.17em] text-[#FF6B00]"><Sparkles className="h-3.5 w-3.5" />SkillSprint Marketplace</div>
@@ -144,23 +145,52 @@ export function MarketplaceCatalog() {
             <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(255,107,0,0.16)] transition hover:-translate-y-0.5 hover:bg-[#E85F00] hover:shadow-[0_10px_24px_rgba(255,107,0,0.2)] active:translate-y-0">Tìm pack<ArrowRight className="h-4 w-4" /></button>
           </form>
         </div>
-        <div className="relative mx-auto w-full max-w-sm pb-5 lg:mx-0">
-          <div className="absolute -bottom-1 left-6 right-6 h-24 rounded-[1.75rem] border border-orange-100 bg-orange-100/70 shadow-sm" />
-          <div className="absolute bottom-2 left-3 right-3 h-28 rounded-[1.75rem] border border-orange-100 bg-amber-50 shadow-md" />
-          <div className="relative overflow-hidden rounded-[1.75rem] border border-orange-200/80 bg-[radial-gradient(circle_at_top_right,#FFD7B8_0%,#FFF0E2_42%,#FFF8F2_100%)] p-5 text-slate-950 shadow-[0_22px_50px_rgba(255,107,0,0.12)] sm:p-6">
-            <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[#FF6B00]/12 blur-2xl" />
-            <div className="relative flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#FF6B00] text-white shadow-[0_8px_18px_rgba(255,107,0,0.2)]"><ShoppingBag className="h-5 w-5" /></span><span className="rounded-full border border-orange-200 bg-white/65 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[#D85B00]">Live library</span></div>
-            <p className="relative mt-6 text-xs font-bold uppercase tracking-[0.15em] text-[#FF6B00]/65">Kho học liệu</p>
-            <p className="relative mt-1 text-xl font-black tracking-tight">Học theo cách của bạn</p>
-            <div className="relative mt-6 grid grid-cols-2 divide-x divide-orange-200 rounded-2xl border border-white/80 bg-white/55 py-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"><div><p className="text-3xl font-black">{loading ? "–" : items.length}</p><p className="mt-1 text-[11px] font-semibold text-slate-500">Quiz Pack</p></div><div><p className="text-3xl font-black text-[#FF6B00]">{loading ? "–" : questionTotal}</p><p className="mt-1 text-[11px] font-semibold text-slate-500">Câu hỏi</p></div></div>
-            <div className="relative mt-4 flex items-center gap-2 text-[11px] font-semibold text-slate-500"><CheckCircle2 className="h-4 w-4 shrink-0 text-[#FF6B00]" />Xem trước · Đánh giá · Xếp hạng</div>
-          </div>
-        </div>
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, y: 18, rotate: 1.2 }}
+          animate={{ opacity: 1, y: 0, rotate: 0 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.12 }}
+          className="relative mx-auto w-full max-w-sm lg:mx-0"
+        >
+          <motion.div
+            animate={reduceMotion ? undefined : { x: [0, -10, 0], y: [0, 8, 0], scale: [1, 1.08, 1] }}
+            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+            className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-orange-100/70 blur-3xl"
+          />
+          <motion.div
+            whileHover={reduceMotion ? undefined : { y: -6, rotate: -0.35 }}
+            transition={{ type: "spring", stiffness: 260, damping: 22 }}
+            className="group/library relative overflow-hidden rounded-[1.65rem] border border-orange-100 bg-[#FFFEFC]/95 p-5 text-slate-950 shadow-[0_20px_48px_rgba(71,50,35,0.09)] backdrop-blur sm:p-6"
+          >
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-orange-100" />
+            <motion.div animate={reduceMotion ? undefined : { scaleX: [0.7, 1, 0.7], opacity: [0.65, 1, 0.65] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }} className="pointer-events-none absolute left-0 top-0 h-1 w-28 origin-left rounded-r-full bg-[#E45F2A]" />
+            <motion.div
+              animate={reduceMotion ? undefined : { opacity: [0.18, 0.38, 0.18], scale: [0.9, 1.12, 0.9] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+              className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-orange-100 blur-3xl"
+            />
+            <div className="relative flex items-center justify-between gap-4">
+              <motion.span
+                animate={reduceMotion ? undefined : { y: [0, -3, 0], rotate: [0, -2, 0] }}
+                transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}
+                className="grid h-11 w-11 place-items-center rounded-2xl border border-orange-100 bg-[#FFF1E8] text-[#D9541E] shadow-[0_7px_16px_rgba(217,84,30,0.1)]"
+              ><ShoppingBag className="h-5 w-5" /></motion.span>
+              <span className="inline-flex items-center gap-2 rounded-lg border border-orange-100 bg-[#FFF9F5] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#C84E20]"><motion.span animate={reduceMotion ? undefined : { opacity: [0.45, 1, 0.45], scale: [0.8, 1.15, 0.8] }} transition={{ duration: 2, repeat: Infinity }} className="h-1.5 w-1.5 rounded-full bg-[#E45F2A]" />Live library</span>
+            </div>
+            <p className="relative mt-6 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Kho học liệu</p>
+            <p className="relative mt-1 text-2xl font-black tracking-[-0.03em] text-slate-900">Học theo cách của bạn</p>
+            <p className="relative mt-2 text-[11px] font-medium leading-5 text-slate-500">Theo dõi nội dung hiện có trong Marketplace.</p>
+            <div className="relative mt-5 grid grid-cols-2 gap-2.5">
+              <div className="rounded-2xl border border-slate-100 bg-white p-3.5 shadow-[0_8px_20px_rgba(71,50,35,0.04)] transition duration-300 group-hover/library:-translate-y-0.5 group-hover/library:border-orange-100"><div className="flex items-center justify-between gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-slate-100 text-slate-500"><ShoppingBag className="h-3.5 w-3.5" /></span><motion.p key={`packs-${loading}-${items.length}`} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="text-2xl font-black tabular-nums text-slate-950">{loading ? "–" : items.length}</motion.p></div><p className="mt-3 text-[10px] font-bold text-slate-500">Quiz Pack</p></div>
+              <div className="rounded-2xl border border-orange-100 bg-[#FFF6F0] p-3.5 shadow-[0_8px_20px_rgba(217,84,30,0.05)] transition duration-300 group-hover/library:-translate-y-0.5 group-hover/library:border-orange-200"><div className="flex items-center justify-between gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-white text-[#D9541E] shadow-sm"><FileQuestion className="h-3.5 w-3.5" /></span><motion.p key={`questions-${loading}-${questionTotal}`} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.06 }} className="text-2xl font-black tabular-nums text-[#D9541E]">{loading ? "–" : questionTotal}</motion.p></div><p className="mt-3 text-[10px] font-bold text-slate-500">Câu hỏi</p></div>
+            </div>
+            <div className="relative mt-5 flex items-center gap-2 border-t border-slate-100 pt-4 text-[11px] font-semibold text-slate-500"><motion.span animate={reduceMotion ? undefined : { scale: [1, 1.1, 1] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}><CheckCircle2 className="h-4 w-4 shrink-0 text-[#E45F2A]" /></motion.span>Xem trước · Đánh giá · Xếp hạng</div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
 
     <section className="mt-10 sm:mt-12">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-extrabold uppercase tracking-[0.15em] text-[#FF6B00]">Khám phá</p><h2 className="mt-2 text-2xl font-black tracking-[-0.025em] text-slate-950 sm:text-3xl">Gói học liệu đang có</h2><p className="mt-2 text-sm text-slate-500">{subject ? `Kết quả cho “${subject}”` : "Chọn một pack để xem nội dung và thử thách."}</p></div><div className="flex items-center gap-2">{!loading && !failed && <span className="rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm">{items.length} kết quả</span>}{subject && <button type="button" onClick={clearSearch} className="rounded-full border border-orange-200 bg-white px-3.5 py-2 text-xs font-bold text-[#FF6B00] shadow-sm transition hover:bg-orange-50">Xóa lọc</button>}</div></div>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-extrabold uppercase tracking-[0.15em] text-[#FF6B00]">Khám phá</p><h2 className="mt-2 text-2xl font-black tracking-[-0.025em] text-slate-950 sm:text-3xl">Gói học liệu đang có</h2><p className="mt-2 text-sm text-slate-500">{subject ? `Kết quả cho “${subject}”` : "Chọn một pack để xem nội dung và thử thách."}</p></div><div className="flex flex-wrap items-center gap-2">{!loading && !failed && <span className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm">{items.length} kết quả</span>}<button type="button" onClick={() => void load()} disabled={loading} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-200 bg-white px-3.5 text-xs font-bold text-[#D9541E] shadow-sm transition hover:-translate-y-0.5 hover:bg-orange-50 hover:shadow-md active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />Làm mới</button>{subject && <button type="button" onClick={clearSearch} className="rounded-xl border border-orange-200 bg-white px-3.5 py-2 text-xs font-bold text-[#FF6B00] shadow-sm transition hover:bg-orange-50">Xóa lọc</button>}</div></div>
       {loading ? <Loading /> : failed ? <ErrorBox retry={load} /> : items.length === 0 ? <div className="relative overflow-hidden rounded-[2rem] border border-dashed border-orange-200 bg-white/80 px-6 py-14 text-center shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur sm:py-16"><div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-orange-50 to-transparent" /><div className="relative mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-orange-100 bg-orange-50 text-[#FF6B00] shadow-sm"><ShoppingBag className="h-7 w-7" /></div><h3 className="relative mt-5 text-xl font-black text-slate-950">{subject ? "Chưa tìm thấy Quiz Pack" : "Marketplace đang được cập nhật"}</h3><p className="relative mt-2 text-sm text-slate-500">{subject ? "Thử một môn học hoặc từ khóa khác." : "Các Quiz Pack mới sẽ sớm xuất hiện tại đây."}</p>{subject && <button type="button" onClick={clearSearch} className="relative mt-6 inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-4 py-2.5 text-sm font-bold text-white shadow-[0_8px_22px_rgba(255,107,0,0.22)] transition hover:-translate-y-0.5 hover:bg-[#E85F00]">Xem tất cả pack<ArrowRight className="h-4 w-4" /></button>}</div> : items.length === 1 ? <FeaturedMarketplacePackCard item={items[0]} /> : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{items.map(item => <MarketplacePackCard key={item.itemId} item={item} />)}</div>}
     </section>
   </Shell>;
