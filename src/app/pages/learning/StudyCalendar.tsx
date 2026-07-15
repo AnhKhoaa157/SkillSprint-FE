@@ -11,6 +11,7 @@ import { useNavigate } from "react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "../../components/ui/dialog";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { isCompletedTaskStatus } from "./studyCompletionStatus";
 
 type CalendarTaskMap = Record<string, CalendarTaskResponse[]>;
 
@@ -291,7 +292,7 @@ export default function StudyCalendar() {
     [lastScheduleSeed, onboardingProfile],
   );
 
-  const totalCompleted = calendarTasks.filter(task => String(task.status || "").toUpperCase() === "COMPLETED").length;
+  const totalCompleted = calendarTasks.filter(task => isCompletedTaskStatus(task.status)).length;
 
   const openStudySession = (taskId: string) => {
     if (!taskId) return;
@@ -643,7 +644,7 @@ export default function StudyCalendar() {
             )}
 
             {selectedTasks.map(task => {
-              const done = String(task.status || "").toUpperCase() === "COMPLETED";
+              const done = isCompletedTaskStatus(task.status);
               const actionableLabel = String(task.status || "").toUpperCase() === "IN_PROGRESS" || String(task.status || "").toUpperCase() === "PROCESSING"
                 ? "Tiếp tục"
                 : "Vào học";

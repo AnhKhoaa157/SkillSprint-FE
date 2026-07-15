@@ -49,6 +49,7 @@ import calendarService from "../../../api/utilities/calendarService";
 import { getMyPointEvents } from "../../../api/learning/pointService";
 import type { MyPointEvent } from "../../../api/core/skillSprintModels";
 import QuizContainer from "../../components/tools/QuizContainer";
+import { isCompletedTaskStatus } from "./studyCompletionStatus";
 
 type StudySessionRouteState = {
   taskId?: string;
@@ -102,7 +103,7 @@ function formatStatusLabel(status: string | null | undefined): string {
   if (!status) return "Chưa xác định";
   const n = status.toUpperCase();
   if (n === "IN_PROGRESS") return "Đang học";
-  if (n === "COMPLETED") return "Đã hoàn thành";
+  if (isCompletedTaskStatus(n)) return "Đã hoàn thành";
   if (n === "CURRENT") return "Đang học";
   if (n === "UPCOMING") return "Sắp tới";
   if (n === "SKIPPED") return "Đã bỏ qua";
@@ -248,9 +249,8 @@ export default function CoursePlayer() {
   const resources = detail?.resources ?? [];
   const actions = detail?.actions ?? null;
 
-  const isSessionCompleted =
-    task?.status?.toUpperCase() === "COMPLETED" ||
-    roadmapStep?.status?.toUpperCase() === "COMPLETED";
+  const isSessionCompleted = isCompletedTaskStatus(task?.status)
+    || isCompletedTaskStatus(roadmapStep?.status);
 
   const hasStartedSession = Boolean(activeSessionId) && !isSessionCompleted;
 
@@ -788,14 +788,24 @@ export default function CoursePlayer() {
       }
 
       const completedTask = await calendarService.completeCalendarTask(taskId);
-      setDetail(current => current
-        ? { ...current, task: { ...current.task, ...completedTask, status: "COMPLETED" } }
-        : current,
-      );
+      const freshDetail = await fetchUpdatedDetail();
+      const isCompleted = isCompletedTaskStatus(completedTask.status)
+        || isCompletedTaskStatus(freshDetail?.task.status)
+        || isCompletedTaskStatus(freshDetail?.roadmapStep.status);
+
+      if (!isCompleted) {
+        throw new Error("Máy chủ chưa xác nhận mục học đã hoàn thành. Vui lòng thử lại sau ít giây.");
+      }
+
+      if (!freshDetail) {
+        setDetail(current => current
+          ? { ...current, task: { ...current.task, ...completedTask } }
+          : current,
+        );
+      }
       setActiveSessionId(null);
       clearStoredSessionId(taskId);
       clearTimerContext();
-      await fetchUpdatedDetail();
       window.dispatchEvent(new Event("skillSprint:points-updated"));
       await notifyRoadmapXpAwards(roadmapStep?.stepId ?? null);
       showToast("success", "[DEV] Đã hoàn thành mục học và đồng bộ tiến độ.");
@@ -827,8 +837,8 @@ export default function CoursePlayer() {
       clearTimerContext();
       const freshDetail = await fetchUpdatedDetail();
       const isCompleted = finishedSession.taskCompleted === true
-        || freshDetail?.task.status?.toUpperCase() === "COMPLETED"
-        || freshDetail?.roadmapStep.status?.toUpperCase() === "COMPLETED";
+        || isCompletedTaskStatus(freshDetail?.task.status)
+        || isCompletedTaskStatus(freshDetail?.roadmapStep.status);
 
       if (isCompleted) {
         showToast("success", "🎉 Bạn đã học đủ thời gian và mục học đã được hoàn thành.");
