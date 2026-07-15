@@ -17,6 +17,8 @@ import {
   Pin,
   Trash2,
   MoreHorizontal,
+  SlidersHorizontal,
+  Sparkles,
 } from "lucide-react";
 
 import {
@@ -193,12 +195,12 @@ function SelectField<T extends string>({
   label: string;
 }) {
   return (
-    <label className="flex min-w-[170px] flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+    <label className="flex min-w-[170px] flex-1 flex-col gap-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
       {label}
       <select
         value={value}
         onChange={(event: React.ChangeEvent<HTMLSelectElement>) => onChange(event.target.value as T)}
-        className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold normal-case tracking-normal text-slate-700 outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-orange-100/50"
+        className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold normal-case tracking-normal text-slate-700 outline-none transition hover:border-slate-300 focus:border-[#FF6B00] focus:ring-4 focus:ring-orange-100/60"
       >
         {options.map((option) => (
           <option key={option.value || "all"} value={option.value}>
@@ -251,13 +253,13 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
   const closeConfirmDialog = () => setConfirmDialog(prev => ({ ...prev, isOpen: false }));
 
   const loadRooms = useCallback(
-    async (pageToLoad = page) => {
+    async (pageToLoad = page, filters?: { status: "" | CommunityRoomStatus; mode: "" | CommunityRoomMode; search: string }) => {
       setLoading(true);
       try {
         const data = await getAdminCommunityRooms({
-          status: status || undefined,
-          mode: mode || undefined,
-          search: search || undefined,
+          status: (filters?.status ?? status) || undefined,
+          mode: (filters?.mode ?? mode) || undefined,
+          search: (filters?.search ?? search) || undefined,
           page: pageToLoad,
           size: PAGE_SIZE,
         });
@@ -385,14 +387,25 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
     loadRooms(0);
   };
 
+  const clearFilters = () => {
+    const shouldReloadDirectly = !status && !mode;
+    setSearch("");
+    setStatus("");
+    setMode("");
+    setPage(0);
+    if (shouldReloadDirectly) void loadRooms(0, { search: "", status: "", mode: "" });
+  };
+
   const pageTitle = "Quản lý Phòng Cộng Đồng";
+  const hasFilters = Boolean(search.trim() || status || mode);
 
   return (
-    <div className={`relative mx-auto max-w-7xl font-sans ${isDashboard ? "p-0" : "px-4 py-8"}`}>
+    <div className={`relative isolate mx-auto max-w-7xl overflow-hidden font-sans ${isDashboard ? "min-h-full rounded-[2rem] bg-[#F7F8FA] p-4 sm:p-6" : "px-4 py-8"}`}>
+      {isDashboard && <><div className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(circle_at_10%_0%,rgba(255,237,223,0.75),transparent_28%),radial-gradient(circle_at_95%_20%,rgba(255,246,234,0.7),transparent_25%)]" /><div className="pointer-events-none absolute inset-0 -z-10 opacity-20 [background-image:radial-gradient(rgba(255,107,0,0.18)_1px,transparent_1px)] [background-size:30px_30px] [mask-image:linear-gradient(to_bottom,black,transparent_45%)]" /></>}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-6"
+        className="space-y-5"
       >
         {!isDashboard && (
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -414,39 +427,46 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
           </div>
         )}
 
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
-          <div className="border-b border-slate-100 bg-slate-50/50 p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-              <form onSubmit={handleSearchSubmit} className="relative min-w-[240px]">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-455" />
+        <div className="overflow-hidden rounded-[2rem] border border-white bg-white/85 shadow-[0_22px_65px_rgba(71,50,35,0.07)] backdrop-blur-xl">
+          <div className="relative overflow-hidden border-b border-slate-100/80 p-5 sm:p-6">
+            <div className="pointer-events-none absolute -right-24 -top-28 h-64 w-64 rounded-full bg-orange-100/55 blur-3xl" />
+            <div className="relative mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-50 text-[#FF6B00] ring-1 ring-orange-100"><SlidersHorizontal className="h-4 w-4" /></span><div><div className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.15em] text-[#FF6B00]"><Sparkles className="h-3 w-3" />Community operations</div><h2 className="mt-1 text-lg font-black tracking-[-0.02em] text-slate-950">Danh sách phòng</h2></div></div>
+              <div className="flex items-center gap-2"><span className="rounded-full border border-orange-100 bg-orange-50/80 px-3 py-1.5 text-[11px] font-bold text-orange-950"><b className="tabular-nums text-[#FF6B00]">{totalItems.toLocaleString("vi-VN")}</b> phòng</span><button type="button" onClick={() => loadRooms(page)} disabled={loading} className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-orange-200 hover:text-[#FF6B00] disabled:opacity-50" aria-label="Làm mới danh sách"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /></button></div>
+            </div>
+            <div className="relative grid gap-3 lg:grid-cols-[minmax(260px,1.35fr)_minmax(180px,0.8fr)_minmax(180px,0.8fr)_auto] lg:items-end">
+              <form onSubmit={handleSearchSubmit} className="relative min-w-0">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   value={search}
                   onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)}
                   placeholder="Tìm phòng theo tên..."
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 text-xs font-semibold outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-orange-100/50"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-xs font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[#FF6B00] focus:ring-4 focus:ring-orange-100/60"
                 />
               </form>
               <SelectField label="Trạng thái phòng" value={status} onChange={setStatus} options={ROOM_STATUS_OPTIONS} />
               <SelectField label="Chế độ phòng" value={mode} onChange={setMode} options={ROOM_MODE_OPTIONS} />
+              <button type="button" onClick={() => loadRooms(0)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#FF6B00] active:translate-y-0"><Search className="h-3.5 w-3.5" />Lọc phòng</button>
             </div>
           </div>
 
-          <div className="min-h-[420px] bg-white">
+          <div className="min-h-[380px] bg-white/60">
             {loading && (
-              <div className="flex min-h-[320px] flex-col items-center justify-center text-slate-400 gap-2">
-                <Loader2 className="h-6 w-6 animate-spin text-[#FF6B00]" />
+              <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 text-slate-400">
+                <span className="grid h-14 w-14 place-items-center rounded-2xl border border-orange-100 bg-orange-50"><Loader2 className="h-5 w-5 animate-spin text-[#FF6B00]" /></span>
                 <p className="text-xs font-bold">Đang tải danh sách phòng...</p>
               </div>
             )}
 
             {!loading && (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100/80">
                 {rooms.map((room) => (
-                  <div key={room.roomId} className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 hover:bg-slate-50/40 transition duration-150">
+                  <div key={room.roomId} className="flex flex-col justify-between gap-5 p-5 transition duration-200 hover:bg-orange-50/25 md:flex-row md:items-center sm:p-6">
                     <div className="min-w-0 flex-1 space-y-2.5">
                       {/* Tên phòng, Chế độ và Trạng thái */}
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-black text-slate-800 mr-1">{room.name}</h3>
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-orange-50 text-[#FF6B00]"><MessageSquare size={15} /></span>
+                        <h3 className="mr-1 text-sm font-black text-slate-900">{room.name}</h3>
                         <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">
                           {room.mode === "PUBLIC" ? <Users size={10} /> : <Lock size={10} />}
                           {ROOM_MODE_LABELS[room.mode]}
@@ -455,12 +475,12 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
                       </div>
                       
                       {/* Mô tả */}
-                      <p className="text-xs font-semibold text-slate-400">
+                      <p className="max-w-2xl pl-12 text-xs font-medium leading-5 text-slate-500">
                         {room.description || <span className="italic text-slate-300">Không có mô tả.</span>}
                       </p>
 
                       {/* Thông tin Chủ phòng & Thống kê */}
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-bold text-slate-400">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-12 text-[11px] font-bold text-slate-400">
                         <div className="flex items-center gap-1.5">
                           <span className="font-semibold text-slate-400">Chủ phòng:</span>
                           {room.owner?.avatarUrl ? (
@@ -492,14 +512,14 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
 
                       {/* Ghi chú Admin nếu có */}
                       {room.adminNote && (
-                        <div className="rounded-xl bg-amber-50/50 border border-amber-100/50 px-3 py-1.5 text-xs text-slate-600 leading-relaxed max-w-2xl">
+                        <div className="ml-12 max-w-2xl rounded-xl border border-amber-100/70 bg-amber-50/60 px-3 py-2 text-xs leading-relaxed text-slate-600">
                           <span className="font-bold text-amber-800">Ghi chú của Admin:</span> {room.adminNote}
                         </div>
                       )}
                     </div>
 
                     {/* Bộ nút thao tác quản lý */}
-                    <div className="flex flex-row md:flex-col items-start md:items-end justify-between md:justify-center gap-2 shrink-0 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
+                    <div className="flex shrink-0 flex-row items-start justify-between gap-2 border-t border-slate-100 pt-4 md:flex-col md:items-end md:justify-center md:border-t-0 md:pt-0">
                       <div className="flex flex-wrap gap-1.5">
                         <ActionButton
                           disabled={actionId === room.roomId || room.status === "ACTIVE"}
@@ -526,7 +546,7 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
                       <button
                         type="button"
                         onClick={() => openRoomDrawer(room)}
-                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-orange-50/50 border border-orange-100/40 px-3.5 text-[11px] font-bold text-[#FF6B00] transition hover:bg-orange-100"
+                        className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3.5 text-[11px] font-bold text-[#FF6B00] shadow-sm transition hover:bg-orange-50"
                       >
                         <MessageSquare size={12} /> Kiểm duyệt nội dung chat
                       </button>
@@ -534,19 +554,20 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
                   </div>
                 ))}
                 {rooms.length === 0 && (
-                  <div className="flex min-h-[220px] flex-col items-center justify-center gap-2 p-8 text-center bg-slate-50/20">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 text-slate-400 border border-slate-100">
-                      <ShieldAlert size={22} />
-                    </div>
-                    <p className="text-xs font-bold text-slate-500">Không tìm thấy phòng nào.</p>
+                  <div className="relative flex min-h-[380px] flex-col items-center justify-center overflow-hidden p-8 text-center">
+                    <div className="pointer-events-none absolute left-1/2 top-14 h-48 w-48 -translate-x-1/2 rounded-full bg-orange-100/65 blur-3xl" />
+                    <div className="relative grid h-16 w-16 place-items-center rounded-[1.35rem] border border-orange-200/70 bg-white text-[#FF6B00] shadow-[0_10px_28px_rgba(255,107,0,0.12)]"><MessageSquare size={25} /></div>
+                    <p className="relative mt-5 text-lg font-black tracking-[-0.02em] text-slate-900">{hasFilters ? "Không có phòng phù hợp" : "Chưa có phòng cộng đồng"}</p>
+                    <p className="relative mt-2 max-w-sm text-xs leading-5 text-slate-500">{hasFilters ? "Thử thay đổi từ khóa hoặc bộ lọc để xem thêm kết quả." : "Các phòng mới được tạo sẽ xuất hiện tại đây để quản trị viên theo dõi."}</p>
+                    {hasFilters && <button type="button" onClick={clearFilters} className="relative mt-5 inline-flex h-10 items-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-xs font-bold text-[#FF6B00] shadow-sm transition hover:bg-orange-50"><X className="h-3.5 w-3.5" />Xóa bộ lọc</button>}
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between bg-slate-50/20">
-            <p className="text-xs font-bold text-slate-400">
+          <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/55 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <p className="text-[11px] font-bold text-slate-400">
               Tổng số: {totalItems.toLocaleString("vi-VN")} mục · Trang {page + 1}/{totalPages}
             </p>
             <div className="flex gap-2">
