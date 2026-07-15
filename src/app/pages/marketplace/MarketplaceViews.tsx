@@ -91,10 +91,68 @@ function MarketplacePackCard({ item }: { item: PurchasedMarketplacePack }) {
 }
 
 function FeaturedMarketplacePackCard({ item }: { item: PurchasedMarketplacePack }) {
-  return <Link to={`/marketplace/items/${item.itemId}`} className="group relative grid overflow-hidden rounded-[2rem] border border-orange-100 bg-[#FFFEFC] shadow-[0_22px_60px_rgba(15,23,42,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_70px_rgba(194,65,12,0.13)] md:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
-    <div className="relative overflow-hidden p-7 sm:p-9"><div className="pointer-events-none absolute -left-20 -top-24 h-64 w-64 rounded-full bg-orange-100/70 blur-3xl" /><div className="relative flex flex-wrap items-center gap-2"><span className="rounded-full bg-[#FF6B00] px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider text-white">Nổi bật</span><span className="rounded-full border border-orange-100 bg-white px-3 py-1.5 text-xs font-bold text-[#FF6B00]">{item.subject}</span></div><h2 className="relative mt-6 max-w-2xl text-2xl font-black leading-tight tracking-[-0.025em] text-slate-950 transition group-hover:text-[#C2410C] sm:text-3xl">{item.title}</h2><p className="relative mt-3 max-w-2xl text-sm leading-7 text-slate-600">{item.description}</p><div className="relative mt-6 flex flex-wrap items-center gap-4"><span className="flex items-center gap-2 text-xs font-semibold text-slate-500"><span className="grid h-8 w-8 place-items-center rounded-full bg-slate-950 font-black uppercase text-white">{item.creatorName?.charAt(0) || "S"}</span>{item.creatorName}</span><span className="inline-flex items-center gap-2 text-sm font-black text-[#FF6B00]">Khám phá pack <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span></div></div>
-    <div className="relative flex flex-col justify-between overflow-hidden border-t border-orange-200 bg-gradient-to-br from-[#FF6B00] to-[#FF8A2A] p-7 text-white md:border-l md:border-t-0 sm:p-8"><div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full border-[36px] border-white/10" /><div className="relative"><div className="flex items-center justify-between"><p className="text-xs font-extrabold uppercase tracking-[0.16em] text-white/70">Tổng quan</p><BookOpen className="h-5 w-5 text-white/80" /></div><div className="mt-6 grid grid-cols-3 divide-x divide-white/20 text-center"><div><b className="block text-2xl font-black">{item.chapterCount}</b><span className="text-[11px] text-white/75">chương</span></div><div><b className="block text-2xl font-black">{item.quizCount}</b><span className="text-[11px] text-white/75">quiz</span></div><div><b className="block text-2xl font-black">{item.questionCount}</b><span className="text-[11px] text-white/75">câu hỏi</span></div></div></div><div className="relative mt-8 flex items-end justify-between border-t border-white/20 pt-5"><span className="inline-flex items-center gap-1.5 text-sm font-bold"><Star className="h-4 w-4 fill-white text-white" />{item.averageRating.toFixed(1)} <span className="font-medium text-white/70">({item.reviewCount})</span></span><span className="rounded-full bg-white px-3 py-2 text-sm [&_span]:text-[#C2410C]"><Coin value={item.priceCoins} /></span></div></div>
-  </Link>;
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <motion.article
+      initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={reduceMotion ? undefined : { y: -5 }}
+      transition={{ type: "spring", stiffness: 250, damping: 24 }}
+      className="rounded-[2rem]"
+    >
+      <Link to={`/marketplace/items/${item.itemId}`} className="group relative grid overflow-hidden rounded-[2rem] border border-[#FFE1C7] bg-[#FFFEFC] shadow-[0_22px_60px_rgba(255,107,0,0.08)] transition duration-300 hover:border-[#FFC993] hover:shadow-[0_30px_72px_rgba(255,107,0,0.13)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 md:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
+        <div className="pointer-events-none absolute inset-x-10 top-0 z-10 h-px bg-gradient-to-r from-transparent via-[#FF8A32]/70 to-transparent" />
+        <div className="relative flex min-h-[22rem] flex-col overflow-hidden p-7 sm:p-9">
+          <div className="pointer-events-none absolute -left-20 -top-24 h-64 w-64 rounded-full bg-[#FFE8D4]/75 blur-3xl transition duration-700 group-hover:scale-110" />
+          <div className="pointer-events-none absolute bottom-0 right-0 h-44 w-44 rounded-full bg-[#FFF4D9]/75 blur-3xl" />
+
+          <div className="relative flex flex-wrap items-center gap-2">
+            <span className="rounded-xl bg-gradient-to-r from-[#FF7A18] to-[#F45D22] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(255,107,0,0.22)]">Nổi bật</span>
+            <span className="rounded-xl border border-[#FFE0C2] bg-white/90 px-3 py-1.5 text-xs font-bold text-[#DC5A00] shadow-[0_5px_14px_rgba(255,107,0,0.06)]">{item.subject}</span>
+          </div>
+
+          <h2 className="relative mt-7 max-w-2xl text-2xl font-black leading-tight tracking-[-0.03em] text-slate-950 transition-colors duration-300 group-hover:text-[#E85F00] sm:text-3xl">{item.title}</h2>
+          <p className="relative mt-3 max-w-2xl line-clamp-3 text-sm leading-7 text-slate-600">{item.description}</p>
+
+          <div className="relative mt-auto flex flex-wrap items-center justify-between gap-4 pt-7">
+            <span className="flex min-w-0 items-center gap-2.5 text-xs font-semibold text-slate-500">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#FFF4E9] to-[#FFE4CA] font-black uppercase text-[#F06414] ring-1 ring-[#FFD7B4] shadow-[0_7px_18px_rgba(255,107,0,0.09)]">{item.creatorName?.charAt(0) || "S"}</span>
+              <span className="min-w-0"><span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Creator</span><span className="block truncate font-bold text-slate-700">{item.creatorName}</span></span>
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF7817] to-[#F45A1C] px-4 py-2.5 text-xs font-bold text-white shadow-[0_9px_22px_rgba(255,107,0,0.2)] transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_13px_28px_rgba(255,107,0,0.28)] group-active:translate-y-0">Khám phá pack <ArrowRight className="h-4 w-4 transition duration-300 group-hover:translate-x-1" /></span>
+          </div>
+        </div>
+
+        <div className="relative flex flex-col justify-between overflow-hidden border-t border-[#FFE1C7] bg-[radial-gradient(circle_at_90%_0%,#FFE2C5_0%,transparent_38%),linear-gradient(145deg,#FFF9F3_0%,#FFF2E7_100%)] p-6 md:border-l md:border-t-0 sm:p-7">
+          <motion.div animate={reduceMotion ? undefined : { x: [0, -10, 0], y: [0, 8, 0], scale: [1, 1.08, 1] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }} className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full border-[42px] border-[#FFB978]/25" />
+          <div className="pointer-events-none absolute bottom-0 left-0 h-40 w-40 rounded-full bg-white/75 blur-3xl" />
+          <div className="pointer-events-none absolute right-9 top-10 h-1.5 w-1.5 rounded-full bg-[#FF8A32]/50 shadow-[18px_12px_0_rgba(255,138,50,0.25),36px_-4px_0_rgba(255,138,50,0.18)]" />
+
+          <div className="relative">
+            <div className="flex items-center justify-between">
+              <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#E35D00]">Tổng quan nội dung</p><p className="mt-1 text-xs font-medium text-slate-500">Thông tin trong Quiz Pack</p></div>
+              <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#FFDBBA] bg-white/90 text-[#FF6B00] shadow-[0_7px_18px_rgba(255,107,0,0.09)] transition duration-300 group-hover:-rotate-3 group-hover:scale-105"><BookOpen className="h-4.5 w-4.5" /></span>
+            </div>
+
+            <div className="mt-6 grid grid-cols-3 gap-2">
+              {[{ value: item.chapterCount, label: "chương" }, { value: item.quizCount, label: "quiz" }, { value: item.questionCount, label: "câu hỏi" }].map((stat, index) => (
+                <motion.div key={stat.label} initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} whileHover={reduceMotion ? undefined : { y: -3, scale: 1.02 }} transition={{ delay: 0.08 * index }} className="rounded-2xl border border-[#FFE0C5] bg-white/90 px-2 py-4 text-center shadow-[0_8px_20px_rgba(255,107,0,0.05)]">
+                  <b className="block text-xl font-black tabular-nums text-slate-950">{stat.value}</b>
+                  <span className="mt-1 block text-[10px] font-semibold text-slate-500">{stat.label}</span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative mt-7 flex items-center justify-between gap-3 border-t border-orange-100 pt-5">
+            <span className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-700"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{item.averageRating.toFixed(1)} <span className="font-medium text-slate-400">({item.reviewCount})</span></span>
+            <span className="rounded-xl border border-[#FFD8B5] bg-white px-3 py-2 text-sm shadow-[0_6px_16px_rgba(255,107,0,0.07)] [&_span]:text-[#E85F00]"><Coin value={item.priceCoins} /></span>
+          </div>
+        </div>
+      </Link>
+    </motion.article>
+  );
 }
 
 function MarketplaceCatalogSimple() {
