@@ -189,7 +189,6 @@ export default function CoursePlayer() {
     proceedNavigation,
     resetNavigation,
     formattedStudyTime,
-    fastForwardTime,
   } = usePomodoro();
 
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -768,6 +767,47 @@ export default function CoursePlayer() {
     setShowReviewModal(true);
   };
 
+  const handleAdminCompleteStudy = async () => {
+    if (!taskId || isFinishing || isSessionCompleted) return;
+    setIsFinishing(true);
+    setError(null);
+
+    try {
+      if (activeSessionId) {
+        try {
+          await studySessionService.finishPomodoro(activeSessionId);
+          await studySessionService.finishStudySession(activeSessionId, {
+            notes: "Hoàn thành bằng công cụ kiểm thử admin",
+            focusScore: 5,
+          });
+        } catch (err) {
+          // Completing the task is the authoritative part of this admin-only
+          // test action. A stale Pomodoro session must not prevent the test.
+          console.warn("Failed to close Pomodoro before admin completion", err);
+        }
+      }
+
+      const completedTask = await calendarService.completeCalendarTask(taskId);
+      setDetail(current => current
+        ? { ...current, task: { ...current.task, ...completedTask, status: "COMPLETED" } }
+        : current,
+      );
+      setActiveSessionId(null);
+      clearStoredSessionId(taskId);
+      clearTimerContext();
+      await fetchUpdatedDetail();
+      window.dispatchEvent(new Event("skillSprint:points-updated"));
+      await notifyRoadmapXpAwards(roadmapStep?.stepId ?? null);
+      showToast("success", "[DEV] Đã hoàn thành mục học và đồng bộ tiến độ.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Không thể hoàn thành mục học bằng công cụ kiểm thử.";
+      showToast("warning", message);
+      setError(message);
+    } finally {
+      setIsFinishing(false);
+    }
+  };
+
   const handleConfirmFinishSession = async () => {
     if (!activeSessionId || isFinishing) return;
     setIsFinishing(true);
@@ -775,33 +815,31 @@ export default function CoursePlayer() {
 
     try {
       await studySessionService.finishPomodoro(activeSessionId);
-      await studySessionService.finishStudySession(activeSessionId, {
+      const finishedSession = await studySessionService.finishStudySession(activeSessionId, {
         notes: reviewNotes.trim() || "Hoàn thành phiên học thực tế",
         focusScore: reviewFocusScore,
       });
-
-      const requiredMinutes = computeMinimumRequiredMinutes(task?.durationMinutes);
-      const requiredSeconds = requiredMinutes * 60;
-
-      if (actualStudySeconds >= requiredSeconds) {
-        showToast(
-          "success",
-          `🎉 Chúc mừng! Bạn đã học đủ thời gian tối thiểu (${elapsedStudyMinutes}/${requiredMinutes} phút) và được hệ thống ghi nhận trạng thái COMPLETED!`,
-        );
-      } else {
-        showToast(
-          "warning",
-          `⚠️ Phiên học đã đóng. Tuy nhiên bạn mới học ${elapsedStudyMinutes} phút, chưa đủ điều kiện tối thiểu (${requiredMinutes} phút) để chuyển trạng thái COMPLETED.`,
-        );
-      }
 
       setShowReviewModal(false);
       setActiveSessionId(null);
       if (taskId) clearStoredSessionId(taskId);
 
-      clearTimerContext(); 
-      await fetchUpdatedDetail();
-      window.dispatchEvent(new Event("skillSprint:points-updated"));
+      clearTimerContext();
+      const freshDetail = await fetchUpdatedDetail();
+      const isCompleted = finishedSession.taskCompleted === true
+        || freshDetail?.task.status?.toUpperCase() === "COMPLETED"
+        || freshDetail?.roadmapStep.status?.toUpperCase() === "COMPLETED";
+
+      if (isCompleted) {
+        showToast("success", "🎉 Bạn đã học đủ thời gian và mục học đã được hoàn thành.");
+        window.dispatchEvent(new Event("skillSprint:points-updated"));
+        await notifyRoadmapXpAwards(roadmapStep?.stepId ?? null);
+      } else {
+        showToast(
+          "warning",
+          `⚠️ Phiên học đã đóng nhưng chưa đủ điều kiện tối thiểu (${minimumRequiredMinutes} phút) để hoàn thành mục học.`,
+        );
+      }
     } catch (err: unknown) {
       const msg = (err as { message?: string })?.message || "Không thể kết thúc phiên học.";
       showToast("warning", msg);
@@ -1584,11 +1622,12 @@ export default function CoursePlayer() {
                   {rawPlanType === "ADMIN_DEFAULT" && (
                     <button
                       type="button"
-                      onClick={() => fastForwardTime(Math.max(15, minimumRequiredMinutes) * 60)}
+                      onClick={handleAdminCompleteStudy}
+                      disabled={isFinishing}
                       className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 text-[#FF6B00] px-5 py-3 text-sm font-bold transition hover:bg-orange-100 active:scale-[0.98] cursor-pointer"
                     >
-                      <WandSparkles size={16} />
-                      [DEV] Tua nhanh đủ điều kiện
+                      {isFinishing ? <LoaderCircle size={16} className="animate-spin" /> : <WandSparkles size={16} />}
+                      {isFinishing ? "Đang hoàn thành..." : "[DEV] Hoàn thành mục học"}
                     </button>
                   )}
                 </div>
