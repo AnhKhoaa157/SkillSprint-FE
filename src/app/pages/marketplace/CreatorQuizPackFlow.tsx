@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { AlertTriangle, ArrowLeft, ArrowRight, BookOpen, CheckCircle2, ChevronDown, ChevronLeft, CircleAlert, ClipboardCheck, Clock3, Coins, FileQuestion, Layers3, LoaderCircle, PackagePlus, RefreshCw, Send, Sparkles, Trophy } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, BookOpen, CheckCircle2, ChevronDown, ChevronLeft, CircleAlert, ClipboardCheck, Clock3, Coins, FileQuestion, Layers3, LoaderCircle, PackagePlus, RefreshCw, Send, Sparkles, Trophy, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { marketplaceService, type CreatorMarketplaceItem, type CreatorValidationPackResponse, type CreatorValidationResult } from "../../../api/marketplace";
+import { getCurrentSubscription } from "../../../api/billing/subscriptionsService";
 import workspaceService, { type WorkspaceResponse } from "../../../api/utilities/workspaceService";
+import { buildCreatorValidationCorrectAnswers } from "./creatorValidationAdminTool";
 
 type ValidationQuestion = {
   questionId: string;
   text: string;
-  options: Array<{ optionId: string; text: string }>;
+  options: Array<{ optionId: string; text: string; correct?: boolean | null }>;
 };
 
 const scoreOf = (item: CreatorMarketplaceItem) => item.creatorValidationScore ?? item.validationScore ?? 0;
@@ -219,7 +221,7 @@ export function CreatorQuizPackCreate() {
 }
 
 function flattenSnapshot(snapshot: CreatorValidationPackResponse): ValidationQuestion[] {
-  return snapshot.chapters.flatMap(chapter => chapter.questions.map(question => ({ questionId: question.questionId, text: question.text, options: question.options.map(option => ({ optionId: option.optionId, text: option.text })) })));
+  return snapshot.chapters.flatMap(chapter => chapter.questions.map(question => ({ questionId: question.questionId, text: question.text, options: question.options.map(option => ({ optionId: option.optionId, text: option.text, correct: option.correct })) })));
 }
 
 export function CreatorQuizPackValidation() {
@@ -237,18 +239,298 @@ export function CreatorQuizPackValidation() {
   const [result, setResult] = useState<CreatorValidationResult | null>(null);
   const [reviewConfirm, setReviewConfirm] = useState(false);
   const [reviewing, setReviewing] = useState(false);
-  const loadSnapshot = useCallback(async () => { setLoading(true); setLoadFailed(false); try { setSnapshot(await marketplaceService.getCreatorValidationSnapshot(itemId)); } catch { setLoadFailed(true); } finally { setLoading(false); } }, [itemId]);
-  useEffect(() => { void loadSnapshot(); }, [loadSnapshot]);
+  const [isAdminDefault, setIsAdminDefault] = useState(false);
+
+  const loadSnapshot = useCallback(async () => {
+    setLoading(true);
+    setLoadFailed(false);
+    try {
+      setSnapshot(await marketplaceService.getCreatorValidationSnapshot(itemId));
+    } catch {
+      setLoadFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [itemId]);
+
+  useEffect(() => {
+    void loadSnapshot();
+  }, [loadSnapshot]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getCurrentSubscription()
+      .then(subscription => {
+        if (!cancelled) {
+          setIsAdminDefault(subscription.plan?.planType === "ADMIN_DEFAULT");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsAdminDefault(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const questions = useMemo(() => snapshot ? flattenSnapshot(snapshot) : [], [snapshot]);
   const current = questions[index];
   const complete = questions.length > 0 && questions.every(question => answers[question.questionId]);
-  useEffect(() => { if (result) return; const timer = window.setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000); return () => clearInterval(timer); }, [result, startedAt]);
-  useEffect(() => { const confirmExit = (event: MouseEvent) => { const target = event.target; if (!(target instanceof Element)) return; const link = target.closest('a[href="/app/creator/marketplace"]'); if (!link) return; event.preventDefault(); event.stopPropagation(); window.dispatchEvent(new Event("skillsprint:creator-validation-exit-confirm")); }; document.addEventListener("click", confirmExit, true); return () => document.removeEventListener("click", confirmExit, true); }, []);
-  const submit = async () => { if (!complete) return; setSubmitting(true); try { const next = await marketplaceService.validateCreator(itemId, { answers: questions.map(question => ({ questionId: question.questionId, selectedOptionId: answers[question.questionId] })), durationSeconds: elapsed }); setResult(next); setConfirm(false); } catch (error) { toast.error(errorText(error)); } finally { setSubmitting(false); } };
-  const retry = () => { setAnswers({}); setIndex(0); setElapsed(0); setStartedAt(Date.now()); setResult(null); };
-  const sendReview = async () => { setReviewing(true); try { await marketplaceService.submitForReview(itemId); toast.success("Đã gửi Quiz Pack chờ duyệt."); navigate("/app/creator/marketplace"); } catch (error) { toast.error(errorText(error)); } finally { setReviewing(false); } };
-  if (loading) return <CreatorShell><Skeleton /></CreatorShell>;
-  if (loadFailed || !snapshot) return <CreatorShell><div className="rounded-3xl border border-amber-200 bg-amber-50 p-7"><CircleAlert className="h-7 w-7 text-amber-700" /><h1 className="mt-3 text-xl font-black">Không thể tải snapshot Validation</h1><p className="mt-2 text-sm leading-6 text-amber-950">Validation chỉ khả dụng với Quiz Pack bản nháp của bạn.</p><div className="mt-5 flex flex-wrap gap-4"><button onClick={loadSnapshot} className="font-bold text-[#FF6B00]">Thử lại</button><Link to="/app/creator/marketplace" className="font-bold text-[#FF6B00]">Quay lại Quiz Pack của tôi</Link></div></div></CreatorShell>;
-  if (result) { const passed = result.score >= 90; return <CreatorShell><div className={`mx-auto max-w-xl rounded-3xl border p-7 text-center ${passed ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"}`}><CheckCircle2 className={`mx-auto h-10 w-10 ${passed ? "text-emerald-600" : "text-rose-600"}`} /><h1 className="mt-4 text-2xl font-black">{passed ? "Validation đạt yêu cầu" : "Validation chưa đạt"}</h1><p className="mt-2 text-sm text-slate-600">Hoàn thành {date(result.completedAt)}</p><div className="mt-6 grid grid-cols-2 gap-3 text-left sm:grid-cols-4">{[["Điểm", result.score], ["Đúng", `${result.correctCount}/${result.questionCount}`], ["Câu hỏi", result.questionCount], ["Thời gian", `${result.durationSeconds}s`]].map(([label, value]) => <div key={String(label)} className="rounded-xl bg-white p-3"><p className="text-xs text-slate-500">{label}</p><p className="font-black">{value}</p></div>)}</div><div className="mt-6 flex flex-wrap justify-center gap-3">{passed ? <Button onClick={() => setReviewConfirm(true)}><Send className="h-4 w-4" />Gửi Admin duyệt</Button> : <Button onClick={retry}>Làm lại Validation</Button>}</div></div>{reviewConfirm && <Confirm title="Gửi Admin duyệt" text="Sau khi gửi duyệt, Quiz Pack sẽ ở trạng thái chờ Admin kiểm tra." busy={reviewing} onClose={() => setReviewConfirm(false)} onConfirm={sendReview} />}</CreatorShell>; }
-  return <CreatorShell><Link to="/app/creator/marketplace" className="inline-flex items-center gap-1 text-sm font-bold text-[#FF6B00]"><ChevronLeft className="h-4 w-4" />Quiz Pack của tôi</Link><div className="mt-5 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-3xl font-black">Full Pack Validation</h1><p className="mt-1 text-sm text-slate-500">Tiến độ {Object.keys(answers).length}/{questions.length} câu trả lời</p></div><span className="inline-flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-2 text-sm font-black text-[#FF6B00]"><Clock3 className="h-4 w-4" />{String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}</span></div><div className="mt-7 grid gap-5 lg:grid-cols-[minmax(0,1fr)_240px]"><section className="rounded-3xl border border-slate-200 bg-white p-6"><p className="text-sm font-bold text-[#FF6B00]">Câu {index + 1}/{questions.length}</p><h2 className="mt-3 text-xl font-black leading-8">{current?.text}</h2><div className="mt-6 grid gap-3">{current?.options.map(option => <label key={option.optionId} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 text-sm font-medium ${answers[current.questionId] === option.optionId ? "border-[#FF6B00] bg-orange-50" : "border-slate-200 hover:border-orange-200"}`}><input type="radio" name={current.questionId} checked={answers[current.questionId] === option.optionId} onChange={() => setAnswers(currentAnswers => ({ ...currentAnswers, [current.questionId]: option.optionId }))} className="accent-[#FF6B00]" />{option.text}</label>)}</div><div className="mt-7 flex justify-between"><button onClick={() => setIndex(value => Math.max(0, value - 1))} disabled={index === 0} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold disabled:opacity-40">Câu trước</button>{index < questions.length - 1 ? <button onClick={() => setIndex(value => Math.min(questions.length - 1, value + 1))} className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-bold text-[#FF6B00]">Câu tiếp</button> : <Button onClick={() => setConfirm(true)} disabled={!complete}><Trophy className="h-4 w-4" />Nộp Validation</Button>}</div></section><aside className="rounded-3xl border border-slate-200 bg-white p-5"><h2 className="font-black">Câu hỏi</h2><div className="mt-4 grid grid-cols-5 gap-2">{questions.map((question, questionIndex) => <button key={question.questionId} onClick={() => setIndex(questionIndex)} className={`h-9 rounded-lg text-xs font-bold ${index === questionIndex ? "bg-[#FF6B00] text-white" : answers[question.questionId] ? "bg-orange-50 text-[#FF6B00]" : "bg-slate-100 text-slate-600"}`}>{questionIndex + 1}</button>)}</div><button onClick={() => setConfirm(true)} disabled={!complete} className="mt-6 w-full rounded-xl bg-[#FF6B00] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40">Nộp Validation</button></aside></div>{confirm && <Confirm title="Nộp Full Pack Validation" text="Bạn đã trả lời tất cả câu hỏi. Xác nhận gửi bài Validation?" busy={submitting} onClose={() => setConfirm(false)} onConfirm={submit} />}</CreatorShell>;
+  const adminCanAutofill = isAdminDefault && questions.length > 0;
+
+  useEffect(() => {
+    if (result) return;
+    const timer = window.setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [result, startedAt]);
+
+  useEffect(() => {
+    const confirmExit = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest('a[href="/app/creator/marketplace"]');
+      if (!link) return;
+      event.preventDefault();
+      event.stopPropagation();
+      window.dispatchEvent(new Event("skillsprint:creator-validation-exit-confirm"));
+    };
+    document.addEventListener("click", confirmExit, true);
+    return () => document.removeEventListener("click", confirmExit, true);
+  }, []);
+
+  const handleAdminAutoFill = () => {
+    const correctAnswers = buildCreatorValidationCorrectAnswers(questions);
+    if (!correctAnswers) {
+      toast.error("Chưa thể điền đáp án đúng vì máy chủ chưa trả về đáp án cho tài khoản admin.");
+      return;
+    }
+
+    setAnswers(correctAnswers);
+    setIndex(questions.length - 1);
+  };
+
+  const submit = async () => {
+    if (!complete) return;
+    setSubmitting(true);
+    try {
+      const next = await marketplaceService.validateCreator(itemId, {
+        answers: questions.map(question => ({
+          questionId: question.questionId,
+          selectedOptionId: answers[question.questionId],
+        })),
+        durationSeconds: elapsed,
+      });
+      setResult(next);
+      setConfirm(false);
+    } catch (error) {
+      toast.error(errorText(error));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const retry = () => {
+    setAnswers({});
+    setIndex(0);
+    setElapsed(0);
+    setStartedAt(Date.now());
+    setResult(null);
+  };
+
+  const sendReview = async () => {
+    setReviewing(true);
+    try {
+      await marketplaceService.submitForReview(itemId);
+      toast.success("Đã gửi Quiz Pack chờ duyệt.");
+      navigate("/app/creator/marketplace");
+    } catch (error) {
+      toast.error(errorText(error));
+    } finally {
+      setReviewing(false);
+    }
+  };
+
+  if (loading) {
+    return <CreatorShell><Skeleton /></CreatorShell>;
+  }
+
+  if (loadFailed || !snapshot) {
+    return (
+      <CreatorShell>
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-7">
+          <CircleAlert className="h-7 w-7 text-amber-700" />
+          <h1 className="mt-3 text-xl font-black">Không thể tải snapshot Validation</h1>
+          <p className="mt-2 text-sm leading-6 text-amber-950">
+            Validation chỉ khả dụng với Quiz Pack bản nháp của bạn.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-4">
+            <button onClick={loadSnapshot} className="font-bold text-[#FF6B00]">Thử lại</button>
+            <Link to="/app/creator/marketplace" className="font-bold text-[#FF6B00]">
+              Quay lại Quiz Pack của tôi
+            </Link>
+          </div>
+        </div>
+      </CreatorShell>
+    );
+  }
+
+  if (result) {
+    const passed = result.score >= 90;
+    return (
+      <CreatorShell>
+        <div className={`mx-auto max-w-xl rounded-3xl border p-7 text-center ${passed ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"}`}>
+          <CheckCircle2 className={`mx-auto h-10 w-10 ${passed ? "text-emerald-600" : "text-rose-600"}`} />
+          <h1 className="mt-4 text-2xl font-black">{passed ? "Validation đạt yêu cầu" : "Validation chưa đạt"}</h1>
+          <p className="mt-2 text-sm text-slate-600">Hoàn thành {date(result.completedAt)}</p>
+          <div className="mt-6 grid grid-cols-2 gap-3 text-left sm:grid-cols-4">
+            {[
+              ["Điểm", result.score],
+              ["Đúng", `${result.correctCount}/${result.questionCount}`],
+              ["Câu hỏi", result.questionCount],
+              ["Thời gian", `${result.durationSeconds}s`],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="rounded-xl bg-white p-3">
+                <p className="text-xs text-slate-500">{label}</p>
+                <p className="font-black">{value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            {passed ? (
+              <Button onClick={() => setReviewConfirm(true)}>
+                <Send className="h-4 w-4" />Gửi Admin duyệt
+              </Button>
+            ) : (
+              <Button onClick={retry}>Làm lại Validation</Button>
+            )}
+          </div>
+        </div>
+        {reviewConfirm && (
+          <Confirm
+            title="Gửi Admin duyệt"
+            text="Sau khi gửi duyệt, Quiz Pack sẽ ở trạng thái chờ Admin kiểm tra."
+            busy={reviewing}
+            onClose={() => setReviewConfirm(false)}
+            onConfirm={sendReview}
+          />
+        )}
+      </CreatorShell>
+    );
+  }
+
+  return (
+    <CreatorShell>
+      <Link to="/app/creator/marketplace" className="inline-flex items-center gap-1 text-sm font-bold text-[#FF6B00]">
+        <ChevronLeft className="h-4 w-4" />Quiz Pack của tôi
+      </Link>
+
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-black">Full Pack Validation</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Tiến độ {Object.keys(answers).length}/{questions.length} câu trả lời
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-2 text-sm font-black text-[#FF6B00]">
+          <Clock3 className="h-4 w-4" />
+          {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
+        </span>
+      </div>
+
+      <div className="mt-7 grid gap-5 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6">
+          <p className="text-sm font-bold text-[#FF6B00]">Câu {index + 1}/{questions.length}</p>
+          <h2 className="mt-3 text-xl font-black leading-8">{current?.text}</h2>
+
+          <div className="mt-6 grid gap-3">
+            {current?.options.map(option => (
+              <label
+                key={option.optionId}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 text-sm font-medium ${answers[current.questionId] === option.optionId ? "border-[#FF6B00] bg-orange-50" : "border-slate-200 hover:border-orange-200"}`}
+              >
+                <input
+                  type="radio"
+                  name={current.questionId}
+                  checked={answers[current.questionId] === option.optionId}
+                  onChange={() => setAnswers(currentAnswers => ({ ...currentAnswers, [current.questionId]: option.optionId }))}
+                  className="accent-[#FF6B00]"
+                />
+                {option.text}
+              </label>
+            ))}
+          </div>
+
+          {adminCanAutofill && (
+            <button
+              type="button"
+              onClick={handleAdminAutoFill}
+              title="Test tool: điền toàn bộ đáp án đúng từ dữ liệu backend"
+              className="mt-7 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs font-bold text-[#FF6B00] transition hover:bg-orange-100 active:scale-[0.98]"
+            >
+              <Zap className="h-4 w-4" />
+              [Admin] Auto-Fill Correct Answers
+            </button>
+          )}
+
+          <div className="mt-7 flex justify-between">
+            <button
+              onClick={() => setIndex(value => Math.max(0, value - 1))}
+              disabled={index === 0}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold disabled:opacity-40"
+            >
+              Câu trước
+            </button>
+            {index < questions.length - 1 ? (
+              <button
+                onClick={() => setIndex(value => Math.min(questions.length - 1, value + 1))}
+                className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-bold text-[#FF6B00]"
+              >
+                Câu tiếp
+              </button>
+            ) : (
+              <Button onClick={() => setConfirm(true)} disabled={!complete}>
+                <Trophy className="h-4 w-4" />Nộp Validation
+              </Button>
+            )}
+          </div>
+        </section>
+
+        <aside className="rounded-3xl border border-slate-200 bg-white p-5">
+          <h2 className="font-black">Câu hỏi</h2>
+          <div className="mt-4 grid grid-cols-5 gap-2">
+            {questions.map((question, questionIndex) => (
+              <button
+                key={question.questionId}
+                onClick={() => setIndex(questionIndex)}
+                className={`h-9 rounded-lg text-xs font-bold ${index === questionIndex ? "bg-[#FF6B00] text-white" : answers[question.questionId] ? "bg-orange-50 text-[#FF6B00]" : "bg-slate-100 text-slate-600"}`}
+              >
+                {questionIndex + 1}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setConfirm(true)}
+            disabled={!complete}
+            className="mt-6 w-full rounded-xl bg-[#FF6B00] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+          >
+            Nộp Validation
+          </button>
+        </aside>
+      </div>
+
+      {confirm && (
+        <Confirm
+          title="Nộp Full Pack Validation"
+          text="Bạn đã trả lời tất cả câu hỏi. Xác nhận gửi bài Validation?"
+          busy={submitting}
+          onClose={() => setConfirm(false)}
+          onConfirm={submit}
+        />
+      )}
+    </CreatorShell>
+  );
 }
