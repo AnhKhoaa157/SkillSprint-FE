@@ -28,6 +28,11 @@ import {
 } from "lucide-react";
 import materialService, { type UploadedMaterialResponse } from "../../../api/learning/materialService";
 import AiTutorChat from "./AiTutorChat";
+import {
+  canReconcileLegacyRoadmap,
+  getRoadmapCompletionState,
+  isCompletedRoadmapStep,
+} from "./roadmapCompletionState";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { RoadmapRewardModal } from "../../components/modals/RoadmapRewardModal";
@@ -299,50 +304,23 @@ export default function Roadmap() {
 
   const steps = roadmapData?.steps || [];
   const totalResources = useMemo(() => getTotalResources(roadmapData), [roadmapData]);
-  const progressPercent = useMemo(() => {
-    if (!roadmapData) return 0;
-    const status = (toText(roadmapData.status) || "").toUpperCase();
-    if (status === "GENERATING") return 0;
-    if (steps.length === 0) return 0;
-    const completedCount = steps.filter(step => {
-      const stepId = getStepKey(step);
-      const matched = tasks.find(t => t.roadmapStepId === stepId);
-      return matched?.status?.toUpperCase() === "COMPLETED" || matched?.status?.toUpperCase() === "DONE";
-    }).length;
-    return Math.round((completedCount / steps.length) * 100);
-  }, [roadmapData, steps, tasks]);
+  const roadmapCompletion = useMemo(() => getRoadmapCompletionState(roadmapData), [roadmapData]);
+  const { progressPercent, isRoadmapComplete, isSyncingCompletion } = roadmapCompletion;
+  const canReconcileLegacyCompletion = useMemo(
+    () => isAdmin && canReconcileLegacyRoadmap(roadmapData, tasks),
+    [isAdmin, roadmapData, tasks],
+  );
+  const canSynchronizeCompletion = isSyncingCompletion || canReconcileLegacyCompletion;
+  const canRequestRoadmapReward = isRoadmapComplete || canSynchronizeCompletion;
 
-  // Fire the reward chest once the roadmap hits 100% — but ONLY after confirming
-  // the backend actually awarded the ROADMAP_COMPLETED points. The client's 100%
-  // is purely task-status derived, whereas the backend enforces a per-step study
-  // gate (≥20 min) before writing the point event, so the two can legitimately
-  // disagree. Celebrating off client progress alone would promise XP that was
-  // never granted.
-  //
-  // Guarded by a per-roadmap localStorage flag so it celebrates once and never
-  // re-rewards on later visits (`tasks` reloads on every mount, which would
-  // otherwise re-trigger the 0 -> 100 transition). The flag is checked BEFORE the
-  // API call — already-claimed roadmaps skip verification entirely — and is only
-  // written after a verified award, so an as-yet-ungranted completion can retry
-  // on a later visit.
-
-  // The canonical roadmap UUID is what the backend stamps as the ROADMAP_COMPLETED
-  // event's sourceId; fall back to id/workspace only for keying.
+  // The backend roadmap UUID is the sourceId for the ROADMAP_COMPLETED point event.
   const roadmapId = toText(roadmapData?.roadmapId) || toText(roadmapData?.id);
   const roadmapKey = roadmapId || activeWorkspaceId;
-
-  // Treat the roadmap as finished when EITHER the task-derived progress hits 100%
-  // OR the backend marks the roadmap itself COMPLETED. The task-derived figure can
-  // legitimately lag (step<->task key mismatch, study-gate), so relying on it alone
-  // is what leaves the chest dormant on an actually-finished roadmap.
-  const isRoadmapComplete =
-    steps.length > 0 &&
-    (progressPercent >= 100 || (toText(roadmapData?.status) || "").toUpperCase() === "COMPLETED");
 
   // Clicking the treasure-chest end node claims the reward and unlocks +700 XP.
   // Already-claimed roadmaps replay the celebration on demand without re-hitting the backend.
   const handleChestClick = useCallback(async () => {
-    if (!isRoadmapComplete) {
+    if (!canRequestRoadmapReward) {
       toast.info("Hãy hoàn thành tất cả cột mốc để mở Kho báu lộ trình.");
       return;
     }
@@ -358,6 +336,8 @@ export default function Roadmap() {
     try {
       // Call backend to claim the 700 XP reward
       await roadmapService.claimRoadmapReward(activeWorkspaceId);
+      const refreshedRoadmap = await roadmapService.getRoadmap(activeWorkspaceId).catch(() => null);
+      if (refreshedRoadmap) setRoadmapData(refreshedRoadmap);
       
       // Mark as claimed locally
       localStorage.setItem(storageKey, "1");
@@ -373,7 +353,7 @@ export default function Roadmap() {
     } finally {
       setIsClaiming(false);
     }
-  }, [isRoadmapComplete, roadmapKey, isClaiming, isClaimed, activeWorkspaceId]);
+  }, [canRequestRoadmapReward, roadmapKey, isClaiming, isClaimed, activeWorkspaceId]);
 
   const handleViewMaterial = async (materialId: string) => {
     if (!activeWorkspaceId || !materialId) return;
@@ -551,9 +531,12 @@ export default function Roadmap() {
     let stepCompletionPercent = 0;
     let stepStatusText = "Chưa mở khóa";
 
-    if (step.status === "COMPLETED" || matchedTask?.status === "COMPLETED" || matchedTask?.status === "DONE") {
+    if (isCompletedRoadmapStep(step)) {
       stepCompletionPercent = 100;
       stepStatusText = "Hoàn thành";
+    } else if (matchedTask?.status === "COMPLETED" || matchedTask?.status === "DONE") {
+      stepCompletionPercent = 90;
+      stepStatusText = "Đang đồng bộ";
     } else if (step.status === "CURRENT" || matchedTask?.status === "IN_PROGRESS") {
       stepCompletionPercent = 50;
       stepStatusText = "Đang học";
@@ -953,7 +936,7 @@ export default function Roadmap() {
             
             <div className="mt-5 pt-4 border-t border-amber-100/50">
               <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
-                <span>Tiến trình hoàn thành</span><span className="text-[#FF7E21]">{progressPercent}%</span>
+                <span>Tiến trình hoàn thành</span><span className="text-[#FF7E21]">{isSyncingCompletion ? "Đang đồng bộ" : `${progressPercent}%`}</span>
               </div>
               <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-slate-100 border border-slate-200/40 shadow-inner">
                 <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-[#FF7E21] transition-all duration-500 shadow-[0_0_8px_rgba(255,107,0,0.4)]" style={{ width: `${progressPercent}%` }} />
@@ -970,7 +953,7 @@ export default function Roadmap() {
                 const stepId = getStepKey(step) || `step-${index}`;
                 const title = toText(step.title) || `Cột mốc ${index + 1}`;
                 const matchedTask = tasks.find((task) => task.roadmapStepId === stepId);
-                const isCompleted = matchedTask?.status?.toUpperCase() === "COMPLETED" || matchedTask?.status?.toUpperCase() === "DONE";
+                const isCompleted = isCompletedRoadmapStep(step);
                 const isFreemiumLocked = !isPremium && index >= 2;
                 const X_curr = xOffsets[index % 10];
                 const X_next = xOffsets[(index + 1) % 10];
@@ -1017,11 +1000,11 @@ export default function Roadmap() {
                   type="button"
                   onClick={handleChestClick}
                   disabled={isClaiming}
-                  aria-label={isClaimed ? "Kho báu lộ trình (đã nhận)" : isRoadmapComplete ? "Mở Kho báu lộ trình để nhận thưởng" : "Kho báu lộ trình (chưa mở khoá)"}
-                  className={`relative z-10 flex flex-col items-center group focus:outline-none ${isRoadmapComplete && !isClaiming ? "cursor-pointer" : isClaiming ? "cursor-wait" : "cursor-default"}`}
+                  aria-label={isClaimed ? "Kho báu lộ trình (đã nhận)" : canRequestRoadmapReward ? "Đồng bộ roadmap và nhận thưởng" : "Kho báu lộ trình (chưa mở khoá)"}
+                  className={`relative z-10 flex flex-col items-center group focus:outline-none ${canRequestRoadmapReward && !isClaiming ? "cursor-pointer" : isClaiming ? "cursor-wait" : "cursor-default"}`}
                 >
-                  <div className={`absolute -inset-2 bg-gradient-to-r ${isClaimed ? "from-emerald-400 to-emerald-500" : "from-amber-400 to-[#FF7E21]"} rounded-full blur transition duration-300 pointer-events-none ${isRoadmapComplete ? "opacity-30 group-hover:opacity-50" : "opacity-15"}`} />
-                  <div className={`flex h-16 w-16 items-center justify-center rounded-full border-2 ${isClaimed ? "border-emerald-500 bg-gradient-to-br from-emerald-400 to-emerald-600" : "border-amber-500 bg-gradient-to-br from-amber-400 to-amber-600"} text-white shadow-lg transition-transform duration-300 ${isRoadmapComplete && !isClaiming ? "group-hover:rotate-6 group-hover:scale-105" : ""}`}>
+                  <div className={`absolute -inset-2 bg-gradient-to-r ${isClaimed ? "from-emerald-400 to-emerald-500" : "from-amber-400 to-[#FF7E21]"} rounded-full blur transition duration-300 pointer-events-none ${canRequestRoadmapReward ? "opacity-30 group-hover:opacity-50" : "opacity-15"}`} />
+                  <div className={`flex h-16 w-16 items-center justify-center rounded-full border-2 ${isClaimed ? "border-emerald-500 bg-gradient-to-br from-emerald-400 to-emerald-600" : "border-amber-500 bg-gradient-to-br from-amber-400 to-amber-600"} text-white shadow-lg transition-transform duration-300 ${canRequestRoadmapReward && !isClaiming ? "group-hover:rotate-6 group-hover:scale-105" : ""}`}>
                     {isClaiming ? (
                       <LoaderCircle className="w-7 h-7 animate-spin" />
                     ) : isClaimed ? (
@@ -1035,8 +1018,8 @@ export default function Roadmap() {
                   </div>
                   <div className={`mt-2.5 bg-[#FFFDF9] px-4 py-1.5 rounded-xl border ${isClaimed ? "border-emerald-300" : "border-amber-300/80"} w-32 sm:w-40 text-center shadow-md`}>
                     <h3 className={`text-[10px] font-extrabold tracking-wider ${isClaimed ? "text-emerald-800" : "text-amber-850"} uppercase`}>Kho báu lộ trình</h3>
-                    <span className={`text-[8px] font-semibold block mt-0.5 ${isClaimed ? "text-emerald-600" : isRoadmapComplete ? "text-[#FF7E21]" : "text-slate-400"}`}>
-                      {isClaiming ? "Đang xác nhận..." : isClaimed ? "Đã nhận" : isRoadmapComplete ? "Nhấn để nhận thưởng" : "Chưa hoàn thành"}
+                    <span className={`text-[8px] font-semibold block mt-0.5 ${isClaimed ? "text-emerald-600" : canRequestRoadmapReward ? "text-[#FF7E21]" : "text-slate-400"}`}>
+                      {isClaiming ? "Đang xác nhận..." : isClaimed ? "Đã nhận" : isRoadmapComplete ? "Nhấn để nhận thưởng" : canSynchronizeCompletion ? "Đồng bộ để nhận" : "Chưa hoàn thành"}
                     </span>
                   </div>
                 </button>
