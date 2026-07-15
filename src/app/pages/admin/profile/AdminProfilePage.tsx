@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { clearAuthTokens } from "../../../../api/auth/authService";
 import meService, { type MeResponse } from "../../../../api/utilities/meService";
 import { ArrowLeft, Camera, Copy, CheckCircle, Shield, User, Mail, Save, LoaderCircle } from "lucide-react";
+import { AvatarCropDialog } from "../../../components/avatar/AvatarCropDialog";
 
 type ApiError = { status?: number; message?: string };
 
@@ -25,6 +26,8 @@ export default function AdminProfile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarCropSource, setAvatarCropSource] = useState<string | null>(null);
+  const [avatarCropFileName, setAvatarCropFileName] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -56,20 +59,44 @@ export default function AdminProfile() {
     return () => { if (avatarPreview) URL.revokeObjectURL(avatarPreview); };
   }, [avatarPreview]);
 
+  const closeAvatarCropper = () => {
+    setAvatarCropSource((source) => {
+      if (source) URL.revokeObjectURL(source);
+      return null;
+    });
+    setAvatarCropFileName("");
+  };
+
+  useEffect(() => {
+    return () => { if (avatarCropSource) URL.revokeObjectURL(avatarCropSource); };
+  }, [avatarCropSource]);
+
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Vui lòng chọn một tệp hình ảnh hợp lệ");
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error("Vui lòng chọn ảnh JPG, PNG hoặc WEBP");
       return;
     }
-    setAvatarFile(file);
-    setAvatarPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ảnh đại diện không được vượt quá 5 MB");
+      return;
+    }
+    setAvatarCropFileName(file.name);
+    setAvatarCropSource((source) => {
+      if (source) URL.revokeObjectURL(source);
       return URL.createObjectURL(file);
     });
-    // Allow re-selecting the same file later
     e.target.value = "";
+  };
+
+  const handleCroppedAvatar = (file: File) => {
+    setAvatarFile(file);
+    setAvatarPreview((preview) => {
+      if (preview) URL.revokeObjectURL(preview);
+      return URL.createObjectURL(file);
+    });
+    closeAvatarCropper();
   };
 
   const uploadAvatar = async (file: File): Promise<MeResponse> => {
@@ -148,6 +175,12 @@ export default function AdminProfile() {
 
   return (
     <div className="min-h-screen p-6 md:p-10 bg-[#F8F9FA] bg-[radial-gradient(at_top_left,_rgba(255,107,0,0.05)_0%,_transparent_40%),_radial-gradient(at_bottom_right,_rgba(139,92,246,0.04)_0%,_transparent_45%)]">
+      <AvatarCropDialog
+        imageUrl={avatarCropSource}
+        fileName={avatarCropFileName}
+        onCancel={closeAvatarCropper}
+        onCropped={handleCroppedAvatar}
+      />
       <div className="max-w-6xl mx-auto space-y-6">
         {/* ── Top action bar ── */}
         <motion.button
@@ -193,7 +226,7 @@ export default function AdminProfile() {
             <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-white flex items-center justify-center shadow">
               <Shield size={12} className="text-[#FF6B00]" />
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
           </div>
 
           {/* Identity text block */}

@@ -21,6 +21,7 @@ import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse, CurrentSub
 import { PlanTypeBadge, PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
 import { normalizePlanType } from "../../../utils/adminStatusHelpers";
 import { useNotificationSocket } from "../../hooks/useNotificationSocket";
+import { AvatarCropDialog } from "../../components/avatar/AvatarCropDialog";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -226,15 +227,31 @@ function AccountTab({ profile, onSave, saving, onAvatarUploaded }: AccountTabPro
   const [deleteModal,    setDeleteModal]    = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [previewImgError, setPreviewImgError] = useState(false);
+  const [avatarCropSource, setAvatarCropSource] = useState<string | null>(null);
+  const [avatarCropFileName, setAvatarCropFileName] = useState("");
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const avatarInitials = getInitials(profile.fullName || profile.email || "U");
 
+  const closeAvatarCropper = () => {
+    setAvatarCropSource((source) => {
+      if (source) URL.revokeObjectURL(source);
+      return null;
+    });
+    setAvatarCropFileName("");
+  };
+
+  useEffect(() => {
+    return () => {
+      if (avatarCropSource) URL.revokeObjectURL(avatarCropSource);
+    };
+  }, [avatarCropSource]);
+
   async function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!e.target) return;
-    e.target.value = "";          // reset so the same file can be re-selected
+    e.target.value = "";
     if (!file) return;
 
     const MAX_MB = 5;
@@ -243,32 +260,38 @@ function AccountTab({ profile, onSave, saving, onAvatarUploaded }: AccountTabPro
       return;
     }
 
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error("Vui lòng chọn ảnh JPG, PNG hoặc WEBP.");
+      return;
+    }
+
+    setPreviewImgError(false);
+    setAvatarCropFileName(file.name);
+    setAvatarCropSource((source) => {
+      if (source) URL.revokeObjectURL(source);
+      return URL.createObjectURL(file);
+    });
+  }
+
+  async function handleCroppedAvatar(file: File) {
     setUploadingAvatar(true);
     try {
-      // Step 1 — get pre-signed S3 URL from backend
-      const { uploadUrl, objectKey } = await meService.getAvatarUploadUrl(
-        file.name,
-        file.type || "image/jpeg",
-      );
-
-      // Step 2 — PUT binary directly to S3 (no auth headers — pre-signed URL)
+      const { uploadUrl, objectKey } = await meService.getAvatarUploadUrl(file.name, file.type);
       const s3Res = await fetch(uploadUrl, {
         method: "PUT",
         body: file,
-        headers: { "Content-Type": file.type || "image/jpeg" },
+        headers: { "Content-Type": file.type },
       });
       if (!s3Res.ok) throw new Error(`S3 upload failed (${s3Res.status})`);
 
-      // Step 3 — confirm with backend and get updated profile
       const updated = await meService.confirmAvatarUpload(objectKey);
       onAvatarUploaded(updated);
+      closeAvatarCropper();
       toast.success("Ảnh đại diện đã được cập nhật.");
-    } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "Không thể tải ảnh lên. Vui lòng thử lại.",
-      );
+    } catch (error) {
+      throw error instanceof Error
+        ? error
+        : new Error("Không thể tải ảnh lên. Vui lòng thử lại.");
     } finally {
       setUploadingAvatar(false);
     }
@@ -307,6 +330,13 @@ function AccountTab({ profile, onSave, saving, onAvatarUploaded }: AccountTabPro
 
   return (
     <>
+      <AvatarCropDialog
+        imageUrl={avatarCropSource}
+        fileName={avatarCropFileName}
+        onCancel={closeAvatarCropper}
+        onCropped={handleCroppedAvatar}
+      />
+
       {/* ── Avatar Upload ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom:"28px" }}>
         <SectionHeading title="Ảnh đại diện"/>
@@ -315,7 +345,7 @@ function AccountTab({ profile, onSave, saving, onAvatarUploaded }: AccountTabPro
         <input
           ref={avatarInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           className="hidden"
           onChange={handleAvatarFileChange}
         />
