@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import {
   AlertTriangle,
   ArrowLeft,
+  BadgeCheck,
   BookOpen,
   Brain,
   BrainCircuit,
@@ -31,7 +32,6 @@ import {
   SkipForward,
   Star,
   Trophy,
-  PartyPopper,
   X,
   CalendarDays,
 } from "lucide-react";
@@ -1583,11 +1583,12 @@ export default function CoursePlayer() {
               )}
 
               {isSessionCompleted ? (
-                <div className="mt-5 rounded-2xl border border-emerald-100/60 bg-emerald-50/40 p-5 text-center shadow-sm">
-                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm shadow-emerald-100/20 mb-3">
-                    <PartyPopper size={20} className="stroke-[2.5]" />
+                <div className="mt-5 rounded-2xl border border-emerald-100/80 bg-gradient-to-b from-emerald-50 to-teal-50/40 p-5 text-center shadow-sm">
+                  <div className="relative mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-sm shadow-emerald-200/60">
+                    <BadgeCheck size={25} className="stroke-[2.25]" aria-hidden="true" />
+                    <Sparkles size={11} className="absolute -right-1 -top-1 text-emerald-500" aria-hidden="true" />
                   </div>
-                  <h4 className="text-sm font-extrabold text-slate-800">🎉 Đã hoàn thành mục học</h4>
+                  <h4 className="text-sm font-extrabold text-slate-800">Đã hoàn thành mục học</h4>
                   <p className="mt-1 text-[11px] leading-5 text-slate-500">Tiến độ đã được đồng bộ lên lộ trình cá nhân của bạn.</p>
                 </div>
               ) : !hasStartedSession ? (
