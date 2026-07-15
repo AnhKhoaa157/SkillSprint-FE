@@ -80,14 +80,14 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
     <>
       <section
         onClick={() => setIsModalOpen(true)}
-        className="group cursor-pointer rounded-3xl border border-white bg-white/90 p-4.5 shadow-[0_12px_36px_rgba(0,0,0,0.02),0_1px_3px_rgba(0,0,0,0.01)] backdrop-blur-xl transition-all duration-300 hover:border-slate-200/85 hover:shadow-[0_20px_48px_rgba(0,0,0,0.04)]"
+        className="group cursor-pointer rounded-[1.75rem] border border-white bg-white/85 p-4 shadow-[0_16px_45px_rgba(71,50,35,0.06)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-orange-100 hover:bg-white hover:shadow-[0_20px_50px_rgba(71,50,35,0.08)] sm:p-5"
       >
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-3 sm:gap-4">
           <div className="relative shrink-0">
-            <div className="absolute -inset-0.5 rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#FF8A00] opacity-40 blur-[1px] group-hover:opacity-90 transition duration-300" />
-            <Avatar className="relative h-10 w-10 border-2 border-white">
+            <div className="absolute -inset-1 rounded-2xl bg-orange-100 opacity-70 transition duration-300 group-hover:bg-orange-200" />
+            <Avatar className="relative h-11 w-11 rounded-xl border-2 border-white shadow-sm">
               <AvatarImage src={avatarUrl} />
-              <AvatarFallback className="bg-orange-50 text-sm font-black text-[#FF6B00]">
+              <AvatarFallback className="rounded-xl bg-orange-50 text-sm font-black text-[#FF6B00]">
                 {displayName.charAt(0) || "S"}
               </AvatarFallback>
             </Avatar>
@@ -99,12 +99,12 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
               event.stopPropagation();
               setIsModalOpen(true);
             }}
-            className="min-w-0 flex-1 rounded-full bg-slate-50/70 border border-slate-200/50 px-5 py-2.5 text-left text-xs font-bold text-slate-400 transition-all duration-300 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-500 focus:outline-none"
+            className="min-w-0 flex-1 rounded-2xl border border-slate-100 bg-[#F8F9FA] px-4 py-3 text-left text-xs font-semibold text-slate-400 transition-all duration-300 hover:border-orange-100 hover:bg-orange-50/40 hover:text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 sm:px-5"
           >
             {composerPrompt}
           </button>
  
-          <div className="hidden items-center gap-1.5 sm:flex">
+          <div className="hidden items-center gap-1 sm:flex">
             <button
               type="button"
               title="Đăng video"
@@ -113,7 +113,7 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
                 event.stopPropagation();
                 setIsModalOpen(true);
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-all duration-300 hover:bg-slate-100 hover:text-rose-500 active:scale-95"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-all duration-300 hover:bg-orange-50 hover:text-[#FF6B00] active:scale-95"
             >
               <Video className="h-4.5 w-4.5" />
             </button>
@@ -125,7 +125,7 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
                 event.stopPropagation();
                 setIsModalOpen(true);
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-all duration-300 hover:bg-slate-100 hover:text-emerald-500 active:scale-95"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-all duration-300 hover:bg-orange-50 hover:text-[#FF6B00] active:scale-95"
             >
               <Image className="h-4.5 w-4.5" />
             </button>
@@ -137,7 +137,7 @@ export function CreatePostComposer({ onPostCreated, openSignal = 0 }: CreatePost
                 event.stopPropagation();
                 setIsModalOpen(true);
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-all duration-300 hover:bg-slate-100 hover:text-sky-500 active:scale-95"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-all duration-300 hover:bg-orange-50 hover:text-[#FF6B00] active:scale-95"
             >
               <Lightbulb className="h-4.5 w-4.5" />
             </button>
