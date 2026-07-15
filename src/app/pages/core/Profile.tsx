@@ -22,6 +22,7 @@ import { PlanTypeBadge, PlanBadgeStyles } from "../../../components/admin/PlanTy
 import { normalizePlanType } from "../../../utils/adminStatusHelpers";
 import { useNotificationSocket } from "../../hooks/useNotificationSocket";
 import { AvatarCropDialog } from "../../components/avatar/AvatarCropDialog";
+import { resolveCurrentProfilePlanId, resolveProfilePlanSlots, type ProfilePlanId } from "./profileSubscriptionPlan";
 
 /* ─── Tokens ─── */
 const F    = "'Inter','Plus Jakarta Sans',sans-serif";
@@ -696,20 +697,11 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
   useEffect(() => () => { if (pollingRef.current) clearInterval(pollingRef.current); }, []);
 
   /* ── Plan registry ── */
-  type PlanId = "starter"|"skill_builder"|"career_premium";
+  type PlanId = ProfilePlanId;
   const planValue: Record<PlanId,number> = { starter:0, skill_builder:1, career_premium:2 };
   const planApiType: Record<PlanId,string> = { starter:"FREE", skill_builder:"SKILL_BUILDER", career_premium:"PREMIUM" };
 
-  // ── Single source of truth: identify plans by price, NOT raw index ──
-  // The BE list may or may not include the FREE plan, so we explicitly split
-  // free vs paid (sorted ascending) instead of assuming positions [0]/[1].
-  const freePlan  = availablePlans.find(p => p.monthlyPrice <= 0) ?? null;
-  const paidPlans = availablePlans.filter(p => p.monthlyPrice > 0).sort((a, b) => a.monthlyPrice - b.monthlyPrice);
-  const planByKey: Record<PlanId, PublicPlanResponse | null> = {
-    starter:        freePlan,
-    skill_builder:  paidPlans[0] ?? null,
-    career_premium: paidPlans[1] ?? null,
-  };
+  const planByKey: Record<PlanId, PublicPlanResponse | null> = resolveProfilePlanSlots(availablePlans);
 
   // Dynamic plan names from BE; use generic UI labels only when metadata is not loaded.
   const planLabel: Record<PlanId,string> = {
@@ -750,16 +742,7 @@ function SubscriptionTab({ onSubscriptionChanged }: { onSubscriptionChanged?: ()
   const rawPlanId = subData?.plan?.planId;
   const rawPlanName = subData?.plan?.planName;
 
-  const hasCurrentId = !!rawPlanId && availablePlans.some(p => p.planId === rawPlanId);
-  const currentPrice = (() => {
-    if (hasCurrentId) return availablePlans.find(p => p.planId === rawPlanId)?.monthlyPrice ?? 0;
-    if (rawPlanType === "PREMIUM") return planByKey.career_premium?.monthlyPrice ?? 0;
-    if (rawPlanType === "SKILL_BUILDER") return planByKey.skill_builder?.monthlyPrice ?? 0;
-    return 0; // FREE
-  })();
-
-  const currentPlanId: PlanId = currentPrice === (planByKey.career_premium?.monthlyPrice ?? -1) ? "career_premium"
-    : currentPrice === (planByKey.skill_builder?.monthlyPrice ?? -1) ? "skill_builder" : "starter";
+  const currentPlanId = resolveCurrentProfilePlanId(rawPlanId, rawPlanType, rawPlanName, planByKey);
   const currentPlanIndex = planValue[currentPlanId];
 
   // Benefits (jsonb string[]) of the user's active plan, sourced from the public

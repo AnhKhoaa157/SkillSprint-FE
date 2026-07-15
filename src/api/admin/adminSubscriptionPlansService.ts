@@ -230,6 +230,9 @@ export type RawPlanFeature =
 export type PublicPlanResponse = {
   planId: string;
   planName: string;
+  // The public endpoint may include this field for recently created plans.
+  // Keep it optional because older payloads omitted it.
+  planType?: string | null;
   description: string | null;
   benefits?: string[];
   // Dynamic styling tokens now exposed by the public endpoint. All optional/nullable
