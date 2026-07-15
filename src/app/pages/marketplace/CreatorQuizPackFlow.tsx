@@ -82,7 +82,6 @@ export function CreatorQuizPackDashboard() {
   useEffect(() => { void load(); }, [load]);
   const submitReview = async () => { if (!reviewItem) return; setSending(true); try { await marketplaceService.submitForReview(reviewItem.itemId); toast.success("Đã gửi Quiz Pack chờ duyệt."); setReviewItem(null); await load(); } catch (error) { toast.error(errorText(error)); } finally { setSending(false); } };
   const refreshSnapshot = async () => { if (!refreshItem) return; setRefreshing(true); try { const item = await marketplaceService.refreshCreatorSnapshot(refreshItem.itemId); toast.success("Đã làm mới snapshot. Hãy thực hiện Validation lại."); setRefreshItem(null); navigate(`/app/creator/marketplace/${item.itemId}/validation`); } catch (error) { toast.error(errorText(error)); } finally { setRefreshing(false); } };
-
   const processSteps = [
     { number: "01", icon: PackagePlus, title: "Chọn workspace", text: "Một workspace cho mỗi pack" },
     { number: "02", icon: Layers3, title: "Hệ thống đóng gói", text: "Roadmap và quiz active" },
@@ -90,37 +89,41 @@ export function CreatorQuizPackDashboard() {
   ];
 
   return <CreatorShell>
-    <section className="relative isolate overflow-hidden rounded-[2rem] border border-orange-100 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
-      <div className="pointer-events-none absolute -right-24 -top-24 -z-10 h-80 w-80 rounded-full bg-orange-100/70 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-10 left-1/3 -z-10 h-48 w-48 rounded-full bg-amber-50 blur-3xl" />
-      <div className="grid gap-10 px-6 py-8 sm:px-9 sm:py-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)] lg:items-center lg:px-12 lg:py-12">
+    <section className="relative isolate overflow-hidden rounded-[2rem] border border-[#FFE1C7] bg-white shadow-[0_24px_70px_rgba(255,107,0,0.08)]">
+      <div className="pointer-events-none absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-[#FF8A32]/60 to-transparent" />
+      <div className="pointer-events-none absolute -right-24 -top-28 -z-10 h-80 w-80 rounded-full bg-orange-100/65 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-4 left-1/3 -z-10 h-44 w-44 rounded-full bg-amber-50 blur-3xl" />
+      <div className="grid gap-7 px-6 py-7 sm:px-9 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)] lg:items-center lg:px-11 lg:py-8">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#FF6B00]">
+          <div className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50/80 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#FF6B00]">
             <Sparkles className="h-3.5 w-3.5" />Creator studio
           </div>
-          <h1 className="mt-5 max-w-3xl text-3xl font-black leading-[1.08] tracking-[-0.035em] text-slate-950 sm:text-4xl lg:text-5xl">Biến workspace thành<br className="hidden sm:block" /> một Quiz Pack hoàn chỉnh.</h1>
-          <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">SkillSprint tự gom roadmap và các quiz đang active. Bạn chỉ cần chọn workspace, hoàn tất Validation và gửi Admin duyệt.</p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link to="/app/creator/marketplace/create" className="w-full sm:w-auto"><Button className="h-12 w-full px-5 sm:w-auto"><PackagePlus className="h-4 w-4" />Tạo Quiz Pack<ArrowRight className="h-4 w-4" /></Button></Link>
-            <span className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 sm:justify-start"><CheckCircle2 className="h-4 w-4 text-[#FF6B00]" />Không cần chọn từng quiz thủ công</span>
-          </div>
+          <h1 className="mt-4 max-w-3xl text-3xl font-black leading-[1.04] tracking-[-0.04em] text-slate-950 sm:text-4xl lg:text-[3.15rem]">Từ workspace<br className="hidden sm:block" /> đến Quiz Pack.</h1>
+          <p className="mt-4 max-w-lg text-sm leading-6 text-slate-600 sm:text-[15px]">Roadmap và quiz active được đóng gói tự động. Hoàn tất Validation để gửi duyệt.</p>
         </div>
         <div className="relative mx-auto w-full max-w-sm lg:mx-0 lg:justify-self-end">
-          <div className="absolute -inset-3 rounded-[2rem] border border-dashed border-orange-200/80" />
-          <div className="relative overflow-hidden rounded-3xl border border-orange-100 bg-white/90 p-5 shadow-[0_20px_50px_rgba(255,107,0,0.12)] backdrop-blur sm:p-6">
-            <div className="flex items-center justify-between"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#FF6B00] text-white shadow-lg shadow-orange-200"><PackagePlus className="h-5 w-5" /></div><span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">Quy trình 3 bước</span></div>
-            <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Từ workspace đến marketplace</p>
-            <div className="mt-4 space-y-3">
-              {["Roadmap được đóng gói", "Quiz active được đồng bộ", "Sẵn sàng gửi Admin duyệt"].map((label, index) => <div key={label} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-3"><span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-black ${index === 2 ? "bg-orange-100 text-[#FF6B00]" : "bg-emerald-100 text-emerald-700"}`}>{index === 2 ? "90+" : <CheckCircle2 className="h-4 w-4" />}</span><span className="text-sm font-bold text-slate-700">{label}</span></div>)}
+          <div className="absolute -inset-2 rounded-[1.8rem] border border-dashed border-orange-200/70" />
+          <div className="relative overflow-hidden rounded-[1.55rem] border border-[#FFE0C2] bg-[radial-gradient(circle_at_100%_0%,#FFE2C5_0%,transparent_42%),linear-gradient(145deg,#FFFEFC_0%,#FFF6ED_100%)] p-5 shadow-[0_18px_46px_rgba(255,107,0,0.11)]">
+            <div className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full border-[22px] border-orange-200/20" />
+            <div className="relative flex items-center justify-between gap-3">
+              <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#E85F00]">Đóng gói tự động</p><p className="mt-1 text-xs font-medium text-slate-500">Nội dung đang active</p></div>
+              <Zap className="h-4 w-4 fill-orange-100 text-[#FF6B00]" />
             </div>
+            <div className="relative mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <div className="rounded-2xl border border-slate-100 bg-white/90 px-3 py-4 text-center shadow-sm"><Layers3 className="mx-auto h-5 w-5 text-slate-500" /><b className="mt-2 block text-sm text-slate-900">Workspace</b><span className="mt-0.5 block text-[10px] text-slate-400">Roadmap + quiz</span></div>
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#FF6B00] text-white shadow-[0_7px_16px_rgba(255,107,0,0.2)]"><ArrowRight className="h-4 w-4" /></span>
+              <div className="rounded-2xl border border-orange-100 bg-white/90 px-3 py-4 text-center shadow-sm"><PackagePlus className="mx-auto h-5 w-5 text-[#FF6B00]" /><b className="mt-2 block text-sm text-slate-900">Quiz Pack</b><span className="mt-0.5 block text-[10px] text-slate-400">Sẵn sàng validate</span></div>
+            </div>
+            <div className="relative mt-4 flex items-center justify-between gap-3 border-t border-orange-100 pt-3 text-[11px] font-semibold text-slate-500"><span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />Đã đồng bộ</span><span className="rounded-lg bg-orange-100/80 px-2 py-1 font-black text-[#E85F00]">Validation ≥ 90</span></div>
           </div>
         </div>
       </div>
-      <div className="grid gap-px border-t border-orange-100 bg-orange-100 sm:grid-cols-3">
-        {processSteps.map(({ number, icon: Icon, title, text }) => <div key={number} className="group flex items-center gap-4 bg-white/90 px-6 py-5 transition-colors duration-200 hover:bg-orange-50/70 sm:px-7">
-          <span className="text-xs font-black tracking-[0.12em] text-orange-300">{number}</span>
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-orange-100 bg-orange-50 text-[#FF6B00] transition duration-200 group-hover:-translate-y-0.5 group-hover:bg-white group-hover:shadow-sm"><Icon className="h-4.5 w-4.5" /></span>
-          <p className="min-w-0 text-sm leading-5 text-slate-500"><b className="block text-slate-900">{title}</b>{text}</p>
+      <div className="grid border-t border-[#FFE1C7] bg-[#FFF9F3] sm:grid-cols-3">
+        {processSteps.map(({ number, icon: Icon, title, text }, index) => <div key={number} className={`group relative flex items-center gap-3 px-5 py-4 transition-colors duration-200 hover:bg-white/80 sm:px-6 ${index < processSteps.length - 1 ? "border-b border-orange-100 sm:border-b-0 sm:border-r" : ""}`}>
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-[10px] font-black tracking-[0.08em] text-[#FF6B00] shadow-sm ring-1 ring-orange-100">{number}</span>
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-orange-50 text-[#FF6B00] transition duration-200 group-hover:-translate-y-0.5 group-hover:bg-white group-hover:shadow-sm"><Icon className="h-4 w-4" /></span>
+          <p className="min-w-0 text-xs leading-5 text-slate-500"><b className="block text-[13px] text-slate-900">{title}</b>{text}</p>
+          {index < processSteps.length - 1 && <ArrowRight className="absolute right-[-9px] top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full bg-white text-orange-300 sm:block" />}
         </div>)}
       </div>
     </section>
@@ -128,7 +131,10 @@ export function CreatorQuizPackDashboard() {
     <section className="mt-10 sm:mt-12">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#FF6B00]">Thư viện Creator</p><h2 className="mt-2 text-2xl font-black tracking-[-0.025em] text-slate-950 sm:text-3xl">Quiz Pack của bạn</h2><p className="mt-2 text-sm text-slate-500">Quản lý nội dung, Validation và trạng thái xét duyệt tại một nơi.</p></div>
-        {!loading && !failed && <span className="w-fit rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm">{items.length} Quiz Pack</span>}
+        {!loading && !failed && <div className="flex w-fit items-center gap-2.5">
+          <span className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-600 shadow-sm">{items.length} Quiz Pack</span>
+          {items.length > 0 && <Link to="/app/creator/marketplace/create"><Button className="h-10 px-4"><PackagePlus className="h-4 w-4" />Tạo Quiz Pack</Button></Link>}
+        </div>}
       </div>
       <div className="mt-6">{loading ? <Skeleton /> : failed ? <Empty><CircleAlert className="mx-auto h-8 w-8 text-rose-500" /><p className="mt-4 font-bold text-slate-800">Không thể tải Quiz Pack.</p><button onClick={load} className="mt-4 font-bold text-[#FF6B00] hover:underline">Thử lại</button></Empty> : items.length === 0 ? <div className="relative overflow-hidden rounded-[2rem] border border-dashed border-slate-300 bg-white px-6 py-12 text-center shadow-[0_18px_50px_rgba(15,23,42,0.04)] sm:py-16">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-orange-50/80 to-transparent" />
