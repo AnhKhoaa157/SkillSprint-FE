@@ -157,17 +157,17 @@ function excerpt(value: string, max = 200): string {
 /* ── Status Badge ── */
 function StatusBadge({ label, status }: { label: string; status: string }) {
   const cfg: Record<string, string> = {
-    APPROVED: "bg-emerald-500 text-white",
-    VISIBLE: "bg-emerald-500 text-white",
-    PENDING_MODERATION: "bg-amber-500 text-white",
-    PENDING: "bg-amber-500 text-white",
-    HIDDEN: "bg-rose-500 text-white",
-    DELETED: "bg-slate-400 text-white",
-    REVIEWED: "bg-blue-500 text-white",
-    DISMISSED: "bg-slate-400 text-white",
+    APPROVED: "border-emerald-200 bg-emerald-50 text-emerald-700 before:bg-emerald-500",
+    VISIBLE: "border-emerald-200 bg-emerald-50 text-emerald-700 before:bg-emerald-500",
+    PENDING_MODERATION: "border-amber-200 bg-amber-50 text-amber-800 before:bg-amber-500",
+    PENDING: "border-amber-200 bg-amber-50 text-amber-800 before:bg-amber-500",
+    HIDDEN: "border-rose-200 bg-rose-50 text-rose-700 before:bg-rose-500",
+    DELETED: "border-slate-200 bg-slate-100 text-slate-600 before:bg-slate-400",
+    REVIEWED: "border-sky-200 bg-sky-50 text-sky-700 before:bg-sky-500",
+    DISMISSED: "border-slate-200 bg-slate-100 text-slate-600 before:bg-slate-400",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-sm ${cfg[status] ?? "bg-slate-400 text-white"}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider before:h-1.5 before:w-1.5 before:rounded-full ${cfg[status] ?? "border-slate-200 bg-slate-100 text-slate-600 before:bg-slate-400"}`}>
       {label}
     </span>
   );
@@ -209,17 +209,17 @@ function ActionButton({
   tone?: "neutral" | "success" | "danger" | "warning";
 }) {
   const styles: Record<string, string> = {
-    neutral: "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200",
-    success: "bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20",
-    danger: "bg-rose-500 text-white hover:bg-rose-600 shadow-lg shadow-rose-500/20",
-    warning: "bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20",
+    neutral: "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50",
+    success: "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100/70",
+    danger: "border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100/70",
+    warning: "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100/70",
   };
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3 text-[11px] font-bold transition-all duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${styles[tone]}`}
+      className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-3 text-[11px] font-bold transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 ${styles[tone]}`}
     >
       {children}
     </button>
@@ -239,12 +239,12 @@ function SelectField<T extends string>({
   label: string;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
+    <div className="flex min-w-[170px] flex-1 flex-col gap-1.5">
+      <span className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</span>
       <select
         value={value}
         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(e.target.value as T)}
-        className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700 outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/15 cursor-pointer min-w-[160px]"
+        className="h-11 min-w-[160px] cursor-pointer rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-bold text-slate-700 outline-none transition hover:border-slate-300 focus:border-[#FF6B00] focus:ring-4 focus:ring-orange-100/60"
       >
         {options.map(opt => (
           <option key={opt.value || "all"} value={opt.value}>
@@ -398,27 +398,30 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
         label: "Nội dung chờ duyệt",
         value: moderationStats.pendingContent,
         icon: ShieldAlert,
-        color: "from-amber-50 to-amber-100/50 border-amber-200",
-        iconBg: "bg-amber-500",
-        accent: "text-amber-600",
+        color: "border-amber-200/70 bg-[radial-gradient(circle_at_90%_10%,rgba(251,191,36,0.18),transparent_42%),linear-gradient(135deg,rgba(255,251,235,0.88),rgba(255,255,255,0.94))]",
+        iconBg: "border border-amber-200 bg-amber-50 text-amber-700",
+        accent: "text-slate-950",
+        caption: "Bài viết và bình luận",
         pulse: moderationStats.pendingContent > 0,
       },
       {
         label: "Báo cáo chờ xử lý",
         value: moderationStats.pendingReports,
         icon: AlertTriangle,
-        color: "from-rose-50 to-rose-100/50 border-rose-200",
-        iconBg: "bg-rose-500",
-        accent: "text-rose-600",
+        color: "border-rose-200/70 bg-[radial-gradient(circle_at_90%_10%,rgba(244,63,94,0.13),transparent_42%),linear-gradient(135deg,rgba(255,241,242,0.82),rgba(255,255,255,0.94))]",
+        iconBg: "border border-rose-200 bg-rose-50 text-rose-700",
+        accent: "text-slate-950",
+        caption: "Báo cáo từ cộng đồng",
         pulse: moderationStats.pendingReports > 0,
       },
       {
         label: "Từ khóa đang chặn",
         value: moderationStats.blockedKeywords,
         icon: Ban,
-        color: "from-slate-50 to-slate-100/50 border-slate-200",
-        iconBg: "bg-slate-600",
-        accent: "text-slate-700",
+        color: "border-slate-200/80 bg-[radial-gradient(circle_at_90%_10%,rgba(100,116,139,0.14),transparent_42%),linear-gradient(135deg,rgba(248,250,252,0.9),rgba(255,255,255,0.96))]",
+        iconBg: "border border-slate-200 bg-slate-100 text-slate-700",
+        accent: "text-slate-950",
+        caption: "Đang áp dụng toàn hệ thống",
         pulse: false,
       },
     ];
@@ -588,8 +591,9 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={`mx-auto max-w-7xl space-y-5 font-sans ${isDashboard ? "p-0" : "px-4 py-8"}`}
+      className={`relative isolate mx-auto max-w-7xl space-y-6 overflow-hidden font-sans ${isDashboard ? "min-h-full rounded-[2rem] bg-[#F7F8FA] p-4 sm:p-6" : "px-4 py-8"}`}
     >
+      {isDashboard && <><div className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(circle_at_10%_0%,rgba(255,237,223,0.76),transparent_28%),radial-gradient(circle_at_95%_18%,rgba(255,246,234,0.72),transparent_25%)]" /><div className="pointer-events-none absolute inset-0 -z-10 opacity-20 [background-image:radial-gradient(rgba(255,107,0,0.18)_1px,transparent_1px)] [background-size:30px_30px] [mask-image:linear-gradient(to_bottom,black,transparent_44%)]" /></>}
       {/* ── Page Header (standalone mode only) ── */}
       {!isDashboard && (
         <div className="flex items-center justify-between">
@@ -621,41 +625,35 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
           return (
             <motion.div
               key={stat.label}
-              whileHover={{ y: -2, boxShadow: "0 8px 30px rgba(0,0,0,0.08)" }}
+              whileHover={{ y: -2 }}
               transition={{ duration: 0.2 }}
-              className={`relative overflow-hidden rounded-2xl border bg-gradient-to-br ${stat.color} p-5`}
+              className={`relative overflow-hidden rounded-[1.5rem] border ${stat.color} p-5 shadow-[0_14px_42px_rgba(71,50,35,0.055)] backdrop-blur-xl sm:p-6`}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">{stat.label}</p>
-                  <p className={`text-3xl font-black ${stat.accent}`}>{stat.value.toLocaleString("vi-VN")}</p>
-                  {stat.pulse && stat.value > 0 && (
-                    <p className="mt-1.5 text-[10px] font-semibold text-slate-400 flex items-center gap-1">
-                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                      Cần xử lý ngay
-                    </p>
-                  )}
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{stat.label}</p>
+                  <p className={`text-3xl font-black tabular-nums tracking-[-0.03em] ${stat.accent}`}>{stat.value.toLocaleString("vi-VN")}</p>
+                  <p className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-slate-400">{stat.pulse && stat.value > 0 && <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />}{stat.pulse && stat.value > 0 ? "Cần xử lý ngay" : stat.caption}</p>
                 </div>
-                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.iconBg} text-white shadow-lg`}>
+                <div className={`relative flex h-11 w-11 items-center justify-center rounded-xl ${stat.iconBg}`}>
+                  <span className="absolute -inset-3 -z-10 rounded-2xl bg-current opacity-[0.06] blur-lg" />
                   <Icon size={20} />
                 </div>
               </div>
-              {/* decorative */}
-              <div className="absolute -right-4 -bottom-4 opacity-5">
-                <Icon size={80} />
-              </div>
+              <div className="absolute inset-x-5 bottom-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             </motion.div>
           );
         })}
       </div>
 
       {/* ── Main Panel ── */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-[2rem] border border-white bg-white/88 shadow-[0_22px_65px_rgba(71,50,35,0.07)] backdrop-blur-xl">
 
         {/* Tab bar + filters */}
-        <div className="border-b border-slate-100 bg-slate-50/60 px-4 pt-4 pb-0">
+        <div className="relative overflow-hidden border-b border-slate-100/80 px-4 pb-4 pt-5 sm:px-6 sm:pt-6">
+          <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-orange-100/50 blur-3xl" />
           {/* Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto">
+          <div className="relative flex items-center gap-2 overflow-x-auto rounded-2xl bg-slate-100/75 p-1.5">
             {TABS.map(tab => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -664,10 +662,10 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center gap-2 px-4 py-3 text-[12px] font-bold transition-all whitespace-nowrap border-b-2 ${
+                  className={`relative flex min-w-fit flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-[12px] font-bold transition-all ${
                     active
-                      ? "border-[#FF6B00] text-[#FF6B00]"
-                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-200"
+                      ? "bg-white text-[#FF6B00] shadow-sm ring-1 ring-slate-200/70"
+                      : "text-slate-500 hover:bg-white/60 hover:text-slate-800"
                   }`}
                 >
                   <Icon size={14} />
@@ -679,15 +677,15 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
         </div>
 
         {/* Filter row */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-white px-4 py-3">
+        <div className="flex flex-wrap items-end gap-3 border-b border-slate-100/80 bg-white/75 px-4 py-4 sm:px-6">
           {(activeTab === "posts" || activeTab === "comments") && (
-            <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[220px] max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <form onSubmit={handleSearchSubmit} className="relative min-w-[220px] flex-[1.4]">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={search}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
                 placeholder="Tìm kiếm nội dung hoặc tác giả..."
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 text-[12px] font-medium outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-2 focus:ring-[#FF6B00]/10"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-[#F8F9FA] pl-10 pr-4 text-[12px] font-semibold outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-orange-100/60"
               />
             </form>
           )}
@@ -705,9 +703,9 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
             </>
           )}
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex h-11 items-center gap-2">
             {activeTab !== "blacklist" && (
-              <span className="text-[11px] font-semibold text-slate-400">
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-500">
                 <BarChart3 size={12} className="inline mr-1" />
                 {totalItems.toLocaleString("vi-VN")} mục
               </span>
@@ -717,7 +715,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
                 type="button"
                 onClick={refreshCurrentView}
                 disabled={loading}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition active:scale-95 disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-[11px] font-bold text-slate-600 shadow-sm transition hover:border-orange-200 hover:text-[#FF6B00] active:scale-[0.98] disabled:opacity-50"
               >
                 <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
                 Làm mới
@@ -727,13 +725,13 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
         </div>
 
         {/* Content area */}
-        <div className="min-h-[420px] p-4">
+        <div className="min-h-[420px] bg-white/55 p-4 sm:p-5">
 
           {/* Loading state */}
           {loading && (
             <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 text-slate-400">
-              <Loader2 className="h-8 w-8 animate-spin text-[#FF6B00]" />
-              <p className="text-sm font-medium">Đang tải dữ liệu...</p>
+              <span className="grid h-14 w-14 place-items-center rounded-2xl border border-orange-100 bg-orange-50"><Loader2 className="h-5 w-5 animate-spin text-[#FF6B00]" /></span>
+              <p className="text-xs font-bold">Đang tải dữ liệu...</p>
             </div>
           )}
 
@@ -748,7 +746,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.2, delay: idx * 0.04 }}
-                    className={`flex gap-4 rounded-xl border border-slate-200 border-l-4 ${postBorder(post.status)} bg-white p-4 hover:border-slate-300 hover:shadow-sm transition-all duration-200 xl:flex-row flex-col`}
+                    className={`flex flex-col gap-4 rounded-[1.5rem] border border-slate-200/80 border-l-4 ${postBorder(post.status)} bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.035)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_38px_rgba(15,23,42,0.06)] xl:flex-row`}
                   >
                     {/* Left: content */}
                     <div className="flex-1 min-w-0 space-y-3">
@@ -825,7 +823,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.2, delay: idx * 0.04 }}
-                    className={`flex gap-4 rounded-xl border border-slate-200 border-l-4 ${commentBorder(comment.status)} bg-white p-4 hover:border-slate-300 hover:shadow-sm transition-all duration-200 xl:flex-row flex-col`}
+                    className={`flex flex-col gap-4 rounded-[1.5rem] border border-slate-200/80 border-l-4 ${commentBorder(comment.status)} bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.035)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_38px_rgba(15,23,42,0.06)] xl:flex-row`}
                   >
                     <div className="flex-1 min-w-0 space-y-3">
                       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -895,7 +893,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.98 }}
                       transition={{ duration: 0.2, delay: idx * 0.04 }}
-                      className={`flex gap-4 rounded-xl border border-slate-200 border-l-4 ${reportBorder(report.status)} bg-white p-4 hover:border-slate-300 hover:shadow-sm transition-all duration-200 xl:flex-row flex-col`}
+                      className={`flex flex-col gap-4 rounded-[1.5rem] border border-slate-200/80 border-l-4 ${reportBorder(report.status)} bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.035)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_38px_rgba(15,23,42,0.06)] xl:flex-row`}
                     >
                       <div className="flex-1 min-w-0 space-y-3">
                         <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -972,9 +970,9 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
               {/* Add keyword form */}
               <form
                 onSubmit={addKeyword}
-                className="flex flex-col gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 sm:flex-row sm:items-center"
+                className="flex flex-col gap-3 rounded-[1.5rem] border border-orange-100 bg-orange-50/45 p-4 sm:flex-row sm:items-center sm:p-5"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FF6B00] text-white shadow-md shadow-[#FF6B00]/25">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FF6B00] text-white shadow-[0_8px_20px_rgba(255,107,0,0.18)]">
                   <Hash size={16} />
                 </div>
                 <input
@@ -982,12 +980,12 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyword(e.target.value)}
                   placeholder="Nhập từ khóa nhạy cảm cần chặn..."
                   maxLength={100}
-                  className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-medium outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/10"
+                  className="h-11 min-w-0 flex-1 rounded-xl border border-orange-100 bg-white px-4 text-[13px] font-semibold outline-none transition focus:border-[#FF6B00] focus:ring-4 focus:ring-orange-100/70"
                 />
                 <button
                   type="submit"
                   disabled={actionId === "blacklist:add" || !newKeyword.trim()}
-                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#FF6B00] px-4 text-[12px] font-bold text-white shadow-md shadow-[#FF6B00]/25 hover:bg-[#e85f00] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 shrink-0"
+                  className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[#FF6B00] px-4 text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(255,107,0,0.18)] transition hover:-translate-y-0.5 hover:bg-[#e85f00] active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Plus size={13} /> Thêm từ khóa
                 </button>
@@ -1003,7 +1001,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.92 }}
                       transition={{ duration: 0.18, delay: idx * 0.02 }}
-                      className="group flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 hover:border-[#FF6B00]/30 hover:shadow-sm transition-all duration-200"
+                      className="group flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.03)] transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-[0_12px_30px_rgba(15,23,42,0.055)]"
                     >
                       <div className="min-w-0 flex items-center gap-2.5">
                         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
@@ -1036,7 +1034,7 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
 
         {/* ── Pagination ── */}
         {activeTab !== "blacklist" && (
-          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-3">
+          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-4 py-4 sm:px-6">
             <p className="text-[11px] font-semibold text-slate-400">
               Trang {page + 1} / {totalPages} · {totalItems.toLocaleString("vi-VN")} mục
             </p>
@@ -1111,13 +1109,14 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
 /* ── Empty State ── */
 function EmptyState({ label = "Không có nội dung nào cần kiểm duyệt." }: { label?: string }) {
   return (
-    <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-        <ShieldAlert size={24} className="text-slate-400" />
+    <div className="relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-[1.5rem] text-center">
+      <div className="pointer-events-none absolute left-1/2 top-16 h-48 w-48 -translate-x-1/2 rounded-full bg-orange-100/65 blur-3xl" />
+      <div className="relative grid h-16 w-16 place-items-center rounded-[1.35rem] border border-orange-200/70 bg-white text-[#FF6B00] shadow-[0_10px_28px_rgba(255,107,0,0.12)]">
+        <ShieldAlert size={25} />
       </div>
-      <div>
-        <p className="text-[13px] font-bold text-slate-500">{label}</p>
-        <p className="text-[11px] text-slate-400 mt-1">Tất cả nội dung đều đã được xử lý.</p>
+      <div className="relative mt-5">
+        <p className="text-lg font-black tracking-[-0.02em] text-slate-900">{label}</p>
+        <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-slate-500">Hàng đợi hiện đã sạch. Nội dung mới cần xử lý sẽ tự động xuất hiện tại đây.</p>
       </div>
     </div>
   );
