@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent as ReactFormEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
-import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, Clock3, Coins, FileQuestion, LoaderCircle, RefreshCw, Search, Send, ShoppingBag, Sparkles, Star, Trophy, WalletCards, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, ChevronDown, Clock3, Coins, FileQuestion, LoaderCircle, RefreshCw, Search, Send, ShoppingBag, Sparkles, Star, Trophy, WalletCards, X } from "lucide-react";
 import { toast } from "sonner";
 import { marketplaceService } from "../../../api/marketplace";
 import type { ChallengeResult, ChallengeSession, CreatorMarketplaceItem, MarketplaceItemDetail, MarketplaceQuestion, MarketplaceReview, MarketplaceWallet, PurchasedMarketplacePack, PurchasedPackDetail } from "../../../api/marketplace";
@@ -26,7 +26,7 @@ function Shell({ children }: { children: ReactNode }) {
     navigate(`/app${href}`);
   };
 
-  return <div onClickCapture={stayInDashboard} className="skill-marketplace min-h-0 bg-slate-50 text-slate-900">
+  return <div onClickCapture={stayInDashboard} className="skill-marketplace relative isolate min-h-0 overflow-hidden bg-[#F8FAFC] text-slate-900">
     <style>{`
       .skill-marketplace .bg-violet-50 { background-color: #fff7ed !important; }
       .skill-marketplace .bg-violet-600 { background-color: #ff6b00 !important; }
@@ -35,25 +35,28 @@ function Shell({ children }: { children: ReactNode }) {
       .skill-marketplace .border-violet-200,
       .skill-marketplace .border-violet-300 { border-color: #fed7aa !important; }
       .skill-marketplace .bg-gradient-to-br { background: linear-gradient(135deg, #ff6b00 0%, #ff9a3c 100%) !important; }
-      .skill-marketplace .bg-slate-950 { background-color: #ff6b00 !important; }
+      .skill-marketplace .bg-slate-950 { background-color: #0f172a !important; }
       .skill-marketplace form input[type="text"],
       .skill-marketplace form input:not([type]),
       .skill-marketplace form input[type="number"],
       .skill-marketplace form textarea,
-      .skill-marketplace form select { background-color: #ffffff !important; color: #0f172a !important; }
+      .skill-marketplace form select { background-color: #fcfcfb !important; color: #0f172a !important; }
       .skill-marketplace form button.bg-slate-950 { background-color: #0f172a !important; }
-      .skill-marketplace .bg-slate-950:hover,
+      .skill-marketplace .bg-slate-950:hover { background-color: #020617 !important; }
       .skill-marketplace .bg-violet-600:hover { background-color: #e85f00 !important; }
       .skill-marketplace input:focus,
-      .skill-marketplace textarea:focus { border-color: #ff6b00 !important; outline-color: #ff6b00 !important; }
+      .skill-marketplace textarea:focus { background-color: #ffffff !important; border-color: #ff6b00 !important; outline-color: #ff6b00 !important; }
     `}</style>
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div className="pointer-events-none absolute inset-0 -z-30 bg-[linear-gradient(145deg,#F8FAFC_0%,#FFFDF9_48%,#FFF7ED_100%)]" />
+    <div className="pointer-events-none absolute inset-0 -z-20 opacity-30 [background-image:radial-gradient(rgba(255,107,0,0.16)_1px,transparent_1px)] [background-size:28px_28px] [mask-image:linear-gradient(to_bottom,black,transparent_72%)]" />
+    <div className="pointer-events-none absolute -right-48 top-24 -z-10 h-[30rem] w-[30rem] rounded-full bg-orange-200/25 blur-3xl" />
+    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link to="/marketplace" className="flex items-center gap-2 font-black"><span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 text-white"><Sparkles className="h-4 w-4" /></span>SkillSprint <span className="text-violet-600">Market</span></Link>
         <nav className="flex items-center gap-1 text-sm font-bold text-slate-600"><Link to="/marketplace" className="rounded-lg px-3 py-2 hover:bg-violet-50">Khám phá</Link><Link to="/my-packs" className="rounded-lg px-3 py-2 hover:bg-violet-50">Gói của tôi</Link><Link to="/wallet" className="rounded-lg p-2 hover:bg-violet-50" aria-label="Ví Coin"><WalletCards className="h-5 w-5" /></Link></nav>
       </div>
     </header>
-    <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6">{children}{showLearningLeaderboard && <div className="mt-7"><MarketplaceLeaderboardCard itemId={itemId || ""} compact /></div>}</main>
+    <main className="relative mx-auto max-w-7xl px-4 py-7 sm:px-6">{children}{showLearningLeaderboard && <div className="mt-7"><MarketplaceLeaderboardCard itemId={itemId || ""} compact /></div>}</main>
   </div>;
 }
 
@@ -74,20 +77,22 @@ function MarketplaceCatalogLegacy() {
 }
 
 function MarketplacePackCard({ item }: { item: PurchasedMarketplacePack }) {
-  return <Link to={`/marketplace/items/${item.itemId}`} className="group flex min-h-72 flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md">
-    <div className="flex items-start justify-between gap-3"><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00]">{item.subject}</span><span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-slate-600"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{item.averageRating.toFixed(1)} <span className="font-medium text-slate-400">({item.reviewCount})</span></span></div>
-    <h2 className="mt-4 line-clamp-2 text-lg font-black leading-6 text-slate-900 group-hover:text-[#C2410C]">{item.title}</h2>
-    <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">{item.description}</p>
-    <p className="mt-4 text-xs font-medium text-slate-500">Tạo bởi {item.creatorName}</p>
-    <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-2.5 text-center text-xs text-slate-600"><span><b className="block text-sm text-slate-900">{item.chapterCount}</b>chương</span><span><b className="block text-sm text-slate-900">{item.quizCount}</b>quiz</span><span><b className="block text-sm text-slate-900">{item.questionCount}</b>câu</span></div>
-    <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-4"><Coin value={item.priceCoins} /><span className="text-sm font-bold text-[#FF6B00]">Xem gói →</span></div>
+  return <Link to={`/marketplace/items/${item.itemId}`} className="group relative flex min-h-[21rem] flex-col overflow-hidden rounded-[1.75rem] border border-[#EFE7DE] bg-[#FFFEFC] p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-1.5 hover:border-orange-200 hover:shadow-[0_24px_55px_rgba(194,65,12,0.12)]">
+    <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#FF6B00] via-[#FF9A3C] to-amber-300 opacity-70 transition group-hover:opacity-100" />
+    <div className="pointer-events-none absolute -right-16 -top-16 h-36 w-36 rounded-full bg-orange-100/60 blur-3xl transition duration-500 group-hover:scale-125" />
+    <div className="relative flex items-start justify-between gap-3"><span className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#FF6B00]">{item.subject}</span><span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-100 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-sm"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />{item.averageRating.toFixed(1)} <span className="font-medium text-slate-400">({item.reviewCount})</span></span></div>
+    <h2 className="relative mt-5 line-clamp-2 text-xl font-black leading-7 tracking-[-0.02em] text-slate-950 transition group-hover:text-[#C2410C]">{item.title}</h2>
+    <p className="relative mt-2 line-clamp-2 text-sm leading-6 text-slate-500">{item.description}</p>
+    <div className="relative mt-5 flex items-center gap-2.5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-950 text-xs font-black uppercase text-white">{item.creatorName?.charAt(0) || "S"}</span><span className="min-w-0"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Creator</span><span className="block truncate text-xs font-bold text-slate-700">{item.creatorName}</span></span></div>
+    <div className="relative mt-4 grid grid-cols-3 divide-x divide-orange-100 rounded-2xl border border-orange-100 bg-orange-50/55 py-3 text-center text-[11px] font-semibold text-slate-500"><span><b className="block text-base font-black text-slate-950">{item.chapterCount}</b>chương</span><span><b className="block text-base font-black text-slate-950">{item.quizCount}</b>quiz</span><span><b className="block text-base font-black text-slate-950">{item.questionCount}</b>câu hỏi</span></div>
+    <div className="relative mt-auto flex items-center justify-between pt-5"><span className="rounded-full bg-amber-50 px-3 py-2 text-sm"><Coin value={item.priceCoins} /></span><span className="grid h-10 w-10 place-items-center rounded-full bg-slate-950 text-white transition duration-300 group-hover:translate-x-1 group-hover:bg-[#FF6B00]"><ArrowRight className="h-4 w-4" /></span></div>
   </Link>;
 }
 
 function FeaturedMarketplacePackCard({ item }: { item: PurchasedMarketplacePack }) {
-  return <Link to={`/marketplace/items/${item.itemId}`} className="group grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-orange-200 hover:shadow-md md:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
-    <div className="p-6 sm:p-7"><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-[#FF6B00]">{item.subject}</span><span className="text-xs font-semibold text-slate-500">Tạo bởi {item.creatorName}</span></div><h2 className="mt-4 text-2xl font-black leading-tight text-slate-900 group-hover:text-[#C2410C]">{item.title}</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{item.description}</p><div className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[#FF6B00]">Xem nội dung pack <span aria-hidden>→</span></div></div>
-    <div className="border-t border-slate-100 bg-slate-50 p-6 md:border-l md:border-t-0"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Tổng quan pack</p><div className="mt-4 grid grid-cols-3 gap-2 text-center"><div className="rounded-xl bg-white p-3"><b className="block text-lg text-slate-900">{item.chapterCount}</b><span className="text-xs text-slate-500">chương</span></div><div className="rounded-xl bg-white p-3"><b className="block text-lg text-slate-900">{item.quizCount}</b><span className="text-xs text-slate-500">quiz</span></div><div className="rounded-xl bg-white p-3"><b className="block text-lg text-slate-900">{item.questionCount}</b><span className="text-xs text-slate-500">câu hỏi</span></div></div><div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4"><span className="inline-flex items-center gap-1 text-sm font-bold text-slate-700"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{item.averageRating.toFixed(1)} ({item.reviewCount})</span><Coin value={item.priceCoins} /></div></div>
+  return <Link to={`/marketplace/items/${item.itemId}`} className="group relative grid overflow-hidden rounded-[2rem] border border-orange-100 bg-[#FFFEFC] shadow-[0_22px_60px_rgba(15,23,42,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_70px_rgba(194,65,12,0.13)] md:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
+    <div className="relative overflow-hidden p-7 sm:p-9"><div className="pointer-events-none absolute -left-20 -top-24 h-64 w-64 rounded-full bg-orange-100/70 blur-3xl" /><div className="relative flex flex-wrap items-center gap-2"><span className="rounded-full bg-[#FF6B00] px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider text-white">Nổi bật</span><span className="rounded-full border border-orange-100 bg-white px-3 py-1.5 text-xs font-bold text-[#FF6B00]">{item.subject}</span></div><h2 className="relative mt-6 max-w-2xl text-2xl font-black leading-tight tracking-[-0.025em] text-slate-950 transition group-hover:text-[#C2410C] sm:text-3xl">{item.title}</h2><p className="relative mt-3 max-w-2xl text-sm leading-7 text-slate-600">{item.description}</p><div className="relative mt-6 flex flex-wrap items-center gap-4"><span className="flex items-center gap-2 text-xs font-semibold text-slate-500"><span className="grid h-8 w-8 place-items-center rounded-full bg-slate-950 font-black uppercase text-white">{item.creatorName?.charAt(0) || "S"}</span>{item.creatorName}</span><span className="inline-flex items-center gap-2 text-sm font-black text-[#FF6B00]">Khám phá pack <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span></div></div>
+    <div className="relative flex flex-col justify-between overflow-hidden border-t border-orange-200 bg-gradient-to-br from-[#FF6B00] to-[#FF8A2A] p-7 text-white md:border-l md:border-t-0 sm:p-8"><div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full border-[36px] border-white/10" /><div className="relative"><div className="flex items-center justify-between"><p className="text-xs font-extrabold uppercase tracking-[0.16em] text-white/70">Tổng quan</p><BookOpen className="h-5 w-5 text-white/80" /></div><div className="mt-6 grid grid-cols-3 divide-x divide-white/20 text-center"><div><b className="block text-2xl font-black">{item.chapterCount}</b><span className="text-[11px] text-white/75">chương</span></div><div><b className="block text-2xl font-black">{item.quizCount}</b><span className="text-[11px] text-white/75">quiz</span></div><div><b className="block text-2xl font-black">{item.questionCount}</b><span className="text-[11px] text-white/75">câu hỏi</span></div></div></div><div className="relative mt-8 flex items-end justify-between border-t border-white/20 pt-5"><span className="inline-flex items-center gap-1.5 text-sm font-bold"><Star className="h-4 w-4 fill-white text-white" />{item.averageRating.toFixed(1)} <span className="font-medium text-white/70">({item.reviewCount})</span></span><span className="rounded-full bg-white px-3 py-2 text-sm [&_span]:text-[#C2410C]"><Coin value={item.priceCoins} /></span></div></div>
   </Link>;
 }
 
@@ -125,9 +130,39 @@ export function MarketplaceCatalog() {
   const questionTotal = items.reduce((total, item) => total + item.questionCount, 0);
 
   return <Shell>
-    <div className="mb-3 flex justify-end"><button type="button" onClick={() => void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm font-bold text-[#FF6B00] hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />Làm mới</button></div>
-    <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-violet-700 to-blue-600 text-white"><div className="grid gap-6 px-6 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_270px] lg:items-end lg:gap-10 lg:px-10 lg:py-9"><div><p className="text-xs font-bold tracking-[0.14em] text-violet-100">SKILLSPRINT MARKETPLACE</p><h1 className="mt-3 max-w-3xl text-3xl font-black leading-tight sm:text-4xl">Học đúng trọng tâm với Quiz Pack phù hợp.</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">Khám phá nội dung do Creator đóng gói từ workspace thực tế, xem trước trước khi quyết định mua.</p><form onSubmit={submitSearch} className="mt-6 flex max-w-2xl flex-col gap-2 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" /><input value={input} onChange={event => setInput(event.target.value)} placeholder="Tìm theo môn học" className="h-11 w-full rounded-xl bg-white pl-11 pr-3 text-sm text-slate-900 outline-none shadow-sm" /></div><button className="h-11 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white">Tìm pack</button></form></div><div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm"><div><p className="text-xs font-semibold text-white/70">Pack đang có</p><p className="mt-1 text-2xl font-black">{loading ? "–" : items.length}</p></div><div><p className="text-xs font-semibold text-white/70">Câu hỏi</p><p className="mt-1 text-2xl font-black">{loading ? "–" : questionTotal}</p></div><p className="col-span-2 border-t border-white/15 pt-3 text-xs leading-5 text-white/80">Mỗi pack có nội dung xem trước, đánh giá và bảng xếp hạng riêng.</p></div></div></section>
-    <section className="mt-8"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-[#FF6B00]">Khám phá</p><h2 className="mt-1 text-2xl font-black">Gói học liệu đang có</h2><p className="mt-1 text-sm text-slate-500">{subject ? `Kết quả theo môn học: ${subject}` : "Chọn một gói để xem trước nội dung và thử thách."}</p></div>{subject && <button type="button" onClick={clearSearch} className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm font-bold text-[#FF6B00]">Xóa lọc</button>}</div>{loading ? <Loading /> : failed ? <ErrorBox retry={load} /> : items.length === 0 ? <Empty title="Chưa có gói phù hợp" text="Hãy thử một môn học khác." /> : items.length === 1 ? <FeaturedMarketplacePackCard item={items[0]} /> : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{items.map(item => <MarketplacePackCard key={item.itemId} item={item} />)}</div>}</section>
+    <section className="group relative isolate overflow-hidden rounded-[2rem] border border-orange-100 bg-[#FFFEFC]/95 shadow-[0_24px_70px_rgba(15,23,42,0.09)] backdrop-blur-sm">
+      <div className="pointer-events-none absolute -right-32 -top-40 -z-10 h-[28rem] w-[28rem] rounded-full bg-orange-200/55 blur-3xl transition duration-700 group-hover:scale-110" />
+      <div className="pointer-events-none absolute bottom-0 left-1/3 -z-10 h-52 w-52 rounded-full bg-amber-100/70 blur-3xl" />
+      <button type="button" onClick={() => void load()} disabled={loading} className="absolute right-5 top-5 z-10 inline-flex h-10 items-center gap-2 rounded-xl border border-orange-200 bg-white/90 px-3 text-xs font-bold text-[#FF6B00] shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:bg-orange-50 hover:shadow-md active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:right-7 sm:top-7"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /><span className="hidden sm:inline">Làm mới</span></button>
+      <div className="grid gap-8 px-6 py-8 sm:px-9 sm:py-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(260px,0.65fr)] lg:items-end lg:gap-12 lg:px-12 lg:py-12">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/80 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.17em] text-[#FF6B00]"><Sparkles className="h-3.5 w-3.5" />SkillSprint Marketplace</div>
+          <h1 className="mt-5 max-w-3xl text-3xl font-black leading-[1.1] tracking-[-0.035em] text-slate-950 sm:text-4xl lg:text-5xl">Học đúng trọng tâm.<br /><span className="text-[#FF6B00]">Tiến bộ nhanh hơn.</span></h1>
+          <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600 sm:text-base">Quiz Pack thực tế từ Creator, có nội dung xem trước trước khi mua.</p>
+          <form onSubmit={submitSearch} className="mt-6 flex max-w-2xl flex-col gap-2 rounded-2xl border border-[#F1E4D8] bg-white/90 p-2 shadow-[0_14px_36px_rgba(15,23,42,0.08)] backdrop-blur sm:flex-row">
+            <div className="relative flex-1"><Search className="absolute left-4 top-3.5 h-4 w-4 text-[#FF6B00]" /><input value={input} onChange={event => setInput(event.target.value)} placeholder="Tìm theo môn học" className="h-11 w-full rounded-xl bg-[#FCFCFB] pl-11 pr-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-orange-100" /></div>
+            <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(255,107,0,0.16)] transition hover:-translate-y-0.5 hover:bg-[#E85F00] hover:shadow-[0_10px_24px_rgba(255,107,0,0.2)] active:translate-y-0">Tìm pack<ArrowRight className="h-4 w-4" /></button>
+          </form>
+        </div>
+        <div className="relative mx-auto w-full max-w-sm pb-5 lg:mx-0">
+          <div className="absolute -bottom-1 left-6 right-6 h-24 rounded-[1.75rem] border border-orange-100 bg-orange-100/70 shadow-sm" />
+          <div className="absolute bottom-2 left-3 right-3 h-28 rounded-[1.75rem] border border-orange-100 bg-amber-50 shadow-md" />
+          <div className="relative overflow-hidden rounded-[1.75rem] border border-orange-200/80 bg-[radial-gradient(circle_at_top_right,#FFD7B8_0%,#FFF0E2_42%,#FFF8F2_100%)] p-5 text-slate-950 shadow-[0_22px_50px_rgba(255,107,0,0.12)] sm:p-6">
+            <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[#FF6B00]/12 blur-2xl" />
+            <div className="relative flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#FF6B00] text-white shadow-[0_8px_18px_rgba(255,107,0,0.2)]"><ShoppingBag className="h-5 w-5" /></span><span className="rounded-full border border-orange-200 bg-white/65 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[#D85B00]">Live library</span></div>
+            <p className="relative mt-6 text-xs font-bold uppercase tracking-[0.15em] text-[#FF6B00]/65">Kho học liệu</p>
+            <p className="relative mt-1 text-xl font-black tracking-tight">Học theo cách của bạn</p>
+            <div className="relative mt-6 grid grid-cols-2 divide-x divide-orange-200 rounded-2xl border border-white/80 bg-white/55 py-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"><div><p className="text-3xl font-black">{loading ? "–" : items.length}</p><p className="mt-1 text-[11px] font-semibold text-slate-500">Quiz Pack</p></div><div><p className="text-3xl font-black text-[#FF6B00]">{loading ? "–" : questionTotal}</p><p className="mt-1 text-[11px] font-semibold text-slate-500">Câu hỏi</p></div></div>
+            <div className="relative mt-4 flex items-center gap-2 text-[11px] font-semibold text-slate-500"><CheckCircle2 className="h-4 w-4 shrink-0 text-[#FF6B00]" />Xem trước · Đánh giá · Xếp hạng</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section className="mt-10 sm:mt-12">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-extrabold uppercase tracking-[0.15em] text-[#FF6B00]">Khám phá</p><h2 className="mt-2 text-2xl font-black tracking-[-0.025em] text-slate-950 sm:text-3xl">Gói học liệu đang có</h2><p className="mt-2 text-sm text-slate-500">{subject ? `Kết quả cho “${subject}”` : "Chọn một pack để xem nội dung và thử thách."}</p></div><div className="flex items-center gap-2">{!loading && !failed && <span className="rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm">{items.length} kết quả</span>}{subject && <button type="button" onClick={clearSearch} className="rounded-full border border-orange-200 bg-white px-3.5 py-2 text-xs font-bold text-[#FF6B00] shadow-sm transition hover:bg-orange-50">Xóa lọc</button>}</div></div>
+      {loading ? <Loading /> : failed ? <ErrorBox retry={load} /> : items.length === 0 ? <div className="relative overflow-hidden rounded-[2rem] border border-dashed border-orange-200 bg-white/80 px-6 py-14 text-center shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur sm:py-16"><div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-orange-50 to-transparent" /><div className="relative mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-orange-100 bg-orange-50 text-[#FF6B00] shadow-sm"><ShoppingBag className="h-7 w-7" /></div><h3 className="relative mt-5 text-xl font-black text-slate-950">{subject ? "Chưa tìm thấy Quiz Pack" : "Marketplace đang được cập nhật"}</h3><p className="relative mt-2 text-sm text-slate-500">{subject ? "Thử một môn học hoặc từ khóa khác." : "Các Quiz Pack mới sẽ sớm xuất hiện tại đây."}</p>{subject && <button type="button" onClick={clearSearch} className="relative mt-6 inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-4 py-2.5 text-sm font-bold text-white shadow-[0_8px_22px_rgba(255,107,0,0.22)] transition hover:-translate-y-0.5 hover:bg-[#E85F00]">Xem tất cả pack<ArrowRight className="h-4 w-4" /></button>}</div> : items.length === 1 ? <FeaturedMarketplacePackCard item={items[0]} /> : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{items.map(item => <MarketplacePackCard key={item.itemId} item={item} />)}</div>}
+    </section>
   </Shell>;
 }
 
