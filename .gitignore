@@ -30,6 +30,13 @@ pnpm-debug.log*
 *.iml
 *.md
 
+# AI agent configuration and context
+AGENTS.md
+CLAUDE.md
+SYSTEM_CONTEXT.md
+.agents/
+.claude/
+
 # OS files
 .DS_Store
 Thumbs.db
