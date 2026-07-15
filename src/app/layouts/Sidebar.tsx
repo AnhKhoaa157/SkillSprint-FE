@@ -102,8 +102,17 @@ const SidebarComponent: React.FC<SidebarProps> = ({
             <div key={section.label} className="space-y-0.5">
               {idx > 0 && <div className="my-1.5 border-t border-slate-100/50" />}
               {section.items.map(item => {
-                const isActive = isNavItemActive(item.path, item.end, item.match);
-                const isExpanded = expandedNavs[item.label] !== false;
+                const isMarketplaceGroupChild = section.label === "Marketplace" && item.path !== "/app/marketplace";
+                if (isMarketplaceGroupChild) return null;
+
+                const nestedItems = section.label === "Marketplace" && item.path === "/app/marketplace"
+                  ? section.items.filter(child => child.path !== item.path)
+                  : [];
+                const hasActiveChild = nestedItems.some(child => isNavItemActive(child.path, child.end, child.match));
+                const isActive = isNavItemActive(item.path, item.end, item.match) || hasActiveChild;
+                const isExpanded = nestedItems.length > 0
+                  ? (item.label in expandedNavs ? expandedNavs[item.label] : isActive)
+                  : expandedNavs[item.label] !== false;
 
                 return (
                   <div key={item.path} className="relative">
@@ -135,7 +144,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                             <span className="relative h-1.5 w-1.5 rounded-full bg-orange-500" />
                           </span>
                         )}
-                        {item.dynamicChildren === "workspaces" && navWorkspaces.length > 0 && (
+                        {(item.dynamicChildren === "workspaces" && navWorkspaces.length > 0 || nestedItems.length > 0) && (
                           <div 
                             className="p-0.5 rounded hover:bg-orange-500/10 transition-colors ml-0.5"
                             onClick={(e) => {
@@ -164,6 +173,51 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                       </div>
                     )}
                     <AnimatePresence initial={false}>
+                      {nestedItems.length > 0 && isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.15, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-0.5 ml-[18px] mr-1.5 border-l border-slate-100 pl-2.5 py-0.5 space-y-0.5">
+                            {nestedItems.map(child => {
+                              const childActive = isNavItemActive(child.path, child.end, child.match);
+
+                              return (
+                                <div key={child.path} className="relative">
+                                  <NavLink
+                                    to={child.path}
+                                    end={child.end}
+                                    onClick={() => setSideOpen(false)}
+                                    className={[
+                                      "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[11px] transition-colors",
+                                      childActive
+                                        ? "bg-orange-500/[0.04] text-[#FF6B00] font-semibold"
+                                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium",
+                                    ].join(" ")}
+                                  >
+                                    <child.icon size={13} strokeWidth={childActive ? 2.1 : 1.8} className={childActive ? "text-[#FF6B00]" : "text-slate-400"} />
+                                    <span className="min-w-0 flex-1 truncate">{child.label}</span>
+                                  </NavLink>
+                                  {typeof child.badge === "string" && (
+                                    <div
+                                      className="absolute inset-0 z-10 flex items-center justify-end rounded-md px-2.5 cursor-not-allowed"
+                                      style={{ background: "rgba(255, 255, 255, 0.45)", backdropFilter: "blur(0.5px)" }}
+                                      onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
+                                    >
+                                      <span className="shrink-0 rounded border border-orange-200/60 bg-orange-50 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-orange-655">
+                                        {child.badge}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
                       {item.dynamicChildren === "workspaces" && navWorkspaces.length > 0 && isExpanded && (
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
