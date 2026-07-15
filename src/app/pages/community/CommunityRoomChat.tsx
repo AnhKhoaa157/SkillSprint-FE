@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { Send, Users, Pin, ArrowLeft, Loader2, UserPlus, Shield, Lock, ShieldAlert, Hash, X, Plus, ExternalLink, Trash2, Smile, Bold, Italic, Code, Paperclip, Flag, EyeOff, MoreHorizontal, VolumeX, Ban, Unlock, UserMinus } from "lucide-react";
+import { Send, Users, Pin, ArrowLeft, Loader2, UserPlus, Shield, Lock, ShieldAlert, Hash, X, Plus, ExternalLink, Trash2, Smile, Bold, Italic, Code, Paperclip, Flag, EyeOff, MoreHorizontal, VolumeX, Ban, Unlock, UserMinus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
@@ -215,13 +215,16 @@ export default function CommunityRoomChat() {
   
   const [loading, setLoading] = useState(true);
   const [inputMessage, setInputMessage] = useState("");
+  const [roomSearch, setRoomSearch] = useState("");
   
   // Right sidebar state
   const [activeTab, setActiveTab] = useState<"MEMBERS" | "PINS">("MEMBERS");
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
 
   const { connected, error, messages, sendMessage, setInitialMessages, updateLocalMessage } = useCommunityChatSocket(roomId || null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const sendMessageLockRef = useRef(false);
 
   // Modals state
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
@@ -280,11 +283,23 @@ export default function CommunityRoomChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputMessage.trim()) return;
-    sendMessage(inputMessage.trim());
+  const submitMessage = (rawMessage: string) => {
+    const content = rawMessage.trim();
+    if (!content || sendMessageLockRef.current) return;
+
+    // Enter can trigger both textarea keydown and form submit in some browsers.
+    // Keep a short synchronous lock so that one interaction publishes once only.
+    sendMessageLockRef.current = true;
+    sendMessage(content);
     setInputMessage("");
+    window.setTimeout(() => {
+      sendMessageLockRef.current = false;
+    }, 100);
+  };
+
+  const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    submitMessage(inputMessage);
   };
 
   const askConfirm = (dialog: Omit<Extract<ActionDialog, { type: "confirm" }>, "type" | "resolve">) =>
@@ -535,7 +550,7 @@ export default function CommunityRoomChat() {
 
   if (subscriptionLoading || loading || !room) {
     return (
-      <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-slate-50">
+      <div className="flex h-full min-h-0 items-center justify-center bg-slate-50">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-[#FF6B00] mx-auto mb-2" />
           <p className="text-sm font-semibold text-slate-500">Đang chuẩn bị phòng chat...</p>
@@ -582,16 +597,19 @@ export default function CommunityRoomChat() {
     }, 50);
   };
 
+  const visibleRooms = myRooms.filter((item) => item.name.toLocaleLowerCase("vi").includes(roomSearch.trim().toLocaleLowerCase("vi")));
+
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-slate-50/50 overflow-hidden relative font-sans antialiased">
+    <div className="relative h-full min-h-0 overflow-hidden overscroll-none bg-[#F5F6F8] p-3 font-sans antialiased sm:p-5">
       {/* Decorative ambient spots */}
       <div className="absolute top-0 left-0 right-0 bottom-0 bg-slate-50/20 backdrop-blur-3xl pointer-events-none z-0" />
       <div className="absolute top-[10%] left-[15%] h-[350px] w-[350px] rounded-full bg-orange-200/10 blur-[130px] pointer-events-none z-0" />
       <div className="absolute bottom-[10%] right-[15%] h-[400px] w-[400px] rounded-full bg-[#FF6B00]/5 blur-[150px] pointer-events-none z-0" />
       
+      <div className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-[1680px] overflow-hidden overscroll-none rounded-[1.75rem] border border-white/90 bg-white/80 shadow-[0_24px_70px_rgba(71,50,35,0.09)] backdrop-blur-xl">
       {/* COLUMN 1: LEFT SIDEBAR */}
-      <div className="w-66 bg-white/85 backdrop-blur-md flex flex-col shrink-0 hidden md:flex border-r border-slate-200/50 relative z-10 shadow-[4px_0_24px_rgba(0,0,0,0.01)]">
-        <div className="p-4.5 border-b border-slate-200/50 flex items-center justify-between">
+      <div className="relative z-10 hidden min-h-0 w-64 shrink-0 flex-col border-r border-slate-200/60 bg-white/78 backdrop-blur-md md:flex">
+        <div className="flex items-center justify-between border-b border-slate-200/60 p-5">
           <span className="font-extrabold text-xs tracking-wider uppercase text-slate-805 flex items-center gap-2">
             <Hash className="w-4 h-4 text-[#FF6B00]" /> Kênh thảo luận
           </span>
@@ -600,12 +618,21 @@ export default function CommunityRoomChat() {
           </Link>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-3.5 space-y-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex-1 space-y-1 overflow-y-auto overscroll-contain p-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="px-3.5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
             Phòng học của tôi
           </div>
+          <label className="relative mb-3 block px-1" aria-label="Tìm phòng của tôi">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <input
+              value={roomSearch}
+              onChange={(event) => setRoomSearch(event.target.value)}
+              placeholder="Tìm phòng"
+              className="h-9 w-full rounded-xl border border-slate-200/80 bg-[#F8F9FA] pl-9 pr-3 text-[11px] font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#F0B89A] focus:bg-white focus:ring-2 focus:ring-orange-100/70"
+            />
+          </label>
           <div className="space-y-1 mt-1">
-            {myRooms.map((r) => {
+            {visibleRooms.map((r) => {
               const isActive = r.roomId === roomId;
               return (
                 <Link 
@@ -613,18 +640,21 @@ export default function CommunityRoomChat() {
                   to={`/app/community/rooms/${r.roomId}`}
                   className={`group flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs transition-all duration-200 relative border border-transparent ${
                     isActive 
-                      ? "bg-gradient-to-r from-orange-500/10 to-amber-500/10 text-[#FF6B00] border-orange-500/15 font-bold shadow-[0_2px_12px_rgba(255,107,0,0.03)]" 
+                      ? "bg-[#FFF3EA] text-[#D9541E] border-[#F8D8C6] font-bold shadow-[0_8px_18px_rgba(217,84,30,0.06)]"
                       : "text-slate-600 hover:bg-slate-100/55 hover:text-slate-900 font-semibold"
                   }`}
                 >
                   {isActive && (
-                    <div className="absolute left-0 top-3 bottom-3 w-1 bg-[#FF6B00] rounded-r-lg" />
+                    <div className="absolute left-0 top-3 bottom-3 w-1 bg-[#E45F2A] rounded-r-lg" />
                   )}
                   <Hash className={`w-4 h-4 shrink-0 ${isActive ? "text-[#FF6B00]" : "text-slate-400 opacity-60 group-hover:opacity-100 transition-opacity"}`} />
                   <span className="truncate">{r.name}</span>
                 </Link>
               );
             })}
+            {visibleRooms.length === 0 && (
+              <p className="px-3.5 py-4 text-[11px] font-medium leading-5 text-slate-400">Không tìm thấy phòng phù hợp.</p>
+            )}
           </div>
         </div>
         
@@ -641,9 +671,9 @@ export default function CommunityRoomChat() {
       </div>
  
       {/* COLUMN 2: CENTER CHAT AREA */}
-      <div className="flex flex-1 flex-col bg-white/35 backdrop-blur-md relative z-10 border-r border-slate-200/30">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col border-r border-slate-200/55 bg-[#FCFCFB]/88 backdrop-blur-md">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-200/50 bg-white/70 backdrop-blur-md">
+        <div className="flex items-center justify-between border-b border-slate-200/60 bg-white/72 px-6 py-4.5 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate("/app/community/rooms")} className="text-slate-500 md:hidden shrink-0 hover:bg-slate-100 rounded-xl h-9.5 w-9.5 border border-slate-200">
               <ArrowLeft className="w-5 h-5" />
@@ -705,7 +735,7 @@ export default function CommunityRoomChat() {
         </div>
  
         {/* Messages Feed */}
-        <div className="flex-1 overflow-y-auto py-5 space-y-3.5 [scrollbar-width:thin] scroll-smooth bg-slate-50/10">
+        <div className="flex-1 space-y-1.5 overflow-y-auto overscroll-contain bg-[radial-gradient(circle_at_50%_-15%,rgba(255,239,225,0.55),transparent_36%)] py-5 [scrollbar-width:thin] scroll-smooth">
           {messages.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center p-8 max-w-sm">
@@ -731,7 +761,7 @@ export default function CommunityRoomChat() {
  
               if (isCompact) {
                 return (
-                  <div key={msg.messageId || idx} className="group/msg relative flex justify-start items-start px-6 py-1 hover:bg-slate-50/50 transition-colors duration-100">
+                  <div key={msg.messageId || idx} className="group/msg relative mx-4 flex items-start justify-start rounded-xl border border-transparent px-3 py-1 transition-colors duration-150 hover:border-white/80 hover:bg-white/70 sm:mx-6">
                     {/* Hover menu */}
                     <div className="absolute right-6 -top-3.5 opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-20 flex items-center bg-white border border-slate-200/80 shadow-md rounded-xl p-1 gap-0.5">
 
@@ -773,7 +803,7 @@ export default function CommunityRoomChat() {
               }
  
               return (
-                <div key={msg.messageId || idx} className="group/msg relative flex justify-start items-start px-6 py-2 hover:bg-slate-50/50 transition-colors duration-100">
+                <div key={msg.messageId || idx} className="group/msg relative mx-4 flex items-start justify-start rounded-2xl border border-transparent px-3 py-2 transition-colors duration-150 hover:border-white/90 hover:bg-white/80 hover:shadow-[0_8px_24px_rgba(71,50,35,0.035)] sm:mx-6">
                   {/* Hover menu */}
                   <div className="absolute right-6 -top-3.5 opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-20 flex items-center bg-white border border-slate-200/80 shadow-md rounded-xl p-1 gap-0.5">
 
@@ -852,23 +882,23 @@ export default function CommunityRoomChat() {
         </div>
  
         {/* Message Input Box */}
-        <div className="px-6 py-4 bg-white shrink-0 border-t border-slate-100">
-          <form onSubmit={handleSendMessage} className="max-w-5xl mx-auto bg-slate-50/50 border border-slate-200/80 rounded-2xl shadow-[0_4px_18px_rgba(0,0,0,0.01)] focus-within:border-slate-350 focus-within:bg-white focus-within:shadow-[0_8px_24px_rgba(0,0,0,0.03)] transition-all duration-300">
+        <div className="shrink-0 border-t border-slate-200/60 bg-white/80 px-6 py-4 backdrop-blur-md">
+          <form onSubmit={handleSendMessage} className="mx-auto max-w-5xl rounded-2xl border border-slate-200/80 bg-[#FBFCFD] shadow-[0_10px_30px_rgba(71,50,35,0.05)] transition-all duration-300 focus-within:border-[#F0B89A] focus-within:bg-white focus-within:shadow-[0_14px_32px_rgba(217,84,30,0.09)]">
             <textarea
               id="chat-textarea"
               placeholder={`Gửi tin nhắn đến #${room.name}...`}
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                   e.preventDefault();
-                  handleSendMessage(e);
+                  submitMessage(e.currentTarget.value);
                 }
               }}
               rows={1}
               className="w-full bg-transparent border-0 outline-none resize-none px-4 pt-3.5 pb-2 text-xs text-slate-800 placeholder-slate-400 max-h-32 min-h-[44px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             />
-            <div className="flex items-center justify-between px-3 py-2 border-t border-slate-100 bg-slate-50/30 rounded-b-2xl">
+            <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/30 px-3 py-2 rounded-b-2xl">
               <div className="flex items-center gap-1 text-slate-455">
                 <button 
                   type="button" 
@@ -911,11 +941,12 @@ export default function CommunityRoomChat() {
                 >
                   <Smile className="w-3.5 h-3.5" />
                 </button>
+                <span className="ml-2 hidden text-[10px] font-medium text-slate-400 lg:inline">Enter để gửi · Shift + Enter để xuống dòng</span>
               </div>
               <button 
                 type="submit" 
                 disabled={!inputMessage.trim()} 
-                className="rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-wider bg-[#FF6B00] hover:bg-[#e85f00] disabled:bg-slate-200 disabled:text-slate-455 text-white shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98] flex items-center gap-1.5"
+                className="flex items-center gap-1.5 rounded-xl bg-[#E45F2A] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white shadow-[0_7px_16px_rgba(228,95,42,0.18)] transition-all duration-200 hover:bg-[#CF4F1F] hover:shadow-[0_9px_20px_rgba(228,95,42,0.24)] disabled:bg-slate-200 disabled:text-slate-455 active:scale-[0.98]"
               >
                 <span>Gửi tin</span>
                 <Send className="w-3.5 h-3.5" />
@@ -926,10 +957,10 @@ export default function CommunityRoomChat() {
       </div>
  
       {/* COLUMN 3: RIGHT SIDEBAR */}
-      <div className={`w-80 bg-white border-l border-slate-200/50 flex flex-col shrink-0 transition-all duration-300 lg:flex relative z-20 ${showMobileSidebar ? "fixed inset-y-0 right-0 shadow-2xl" : "hidden lg:flex"}`}>
+      <div className={`relative z-20 flex min-h-0 w-72 shrink-0 flex-col bg-white/78 transition-[width,opacity,border-color] duration-300 lg:flex ${showMobileSidebar ? "fixed inset-y-0 right-0 border-l border-slate-200/60 shadow-2xl" : "hidden lg:flex"} ${isDetailsCollapsed && !showMobileSidebar ? "lg:w-0 lg:pointer-events-none lg:overflow-hidden lg:border-l-0 lg:opacity-0" : "border-l border-slate-200/60"}`}>
         {/* Tabs Switcher */}
-        <div className="p-3 shrink-0 border-b border-slate-100 bg-slate-50/40">
-          <div className="flex bg-slate-100/70 p-1 rounded-xl gap-1">
+        <div className="shrink-0 border-b border-slate-200/60 bg-white/60 p-3.5">
+          <div className="flex gap-1 rounded-xl bg-[#F4F6F8] p-1">
             <button 
               className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 rounded-lg transition-all duration-250 ${
                 activeTab === "MEMBERS" 
@@ -954,9 +985,21 @@ export default function CommunityRoomChat() {
         </div>
  
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 [scrollbar-width:thin]">
+        <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 [scrollbar-width:thin]">
           {activeTab === "MEMBERS" ? (
             <div className="space-y-4">
+              <section className="rounded-2xl border border-orange-100/80 bg-[#FFF9F5] p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#C84E20]">Thông tin phòng</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Đang hoạt động</span>
+                </div>
+                <p className="mt-2 line-clamp-3 text-[11px] font-medium leading-5 text-slate-600">{room.description || "Không gian để cùng học, trao đổi và hỗ trợ nhau trong thời gian thực."}</p>
+                <div className="mt-3 flex items-center gap-2 border-t border-orange-100/80 pt-3 text-[10px] font-bold text-slate-500">
+                  <Users className="h-3.5 w-3.5 text-[#E45F2A]" /> {room.memberCount} thành viên
+                  <span className="text-slate-300">•</span>
+                  <Hash className="h-3.5 w-3.5 text-[#E45F2A]" /> {room.mode === "PRIVATE" ? "Riêng tư" : room.mode === "INVITE_ONLY" ? "Theo lời mời" : "Công khai"}
+                </div>
+              </section>
               {isModerator && (
                 <button 
                   type="button"
@@ -1144,6 +1187,16 @@ export default function CommunityRoomChat() {
             </div>
           )}
         </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => setIsDetailsCollapsed((value) => !value)}
+        className={`absolute top-1/2 z-30 hidden h-11 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-[0_6px_18px_rgba(71,50,35,0.11)] transition-all duration-300 hover:border-[#F0B89A] hover:bg-[#FFF8F4] hover:text-[#C84E20] focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 active:scale-95 lg:flex ${isDetailsCollapsed ? "right-2" : "right-72 -translate-x-1/2"}`}
+        aria-label={isDetailsCollapsed ? "Hiện bảng thông tin phòng" : "Ẩn bảng thông tin phòng"}
+        title={isDetailsCollapsed ? "Hiện thông tin phòng" : "Ẩn thông tin phòng"}
+      >
+        {isDetailsCollapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </button>
       </div>
  
       {/* Close button for Mobile Sidebar overlay */}

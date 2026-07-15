@@ -755,20 +755,31 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
       </AnimatePresence>
 
       <Dialog open={noteDialog.isOpen} onOpenChange={(open) => !open && closeNoteDialog()}>
-        <DialogContent className="bg-white text-slate-900 border-slate-200 shadow-xl">
-          <DialogHeader>
-            <DialogTitle className="text-slate-900 font-semibold">{noteDialog.title}</DialogTitle>
-            <DialogDescription className="text-slate-500">Ghi chú này sẽ được lưu lại trong lịch sử kiểm duyệt.</DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            placeholder="Nhập ghi chú của bạn (không bắt buộc)..."
-            className="min-h-[100px] bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-[#FF6B00]"
-          />
-          <DialogFooter>
-            <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 bg-white" onClick={closeNoteDialog}>Hủy</Button>
-            <Button className="bg-[#FF6B00] text-white hover:bg-[#EA580C] border-none" onClick={() => {
+        <DialogContent className="overflow-hidden rounded-[1.75rem] border border-white bg-white p-0 text-slate-900 shadow-[0_28px_90px_rgba(15,23,42,0.22)] sm:max-w-[560px] [&>button]:right-5 [&>button]:top-5 [&>button]:rounded-lg [&>button]:p-1 [&>button]:text-slate-400 [&>button]:transition [&>button]:hover:bg-slate-100 [&>button]:hover:text-slate-700">
+          <div className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-br from-orange-50/85 via-white to-white px-6 py-6 pr-14">
+            <div className="pointer-events-none absolute -right-12 -top-16 h-36 w-36 rounded-full bg-orange-100/70 blur-3xl" />
+            <div className="relative flex items-start gap-3.5">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-orange-200 bg-white text-[#FF6B00] shadow-sm"><MessageSquare className="h-4.5 w-4.5" /></span>
+              <DialogHeader className="gap-1.5 text-left">
+                <DialogTitle className="text-lg font-black tracking-[-0.02em] text-slate-950">{noteDialog.title}</DialogTitle>
+                <DialogDescription className="text-xs leading-5 text-slate-500">Ghi chú sẽ được lưu trong lịch sử kiểm duyệt và giúp các quản trị viên phối hợp rõ ràng hơn.</DialogDescription>
+              </DialogHeader>
+            </div>
+          </div>
+          <div className="px-6 pt-5">
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-400" htmlFor="room-moderation-note">Ghi chú kiểm duyệt</label>
+            <Textarea
+              id="room-moderation-note"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Nhập lý do hoặc thông tin cần lưu ý..."
+              className="min-h-[130px] resize-none rounded-2xl border-slate-200 bg-[#F8F9FA] p-4 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus-visible:border-[#FF6B00] focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-orange-100 focus-visible:ring-offset-0"
+            />
+            <p className="mt-2 text-[10px] leading-4 text-slate-400">Không bắt buộc. Viết ngắn gọn và tập trung vào lý do thay đổi trạng thái.</p>
+          </div>
+          <DialogFooter className="mt-5 border-t border-slate-100 bg-slate-50/60 px-6 py-4 sm:justify-end">
+            <Button variant="outline" className="h-10 rounded-xl border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-100 hover:text-slate-900" onClick={closeNoteDialog}>Hủy</Button>
+            <Button className="h-10 rounded-xl border-none bg-[#FF6B00] px-5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(255,107,0,0.18)] transition hover:-translate-y-0.5 hover:bg-[#EA580C] active:translate-y-0" onClick={() => {
               noteDialog.onConfirm(noteText.trim());
               closeNoteDialog();
             }}>
