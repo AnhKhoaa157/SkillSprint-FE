@@ -55,6 +55,9 @@ const marketplaceService = {
   async createSepayTopUp(packageKey: string) {
     return unwrap((await skillSprintApiClient.post<ApiResponse<CoinTopUpPayment>>("/api/marketplace/wallet/top-ups/sepay", { packageKey })).data);
   },
+  async cancelSepayTopUp(paymentId: string) {
+    return unwrap((await skillSprintApiClient.patch<ApiResponse<CoinTopUpPayment>>(`/api/marketplace/wallet/top-ups/${paymentId}/cancel`)).data);
+  },
   async getMine() {
     return unwrap((await skillSprintApiClient.get<ApiResponse<CreatorMarketplaceItem[]>>("/api/marketplace/items/mine")).data);
   },
