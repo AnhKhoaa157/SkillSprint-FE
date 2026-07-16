@@ -105,7 +105,21 @@ export interface PurchasedMarketplacePack extends MarketplaceItemSummary {
   purchasedAt?: string | null;
 }
 
-export interface PurchasedPackDetail extends MarketplaceItemSummary {
+/** Raw response returned by GET /api/marketplace/my-packs/{itemId}. */
+export interface PurchasedPackApiResponse {
+  itemId: string;
+  title: string;
+  subject: string;
+  questionCount: number;
+  content: unknown;
+}
+
+export interface PurchasedPackDetail {
+  itemId: string;
+  title: string;
+  subject: string;
+  questionCount: number;
+  description: string;
   chapters: MarketplaceChapter[];
   questions: MarketplaceQuestion[];
 }

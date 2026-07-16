@@ -48,4 +48,59 @@ describe("marketplaceService creator snapshot endpoints", () => {
     await expect(marketplaceService.cancelSepayTopUp("payment-1")).resolves.toEqual(payment);
     expect(skillSprintApiClient.patch).toHaveBeenCalledWith("/api/marketplace/wallet/top-ups/payment-1/cancel");
   });
+
+  it("normalizes purchased pack content for the learning page", async () => {
+    const pack = {
+      itemId: "pack-1",
+      title: "Basic math",
+      subject: "Math",
+      questionCount: 1,
+      content: {
+        chapters: [{
+          sequenceNo: 1,
+          title: "Chapter 1",
+          summary: "Number practice.",
+          quiz: {
+            questions: [{
+              questionId: "question-1",
+              text: "What is 1 + 1?",
+              options: [{ optionId: "option-1", label: "A", text: "2" }],
+            }],
+          },
+        }],
+      },
+    };
+    vi.mocked(skillSprintApiClient.get).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: pack } } as never);
+
+    await expect(marketplaceService.getMyPack("pack-1")).resolves.toEqual({
+      itemId: "pack-1",
+      title: "Basic math",
+      subject: "Math",
+      questionCount: 1,
+      description: "",
+      chapters: [{
+        chapterId: "chapter-1",
+        title: "Chapter 1",
+        summary: "Number practice.",
+        questions: [{
+          questionId: "question-1",
+          question: "What is 1 + 1?",
+          options: [{ optionId: "option-1", text: "2" }],
+        }],
+      }],
+      questions: [{
+        questionId: "question-1",
+        question: "What is 1 + 1?",
+        options: [{ optionId: "option-1", text: "2" }],
+      }],
+    });
+    expect(skillSprintApiClient.get).toHaveBeenCalledWith("/api/marketplace/my-packs/pack-1");
+  });
+
+  it("returns empty content when a purchased pack has no chapters", async () => {
+    const pack = { itemId: "pack-1", title: "Empty pack", subject: "Math", questionCount: 0, content: {} };
+    vi.mocked(skillSprintApiClient.get).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: pack } } as never);
+
+    await expect(marketplaceService.getMyPack("pack-1")).resolves.toMatchObject({ chapters: [], questions: [] });
+  });
 });
