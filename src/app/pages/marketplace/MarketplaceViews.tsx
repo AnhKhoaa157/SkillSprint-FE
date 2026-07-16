@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent as ReactFormEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, ChevronDown, Clock3, Coins, FileQuestion, LoaderCircle, RefreshCw, Search, Send, ShoppingBag, Sparkles, Star, Trophy, WalletCards, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, ChevronDown, Clock3, Coins, Copy, FileQuestion, LoaderCircle, RefreshCw, Search, Send, ShoppingBag, Sparkles, Star, Trophy, WalletCards, X } from "lucide-react";
 import { toast } from "sonner";
 import { motion, useReducedMotion } from "motion/react";
 import { marketplaceService } from "../../../api/marketplace";
-import type { ChallengeResult, ChallengeSession, CreatorMarketplaceItem, MarketplaceItemDetail, MarketplaceQuestion, MarketplaceReview, MarketplaceWallet, PurchasedMarketplacePack, PurchasedPackDetail } from "../../../api/marketplace";
+import type { ChallengeResult, ChallengeSession, CoinTopUpPackage, CoinTopUpPayment, CreatorMarketplaceItem, MarketplaceItemDetail, MarketplaceQuestion, MarketplaceReview, MarketplaceTransaction, MarketplaceWallet, PurchasedMarketplacePack, PurchasedPackDetail } from "../../../api/marketplace";
 import workspaceService, { type WorkspaceResponse } from "../../../api/utilities/workspaceService";
 import MarketplaceLeaderboardCard from "../../components/marketplace/MarketplaceLeaderboardCard";
 import { refreshMarketplaceLeaderboard } from "../../../api/marketplace/useMarketplaceLeaderboard";
@@ -314,8 +314,8 @@ function MarketplaceItemPageLegacy() {
   const buy = async () => { if (!item) return; setBuying(true); try { await marketplaceService.purchase(item.itemId); toast.success("Đã mua gói học liệu."); go(`/my-packs/${item.itemId}`); } catch (e) { toast.error(message(e)); } finally { setBuying(false); } };
   const saveReview = async () => { if (!item) return; setReviewing(true); try { await marketplaceService.review(item.itemId, { rating, comment: comment.trim() || undefined }); toast.success("Đã lưu đánh giá."); setReviewOpen(false); await load(); } catch (e) { toast.error(message(e)); } finally { setReviewing(false); } };
   if (loading) return <Shell><Loading /></Shell>; if (failed || !item) return <Shell><ErrorBox retry={load} /></Shell>;
-  const shortage = Math.max(0, item.priceCoins - (wallet?.balanceCoins ?? 0));
-  return <Shell><Link to="/marketplace" className="inline-flex items-center gap-1 text-sm font-bold text-violet-700"><ArrowLeft className="h-4 w-4" />Marketplace</Link><div className="mt-5 grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]"><div><section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"><span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">{item.subject}</span><h1 className="mt-4 text-3xl font-black">{item.title}</h1><p className="mt-2 text-sm text-slate-500">Bởi {item.creatorName}</p><p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-600">{item.description}</p><div className="mt-5 flex flex-wrap gap-4 text-sm text-slate-600"><span>{item.chapterCount} chương</span><span>{item.quizCount} quiz</span><span>{item.questionCount} câu hỏi</span><span className="flex gap-1"><Stars value={item.averageRating} />{item.averageRating.toFixed(1)} ({item.reviewCount})</span></div></section><Content chapters={item.chapters} questions={item.previewQuestions} preview /><section className="mt-7"><h2 className="text-xl font-black">Top 10</h2><div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">{board.length ? board.slice(0,10).map((entry, i) => <div key={`${entry.learnerName}-${i}`} className="flex gap-3 border-b border-slate-100 p-4 last:border-0"><b className="text-violet-700">#{entry.rank ?? i + 1}</b><span className="flex-1 font-semibold">{entry.learnerName}</span><b>{entry.score} điểm</b></div>) : <p className="p-5 text-sm text-slate-500">Chưa có kết quả thử thách.</p>}</div></section><section className="mt-7"><h2 className="text-xl font-black">Đánh giá</h2><div className="mt-3 space-y-3">{reviews.length ? reviews.map((r, i) => <article key={r.reviewId || i} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex justify-between"><b>{r.reviewerName}</b><Stars value={r.rating} /></div>{r.comment && <p className="mt-3 text-sm text-slate-600">{r.comment}</p>}<p className="mt-3 text-xs text-slate-400">{date(r.createdAt)}</p></article>) : <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500">Chưa có đánh giá.</p>}</div></section></div><aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 lg:sticky lg:top-24"><p className="text-sm text-slate-500">Giá gói học liệu</p><p className="mt-2 text-2xl"><Coin value={item.priceCoins} /></p><button onClick={openBuy} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-black text-white"><Coins className="h-4 w-4" />Mua bằng Coin</button><div className="mt-6 border-t pt-5"><h2 className="font-black">Đánh giá của bạn</h2><div className="mt-3 flex">{[1,2,3,4,5].map(n => <button key={n} onClick={() => setRating(n)} aria-label={`${n} sao`}><Star className={`h-6 w-6 ${n <= rating ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} /></button>)}</div><textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Nhận xét (không bắt buộc)" className="mt-3 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm" /><button onClick={() => rating ? setReviewOpen(true) : toast.message("Chọn số sao trước khi gửi đánh giá.")} className="mt-3 rounded-xl border border-violet-200 px-4 py-2 text-sm font-bold text-violet-700">{reviews.some(r => r.mine) ? "Cập nhật đánh giá" : "Gửi đánh giá"}</button></div></aside></div><Confirm open={buyOpen} title="Xác nhận mua gói" text={wallet ? `Số dư: ${fmt.format(wallet.balanceCoins)} Coin.${shortage ? ` Còn thiếu ${fmt.format(shortage)} Coin. Ví Coin hiện được nạp bởi quản trị viên trong bản demo.` : " Coin sẽ được trừ khi xác nhận."}` : "Đang kiểm tra ví."} button="Xác nhận mua" busy={buying} close={() => setBuyOpen(false)} submit={buy} /><Confirm open={reviewOpen} title="Gửi đánh giá" text="Bạn xác nhận lưu đánh giá này?" button="Lưu đánh giá" busy={reviewing} close={() => setReviewOpen(false)} submit={saveReview} /></Shell>;
+  const shortage = Math.max(0, item.priceCoins - coinBalance(wallet));
+  return <Shell><Link to="/marketplace" className="inline-flex items-center gap-1 text-sm font-bold text-violet-700"><ArrowLeft className="h-4 w-4" />Marketplace</Link><div className="mt-5 grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]"><div><section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"><span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">{item.subject}</span><h1 className="mt-4 text-3xl font-black">{item.title}</h1><p className="mt-2 text-sm text-slate-500">Bởi {item.creatorName}</p><p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-600">{item.description}</p><div className="mt-5 flex flex-wrap gap-4 text-sm text-slate-600"><span>{item.chapterCount} chương</span><span>{item.quizCount} quiz</span><span>{item.questionCount} câu hỏi</span><span className="flex gap-1"><Stars value={item.averageRating} />{item.averageRating.toFixed(1)} ({item.reviewCount})</span></div></section><Content chapters={item.chapters} questions={item.previewQuestions} preview /><section className="mt-7"><h2 className="text-xl font-black">Top 10</h2><div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">{board.length ? board.slice(0,10).map((entry, i) => <div key={`${entry.learnerName}-${i}`} className="flex gap-3 border-b border-slate-100 p-4 last:border-0"><b className="text-violet-700">#{entry.rank ?? i + 1}</b><span className="flex-1 font-semibold">{entry.learnerName}</span><b>{entry.score} điểm</b></div>) : <p className="p-5 text-sm text-slate-500">Chưa có kết quả thử thách.</p>}</div></section><section className="mt-7"><h2 className="text-xl font-black">Đánh giá</h2><div className="mt-3 space-y-3">{reviews.length ? reviews.map((r, i) => <article key={r.reviewId || i} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex justify-between"><b>{r.reviewerName}</b><Stars value={r.rating} /></div>{r.comment && <p className="mt-3 text-sm text-slate-600">{r.comment}</p>}<p className="mt-3 text-xs text-slate-400">{date(r.createdAt)}</p></article>) : <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500">Chưa có đánh giá.</p>}</div></section></div><aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 lg:sticky lg:top-24"><p className="text-sm text-slate-500">Giá gói học liệu</p><p className="mt-2 text-2xl"><Coin value={item.priceCoins} /></p><button onClick={openBuy} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-black text-white"><Coins className="h-4 w-4" />Mua bằng Coin</button><div className="mt-6 border-t pt-5"><h2 className="font-black">Đánh giá của bạn</h2><div className="mt-3 flex">{[1,2,3,4,5].map(n => <button key={n} onClick={() => setRating(n)} aria-label={`${n} sao`}><Star className={`h-6 w-6 ${n <= rating ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} /></button>)}</div><textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Nhận xét (không bắt buộc)" className="mt-3 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm" /><button onClick={() => rating ? setReviewOpen(true) : toast.message("Chọn số sao trước khi gửi đánh giá.")} className="mt-3 rounded-xl border border-violet-200 px-4 py-2 text-sm font-bold text-violet-700">{reviews.some(r => r.mine) ? "Cập nhật đánh giá" : "Gửi đánh giá"}</button></div></aside></div><Confirm open={buyOpen} title="Xác nhận mua gói" text={wallet ? `Số dư: ${fmt.format(coinBalance(wallet))} Coin.${shortage ? ` Còn thiếu ${fmt.format(shortage)} Coin. Nạp Coin qua SePay trong Ví Coin trước khi xác nhận.` : " Coin sẽ được trừ khi xác nhận."}` : "Đang kiểm tra ví."} button="Xác nhận mua" busy={buying} close={() => setBuyOpen(false)} submit={buy} /><Confirm open={reviewOpen} title="Gửi đánh giá" text="Bạn xác nhận lưu đánh giá này?" button="Lưu đánh giá" busy={reviewing} close={() => setReviewOpen(false)} submit={saveReview} /></Shell>;
 }
 
 export function MarketplaceItemPage() {
@@ -362,7 +362,7 @@ export function MarketplaceItemPage() {
 
   if (loading) return <Shell><Loading /></Shell>;
   if (failed || !item) return <Shell><ErrorBox retry={load} /></Shell>;
-  const shortage = Math.max(0, item.priceCoins - (wallet?.balanceCoins ?? 0));
+  const shortage = Math.max(0, item.priceCoins - coinBalance(wallet));
 
   return <Shell>
     <Link to="/marketplace" className="inline-flex items-center gap-1 text-sm font-bold text-violet-700"><ArrowLeft className="h-4 w-4" />Marketplace</Link>
@@ -375,7 +375,7 @@ export function MarketplaceItemPage() {
       </div>
       <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 lg:sticky lg:top-24"><p className="text-sm text-slate-500">Giá gói học liệu</p><p className="mt-2 text-2xl"><Coin value={item.priceCoins} /></p><button onClick={openBuy} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-black text-white"><Coins className="h-4 w-4" />Mua bằng Coin</button><div className="mt-6 border-t pt-5"><h2 className="font-black">Đánh giá của bạn</h2><div className="mt-3 flex">{[1, 2, 3, 4, 5].map(number => <button key={number} onClick={() => setRating(number)} aria-label={`${number} sao`}><Star className={`h-6 w-6 ${number <= rating ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} /></button>)}</div><textarea value={comment} onChange={event => setComment(event.target.value)} placeholder="Nhận xét (không bắt buộc)" className="mt-3 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm" /><button onClick={() => rating ? setReviewOpen(true) : toast.message("Chọn số sao trước khi gửi đánh giá.")} className="mt-3 rounded-xl border border-violet-200 px-4 py-2 text-sm font-bold text-violet-700">{reviews.some(review => review.mine) ? "Cập nhật đánh giá" : "Gửi đánh giá"}</button></div></aside>
     </div>
-    <Confirm open={buyOpen} title="Xác nhận mua gói" text={wallet ? `Số dư: ${fmt.format(wallet.balanceCoins)} Coin.${shortage ? ` Còn thiếu ${fmt.format(shortage)} Coin. Ví Coin hiện được nạp bởi quản trị viên trong bản demo.` : " Coin sẽ được trừ khi xác nhận."}` : "Đang kiểm tra ví."} button="Xác nhận mua" busy={buying} close={() => setBuyOpen(false)} submit={buy} />
+    <Confirm open={buyOpen} title="Xác nhận mua gói" text={wallet ? `Số dư: ${fmt.format(coinBalance(wallet))} Coin.${shortage ? ` Còn thiếu ${fmt.format(shortage)} Coin. Nạp Coin qua SePay trong Ví Coin trước khi xác nhận.` : " Coin sẽ được trừ khi xác nhận."}` : "Đang kiểm tra ví."} button="Xác nhận mua" busy={buying} close={() => setBuyOpen(false)} submit={buy} />
     <Confirm open={reviewOpen} title="Gửi đánh giá" text="Bạn xác nhận lưu đánh giá này?" button="Lưu đánh giá" busy={reviewing} close={() => setReviewOpen(false)} submit={saveReview} />
   </Shell>;
 }
@@ -400,10 +400,121 @@ export function MyPackLearningPage() {
   return <Shell><Link to="/my-packs" className="inline-flex items-center gap-1 text-sm font-bold text-violet-700"><ArrowLeft className="h-4 w-4" />Gói của tôi</Link><h1 className="mt-4 text-3xl font-black">{pack.title}</h1><p className="mt-2 text-slate-500">{pack.description}</p><Content chapters={pack.chapters} questions={pack.questions} /><section className="mt-7 rounded-3xl border border-violet-200 bg-violet-50 p-6"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><h2 className="text-xl font-black">Full Pack Challenge</h2><p className="mt-1 text-sm text-slate-600">Trả lời tất cả câu hỏi trước khi nộp. Thời gian được máy chủ quản lý.</p></div>{!session && <button onClick={start} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white"><Trophy className="h-4 w-4" />Bắt đầu Full Pack Challenge</button>}</div>{expired && <p className="mt-5 rounded-xl bg-amber-100 p-4 text-sm font-bold text-amber-900">Phiên đã hết hạn. Hãy bắt đầu một phiên mới.</p>}{session && !expired && <div className="mt-6"><div className="flex flex-wrap justify-between gap-3"><p className="text-sm text-slate-600">Bắt đầu: {date(session.startedAt)}</p><Timer expiresAt={session.expiresAt} expire={() => setExpired(true)} /></div><Questions questions={session.questions} answers={answers} select={(id, option) => setAnswers(a => ({ ...a, [id]: option }))} /><button onClick={() => setConfirm(true)} disabled={!done} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50"><Send className="h-4 w-4" />Nộp bài ({Object.keys(answers).length}/{session.questions.length})</button>{!done && <p className="mt-2 text-xs text-slate-500">Bạn cần trả lời mọi câu hỏi trước khi nộp.</p>}</div>}{result && <div className="mt-6 rounded-2xl bg-white p-5"><div className="flex gap-3"><CheckCircle2 className="h-6 w-6 text-emerald-600" /><div><h3 className="font-black">Kết quả thử thách</h3><p className="text-sm text-slate-500">Hoàn thành {date(result.completedAt)}</p></div></div><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Điểm",result.score],["Đúng",`${result.correctCount}/${result.questionCount}`],["Câu hỏi",result.questionCount],["Thời gian",`${result.durationSeconds}s`]].map(([k,v]) => <div key={String(k)} className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">{k}</p><p className="font-black text-violet-700">{v}</p></div>)}</div></div>}</section><Confirm open={confirm} title="Xác nhận nộp bài" text="Bạn đã trả lời đủ tất cả câu hỏi. Bạn muốn gửi bài thử thách?" button="Nộp bài" busy={submitting} close={() => setConfirm(false)} submit={submit} /></Shell>;
 }
 
+const coinBalance = (wallet: MarketplaceWallet | null) => wallet?.balance ?? wallet?.balanceCoins ?? 0;
+const isTopUpTransaction = (transaction: MarketplaceTransaction, paymentId: string) => transaction.referenceType === "COIN_TOP_UP" && transaction.referenceId === paymentId;
+const transactionLabel = (transaction: MarketplaceTransaction) => transaction.referenceType === "COIN_TOP_UP" ? "Nạp Coin" : transaction.direction === "CREDIT" ? "Cộng Coin" : "Trừ Coin";
+
+function CopyValue({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      toast.error("Không thể sao chép. Hãy sao chép thủ công.");
+    }
+  };
+
+  return <button type="button" onClick={() => void copy()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 transition hover:border-orange-200 hover:bg-orange-50"><Copy className="h-3.5 w-3.5" />{copied ? "Đã sao chép" : `Sao chép ${label}`}</button>;
+}
+
+function TopUpCountdown({ expiresAt }: { expiresAt: string }) {
+  const [remaining, setRemaining] = useState(() => Math.max(0, new Date(expiresAt).getTime() - Date.now()));
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setRemaining(Math.max(0, new Date(expiresAt).getTime() - Date.now())), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [expiresAt]);
+  return <b>{String(Math.floor(remaining / 60000)).padStart(2, "0")}:{String(Math.floor(remaining / 1000) % 60).padStart(2, "0")}</b>;
+}
+
+function CoinTopUpDialog({ payment, state, close }: { payment: CoinTopUpPayment; state: "pending" | "success" | "expired"; close: () => void }) {
+  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="coin-top-up-title">
+    <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[2rem] bg-white p-5 shadow-2xl sm:rounded-[2rem] sm:p-7">
+      <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-[#FF6B00]">Nạp Coin qua SePay</p><h2 id="coin-top-up-title" className="mt-2 text-2xl font-black text-slate-950">{state === "success" ? "Nạp Coin thành công" : state === "expired" ? "Giao dịch đã hết hạn" : "Chuyển khoản để nạp Coin"}</h2></div><button type="button" onClick={close} aria-label="Đóng" className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200"><X className="h-4 w-4" /></button></div>
+      {state === "success" ? <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950"><CheckCircle2 className="h-7 w-7 text-emerald-600" /><p className="mt-3 font-black">{fmt.format(payment.coinAmount)} Coin đã được cộng vào ví.</p><p className="mt-1 text-sm">Số dư và lịch sử giao dịch đã được làm mới.</p></div> : state === "expired" ? <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950"><p className="font-black">Mã thanh toán này không còn hiệu lực.</p><p className="mt-1 text-sm">Hãy đóng cửa sổ và tạo một giao dịch nạp Coin mới nếu vẫn cần nạp.</p></div> : <><div className="mt-6 grid gap-4 rounded-2xl border border-orange-100 bg-orange-50/70 p-4 sm:grid-cols-[150px_1fr]"><div className="grid min-h-36 place-items-center overflow-hidden rounded-xl bg-white p-2"><img src={payment.qrUrl} alt="Mã QR thanh toán SePay" className="h-32 w-32 object-contain" /></div><div><p className="text-sm font-bold text-slate-600">Nội dung thanh toán</p><p className="mt-1 break-all text-lg font-black text-slate-950">{payment.paymentCode}</p><div className="mt-2"><CopyValue value={payment.paymentCode} label="mã" /></div><p className="mt-4 text-sm text-slate-600">Cần chuyển đúng</p><p className="mt-1 text-2xl font-black text-[#FF6B00]">{fmt.format(payment.amount)} ₫</p><p className="mt-1 text-sm font-semibold text-slate-700">Nhận {fmt.format(payment.coinAmount)} Coin</p></div></div>
+      <dl className="mt-4 grid gap-3 rounded-2xl border border-slate-200 p-4 text-sm"><div><dt className="text-slate-500">Ngân hàng</dt><dd className="mt-1 font-black text-slate-950">{payment.bank.bankCode}</dd></div><div><dt className="text-slate-500">Số tài khoản</dt><dd className="mt-1 flex flex-wrap items-center gap-2 font-black text-slate-950"><span>{payment.bank.accountNumber}</span><CopyValue value={payment.bank.accountNumber} label="STK" /></dd></div><div><dt className="text-slate-500">Chủ tài khoản</dt><dd className="mt-1 font-black text-slate-950">{payment.bank.accountName}</dd></div></dl>
+      <div className="mt-4 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950"><LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin" /><p>Đang chờ SePay xác nhận. Ví sẽ tự động cập nhật sau khi thanh toán thành công. Mã hết hạn sau <TopUpCountdown expiresAt={payment.expiredAt} />.</p></div></>}</div>
+  </div>;
+}
+
 export function WalletPage() {
-  const [wallet, setWallet] = useState<MarketplaceWallet | null>(null); const [transactions, setTransactions] = useState<any[]>([]); const [loading, setLoading] = useState(true); const [failed, setFailed] = useState(false);
-  const load = useCallback(async () => { setLoading(true); setFailed(false); try { const [a,b] = await Promise.all([marketplaceService.getWallet(), marketplaceService.getTransactions()]); setWallet(a); setTransactions(b); } catch { setFailed(true); } finally { setLoading(false); } }, []); useEffect(() => { void load(); }, [load]);
-  return <Shell><h1 className="text-3xl font-black">Ví Coin</h1><p className="mt-2 text-slate-500">Theo dõi số dư và các giao dịch Coin của bạn.</p>{loading ? <div className="mt-7"><Loading /></div> : failed ? <div className="mt-7"><ErrorBox retry={load} /></div> : <><section className="mt-7 rounded-3xl bg-gradient-to-br from-violet-700 to-blue-600 p-7 text-white"><p className="text-sm font-bold text-violet-100">SỐ DƯ HIỆN CÓ</p><p className="mt-2 text-4xl font-black">{fmt.format(wallet?.balanceCoins || 0)} Coin</p></section><p className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">Nạp Coin qua SePay và rút tiền cho Creator chưa có trong phiên bản này.</p><section className="mt-7"><h2 className="text-xl font-black">Giao dịch</h2><div className="mt-3 overflow-x-auto rounded-2xl border border-slate-200 bg-white"><table className="w-full min-w-[640px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="p-4">Loại</th><th className="p-4">Số Coin</th><th className="p-4">Số dư sau</th><th className="p-4">Tham chiếu</th><th className="p-4">Thời gian</th></tr></thead><tbody>{transactions.length ? transactions.map(t => <tr key={t.transactionId} className="border-t border-slate-100"><td className="p-4 font-bold">{t.direction}</td><td className="p-4">{t.amount}</td><td className="p-4">{t.balanceAfter}</td><td className="p-4">{t.referenceType}</td><td className="p-4">{date(t.createdAt)}</td></tr>) : <tr><td colSpan={5} className="p-8 text-center text-slate-500">Chưa có giao dịch.</td></tr>}</tbody></table></div></section></>}</Shell>;
+  const [wallet, setWallet] = useState<MarketplaceWallet | null>(null);
+  const [transactions, setTransactions] = useState<MarketplaceTransaction[]>([]);
+  const [packages, setPackages] = useState<CoinTopUpPackage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [packagesLoading, setPackagesLoading] = useState(true);
+  const [packagesError, setPackagesError] = useState(false);
+  const [creatingTopUp, setCreatingTopUp] = useState<string | null>(null);
+  const [payment, setPayment] = useState<CoinTopUpPayment | null>(null);
+  const [paymentState, setPaymentState] = useState<"pending" | "success" | "expired">("pending");
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const loadWallet = useCallback(async () => {
+    const [nextWallet, nextTransactions] = await Promise.all([marketplaceService.getWallet(), marketplaceService.getTransactions()]);
+    setWallet(nextWallet);
+    setTransactions(nextTransactions);
+    return { nextWallet, nextTransactions };
+  }, []);
+  const loadPackages = useCallback(async () => {
+    setPackagesLoading(true);
+    setPackagesError(false);
+    try { setPackages(await marketplaceService.getTopUpPackages()); }
+    catch { setPackagesError(true); }
+    finally { setPackagesLoading(false); }
+  }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setFailed(false);
+    try { await loadWallet(); }
+    catch { setFailed(true); }
+    finally { setLoading(false); }
+  }, [loadWallet]);
+
+  useEffect(() => { void load(); void loadPackages(); }, [load, loadPackages]);
+  useEffect(() => {
+    if (!payment || paymentState !== "pending") return;
+    let active = true;
+    const refreshPayment = async () => {
+      if (new Date(payment.expiredAt).getTime() <= Date.now()) {
+        if (active) setPaymentState("expired");
+        return;
+      }
+      try {
+        const { nextTransactions } = await loadWallet();
+        if (active && nextTransactions.some(transaction => isTopUpTransaction(transaction, payment.paymentId))) {
+          setPaymentState("success");
+          setDialogOpen(true);
+          toast.success(`Đã nạp ${fmt.format(payment.coinAmount)} Coin vào ví.`);
+        }
+      } catch {
+        // Keep the pending payment visible; the next interval can recover from a transient request failure.
+      }
+    };
+    const intervalId = window.setInterval(() => void refreshPayment(), 5000);
+    const expiryId = window.setTimeout(() => { if (active) setPaymentState("expired"); }, Math.max(0, new Date(payment.expiredAt).getTime() - Date.now()));
+    return () => { active = false; window.clearInterval(intervalId); window.clearTimeout(expiryId); };
+  }, [loadWallet, payment, paymentState]);
+
+  const createTopUp = async (packageKey: string) => {
+    setCreatingTopUp(packageKey);
+    try {
+      const nextPayment = await marketplaceService.createSepayTopUp(packageKey);
+      setPayment(nextPayment);
+      setPaymentState("pending");
+      setDialogOpen(true);
+    } catch (error) {
+      toast.error(message(error));
+    } finally {
+      setCreatingTopUp(null);
+    }
+  };
+
+  return <Shell><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-3xl font-black">Ví Coin</h1><p className="mt-2 text-slate-500">Nạp Coin an toàn qua SePay và theo dõi các giao dịch của bạn.</p></div><button type="button" onClick={() => void load()} disabled={loading} className="inline-flex w-fit items-center gap-2 rounded-xl border border-orange-200 bg-white px-4 py-2.5 text-sm font-bold text-[#FF6B00] hover:bg-orange-50 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />Làm mới số dư</button></div>{loading ? <div className="mt-7"><Loading /></div> : failed ? <div className="mt-7"><ErrorBox retry={load} /></div> : <><section className="mt-7 rounded-3xl bg-gradient-to-br from-violet-700 to-blue-600 p-7 text-white"><p className="text-sm font-bold text-violet-100">SỐ DƯ HIỆN CÓ</p><p className="mt-2 text-4xl font-black">{fmt.format(coinBalance(wallet))} Coin</p><p className="mt-3 max-w-xl text-sm leading-6 text-white/85">1 Coin = 1 ₫. Chọn gói nạp bên dưới để tạo mã thanh toán SePay.</p></section>
+      {payment && paymentState === "pending" && !dialogOpen && <button type="button" onClick={() => setDialogOpen(true)} className="mt-5 flex w-full items-center justify-between gap-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-left text-sky-950 hover:bg-sky-100"><span><b>Đang chờ xác nhận nạp {fmt.format(payment.coinAmount)} Coin</b><span className="mt-1 block text-sm">Mở lại thông tin chuyển khoản và mã thanh toán.</span></span><ArrowRight className="h-5 w-5 shrink-0" /></button>}
+      <section className="mt-7"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black">Nạp Coin</h2><p className="mt-1 text-sm text-slate-500">Chọn gói phù hợp. Không áp dụng khuyến mãi trong giai đoạn này.</p></div><button type="button" onClick={() => void loadPackages()} disabled={packagesLoading} className="text-sm font-bold text-[#FF6B00] disabled:opacity-50">Tải lại gói</button></div>{packagesLoading ? <div className="mt-4"><Loading /></div> : packagesError ? <div className="mt-4"><ErrorBox retry={loadPackages} /></div> : packages.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">Hiện chưa có gói Coin khả dụng.</div> : <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{packages.map(item => <article key={item.packageKey} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-orange-50 text-[#FF6B00]"><Coins className="h-5 w-5" /></span><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black text-slate-600">{item.currency}</span></div><p className="mt-5 text-2xl font-black text-slate-950">{fmt.format(item.coinAmount)} Coin</p><p className="mt-1 text-sm font-semibold text-slate-500">{fmt.format(item.vndAmount)} ₫</p><button type="button" onClick={() => void createTopUp(item.packageKey)} disabled={Boolean(creatingTopUp) || paymentState === "pending" && payment !== null} className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl bg-violet-600 px-4 text-sm font-black text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50">{creatingTopUp === item.packageKey ? <LoaderCircle className="h-4 w-4 animate-spin" /> : paymentState === "pending" && payment ? "Đang có giao dịch chờ" : "Nạp Coin"}</button></article>)}</div>}</section>
+      <section className="mt-8"><h2 className="text-xl font-black">Giao dịch</h2><div className="mt-3 overflow-x-auto rounded-2xl border border-slate-200 bg-white"><table className="w-full min-w-[640px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="p-4">Loại</th><th className="p-4">Số Coin</th><th className="p-4">Số dư sau</th><th className="p-4">Tham chiếu</th><th className="p-4">Thời gian</th></tr></thead><tbody>{transactions.length ? transactions.map(transaction => <tr key={transaction.transactionId} className="border-t border-slate-100"><td className="p-4 font-bold">{transactionLabel(transaction)}</td><td className={`p-4 font-bold ${transaction.direction === "CREDIT" ? "text-emerald-700" : "text-rose-700"}`}>{transaction.direction === "CREDIT" ? "+" : "−"}{fmt.format(transaction.amount)}</td><td className="p-4">{fmt.format(transaction.balanceAfter)}</td><td className="p-4 text-slate-600">{transaction.referenceId || transaction.referenceType}</td><td className="p-4 text-slate-500">{date(transaction.createdAt)}</td></tr>) : <tr><td colSpan={5} className="p-8 text-center text-slate-500">Chưa có giao dịch.</td></tr>}</tbody></table></div></section></>}{dialogOpen && payment && <CoinTopUpDialog payment={payment} state={paymentState} close={() => setDialogOpen(false)} />}</Shell>;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="block text-sm font-bold text-slate-700"><span>{label}</span><div className="mt-2 [&_input]:h-11 [&_input]:w-full [&_input]:rounded-xl [&_input]:border [&_input]:border-slate-200 [&_input]:px-3 [&_textarea]:min-h-24 [&_textarea]:w-full [&_textarea]:rounded-xl [&_textarea]:border [&_textarea]:border-slate-200 [&_textarea]:p-3">{children}</div></label>; }

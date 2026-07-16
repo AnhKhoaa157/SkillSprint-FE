@@ -58,16 +58,47 @@ export interface MarketplaceReview {
 }
 
 export interface MarketplaceWallet {
-  balanceCoins: number;
+  /** `balance` is the current API field; `balanceCoins` keeps old deployments compatible. */
+  balance?: number;
+  balanceCoins?: number;
 }
 
 export interface MarketplaceTransaction {
   transactionId: string;
   direction: string;
   amount: number;
+  balanceBefore?: number;
   balanceAfter: number;
   referenceType: string;
+  referenceId?: string | null;
   createdAt: string;
+}
+
+export interface CoinTopUpPackage {
+  packageKey: string;
+  coinAmount: number;
+  vndAmount: number;
+  currency: string;
+}
+
+export interface CoinTopUpBankAccount {
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+}
+
+export interface CoinTopUpPayment {
+  paymentId: string;
+  purpose: "COIN_TOP_UP";
+  status: "PENDING" | string;
+  packageKey: string;
+  coinAmount: number;
+  amount: number;
+  currency: string;
+  paymentCode: string;
+  qrUrl: string;
+  bank: CoinTopUpBankAccount;
+  expiredAt: string;
 }
 
 export interface PurchasedMarketplacePack extends MarketplaceItemSummary {
