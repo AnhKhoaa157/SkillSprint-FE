@@ -96,20 +96,22 @@ Khi phát triển tính năng có gọi API, hãy đối chiếu request/respons
 | Dữ liệu & giao tiếp | Fetch API, Axios, STOMP/WebSocket |
 | Xác thực & hạ tầng | AWS Cognito, Spring Boot API, AWS S3 presigned URL |
 | Kiểm thử | Vitest, React Testing Library, jsdom |
-| Triển khai | Vercel |
+| Triển khai | AWS S3 (static hosting) + Amazon CloudFront |
 
 ## Kiến trúc tổng quan
 
 ```mermaid
 flowchart LR
-  Browser["Người dùng trên trình duyệt"] --> SPA["SkillSprint Frontend\nReact + Vite"]
+  Browser["Người dùng trên trình duyệt"] --> CF["Amazon CloudFront\nCDN + HTTPS"]
+  CF --> StaticS3["AWS S3\nStatic frontend hosting"]
+  StaticS3 --> SPA["SkillSprint Frontend\nReact + Vite"]
   SPA --> Router["React Router\nPublic · Learner · Admin"]
   SPA --> Auth["AWS Cognito\nĐăng nhập / OAuth"]
   SPA --> API["SkillSprint API\nSpring Boot"]
   SPA --> Socket["STOMP WebSocket\nThông báo · Phòng cộng đồng"]
   API --> DB[("PostgreSQL")]
-  API --> S3["AWS S3\nPresigned PUT/GET URL"]
-  SPA -. "PUT tệp trực tiếp\nkhông kèm token" .-> S3
+  API --> UploadS3["AWS S3\nPresigned PUT/GET URL"]
+  SPA -. "PUT tệp trực tiếp\nkhông kèm token" .-> UploadS3
 ```
 
 Ứng dụng được tổ chức theo các lớp rõ ràng:
@@ -223,7 +225,6 @@ SkillSprint-FE/
 │   ├── styles/                   # Global CSS, Tailwind, theme và font
 │   └── test/                     # Thiết lập Vitest/Testing Library
 ├── .env.example                  # Mẫu biến môi trường
-├── vercel.json                   # Cấu hình SPA fallback cho Vercel
 ├── vite.config.ts                # Cấu hình Vite, React và Tailwind
 └── vitest.config.ts              # Cấu hình unit/component tests
 ```
@@ -289,13 +290,30 @@ Test được đặt cạnh mã nguồn theo tên `*.test.ts` hoặc `*.test.tsx
 
 ## Triển khai
 
-Ứng dụng được cấu hình cho **Vercel** qua [`vercel.json`](vercel.json):
+Frontend production được deploy dưới dạng static site trên **AWS S3** và phân phối qua **Amazon CloudFront**.
 
-- `npm install` cài dependency.
-- `npm run build` sinh static bundle tại `dist/`.
-- Mọi route được fallback về `index.html`, để React Router xử lý điều hướng phía client.
+1. Thiết lập `VITE_API_URL` và cấu hình Cognito cho đúng môi trường **trước khi build**. Biến `VITE_*` được đóng gói vào bundle và không thể thay đổi sau khi đã upload `dist/`.
+2. Tạo production bundle:
 
-Trước khi deploy, thiết lập `VITE_API_URL` và cấu hình Cognito phù hợp trong environment variables của môi trường triển khai. Không đưa thông tin nhạy cảm vào frontend: mọi biến `VITE_*` đều được đóng gói vào client bundle.
+   ```bash
+   npm ci
+   npm run build
+   ```
+
+3. Đồng bộ nội dung thư mục `dist/` vào S3 bucket phục vụ frontend:
+
+   ```bash
+   aws s3 sync dist/ s3://<frontend-bucket>/ --delete
+   ```
+
+4. Cấu hình CloudFront dùng S3 bucket làm origin, HTTPS/custom domain và SPA fallback: trả `index.html` với HTTP `200` cho lỗi `403`/`404` để React Router xử lý route phía client.
+5. Invalidate cache CloudFront sau mỗi release, tối thiểu cho `index.html`:
+
+   ```bash
+   aws cloudfront create-invalidation --distribution-id <distribution-id> --paths "/index.html"
+   ```
+
+Khuyến nghị cache dài hạn cho assets có hash trong `dist/assets/` và cache ngắn hoặc `no-cache` cho `index.html`. Không đưa thông tin nhạy cảm vào frontend: mọi biến `VITE_*` đều có thể đọc được từ client bundle.
 
 ## Đóng góp
 
@@ -322,7 +340,7 @@ Khi thay đổi API, hãy kiểm tra đúng DTO của backend. Khi thay đổi u
 | Đăng nhập Cognito không quay về app | Kiểm tra Cognito callback URL khớp chính xác origin hiện tại + `/auth/callback`. |
 | Upload S3 thất bại | Kiểm tra `Content-Type` của `PUT` trùng loại đã ký, không gửi auth header và xác nhận CORS bucket. |
 | Màn hình báo bảo trì | Kiểm tra endpoint trạng thái hệ thống; tài khoản admin được miễn giới hạn để vận hành. |
-| Route Vercel trả 404 khi refresh | Kiểm tra deployment dùng [`vercel.json`](vercel.json) và output directory là `dist`. |
+| Route trả 403/404 khi refresh | Kiểm tra CloudFront custom error response hoặc SPA rewrite đang trả `/index.html` với HTTP `200` cho route phía client. |
 | Type-check không tìm thấy module | Kiểm tra import tương đối; TypeScript hiện không cấu hình `@/` path alias. |
 
 ---
