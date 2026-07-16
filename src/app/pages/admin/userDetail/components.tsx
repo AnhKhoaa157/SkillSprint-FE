@@ -82,62 +82,63 @@ export function UserBanner({ user, id }: { user: AdminUserDetail; id: string }) 
   return (
     <motion.div
       variants={itemVariants}
-      className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden"
+      className="relative overflow-hidden rounded-[28px] border border-orange-100 bg-[linear-gradient(120deg,#ffffff_0%,#fffdf9_58%,#fff6eb_100%)] p-5 shadow-[0_18px_45px_rgba(148,86,24,0.08)] md:p-7"
     >
-      <div
-        className="absolute top-0 right-0 w-48 h-48 pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(255,107,0,0.03) 0%, transparent 70%)", transform: "translate(20%, -20%)" }}
-      />
+      <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full border-[28px] border-orange-100/70" />
+      <div className="pointer-events-none absolute right-24 top-0 h-full w-px bg-gradient-to-b from-transparent via-orange-100 to-transparent" />
 
-      <div className="flex items-center gap-4 relative z-10">
-        {showImage ? (
-          <img
-            src={avatarUrl}
-            alt={user.fullName || user.email}
-            onError={() => setImgError(true)}
-            className="w-14 h-14 rounded-xl object-cover shadow-sm shrink-0"
-          />
-        ) : (
-          <div
-            className="w-14 h-14 rounded-xl flex items-center justify-center font-black text-xl text-white shadow-sm shrink-0"
-            style={{ background: "linear-gradient(135deg, #FF6B00, #EA580C)" }}
-          >
-            {initial}
-          </div>
-        )}
-
-        <div className="min-w-0 space-y-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-base font-extrabold text-slate-900 tracking-tight leading-none">
-              {user.fullName || "Chưa cập nhật tên"}
-            </h2>
-            <span
-              className="px-2 py-0.5 rounded-md text-[10px] font-bold"
-              style={{ background: badge.bg, color: badge.text, border: `1px solid ${badge.border}` }}
+      <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+          {showImage ? (
+            <img
+              src={avatarUrl}
+              alt={user.fullName || user.email}
+              onError={() => setImgError(true)}
+              className="h-16 w-16 shrink-0 rounded-2xl object-cover shadow-[0_10px_24px_rgba(148,86,24,0.16)]"
+            />
+          ) : (
+            <div
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl font-black text-white shadow-[0_10px_24px_rgba(255,107,0,0.26)]"
+              style={{ background: "linear-gradient(135deg, #FF7A18, #F05A00)" }}
             >
-              {badge.label}
-            </span>
-          </div>
-          <p className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
-            <Mail size={13} /> {user.email}
-          </p>
-          <p className="text-[11px] font-mono text-slate-400">UID: {id}</p>
-        </div>
-      </div>
+              {initial}
+            </div>
+          )}
 
-      <div className="grid grid-cols-2 gap-4 sm:gap-8 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-8 text-xs shrink-0">
-        <div className="space-y-0.5">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Clock size={11} /> Tạo tài khoản
-          </span>
-          <p className="font-bold text-slate-700">{formatDate(user.createdAt)}</p>
+          <div className="min-w-0 space-y-1.5">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-orange-600">Hồ sơ người dùng</p>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="text-xl font-extrabold tracking-tight text-slate-950">
+                {user.fullName || "Chưa cập nhật tên"}
+              </h2>
+              <span
+                className="rounded-full px-2.5 py-1 text-[10px] font-bold"
+                style={{ background: badge.bg, color: badge.text, border: `1px solid ${badge.border}` }}
+              >
+                {badge.label}
+              </span>
+            </div>
+            <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium text-slate-500">
+              <Mail size={14} className="shrink-0 text-slate-400" /> {user.email}
+            </p>
+            <p className="font-mono text-[11px] text-slate-400">UID · {id}</p>
+          </div>
         </div>
-        <div className="space-y-0.5">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <LogIn size={11} /> Đăng nhập cuối
-          </span>
-          <p className="font-bold text-slate-700">{formatDate(user.lastLoginAt)}</p>
-        </div>
+
+        <dl className="grid grid-cols-2 gap-2 sm:min-w-[320px]">
+          <div className="rounded-2xl border border-white/80 bg-white/75 px-3.5 py-3 shadow-[0_6px_16px_rgba(148,86,24,0.05)] backdrop-blur-sm">
+            <dt className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+              <Clock size={12} /> Tạo tài khoản
+            </dt>
+            <dd className="mt-1 font-semibold tabular-nums text-slate-700">{formatDate(user.createdAt)}</dd>
+          </div>
+          <div className="rounded-2xl border border-white/80 bg-white/75 px-3.5 py-3 shadow-[0_6px_16px_rgba(148,86,24,0.05)] backdrop-blur-sm">
+            <dt className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+              <LogIn size={12} /> Đăng nhập cuối
+            </dt>
+            <dd className="mt-1 font-semibold tabular-nums text-slate-700">{formatDate(user.lastLoginAt)}</dd>
+          </div>
+        </dl>
       </div>
     </motion.div>
   );
@@ -165,21 +166,28 @@ export function SubscriptionCard({ sub, plans }: { sub?: SubscriptionAdminRespon
   return (
     <motion.div
       variants={itemVariants}
-      className="md:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between"
+      className="relative overflow-hidden rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-[0_16px_36px_rgba(15,23,42,0.06)] md:col-span-2 md:p-7"
     >
-      <div className="space-y-5">
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-          <CreditCard size={16} className="text-orange-500" />
-          <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-            Thông tin gói dịch vụ hiện tại
-          </h3>
+      <div className="pointer-events-none absolute -bottom-24 -right-20 h-52 w-52 rounded-full bg-orange-50" />
+      <div className="relative space-y-6">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+              <CreditCard size={17} />
+            </span>
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-orange-600">Dịch vụ</p>
+              <h3 className="text-sm font-extrabold tracking-tight text-slate-900">Gói đang sử dụng</h3>
+            </div>
+          </div>
+          {sub && <span className="text-[11px] font-medium text-slate-400">Cập nhật theo dữ liệu hệ thống</span>}
         </div>
 
         {sub ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/60 flex flex-col justify-center items-start gap-1.5 shadow-sm">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gói đăng ký hiện hành</span>
+            <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-[1.15fr_.85fr]">
+              <div className="flex min-h-28 flex-col justify-between rounded-2xl border border-orange-100 bg-[linear-gradient(135deg,#fffaf5,#fff)] p-4 shadow-[0_8px_20px_rgba(255,107,0,0.05)]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Gói đăng ký</span>
                 <PlanTypeBadge
                   type={planType}
                   label={planName}
@@ -190,28 +198,28 @@ export function SubscriptionCard({ sub, plans }: { sub?: SubscriptionAdminRespon
                 />
               </div>
 
-              <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/60 space-y-1 flex flex-col justify-center">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Trạng thái quyền lợi</p>
-                <div className="pt-0.5">
+              <div className="flex min-h-28 flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Quyền lợi</p>
+                <div>
                   <SubscriptionStatusBadge status={sub.status} size="md" />
                 </div>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/40 text-xs space-y-2.5 text-slate-600">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/50 px-4 text-xs text-slate-600">
               <div className="flex items-center gap-3">
-                <Calendar size={15} className="text-slate-400 shrink-0" />
-                <span>
-                  <strong>Hạn sử dụng:</strong>{" "}
+                <Calendar size={16} className="shrink-0 text-orange-400" />
+                <span className="py-3.5">
+                  <strong className="font-semibold text-slate-700">Hạn sử dụng</strong>{" · "}
                   {isAdmin || !sub.endDate 
-                    ? "Hết hạn: Vô hạn" 
-                    : `Hết hạn: ${safeFormatDate(sub.endDate)}`}
+                    ? "Vô hạn"
+                    : safeFormatDate(sub.endDate)}
                 </span>
               </div>
-              <div className="flex items-center gap-3 pt-2.5 border-t border-slate-100/70">
-                <FileText size={15} className="text-slate-400 shrink-0" />
-                <span className="truncate">
-                  <strong>Mã đối chiếu danh mục:</strong> {sub.subscriptionId ? String(sub.subscriptionId) : "SUB_GEN_OR_LEGACY"}
+              <div className="flex items-center gap-3 border-t border-slate-200/70">
+                <FileText size={16} className="shrink-0 text-slate-400" />
+                <span className="truncate py-3.5">
+                  <strong className="font-semibold text-slate-700">Mã đối chiếu</strong>{" · "}{sub.subscriptionId ? String(sub.subscriptionId) : "SUB_GEN_OR_LEGACY"}
                 </span>
               </div>
             </div>
@@ -256,12 +264,12 @@ function AdminActionField({
   divider?: boolean;
 }) {
   return (
-    <div className={`space-y-1.5 ${divider ? "pt-3 border-t border-slate-100" : ""}`}>
-      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">{label}</label>
+    <div className={`space-y-2 ${divider ? "border-t border-slate-100 pt-4" : ""}`}>
+      <label className="text-[10px] font-bold uppercase tracking-[0.11em] text-slate-500">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-9 px-3 rounded-xl text-xs border border-slate-200 bg-slate-50 outline-none text-slate-700 font-medium"
+        className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-semibold text-slate-700 outline-none transition focus:border-orange-300 focus:bg-white focus:ring-4 focus:ring-orange-100"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -271,10 +279,11 @@ function AdminActionField({
       </select>
       <motion.button
         whileTap={{ scale: 0.98 }}
+        whileHover={dirty && !saving ? { y: -1 } : undefined}
         onClick={onSave}
         disabled={!dirty || saving}
-        className={`w-full h-8.5 rounded-xl text-xs font-bold text-white shadow-sm disabled:cursor-not-allowed ${gradient}`}
-        style={{ opacity: dirty && !saving ? 1 : 0.85 }}
+        className={`h-10 w-full rounded-xl text-xs font-bold text-white shadow-[0_8px_16px_rgba(234,88,12,0.18)] transition disabled:cursor-not-allowed disabled:shadow-none ${gradient}`}
+        style={{ opacity: dirty && !saving ? 1 : 0.45 }}
       >
         {saving ? "Đang lưu..." : actionLabel}
       </motion.button>
@@ -304,12 +313,17 @@ export function ControlPanel({
   return (
     <motion.div
       variants={itemVariants}
-      className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between gap-5"
+      className="h-fit rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-[0_16px_36px_rgba(15,23,42,0.06)] lg:sticky lg:top-6"
     >
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-          <Settings size={14} className="text-slate-400" />
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hành động quản trị</h3>
+      <div className="space-y-5">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+            <Settings size={16} />
+          </span>
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-orange-600">Quản trị</p>
+            <h3 className="text-sm font-extrabold tracking-tight text-slate-900">Điều chỉnh tài khoản</h3>
+          </div>
         </div>
 
         <AdminActionField
