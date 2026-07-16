@@ -185,22 +185,24 @@ export function SubscriptionCard({ sub, plans }: { sub?: SubscriptionAdminRespon
 
         {sub ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-[1.15fr_.85fr]">
-              <div className="flex min-h-28 flex-col justify-between rounded-2xl border border-orange-100 bg-[linear-gradient(135deg,#fffaf5,#fff)] p-4 shadow-[0_8px_20px_rgba(255,107,0,0.05)]">
+            <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+              <div className="flex min-h-[132px] flex-col items-start gap-5 rounded-2xl border border-orange-100 bg-[linear-gradient(135deg,#fffaf5,#fff)] p-5 shadow-[0_8px_20px_rgba(255,107,0,0.05)]">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Gói đăng ký</span>
-                <PlanTypeBadge
-                  type={planType}
-                  label={planName}
-                  badgeColor={badgeColor}
-                  badgeIcon={badgeIcon}
-                  animationType={animationType}
-                  size="md"
-                />
+                <div className="inline-flex w-fit self-start [&_span]:!w-fit">
+                  <PlanTypeBadge
+                    type={planType}
+                    label={planName}
+                    badgeColor={badgeColor}
+                    badgeIcon={badgeIcon}
+                    animationType={animationType}
+                    size="md"
+                  />
+                </div>
               </div>
 
-              <div className="flex min-h-28 flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+              <div className="flex min-h-[132px] flex-col items-start gap-5 rounded-2xl border border-orange-100/70 bg-[linear-gradient(135deg,#fffdfb,#fff)] p-5">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Quyền lợi</p>
-                <div>
+                <div className="inline-flex w-fit self-start [&_span]:!w-fit">
                   <SubscriptionStatusBadge status={sub.status} size="md" />
                 </div>
               </div>
