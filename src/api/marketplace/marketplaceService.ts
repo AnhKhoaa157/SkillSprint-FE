@@ -2,7 +2,7 @@ import { skillSprintApiClient, type ApiResponse } from "../core/skillSprintApiCl
 import type {
   ChallengeResult, ChallengeSession, CreateMarketplaceItemRequest,
   CreatorMarketplaceItem, CreatorValidationPackResponse, CreatorValidationRequest, CreatorValidationResult, MarketplaceItemDetail, MarketplaceItemSummary,
-  MarketplaceLeaderboardEntry, MarketplaceReview, MarketplaceTransaction, MarketplaceWallet,
+  CoinTopUpPackage, CoinTopUpPayment, MarketplaceLeaderboardEntry, MarketplaceReview, MarketplaceTransaction, MarketplaceWallet,
   PurchasedMarketplacePack, PurchasedPackDetail,
 } from "./marketplaceTypes";
 
@@ -48,6 +48,12 @@ const marketplaceService = {
   },
   async getTransactions() {
     return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceTransaction[]>>("/api/marketplace/wallet/transactions")).data);
+  },
+  async getTopUpPackages() {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<CoinTopUpPackage[]>>("/api/marketplace/wallet/top-ups/packages")).data);
+  },
+  async createSepayTopUp(packageKey: string) {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<CoinTopUpPayment>>("/api/marketplace/wallet/top-ups/sepay", { packageKey })).data);
   },
   async getMine() {
     return unwrap((await skillSprintApiClient.get<ApiResponse<CreatorMarketplaceItem[]>>("/api/marketplace/items/mine")).data);
