@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3, Store } from "lucide-react";
+import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3, Store, WalletCards } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminHealth from "../sections/health";
@@ -14,6 +14,7 @@ import AdminLeaderboard from "../sections/leaderboard";
 import AdminCommunityModeration from "../sections/community/AdminCommunityModeration";
 import AdminCommunityRooms from "../sections/community/AdminCommunityRooms";
 import MarketplaceAdmin from "../MarketplaceAdmin";
+import CoinWalletSection from "../sections/wallet/CoinWalletSection";
 import healthService from "../../../../api/system/healthService";
 
 /** Navbar profile avatar. Renders a strictly square, cropped circular image and
@@ -49,7 +50,7 @@ function AdminNavAvatar({ avatarUrl, fullName }: { avatarUrl?: string; fullName?
 }
 
 export default function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "feedback" | "subscriptions" | "system" | "leaderboard" | "community" | "communityRooms" | "marketplace">("financials");
+  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "wallet" | "feedback" | "subscriptions" | "system" | "leaderboard" | "community" | "communityRooms" | "marketplace">("financials");
   const [, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<{ fullName?: string; roles?: string[]; avatarUrl?: string } | null>(null);
@@ -64,6 +65,7 @@ export default function AdminDashboard() {
     { id: "users",         label: "Quản lý người dùng",  icon: ShieldCheck },
     { id: "leaderboard",   label: "Quản lý bảng điểm",   icon: BarChart3   },
     { id: "payments",      label: "Quản lý thanh toán",  icon: DollarSign  },
+    { id: "wallet",        label: "Quản lý ví Coin",       icon: WalletCards },
     { id: "subscriptions", label: "Gói dịch vụ",         icon: Layers      },
     { id: "feedback",      label: "Feedback người dùng", icon: MessageSquare },
     { id: "community",     label: "Kiểm duyệt cộng đồng", icon: ShieldAlert },
@@ -90,6 +92,7 @@ export default function AdminDashboard() {
   }, []);
 
   const headerLabels: Record<string, { title: string; sub: string }> = {
+    wallet:        { title: "Quản lý ví Coin",      sub: "Số dư · Audit điều chỉnh · Giao dịch Coin" },
     financials:    { title: "Tài chính",           sub: "Chỉ số doanh thu · Unit economics" },
     users:         { title: "Quản lý người dùng",  sub: "Quản lý người dùng và phân quyền" },
     leaderboard:   { title: "Quản lý bảng điểm",   sub: "Xếp hạng người dùng theo XP · Tuần · Tháng · Tổng" },
@@ -122,6 +125,7 @@ export default function AdminDashboard() {
   };
 
   const commandActions = [
+    { id: "goto-wallet", label: "Đi tới Quản lý ví Coin", keywords: "wallet coin số dư nạp điều chỉnh", action: () => setActiveNav("wallet") },
     { id: "goto-users", label: "Đi tới Quản lý người dùng", keywords: "users students cohorts quản lý người dùng phân quyền", action: () => setActiveNav("users") },
     { id: "goto-leaderboard", label: "Đi tới Quản lý bảng điểm", keywords: "leaderboard ranking xp điểm bảng xếp hạng quản lý bảng điểm thống kê", action: () => setActiveNav("leaderboard") },
     { id: "goto-financials", label: "Đi tới Tài chính", keywords: "finance revenue mrr", action: () => setActiveNav("financials") },
@@ -367,6 +371,7 @@ export default function AdminDashboard() {
           )}
           {activeNav === "financials" && <FinancialsView />}
           {activeNav === "payments" && <PaymentsView />}
+          {activeNav === "wallet" && <CoinWalletSection />}
           {activeNav === "subscriptions" && <SubscriptionPlansView />}
           {activeNav === "feedback" && <AdminFeedback isDashboard={true} />}
           {activeNav === "community" && <AdminCommunityModeration isDashboard={true} />}
