@@ -14,7 +14,6 @@ import AdminLayout from "./layouts/AdminLayout";
 import AdminHealth from "./pages/admin/sections/health";
 import AdminAuth from "./pages/admin/auth";
 import AdminUsers from "./pages/admin/sections/users";
-import AdminUserDetail from "./pages/admin/userDetail";
 import AdminUserPointHistory from "./pages/admin/sections/leaderboard/AdminUserPointHistoryPage";
 import AdminProfile from "./pages/admin/profile";
 import AdminFeedback from "./pages/admin/sections/feedback";
@@ -177,7 +176,7 @@ export const router = createBrowserRouter([
           { index: true, Component: AdminDashboard },
           { path: adminRoutes.profile, Component: AdminProfile },
           { path: adminRoutes.users, Component: AdminUsers },
-          { path: adminRoutes.userDetail, Component: AdminUserDetail },
+          { path: adminRoutes.userDetail, Component: AdminDashboard },
           { path: adminRoutes.userPoints, Component: AdminUserPointHistory },
           { path: adminRoutes.health, Component: AdminHealth },
           { path: adminRoutes.feedback, Component: AdminFeedback },

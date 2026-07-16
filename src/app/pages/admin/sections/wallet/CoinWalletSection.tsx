@@ -101,7 +101,7 @@ export default function CoinWalletSection() {
               </div>
               <button
                 type="button"
-                onClick={() => navigate(`/admin/users/${encodeURIComponent(user.id)}`)}
+                onClick={() => navigate(`/admin/users/${encodeURIComponent(user.id)}`, { state: { adminSection: "wallet" } })}
                 className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-2 text-xs font-bold text-[#FF6B00] transition hover:bg-orange-50"
               >
                 Mở ví <ArrowRight size={14} />
