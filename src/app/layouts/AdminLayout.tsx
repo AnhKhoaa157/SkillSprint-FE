@@ -17,10 +17,11 @@ const NAV_ITEMS = [
 export default function AdminLayout() {
   const location = useLocation();
   const isDashboardHome = location.pathname === "/admin" || location.pathname === "/admin/";
+  const isUserDetail = /^\/admin\/users\/[^/]+\/?$/.test(location.pathname);
 
-  // The dashboard owns its own full shell. Sub-pages use the same navigation styling
-  // so they remain part of the Admin experience instead of opening as standalone pages.
-  if (isDashboardHome) return <Outlet />;
+  // The dashboard owns the full admin shell. Keep the same shell while opening a
+  // user's wallet detail instead of switching to this legacy fallback layout.
+  if (isDashboardHome || isUserDetail) return <Outlet />;
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#F1F5F9", fontFamily: "'Inter', sans-serif", color: "#111827" }}>

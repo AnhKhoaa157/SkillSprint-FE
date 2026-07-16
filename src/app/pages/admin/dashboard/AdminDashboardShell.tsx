@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3, Store, WalletCards } from "lucide-react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useMatch, useNavigate } from "react-router";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminHealth from "../sections/health";
 import AdminFeedback from "../sections/feedback";
@@ -15,7 +15,21 @@ import AdminCommunityModeration from "../sections/community/AdminCommunityModera
 import AdminCommunityRooms from "../sections/community/AdminCommunityRooms";
 import MarketplaceAdmin from "../MarketplaceAdmin";
 import CoinWalletSection from "../sections/wallet/CoinWalletSection";
+import AdminUserDetail from "../userDetail";
 import healthService from "../../../../api/system/healthService";
+
+type AdminNavSection = "financials" | "users" | "payments" | "wallet" | "feedback" | "subscriptions" | "system" | "leaderboard" | "community" | "communityRooms" | "marketplace";
+
+function getRequestedAdminSection(state: unknown): AdminNavSection | null {
+  if (!state || typeof state !== "object") return null;
+
+  const section = (state as { adminSection?: unknown }).adminSection;
+  return section === "financials" || section === "users" || section === "payments" || section === "wallet" ||
+    section === "feedback" || section === "subscriptions" || section === "system" || section === "leaderboard" ||
+    section === "community" || section === "communityRooms" || section === "marketplace"
+    ? section
+    : null;
+}
 
 /** Navbar profile avatar. Renders a strictly square, cropped circular image and
  *  falls back to the styled initial circle on a missing/broken source. Keeping the
@@ -50,7 +64,11 @@ function AdminNavAvatar({ avatarUrl, fullName }: { avatarUrl?: string; fullName?
 }
 
 export default function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState<"financials" | "users" | "payments" | "wallet" | "feedback" | "subscriptions" | "system" | "leaderboard" | "community" | "communityRooms" | "marketplace">("financials");
+  const location = useLocation();
+  const userDetailMatch = useMatch("/admin/users/:id");
+  const requestedSection = getRequestedAdminSection(location.state);
+  const isUserDetailRoute = Boolean(userDetailMatch);
+  const [activeNav, setActiveNav] = useState<AdminNavSection>(() => requestedSection ?? (isUserDetailRoute ? "users" : "financials"));
   const [, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<{ fullName?: string; roles?: string[]; avatarUrl?: string } | null>(null);
@@ -59,6 +77,10 @@ export default function AdminDashboard() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [showHealthPanel, setShowHealthPanel] = useState(false);
+
+  useEffect(() => {
+    if (requestedSection) setActiveNav(requestedSection);
+  }, [requestedSection]);
 
   const navItems = [
     { id: "financials",    label: "Tài chính",           icon: TrendingUp  },
@@ -103,6 +125,14 @@ export default function AdminDashboard() {
     marketplace:   { title: "Duyệt Quiz Pack", sub: "Kiểm tra nội dung và xuất bản Quiz Pack" },
     communityRooms: { title: "Quản lý Phòng Cộng Đồng", sub: "Danh sách phòng · Tin nhắn · Trạng thái" },
     system:        { title: "Hệ thống & Cảnh báo", sub: "Bảo trì hệ thống · Thông báo chung" },
+  };
+
+  const handleNavigation = (section: AdminNavSection) => {
+    if (isUserDetailRoute) {
+      navigate("/admin", { state: { adminSection: section } });
+      return;
+    }
+    setActiveNav(section);
   };
   const current = headerLabels[activeNav];
 
@@ -237,7 +267,7 @@ export default function AdminDashboard() {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveNav(item.id)}
+                onClick={() => handleNavigation(item.id)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 text-left"
                 style={{
                   background: isActive ? "rgba(255,107,0,0.07)" : "transparent",
@@ -353,12 +383,14 @@ export default function AdminDashboard() {
         </header>
 
         {/* ── SCROLLABLE CONTENT ── */}
-        <div className="flex-1 overflow-y-auto p-7">
+        <div className={`flex-1 overflow-y-auto ${isUserDetailRoute ? "" : "p-7"}`}>
           {actionMessage && (
             <div className="mb-4 px-4 py-2 rounded-xl text-sm" style={{ background: "rgba(255,107,0,0.06)", border: "1px solid rgba(255,107,0,0.18)", color: "#C2410C" }}>
               {actionMessage}
             </div>
           )}
+          {isUserDetailRoute ? <AdminUserDetail /> : (
+            <>
           {activeNav === "users" && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <AdminUsers />
@@ -379,6 +411,8 @@ export default function AdminDashboard() {
           {activeNav === "communityRooms" && <AdminCommunityRooms isDashboard={true} />}
           {activeNav === "system" && (
             <AdminSystemSection />
+          )}
+            </>
           )}
         </div>
       </main>
