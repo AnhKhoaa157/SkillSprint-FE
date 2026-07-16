@@ -110,37 +110,41 @@ export function PaymentsView() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
 
       {/* Header banner */}
-      <div className="rounded-2xl p-5"
-        style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#F8FAFC 100%)", border: "1px solid #E2E8F0" }}>
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-          <div>
-            <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0F172A" }}>Quản lý thanh toán</h2>
-            <p style={{ margin: "4px 0 0", color: "#64748B", fontSize: "0.88rem" }}>Lịch sử giao dịch · Phân tích thanh toán</p>
+      <div className="relative overflow-hidden rounded-[28px] border border-orange-100 bg-[linear-gradient(120deg,#ffffff_0%,#fffaf4_62%,#fff1df_100%)] p-5 shadow-[0_16px_36px_rgba(148,86,24,0.07)] sm:p-7">
+        <motion.div aria-hidden="true" className="pointer-events-none absolute -right-12 top-7 h-24 w-80 -rotate-[18deg] bg-gradient-to-r from-transparent via-orange-200/70 to-transparent blur-xl" animate={{ x: [-22, 18, -22], opacity: [0.25, 0.75, 0.25] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }} />
+        <div aria-hidden="true" className="pointer-events-none absolute right-14 top-7 flex items-center gap-3 opacity-60"><span className="h-2 w-2 rounded-full bg-orange-300" /><span className="h-1.5 w-1.5 rounded-full bg-orange-200" /><span className="h-2.5 w-2.5 rounded-full border border-orange-200 bg-white/50" /></div>
+        <div aria-hidden="true" className="pointer-events-none absolute right-36 top-0 h-full w-px bg-gradient-to-b from-transparent via-orange-100 to-transparent" />
+        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex items-start gap-3.5">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[linear-gradient(135deg,#FF7A18,#F05A00)] text-white shadow-[0_10px_22px_rgba(255,107,0,0.23)]"><DollarSign size={21} /></span>
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-orange-600">Payment control</p>
+              <h2 className="mt-1 text-xl font-extrabold tracking-[-0.03em] text-slate-950">Quản lý thanh toán</h2>
+              <p className="mt-1 text-sm text-slate-500">Theo dõi giao dịch và đối soát các thanh toán cần xử lý.</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-3 py-1 rounded-full text-xs"
-              style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#334155" }}>
-              Tổng: {totalItems.toLocaleString()}
-            </span>
-            <span className="px-3 py-1 rounded-full text-xs"
-              style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#334155" }}>
-              Trang: {page + 1} / {totalPages || 1}
-            </span>
+          <div className="grid grid-cols-2 gap-2 sm:min-w-[250px]">
+            <div className="rounded-2xl border border-white/80 bg-white/75 px-3.5 py-3 shadow-[0_6px_16px_rgba(148,86,24,0.05)] backdrop-blur-sm"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Giao dịch</p><p className="mt-1 text-lg font-extrabold tabular-nums text-slate-900">{totalItems.toLocaleString()}</p></div>
+            <div className="rounded-2xl border border-white/80 bg-white/75 px-3.5 py-3 shadow-[0_6px_16px_rgba(148,86,24,0.05)] backdrop-blur-sm"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Trang hiện tại</p><p className="mt-1 text-lg font-extrabold tabular-nums text-slate-900">{page + 1}<span className="text-sm text-slate-400"> / {totalPages || 1}</span></p></div>
           </div>
         </div>
       </div>
 
       {/* Table */}
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="rounded-2xl overflow-hidden"
-        style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        className="overflow-x-auto rounded-[28px] border border-slate-200/80 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
+
+        <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+          <div><p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-orange-600">Danh sách giao dịch</p><h3 className="mt-0.5 text-sm font-extrabold tracking-tight text-slate-900">Lịch sử thanh toán</h3></div>
+          <span className="rounded-lg bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-orange-700">{totalItems.toLocaleString()} bản ghi</span>
+        </div>
 
         {/* Column headers */}
-        <div className="grid px-6 py-2.5"
-          style={{ gridTemplateColumns: PAYMENTS_COLS, borderBottom: "1px solid #F3F4F6", background: "#FAFAFA" }}>
+        <div className="grid min-w-[980px] border-b border-slate-100 bg-slate-50/80 px-6 py-3"
+          style={{ gridTemplateColumns: PAYMENTS_COLS }}>
           {["Mã giao dịch", "Gói", "Số tiền", "Trạng thái", "Thanh toán lúc", "Tạo lúc", "Hành động"].map(col => (
             <span key={col}
-              style={{ color: "#9CA3AF", fontSize: "0.68rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
               {col}
             </span>
           ))}
@@ -148,8 +152,8 @@ export function PaymentsView() {
 
         {/* Loading skeleton rows */}
         {loading && Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="grid px-6 py-4 animate-pulse"
-            style={{ gridTemplateColumns: PAYMENTS_COLS, borderBottom: "1px solid #F9FAFB", alignItems: "center" }}>
+          <div key={i} className="grid min-w-[980px] animate-pulse border-b border-slate-50 px-6 py-4"
+            style={{ gridTemplateColumns: PAYMENTS_COLS, alignItems: "center" }}>
             {[0.8, 0.6, 0.5, 0.55, 0.6, 0.7].map((w, j) => (
               <div key={j} className="h-3 rounded" style={{ background: "#F3F4F6", width: `${w * 100}%` }} />
             ))}
@@ -170,28 +174,26 @@ export function PaymentsView() {
           return (
             <motion.div key={tx.paymentId}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.025 }}
-              className="grid px-6 py-3.5"
-              style={{ gridTemplateColumns: PAYMENTS_COLS, borderBottom: "1px solid #F9FAFB", alignItems: "center" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "#F9FAFB"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}>
+              className="grid min-w-[980px] border-b border-slate-50 px-6 py-4 transition-colors hover:bg-orange-50/35"
+              style={{ gridTemplateColumns: PAYMENTS_COLS, alignItems: "center" }}>
 
               {/* Transaction ID */}
               <div>
-                <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#111827", fontFamily: "monospace" }}>
+                <p className="font-mono text-xs font-bold text-slate-800">
                   {tx.paymentId.slice(0, 8).toUpperCase()}…
                 </p>
                 {tx.paymentCode && (
-                  <p style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{tx.paymentCode}</p>
+                  <p className="mt-0.5 text-[10px] font-medium text-slate-400">{tx.paymentCode}</p>
                 )}
               </div>
 
               {/* Plan */}
-              <span style={{ fontSize: "0.78rem", color: "#374151", fontWeight: 500 }}>
+              <span className="text-xs font-semibold text-slate-700">
                 {paymentLabel(tx)}
               </span>
 
               {/* Amount */}
-              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#16a34a" }}>
+              <span className="text-sm font-extrabold tabular-nums text-orange-600">
                 {formatVnd(tx.amount)}
               </span>
 
@@ -202,10 +204,10 @@ export function PaymentsView() {
               </span>
 
               {/* Paid at */}
-              <span style={{ fontSize: "0.72rem", color: "#6B7280" }}>{formatDate(tx.paidAt)}</span>
+              <span className="text-[11px] font-medium tabular-nums text-slate-500">{formatDate(tx.paidAt)}</span>
 
               {/* Created at */}
-              <span style={{ fontSize: "0.72rem", color: "#9CA3AF" }}>{formatDate(tx.createdAt)}</span>
+              <span className="text-[11px] font-medium tabular-nums text-slate-400">{formatDate(tx.createdAt)}</span>
 
               {/* Action */}
               <div>
@@ -229,31 +231,26 @@ export function PaymentsView() {
         })}
 
         {/* Pagination footer */}
-        <div className="px-6 py-3 flex items-center justify-between"
-          style={{ borderTop: "1px solid #F3F4F6", background: "#FAFAFA" }}>
-          <span style={{ fontSize: "0.8rem", color: "#64748B" }}>
+        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-6 py-3.5">
+          <span className="text-xs font-medium text-slate-500">
             Trang {page + 1} · {totalItems.toLocaleString()} giao dịch
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => load(Math.max(0, page - 1))}
               disabled={page === 0 || loading}
-              className="px-3 py-1.5 rounded-lg text-xs"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-orange-200 hover:text-orange-600 disabled:cursor-not-allowed"
               style={{
-                border: "1px solid #E2E8F0", background: "#fff", color: "#334155",
                 opacity: page === 0 || loading ? 0.4 : 1,
-                cursor: page === 0 || loading ? "not-allowed" : "pointer",
               }}>
               ← Trước
             </button>
             <button
               onClick={() => load(page + 1)}
               disabled={page + 1 >= totalPages || loading}
-              className="px-3 py-1.5 rounded-lg text-xs"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-orange-200 hover:text-orange-600 disabled:cursor-not-allowed"
               style={{
-                border: "1px solid #E2E8F0", background: "#fff", color: "#334155",
                 opacity: page + 1 >= totalPages || loading ? 0.4 : 1,
-                cursor: page + 1 >= totalPages || loading ? "not-allowed" : "pointer",
               }}>
               Tiếp →
             </button>

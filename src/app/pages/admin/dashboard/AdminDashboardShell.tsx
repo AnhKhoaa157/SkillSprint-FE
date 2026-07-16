@@ -383,7 +383,7 @@ export default function AdminDashboard() {
         </header>
 
         {/* ── SCROLLABLE CONTENT ── */}
-        <div className={`flex-1 overflow-y-auto ${isUserDetailRoute ? "" : "p-7"}`}>
+        <div className={`flex-1 overflow-y-auto [scrollbar-gutter:stable_both-edges] ${isUserDetailRoute ? "" : "p-7"}`}>
           {actionMessage && (
             <div className="mb-4 px-4 py-2 rounded-xl text-sm" style={{ background: "rgba(255,107,0,0.06)", border: "1px solid rgba(255,107,0,0.18)", color: "#C2410C" }}>
               {actionMessage}
