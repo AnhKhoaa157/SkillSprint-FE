@@ -86,7 +86,11 @@ export type RecentUser = {
 export type PaymentTransactionResponse = {
   paymentId: string;
   status: string;
-  plan: string;
+  purpose: string;
+  plan: string | null;
+  planName?: string | null;
+  coinAmount?: number | null;
+  coinPackageKey?: string | null;
   amount: number;
   currency: string;
   paymentCode: string | null;
@@ -141,9 +145,20 @@ export async function getAdminPayments(
   return res.data;
 }
 
-export async function reconcilePayment(paymentId: string): Promise<void> {
+export type ReconcilePaymentRequest = {
+  providerTransactionId: string;
+  providerReferenceCode?: string;
+  note?: string;
+};
+
+export async function reconcilePayment(paymentId: string, request: ReconcilePaymentRequest): Promise<void> {
   const res = await requestJson<void>(`/api/admin/payments/${paymentId}/reconcile`, {
-    method: "POST"
+    method: "POST",
+    body: JSON.stringify({
+      providerTransactionId: request.providerTransactionId,
+      ...(request.providerReferenceCode ? { providerReferenceCode: request.providerReferenceCode } : {}),
+      ...(request.note ? { note: request.note } : {}),
+    }),
   });
   if (res.code !== 200) throw new Error(res.message || "Đối soát thanh toán thất bại");
 }
