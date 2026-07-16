@@ -3,7 +3,7 @@ import marketplaceService from "./marketplaceService";
 import { skillSprintApiClient } from "../core/skillSprintApiClient";
 
 vi.mock("../core/skillSprintApiClient", () => ({
-  skillSprintApiClient: { get: vi.fn(), post: vi.fn() },
+  skillSprintApiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn() },
 }));
 
 describe("marketplaceService creator snapshot endpoints", () => {
@@ -39,5 +39,13 @@ describe("marketplaceService creator snapshot endpoints", () => {
 
     await expect(marketplaceService.createSepayTopUp("COIN_10000")).resolves.toEqual(payment);
     expect(skillSprintApiClient.post).toHaveBeenCalledWith("/api/marketplace/wallet/top-ups/sepay", { packageKey: "COIN_10000" });
+  });
+
+  it("cancels the selected pending SePay Coin top-up", async () => {
+    const payment = { paymentId: "payment-1", purpose: "COIN_TOP_UP", status: "CANCELED", packageKey: "COIN_10000", coinAmount: 10000, amount: 10000, currency: "VND", paymentCode: "TOPUP-payment-1", qrUrl: "https://example.test/qr.png", bank: { bankCode: "MB", accountNumber: "123", accountName: "SKILLSPRINT" }, expiredAt: "2026-07-16T10:00:00Z" };
+    vi.mocked(skillSprintApiClient.patch).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: payment } } as never);
+
+    await expect(marketplaceService.cancelSepayTopUp("payment-1")).resolves.toEqual(payment);
+    expect(skillSprintApiClient.patch).toHaveBeenCalledWith("/api/marketplace/wallet/top-ups/payment-1/cancel");
   });
 });
