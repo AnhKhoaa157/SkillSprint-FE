@@ -41,15 +41,29 @@ export function PaymentsView() {
   const [loading, setLoading] = useState(false);
   const [reconcilingId, setReconcilingId] = useState<string | null>(null);
   const [reconcileModalOpen, setReconcileModalOpen] = useState<PaymentTransactionResponse | null>(null);
+  const [providerTransactionId, setProviderTransactionId] = useState("");
+  const [providerReferenceCode, setProviderReferenceCode] = useState("");
+  const [reconcileNote, setReconcileNote] = useState("");
   const PAGE_SIZE = 10;
 
   async function handleReconcile() {
     if (!reconcileModalOpen) return;
+    if (!providerTransactionId.trim()) {
+      toast.error("Cần nhập mã giao dịch SePay.");
+      return;
+    }
     setReconcilingId(reconcileModalOpen.paymentId);
     try {
-      await reconcilePayment(reconcileModalOpen.paymentId);
+      await reconcilePayment(reconcileModalOpen.paymentId, {
+        providerTransactionId: providerTransactionId.trim(),
+        providerReferenceCode: providerReferenceCode.trim() || undefined,
+        note: reconcileNote.trim() || undefined,
+      });
       toast.success("Đối soát giao dịch thành công");
       setReconcileModalOpen(null);
+      setProviderTransactionId("");
+      setProviderReferenceCode("");
+      setReconcileNote("");
       void load(page);
     } catch (err: any) {
       toast.error(err?.message || "Đối soát thất bại");
@@ -87,6 +101,10 @@ export function PaymentsView() {
     iso
       ? new Date(iso).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })
       : "—";
+
+  const paymentLabel = (transaction: PaymentTransactionResponse) => transaction.purpose === "COIN_TOP_UP"
+    ? `Nạp ${Number(transaction.coinAmount ?? 0).toLocaleString("vi-VN")} Coin`
+    : PLAN_LABEL[transaction.plan ?? ""] ?? transaction.planName ?? "Gói dịch vụ";
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -169,7 +187,7 @@ export function PaymentsView() {
 
               {/* Plan */}
               <span style={{ fontSize: "0.78rem", color: "#374151", fontWeight: 500 }}>
-                {PLAN_LABEL[tx.plan] ?? tx.plan}
+                {paymentLabel(tx)}
               </span>
 
               {/* Amount */}
@@ -193,7 +211,12 @@ export function PaymentsView() {
               <div>
                 {(tx.status === "FAILED" || tx.status === "PENDING") && (
                   <button
-                    onClick={() => setReconcileModalOpen(tx)}
+                    onClick={() => {
+                      setReconcileModalOpen(tx);
+                      setProviderTransactionId("");
+                      setProviderReferenceCode("");
+                      setReconcileNote("");
+                    }}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-[0.98] bg-orange-50 text-[#FF6B00] border border-orange-200 hover:bg-orange-100 cursor-pointer"
                   >
                     <RefreshCw size={12} />
@@ -268,9 +291,12 @@ export function PaymentsView() {
               </div>
 
               <p className="text-sm text-slate-600 mb-6">
-                Bạn có chắc chắn muốn đối soát lại giao dịch <strong>{reconcileModalOpen.paymentId.slice(0, 8).toUpperCase()}…</strong> không?
-                Hệ thống sẽ thử kiểm tra trạng thái trên gateway một lần nữa.
+                Xác nhận giao dịch <strong>{reconcileModalOpen.paymentId.slice(0, 8).toUpperCase()}…</strong> sau khi đã kiểm tra sao kê ngân hàng.
               </p>
+
+              <label className="block text-xs font-bold text-slate-700">Mã giao dịch SePay<input value={providerTransactionId} onChange={event => setProviderTransactionId(event.target.value)} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-orange-400" placeholder="Bắt buộc" /></label>
+              <label className="mt-3 block text-xs font-bold text-slate-700">Mã tham chiếu ngân hàng (tuỳ chọn)<input value={providerReferenceCode} onChange={event => setProviderReferenceCode(event.target.value)} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-orange-400" /></label>
+              <label className="mt-3 block text-xs font-bold text-slate-700">Ghi chú (tuỳ chọn)<textarea value={reconcileNote} onChange={event => setReconcileNote(event.target.value)} rows={2} className="mt-1.5 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-orange-400" /></label>
 
               <div className="flex gap-2">
                 <button

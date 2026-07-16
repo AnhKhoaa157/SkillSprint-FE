@@ -17,6 +17,7 @@ import {
   SystemLogTimeline,
 } from "./components";
 import { PointAuditSection } from "./PointAuditSection";
+import { CoinWalletAuditSection } from "./CoinWalletAuditSection";
 
 export default function AdminUserDetailPage() {
   const { id } = useParams();
@@ -60,6 +61,8 @@ export default function AdminUserDetailPage() {
                   (user! as { isBannedFromLeaderboard?: boolean; bannedFromLeaderboard?: boolean }).bannedFromLeaderboard,
               )}
             />
+
+            <CoinWalletAuditSection userId={id!} />
 
             <SystemLogTimeline user={user!} />
           </div>

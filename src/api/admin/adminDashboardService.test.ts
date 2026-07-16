@@ -53,15 +53,18 @@ describe("adminDashboardService", () => {
     it("should reconcile payment successfully", async () => {
       vi.mocked(requestJson).mockResolvedValueOnce({ code: 200 } as any);
 
-      await reconcilePayment("p1");
+      await reconcilePayment("p1", { providerTransactionId: "SEPAY-123", providerReferenceCode: "BANK-456", note: "Checked" });
 
-      expect(requestJson).toHaveBeenCalledWith("/api/admin/payments/p1/reconcile", { method: "POST" });
+      expect(requestJson).toHaveBeenCalledWith("/api/admin/payments/p1/reconcile", {
+        method: "POST",
+        body: JSON.stringify({ providerTransactionId: "SEPAY-123", providerReferenceCode: "BANK-456", note: "Checked" }),
+      });
     });
 
     it("should throw error if reconcile fails", async () => {
       vi.mocked(requestJson).mockResolvedValueOnce({ code: 400, message: "Reconcile failed" } as any);
 
-      await expect(reconcilePayment("p1")).rejects.toThrow("Reconcile failed");
+      await expect(reconcilePayment("p1", { providerTransactionId: "SEPAY-123" })).rejects.toThrow("Reconcile failed");
     });
   });
 });
