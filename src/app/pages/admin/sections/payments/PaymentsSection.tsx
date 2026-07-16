@@ -111,7 +111,8 @@ export function PaymentsView() {
 
       {/* Header banner */}
       <div className="relative overflow-hidden rounded-[28px] border border-orange-100 bg-[linear-gradient(120deg,#ffffff_0%,#fffaf4_62%,#fff1df_100%)] p-5 shadow-[0_16px_36px_rgba(148,86,24,0.07)] sm:p-7">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-20 h-52 w-52 rounded-full border-[28px] border-orange-100/70" />
+        <motion.div aria-hidden="true" className="pointer-events-none absolute -right-12 top-7 h-24 w-80 -rotate-[18deg] bg-gradient-to-r from-transparent via-orange-200/70 to-transparent blur-xl" animate={{ x: [-22, 18, -22], opacity: [0.25, 0.75, 0.25] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }} />
+        <div aria-hidden="true" className="pointer-events-none absolute right-14 top-7 flex items-center gap-3 opacity-60"><span className="h-2 w-2 rounded-full bg-orange-300" /><span className="h-1.5 w-1.5 rounded-full bg-orange-200" /><span className="h-2.5 w-2.5 rounded-full border border-orange-200 bg-white/50" /></div>
         <div aria-hidden="true" className="pointer-events-none absolute right-36 top-0 h-full w-px bg-gradient-to-b from-transparent via-orange-100 to-transparent" />
         <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-start gap-3.5">
