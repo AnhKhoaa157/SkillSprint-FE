@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { Link } from "react-router";
 import {
@@ -97,6 +97,76 @@ function ShimmerOverlay() {
         transition={{ duration: 0.95, ease: "easeInOut" }}
       />
     </motion.div>
+  );
+}
+
+function PremiumAuroraBackdrop() {
+  const reduceMotion = useReducedMotion();
+  const particles = [
+    { left: "14%", top: "22%", delay: 0.2, size: 4 },
+    { left: "74%", top: "28%", delay: 1.1, size: 3 },
+    { left: "82%", top: "58%", delay: 0.6, size: 5 },
+    { left: "28%", top: "72%", delay: 1.8, size: 3 },
+    { left: "57%", top: "84%", delay: 2.4, size: 4 },
+  ];
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <motion.div
+        className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#9F76D0]/45 blur-3xl"
+        animate={reduceMotion ? undefined : { x: [0, -36, 12, 0], y: [0, 28, -10, 0], scale: [1, 1.18, 1.05, 1] }}
+        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-[#F6C76E]/32 blur-3xl"
+        animate={reduceMotion ? undefined : { x: [0, 34, -8, 0], y: [0, -20, 10, 0], scale: [1, 1.14, 1.02, 1] }}
+        transition={{ duration: 13, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
+      />
+      <motion.div
+        className="absolute -left-1/3 top-[32%] h-40 w-[165%] -rotate-[18deg] blur-2xl"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent 4%, rgba(169,121,232,0.14) 35%, rgba(249,217,151,0.32) 54%, rgba(169,121,232,0.14) 76%, transparent 96%)",
+        }}
+        animate={
+          reduceMotion
+            ? undefined
+            : { x: ["-9%", "12%", "-9%"], opacity: [0.2, 0.82, 0.2], scale: [0.98, 1.08, 0.98] }
+        }
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute -left-1/4 top-[42%] h-px w-[150%] rotate-[-18deg] bg-gradient-to-r from-transparent via-[#F9D997]/45 to-transparent"
+        animate={reduceMotion ? undefined : { x: ["-12%", "14%", "-12%"], opacity: [0.16, 0.78, 0.16] }}
+        transition={{ duration: 8.5, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute -right-12 top-[31%] h-40 w-40 rounded-full border border-[#F9D997]/35"
+        animate={reduceMotion ? undefined : { rotate: 360, scale: [1, 1.12, 1], opacity: [0.34, 0.82, 0.34] }}
+        transition={{
+          rotate: { duration: 14, repeat: Infinity, ease: "linear" },
+          scale: { duration: 3.8, repeat: Infinity, ease: "easeInOut" },
+          opacity: { duration: 3.8, repeat: Infinity, ease: "easeInOut" },
+        }}
+      >
+        <span className="absolute -top-1 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[#F9D997] shadow-[0_0_16px_rgba(249,217,151,1)]" />
+        <span className="absolute bottom-3 -left-1 h-1.5 w-1.5 rounded-full bg-[#C9A1F2] shadow-[0_0_12px_rgba(201,161,242,0.95)]" />
+      </motion.div>
+      <motion.div
+        className="absolute inset-1 rounded-[25px] border border-[#F9D997]/30"
+        animate={reduceMotion ? undefined : { opacity: [0.18, 0.56, 0.18] }}
+        transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      {particles.map((particle, index) => (
+        <motion.span
+          key={`${particle.left}-${particle.top}`}
+          className="absolute rounded-full bg-[#F9D997] shadow-[0_0_14px_rgba(249,217,151,0.85)]"
+          style={{ left: particle.left, top: particle.top, width: particle.size, height: particle.size }}
+          animate={reduceMotion ? undefined : { y: [0, -15, 0], opacity: [0.18, 1, 0.18], scale: [0.72, 1.3, 0.72] }}
+          transition={{ duration: 3.8 + index * 0.45, repeat: Infinity, ease: "easeInOut", delay: particle.delay }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -245,7 +315,7 @@ export default function UltraPremiumPricingPage() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-7 items-stretch">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-5 items-stretch">
                 {plans.map((plan, idx) => {
                   const isFree = plan.monthlyPrice <= 0;
                   const isPremium = !isFree && idx === plans.length - 1 && plans.length > 1;
@@ -257,91 +327,74 @@ export default function UltraPremiumPricingPage() {
                       initial={{ opacity: 0, y: 60 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: idx * 0.12 }}
-                      className={`flex flex-col ${isPremium ? "lg:-translate-y-4" : ""}`}
+                      className="flex flex-col"
                       style={{ transformStyle: "preserve-3d" }}
                     >
                       <TiltCard isPremium={isPremium} className="relative h-full flex flex-col flex-1">
                         {/* ── CARD WRAPPER ── */}
                         <div
-                          className="relative rounded-[36px] flex flex-col h-full overflow-hidden flex-1 transition-all duration-350"
+                          className="relative rounded-[28px] flex flex-col h-full overflow-hidden flex-1 transition-all duration-350"
                           style={
                             isPremium
                               ? {
                                   /* Nền tối sâu thẳm Obsidian Black cho Premium */
-                                  background: "linear-gradient(160deg, #090e18 0%, #0d1525 50%, #060a12 100%)",
-                                  border: "1.5px solid rgba(249,115,22,0.6)",
+                                  background: "radial-gradient(circle at 90% 0%, rgba(133,92,180,0.35) 0%, transparent 34%), radial-gradient(circle at 0% 100%, rgba(235,181,91,0.18) 0%, transparent 32%), linear-gradient(155deg, #21182E 0%, #171D35 54%, #10172A 100%)",
+                                  border: "1px solid rgba(242,194,109,0.56)",
                                   boxShadow:
-                                    "0 35px 70px -15px rgba(249,115,22,0.3), 0 15px 30px -10px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.1)",
-                                  padding: "44px 36px 36px",
+                                    "0 30px 64px -20px rgba(91,49,128,0.32), 0 18px 38px -22px rgba(211,146,52,0.28), inset 0 1px 0 rgba(255,255,255,0.13)",
+                                  padding: "34px 30px 30px",
                                 }
                               : isMiddle
                               ? {
                                   /* Thẻ giữa: Kính sáng cao cấp và viền cam nhẹ */
-                                  background: "linear-gradient(165deg, rgba(255,255,255,0.98) 0%, rgba(255,250,245,0.95) 100%)",
-                                  border: "1.5px solid rgba(255,107,0,0.2)",
+                                  background: "radial-gradient(circle at 100% 0%, rgba(255,219,178,0.45) 0%, transparent 36%), linear-gradient(165deg, #FFFEFC 0%, #FFF7EF 100%)",
+                                  border: "1px solid rgba(255,151,72,0.34)",
                                   boxShadow:
-                                    "0 30px 60px -15px rgba(255,107,0,0.1), 0 10px 20px -8px rgba(15,23,42,0.04), inset 0 1.5px 0 rgba(255,255,255,1)",
-                                  backdropFilter: "blur(20px)",
-                                  padding: "40px 32px 32px",
+                                    "0 24px 48px -20px rgba(222,100,22,0.18), inset 0 1px 0 rgba(255,255,255,1)",
+                                  padding: "34px 30px 30px",
                                 }
                               : {
                                   /* Gói Free: Nền kính tinh tế, muted hơn */
-                                  background: "linear-gradient(165deg, rgba(255,255,255,0.92) 0%, rgba(248,250,252,0.85) 100%)",
-                                  border: "1px solid rgba(226,232,240,0.9)",
+                                  background: "linear-gradient(165deg, #FFFFFF 0%, #F8FAFC 100%)",
+                                  border: "1px solid #E2E8F0",
                                   boxShadow:
-                                    "0 20px 40px -10px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,1)",
-                                  backdropFilter: "blur(16px)",
-                                  padding: "40px 32px 32px",
+                                    "0 18px 42px -22px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,1)",
+                                  padding: "34px 30px 30px",
                                 }
                           }
                         >
                           <ShimmerOverlay />
 
                           {/* Glow viền & góc cho Premium */}
-                          {isPremium && (
-                            <>
-                              <div
-                                className="absolute top-0 right-0 w-56 h-56 pointer-events-none opacity-40"
-                                style={{
-                                  background: "radial-gradient(circle at top right, rgba(249,115,22,0.45) 0%, transparent 70%)",
-                                }}
-                              />
-                              <div
-                                className="absolute bottom-0 left-0 w-44 h-44 pointer-events-none opacity-30"
-                                style={{
-                                  background: "radial-gradient(circle at bottom left, rgba(234,88,12,0.3) 0%, transparent 70%)",
-                                }}
-                              />
-                            </>
-                          )}
+                          {isPremium && <PremiumAuroraBackdrop />}
 
                           {/* Badge nổi bật Premium */}
                           {isPremium && (
                             <div
-                              className="absolute -top-px left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-6 py-2 rounded-b-2xl z-20"
+                              className="absolute right-5 top-0 flex items-center gap-1.5 px-3 py-1.5 rounded-b-xl z-20"
                               style={{
-                                background: "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #e65c00 100%)",
-                                boxShadow: "0 6px 20px rgba(249,115,22,0.45)",
+                                background: "linear-gradient(135deg, #F8D692 0%, #E6AD51 100%)",
+                                boxShadow: "0 8px 18px rgba(232,181,82,0.28)",
                               }}
                             >
-                              <Zap size={11} className="text-white fill-white animate-bounce" />
-                              <span className="text-[10px] text-white font-extrabold tracking-widest uppercase">
-                                KHUYÊN DÙNG NHẤT
+                              <Zap size={11} className="text-[#382546] fill-[#382546]" />
+                              <span className="text-[10px] text-[#382546] font-extrabold tracking-widest uppercase">
+                                ĐƯỢC CHỌN NHIỀU
                               </span>
                             </div>
                           )}
 
                           {/* CARD HEADER */}
-                          <div className="flex items-start justify-between gap-4 mb-8 relative z-10" style={{ marginTop: isPremium ? "12px" : "0" }}>
+                          <div className="flex items-start justify-between gap-4 mb-6 relative z-10" style={{ marginTop: "0" }}>
                             {/* Icon gói */}
                             <div
-                              className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                              className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
                               style={
                                 isPremium
                                   ? {
-                                      background: "linear-gradient(135deg, rgba(249,115,22,0.25), rgba(234,88,12,0.1))",
-                                      border: "1.5px solid rgba(249,115,22,0.45)",
-                                      boxShadow: "0 10px 25px rgba(249,115,22,0.35)",
+                                      background: "linear-gradient(135deg, rgba(247,207,132,0.22), rgba(151,102,202,0.13))",
+                                      border: "1px solid rgba(247,207,132,0.48)",
+                                      boxShadow: "0 8px 20px rgba(109,70,150,0.26)",
                                     }
                                   : isMiddle
                                   ? {
@@ -358,7 +411,7 @@ export default function UltraPremiumPricingPage() {
                               {isFree ? (
                                 <Layers3 size={24} className="text-slate-600" />
                               ) : isPremium ? (
-                                <Crown size={24} className="text-orange-400 fill-orange-400/20" />
+                                <Crown size={24} className="text-[#F8D692] fill-[#F8D692]/20" />
                               ) : (
                                 <Shield size={24} className="text-orange-500" />
                               )}
@@ -370,9 +423,9 @@ export default function UltraPremiumPricingPage() {
                               style={
                                 isPremium
                                   ? {
-                                      background: "rgba(249,115,22,0.18)",
-                                      color: "#ff914d",
-                                      border: "1px solid rgba(249,115,22,0.3)",
+                                      background: "rgba(248,214,146,0.13)",
+                                      color: "#F8D692",
+                                      border: "1px solid rgba(248,214,146,0.28)",
                                     }
                                   : isMiddle
                                   ? {
@@ -393,29 +446,29 @@ export default function UltraPremiumPricingPage() {
 
                           {/* TÊN GÓI */}
                           <h3
-                            className="text-[30px] font-black tracking-tight leading-none mb-2.5 relative z-10"
-                            style={{ color: isPremium ? "#ffffff" : "#0f172a" }}
+                            className="text-[29px] font-black tracking-tight leading-none mb-2 relative z-10"
+                            style={{ color: isPremium ? "#FFFDF9" : "#0f172a" }}
                           >
                             {plan.planName}
                           </h3>
 
                           {/* Mô tả ngắn */}
                           <p
-                            className="text-[13.5px] leading-relaxed font-semibold mb-8 relative z-10 min-h-[40px]"
-                            style={{ color: isPremium ? "#94a3b8" : "#64748b" }}
+                            className="text-[13px] leading-relaxed font-semibold mb-6 relative z-10 min-h-[40px]"
+                            style={{ color: isPremium ? "#C4CBD8" : "#64748b" }}
                           >
                             {plan.description || "Giải pháp toàn diện giúp bứt phá giới hạn tư duy học tập."}
                           </p>
 
                           {/* KHUNG GIÁ (CTA TIỀN TỆ QUAN TRỌNG) */}
                           <div
-                            className="mb-8 rounded-[24px] p-6 relative z-10 transition-all duration-300"
+                            className="mb-7 rounded-[20px] p-5 relative z-10 transition-all duration-300"
                             style={
                               isPremium
                                 ? {
-                                    background: "linear-gradient(135deg, rgba(249,115,22,0.15) 0%, rgba(234,88,12,0.08) 100%)",
-                                    border: "1.5px solid rgba(249,115,22,0.35)",
-                                    boxShadow: "inset 0 1px 2px rgba(255,255,255,0.05)",
+                                    background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(248,214,146,0.08) 100%)",
+                                    border: "1px solid rgba(248,214,146,0.25)",
+                                    boxShadow: "inset 0 1px 1px rgba(255,255,255,0.08)",
                                   }
                                 : isMiddle
                                 ? {
@@ -445,10 +498,10 @@ export default function UltraPremiumPricingPage() {
                               <>
                                 <div className="flex items-baseline gap-1 flex-wrap">
                                   <span
-                                    className="text-5xl font-black tracking-tight leading-none"
+                                    className="text-4xl font-black tracking-tight leading-none"
                                     style={
                                       isPremium
-                                        ? { color: "#f97316", textShadow: "0 4px 20px rgba(249,115,22,0.2)" }
+                                        ? { color: "#F8D692", textShadow: "0 4px 22px rgba(248,214,146,0.2)" }
                                         : { color: "#ea580c" }
                                     }
                                   >
@@ -456,7 +509,7 @@ export default function UltraPremiumPricingPage() {
                                   </span>
                                   <span
                                     className="text-2xl font-black ml-1 relative -top-1"
-                                    style={{ color: isPremium ? "#f97316" : "#ea580c" }}
+                                    style={{ color: isPremium ? "#F8D692" : "#ea580c" }}
                                   >
                                     đ
                                   </span>
@@ -466,7 +519,7 @@ export default function UltraPremiumPricingPage() {
                                 </div>
                                 <p
                                   className="text-[11px] font-bold mt-2"
-                                  style={{ color: isPremium ? "#64748b" : "#64748b" }}
+                              style={{ color: isPremium ? "#8F9AAF" : "#64748b" }}
                                 >
                                   Gia hạn hàng tháng • Hủy bất cứ lúc nào
                                 </p>
@@ -475,14 +528,14 @@ export default function UltraPremiumPricingPage() {
                           </div>
 
                           {/* DANH SÁCH ĐẶC QUYỀN */}
-                          <div className="flex-1 relative z-10 mb-8">
+                          <div className="flex-1 relative z-10 mb-7">
                             <div
-                              className="text-[11px] font-black uppercase tracking-wider mb-5"
-                              style={{ color: isPremium ? "#ff914d" : "#ea580c" }}
+                              className="text-[10px] font-black uppercase tracking-[0.12em] mb-4"
+                              style={{ color: isPremium ? "#F8D692" : "#ea580c" }}
                             >
                               Đặc quyền có trong gói:
                             </div>
-                            <ul className="space-y-4">
+                            <ul className="space-y-3">
                               {(() => {
                                 const resolved = resolvePlanFeatures(plan);
                                 const rawFeatures =
@@ -498,10 +551,10 @@ export default function UltraPremiumPricingPage() {
                                       style={{
                                         color: enabled
                                           ? isPremium
-                                            ? "#e2e8f0"
+                                            ? "#F2F4F8"
                                             : "#334155"
                                           : isPremium
-                                          ? "#475569"
+                                          ? "#657189"
                                           : "#94a3b8",
                                         textDecoration: enabled ? "none" : "line-through",
                                       }}
@@ -513,9 +566,9 @@ export default function UltraPremiumPricingPage() {
                                           enabled
                                             ? isPremium
                                               ? {
-                                                  background: "linear-gradient(135deg, #f97316, #ea580c)",
-                                                  boxShadow: "0 4px 10px rgba(249,115,22,0.35)",
-                                                  color: "#fff",
+                                                  background: "linear-gradient(135deg, #F8D692, #D79A43)",
+                                                  boxShadow: "0 4px 12px rgba(232,181,82,0.24)",
+                                                  color: "#382546",
                                                 }
                                               : {
                                                   background: "rgba(255,107,0,0.1)",
@@ -549,15 +602,15 @@ export default function UltraPremiumPricingPage() {
                             whileHover={{ scale: 1.025 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => handlePlanCTA(plan)}
-                            className="relative z-10 w-full py-4.5 px-4 rounded-2xl font-black text-xs tracking-wider uppercase cursor-pointer flex items-center justify-center gap-2 group overflow-hidden transition-all duration-300"
+                            className="relative z-10 w-full py-3.5 px-4 rounded-xl font-black text-xs tracking-wider uppercase cursor-pointer flex items-center justify-center gap-2 group overflow-hidden transition-all duration-300"
                             style={
                               isPremium
                                 ? {
                                     background:
-                                      "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #e65c00 100%)",
+                                      "linear-gradient(135deg, #FF7A18 0%, #EF5B1D 58%, #D94721 100%)",
                                     color: "#ffffff",
                                     boxShadow:
-                                      "0 20px 35px rgba(249,115,22,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
+                                      "0 16px 28px rgba(209,71,33,0.32), inset 0 1px 0 rgba(255,255,255,0.25)",
                                     border: "none",
                                   }
                                 : isMiddle
