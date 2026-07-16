@@ -41,11 +41,9 @@ export default function CoinWalletSection() {
               <WalletCards size={20} />
             </span>
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#FF6B00]">Wallet control</p>
-              <h2 className="mt-1 text-xl font-black tracking-tight text-slate-950">Quản lý ví Coin</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                Chọn người dùng để xem số dư, lịch sử audit và điều chỉnh Coin có lưu người thực hiện cùng lý do.
-              </p>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#FF6B00]">Ví người dùng</p>
+              <h2 className="mt-1 text-xl font-black tracking-tight text-slate-950">Quản lý Coin</h2>
+              <p className="mt-1 max-w-xl text-sm leading-6 text-slate-600">Tra cứu số dư, lịch sử và điều chỉnh Coin có lưu audit.</p>
             </div>
           </div>
           <button
@@ -70,7 +68,7 @@ export default function CoinWalletSection() {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Tìm theo tên, email hoặc mã người dùng"
+              placeholder="Tìm tên, email hoặc mã người dùng"
               className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-slate-400"
             />
           </label>
