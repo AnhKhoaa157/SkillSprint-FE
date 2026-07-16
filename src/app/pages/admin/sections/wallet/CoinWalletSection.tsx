@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowRight, LoaderCircle, RefreshCw, Search, WalletCards } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { useNavigate } from "react-router";
 import { getAdminUsers, type AdminUserSummary } from "../../../../../api/admin/adminUserService";
+import { CoinWalletAuditSection } from "../../userDetail/CoinWalletAuditSection";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../../../components/ui/dialog";
 
 export default function CoinWalletSection() {
-  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
+  const [selectedUser, setSelectedUser] = useState<AdminUserSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const reduceMotion = useReducedMotion();
@@ -104,7 +105,7 @@ export default function CoinWalletSection() {
               </div>
               <button
                 type="button"
-                onClick={() => navigate(`/admin/users/${encodeURIComponent(user.id)}`, { state: { adminSection: "wallet" } })}
+                onClick={() => setSelectedUser(user)}
                 className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-transparent px-2.5 py-2 text-xs font-bold text-[#FF6B00] transition hover:border-orange-100 hover:bg-orange-50"
               >
                 Mở ví <ArrowRight size={14} />
@@ -113,6 +114,20 @@ export default function CoinWalletSection() {
           ))}
         </div></section>
       )}
+      <Dialog open={selectedUser !== null} onOpenChange={(open) => { if (!open) setSelectedUser(null); }}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-3xl overflow-y-auto rounded-[2rem] border-white bg-[#F8FAFC] p-0 text-slate-900 shadow-[0_28px_80px_rgba(15,23,42,0.26)] sm:max-w-3xl [&>button]:right-5 [&>button]:top-5 [&>button]:rounded-xl [&>button]:bg-white [&>button]:p-1.5 [&>button]:opacity-100 [&>button]:shadow-sm">
+          {selectedUser && <>
+            <DialogHeader className="border-b border-orange-100 bg-[linear-gradient(135deg,#FFF8F0,#FFFFFF)] px-6 pb-5 pt-6 text-left sm:px-7 sm:pt-7">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#FF6B00]">Quản lý ví Coin</p>
+              <DialogTitle className="pr-10 text-xl font-black tracking-[-0.03em] text-slate-950">Ví của {selectedUser.fullName || selectedUser.email}</DialogTitle>
+              <DialogDescription className="pr-8 text-xs leading-5 text-slate-500">{selectedUser.email} · Xem số dư, lịch sử và điều chỉnh Coin có lưu audit.</DialogDescription>
+            </DialogHeader>
+            <div className="p-4 sm:p-5">
+              <CoinWalletAuditSection userId={selectedUser.id} canAdjust />
+            </div>
+          </>}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
