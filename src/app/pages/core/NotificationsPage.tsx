@@ -17,11 +17,11 @@ import {
   Shield,
   Users
 } from "lucide-react";
-import { useNotificationSocket } from "../../hooks/useNotificationSocket";
+import { useNotifications } from "../../providers/NotificationProvider";
 
 export default function NotificationsPage() {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead } = useNotificationSocket();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [activeCategory, setActiveCategory] = useState<"all" | "learning" | "tasks" | "community" | "system">("all");
@@ -69,17 +69,8 @@ export default function NotificationsPage() {
 
   const handleMarkAllRead = async () => {
     setIsClearingAll(true);
-    const unreadOnes = notifications.filter((n) => !n.read);
-    if (unreadOnes.length === 0) {
-      setIsClearingAll(false);
-      return;
-    }
     try {
-      for (const notif of unreadOnes) {
-        await markAsRead(notif.notificationId);
-      }
-    } catch (err) {
-      console.error(err);
+      await markAllAsRead();
     } finally {
       setIsClearingAll(false);
     }

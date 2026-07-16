@@ -3,6 +3,7 @@ import {
   getNotifications,
   getUnreadNotifications,
   markNotificationRead,
+  markAllNotificationsRead,
   createReminder,
 } from "./notificationsService";
 import { extractApiData, skillSprintApiClient } from "../core/skillSprintApiClient";
@@ -56,6 +57,16 @@ describe("notificationsService", () => {
       await markNotificationRead("notif123");
 
       expect(skillSprintApiClient.patch).toHaveBeenCalledWith("/api/notifications/notif123/read");
+    });
+  });
+
+  describe("markAllNotificationsRead", () => {
+    it("should mark every backend notification as read", async () => {
+      vi.mocked(skillSprintApiClient.patch).mockResolvedValueOnce({} as never);
+
+      await markAllNotificationsRead();
+
+      expect(skillSprintApiClient.patch).toHaveBeenCalledWith("/api/notifications/read-all");
     });
   });
 

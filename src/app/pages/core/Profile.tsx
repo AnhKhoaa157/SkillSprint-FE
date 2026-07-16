@@ -20,7 +20,7 @@ import pointService from "../../../api/learning/pointService";
 import type { SepayPaymentCreateResponse, SepayPaymentDetailResponse, CurrentSubscriptionResponse, QuotaStatusResponse, ServicePlanType, UserPointSummary } from "../../../api/core/skillSprintModels";
 import { PlanTypeBadge, PlanBadgeStyles } from "../../../components/admin/PlanTypeBadge";
 import { normalizePlanType } from "../../../utils/adminStatusHelpers";
-import { useNotificationSocket } from "../../hooks/useNotificationSocket";
+import { useNotifications } from "../../providers/NotificationProvider";
 import { AvatarCropDialog } from "../../components/avatar/AvatarCropDialog";
 import { resolveCurrentProfilePlanId, resolveProfilePlanSlots, type ProfilePlanId } from "./profileSubscriptionPlan";
 
@@ -1250,7 +1250,7 @@ function resolveFeedbackRelatedUrl(feedback: FeedbackResponse): string | null {
 ═══════════════════════════════════════════════ */
 function NotificationsTab() {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead } = useNotificationSocket();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [isClearingAll, setIsClearingAll] = useState(false);
 
@@ -1280,15 +1280,9 @@ function NotificationsTab() {
   });
 
   const handleMarkAllRead = async () => {
-    const unreadOnes = notifications.filter((n) => !n.read);
-    if (unreadOnes.length === 0) return;
     setIsClearingAll(true);
     try {
-      for (const notif of unreadOnes) {
-        await markAsRead(notif.notificationId);
-      }
-    } catch (err) {
-      console.error(err);
+      await markAllAsRead();
     } finally {
       setIsClearingAll(false);
     }

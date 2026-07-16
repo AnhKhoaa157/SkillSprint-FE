@@ -6,7 +6,7 @@ import {
   AlertTriangle, CalendarClock, BookOpenCheck, CheckCircle2,
   LoaderCircle, User, Calendar, CheckSquare, Shield, Info
 } from "lucide-react";
-import { useNotificationSocket } from "../hooks/useNotificationSocket";
+import { NotificationProvider, useNotifications } from "../providers/NotificationProvider";
 import { APP_NAV_SECTIONS } from "../config/nav";
 import { motion, AnimatePresence } from "motion/react";
 import { PricingModal } from "../components/modals/PricingModal";
@@ -280,7 +280,7 @@ function PlanBadge({ tier, label, onClick }: { tier: PlanTier; label?: string; o
   );
 }
 
-export default function DashboardLayout() {
+function DashboardLayoutContent() {
   const [sideOpen, setSideOpen]       = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [notifOpen, setNotifOpen]     = useState(false);
@@ -300,7 +300,7 @@ export default function DashboardLayout() {
       avatarLetter: fullName.trim().charAt(0).toUpperCase() || "L",
     };
   });
-  const { notifications, unreadCount, markAsRead } = useNotificationSocket();
+  const { notifications, unreadCount, markAsRead } = useNotifications();
   const navigate = useNavigate();
   const loc   = useLocation();
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
@@ -720,5 +720,13 @@ export default function DashboardLayout() {
         currentPlanId={rawPlanId}
       />
     </div>
+  );
+}
+
+export default function DashboardLayout() {
+  return (
+    <NotificationProvider>
+      <DashboardLayoutContent />
+    </NotificationProvider>
   );
 }
