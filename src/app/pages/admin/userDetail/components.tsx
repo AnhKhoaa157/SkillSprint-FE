@@ -450,28 +450,37 @@ function buildSystemLogs(user: AdminUserDetail): SystemLog[] {
 export function SystemLogTimeline({ user }: { user: AdminUserDetail }) {
   const logs = buildSystemLogs(user);
   return (
-    <motion.div variants={itemVariants} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-      <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-        <History size={15} className="text-slate-400" />
-        <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Nhật ký hệ thống</h3>
+    <motion.div variants={itemVariants} className="rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-[0_16px_36px_rgba(15,23,42,0.06)] md:p-7">
+      <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-orange-50 text-orange-600">
+            <History size={17} />
+          </span>
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-orange-600">Audit</p>
+            <h3 className="text-sm font-extrabold tracking-tight text-slate-900">Nhật ký hệ thống</h3>
+          </div>
+        </div>
+        {logs.length > 0 && <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-slate-500">{logs.length} sự kiện</span>}
       </div>
-      <div className="mt-4 space-y-3 text-xs">
+      <div className="relative mt-5 space-y-2.5 text-xs before:absolute before:bottom-6 before:left-[1.125rem] before:top-6 before:w-px before:bg-orange-100">
         {logs.length > 0 ? (
           logs.map((log) => (
             <motion.div
               key={log.id}
-              whileHover={{ x: 2 }}
-              className="flex items-center justify-between p-3 rounded-xl bg-slate-50/80 border border-slate-100"
+              whileHover={{ x: 3, y: -1 }}
+              transition={{ type: "spring", stiffness: 350, damping: 24 }}
+              className="relative grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 transition hover:border-orange-100 hover:bg-orange-50/40 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-x-4"
             >
-              <div className="flex items-center gap-2.5 text-slate-600">
+              <span className="relative z-10 grid h-9 w-9 place-items-center rounded-xl border border-white bg-white shadow-[0_5px_12px_rgba(15,23,42,0.05)]">
                 {log.icon}
-                <span>{log.text}</span>
-              </div>
-              <span className="font-mono text-slate-400">{formatDateTime(log.time)}</span>
+              </span>
+              <div className="min-w-0 leading-5 text-slate-600"><span>{log.text}</span></div>
+              <time dateTime={log.time} className="col-start-2 text-[11px] font-semibold tabular-nums text-slate-400 sm:col-auto sm:text-right">{formatDateTime(log.time)}</time>
             </motion.div>
           ))
         ) : (
-          <div className="text-center py-6 text-slate-400 italic">Chưa ghi nhận dòng thời gian hoạt động.</div>
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 py-8 text-center text-slate-400 italic">Chưa ghi nhận dòng thời gian hoạt động.</div>
         )}
       </div>
     </motion.div>
