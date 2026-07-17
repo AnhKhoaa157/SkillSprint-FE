@@ -57,6 +57,37 @@ describe("marketplaceService creator snapshot endpoints", () => {
     expect(skillSprintApiClient.post).toHaveBeenCalledWith("/api/marketplace/items/pack-1/challenge/start");
   });
 
+  it("uses the version-first Ranked Quiz endpoints with the exact submit payload", async () => {
+    const attempt = {
+      attemptId: "attempt-1", versionId: "version-1", versionNo: 2, status: "IN_PROGRESS",
+      attemptDate: "2026-07-17", attemptNumber: 1, startedAt: "2026-07-17T00:00:00Z",
+      expiresAt: "2026-07-17T01:00:00Z", totalQuestionCount: 45, attemptsRemaining: 2, questions: [],
+    };
+    const result = {
+      attemptId: "attempt-1", versionId: "version-1", score: 100, correctCount: 45,
+      questionCount: 45, durationSeconds: 120, completedAt: "2026-07-17T00:02:00Z",
+      suspicious: false, leaderboardEligible: true,
+    };
+    const leaderboard = [{ rank: 1, userName: "Learner", score: 100, durationSeconds: 120, completedAt: "2026-07-17T00:02:00Z" }];
+    const history = [{ attemptId: "attempt-1", attemptDate: "2026-07-17", attemptNumber: 1, status: "COMPLETED", score: 100, correctCount: 45, questionCount: 45, durationSeconds: 120, startedAt: "2026-07-17T00:00:00Z", expiresAt: "2026-07-17T01:00:00Z", completedAt: "2026-07-17T00:02:00Z", leaderboardEligible: true }];
+    vi.mocked(skillSprintApiClient.post).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: attempt } } as never).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: result } } as never);
+    vi.mocked(skillSprintApiClient.get).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: leaderboard } } as never).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: history } } as never);
+
+    await expect(marketplaceService.startOrResumeRankedAttempt("version-1")).resolves.toEqual(attempt);
+    await expect(marketplaceService.submitRankedAttempt("version-1", "attempt-1", {
+      idempotencyKey: "request-1", answers: [{ questionId: "question-1", optionId: "option-1" }],
+    })).resolves.toEqual(result);
+    await expect(marketplaceService.getRankedLeaderboard("version-1")).resolves.toEqual(leaderboard);
+    await expect(marketplaceService.getRankedAttemptHistory("version-1")).resolves.toEqual(history);
+
+    expect(skillSprintApiClient.post).toHaveBeenNthCalledWith(1, "/api/marketplace/versions/version-1/ranked-attempts");
+    expect(skillSprintApiClient.post).toHaveBeenNthCalledWith(2, "/api/marketplace/versions/version-1/ranked-attempts/attempt-1/submit", {
+      idempotencyKey: "request-1", answers: [{ questionId: "question-1", optionId: "option-1" }],
+    });
+    expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(1, "/api/marketplace/versions/version-1/leaderboard");
+    expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(2, "/api/marketplace/versions/version-1/ranked-attempts/me");
+  });
+
   it("purchases a pack version with the supplied idempotency key", async () => {
     const receipt = { saleId: "sale-1", entitlementId: "entitlement-1", packId: "pack-1", packVersionId: "version-2", versionNo: 2, upgrade: true, originalGrossCoinAmount: 100, discountCoinAmount: 20, grossCoinAmount: 80, creatorAmount: 64, platformAmount: 16, remainingCoinBalance: 920, purchasedAt: "2026-07-17T00:00:00Z" };
     vi.mocked(skillSprintApiClient.post).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: receipt } } as never);

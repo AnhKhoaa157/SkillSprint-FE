@@ -5,6 +5,7 @@ import type {
   CoinTopUpPackage, CoinTopUpPayment, MarketplaceLeaderboardEntry, MarketplaceReview, MarketplaceTransaction, MarketplaceWallet,
   MarketplaceChapter, MarketplaceOption, MarketplaceQuestion, PurchasedMarketplacePack, PurchasedPackApiResponse, PurchasedPackDetail,
   CreatorEarnings, CreatorPayout, CreatorPayoutDestination, CreatorPayoutQrUploadUrl, MarketplaceVersionPurchaseReceipt,
+  MarketplaceRankedAttempt, MarketplaceRankedAttemptHistory, MarketplaceRankedAttemptResult,
 } from "./marketplaceTypes";
 
 const CREATOR_PAYOUT_QR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -122,6 +123,31 @@ const marketplaceService = {
   },
   async submitChallenge(itemId: string, request: { sessionId: string; answers: Array<{ questionId: string; selectedOptionId: string }> }) {
     return unwrap((await skillSprintApiClient.post<ApiResponse<ChallengeResult>>(`/api/marketplace/items/${itemId}/challenge/submit`, request)).data);
+  },
+  async startOrResumeRankedAttempt(versionId: string): Promise<MarketplaceRankedAttempt> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplaceRankedAttempt>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/ranked-attempts`,
+    )).data);
+  },
+  async submitRankedAttempt(
+    versionId: string,
+    attemptId: string,
+    request: { idempotencyKey: string; answers: Array<{ questionId: string; optionId: string }> },
+  ): Promise<MarketplaceRankedAttemptResult> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplaceRankedAttemptResult>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/ranked-attempts/${encodeURIComponent(attemptId)}/submit`,
+      request,
+    )).data);
+  },
+  async getRankedLeaderboard(versionId: string): Promise<MarketplaceLeaderboardEntry[]> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceLeaderboardEntry[]>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/leaderboard`,
+    )).data);
+  },
+  async getRankedAttemptHistory(versionId: string): Promise<MarketplaceRankedAttemptHistory[]> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceRankedAttemptHistory[]>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/ranked-attempts/me`,
+    )).data);
   },
   async review(itemId: string, request: { rating: number; comment?: string }) {
     return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplaceReview>>(`/api/marketplace/items/${itemId}/review`, request)).data);
