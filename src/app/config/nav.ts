@@ -51,7 +51,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     label: "Marketplace",
     items: [
       { path: "/app/marketplace", label: "Marketplace", icon: Store, match: "prefix" },
-      { path: "/app/my-packs", label: "Gói học của tôi", icon: BookOpen, badge: "Đang phát triển", match: "prefix" },
+      { path: "/app/my-packs", label: "Gói học của tôi", icon: BookOpen, match: "prefix" },
       { path: "/app/wallet", label: "Ví Coin", icon: WalletCards, match: "prefix" },
       { path: "/app/creator/marketplace", label: "Đóng gói Quiz", icon: PackagePlus, match: "prefix" },
       { path: "/app/creator/earnings", label: "Thu nhập & rút tiền", icon: HandCoins, match: "prefix" },
