@@ -58,7 +58,8 @@ describe("marketplaceService creator snapshot endpoints", () => {
   });
 
   it("returns no destination when a Creator has not saved payout details yet", async () => {
-    vi.mocked(skillSprintApiClient.get).mockRejectedValueOnce({ response: { status: 404 } });
+    const missingDestination = Object.assign(new Error("Chưa có thông tin nhận tiền Creator"), { status: 400 });
+    vi.mocked(skillSprintApiClient.get).mockRejectedValueOnce(missingDestination);
 
     await expect(marketplaceService.getCreatorPayoutDestination()).resolves.toBeNull();
   });
