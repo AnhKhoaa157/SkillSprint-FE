@@ -129,9 +129,11 @@ export interface PurchasedPackDetail {
 
 export interface ChallengeSession {
   sessionId: string;
+  packId: string;
+  versionId: string;
+  versionNo: number;
   startedAt: string;
   expiresAt: string;
-  questions: MarketplaceQuestion[];
 }
 
 export interface ChallengeResult {
