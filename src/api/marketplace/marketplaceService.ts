@@ -16,10 +16,17 @@ function unwrap<T>(payload: ApiResponse<T>): T {
 }
 
 function statusOf(error: unknown): number | undefined {
-  if (typeof error !== "object" || error === null || !("response" in error)) return undefined;
+  if (typeof error !== "object" || error === null) return undefined;
+  if ("status" in error && typeof error.status === "number") return error.status;
+  if (!("response" in error)) return undefined;
   const response = error.response;
   if (typeof response !== "object" || response === null || !("status" in response)) return undefined;
   return typeof response.status === "number" ? response.status : undefined;
+}
+
+function isMissingCreatorPayoutDestination(error: unknown): boolean {
+  if (statusOf(error) === 404) return true;
+  return statusOf(error) === 400 && error instanceof Error && error.message === "Chưa có thông tin nhận tiền Creator";
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -159,7 +166,7 @@ const marketplaceService = {
     try {
       return unwrap((await skillSprintApiClient.get<ApiResponse<CreatorPayoutDestination>>("/api/marketplace/creator/payout-destination")).data);
     } catch (error) {
-      if (statusOf(error) === 404) return null;
+      if (isMissingCreatorPayoutDestination(error)) return null;
       throw error;
     }
   },
