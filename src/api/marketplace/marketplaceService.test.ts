@@ -49,6 +49,14 @@ describe("marketplaceService creator snapshot endpoints", () => {
     expect(skillSprintApiClient.patch).toHaveBeenCalledWith("/api/marketplace/wallet/top-ups/payment-1/cancel");
   });
 
+  it("starts a challenge with the session details returned by the backend", async () => {
+    const session = { sessionId: "session-1", packId: "pack-1", versionId: "version-1", versionNo: 1, startedAt: "2026-07-17T00:00:00Z", expiresAt: "2026-07-17T01:00:00Z" };
+    vi.mocked(skillSprintApiClient.post).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: session } } as never);
+
+    await expect(marketplaceService.startChallenge("pack-1")).resolves.toEqual(session);
+    expect(skillSprintApiClient.post).toHaveBeenCalledWith("/api/marketplace/items/pack-1/challenge/start");
+  });
+
   it("purchases a pack version with the supplied idempotency key", async () => {
     const receipt = { saleId: "sale-1", entitlementId: "entitlement-1", packId: "pack-1", packVersionId: "version-2", versionNo: 2, upgrade: true, originalGrossCoinAmount: 100, discountCoinAmount: 20, grossCoinAmount: 80, creatorAmount: 64, platformAmount: 16, remainingCoinBalance: 920, purchasedAt: "2026-07-17T00:00:00Z" };
     vi.mocked(skillSprintApiClient.post).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: receipt } } as never);
