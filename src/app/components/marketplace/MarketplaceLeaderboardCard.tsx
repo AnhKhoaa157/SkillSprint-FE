@@ -2,7 +2,8 @@ import { ArrowUp, Trophy } from "lucide-react";
 import { useMarketplaceLeaderboard } from "../../../api/marketplace/useMarketplaceLeaderboard";
 
 type MarketplaceLeaderboardCardProps = {
-  itemId: string;
+  itemId?: string;
+  versionId?: string;
   compact?: boolean;
   limit?: number;
 };
@@ -33,8 +34,9 @@ function SkeletonRows({ compact }: { compact: boolean }) {
   return <div className="space-y-2">{[1, 2, 3].map(row => <div key={row} className={`animate-pulse rounded-xl bg-slate-100 ${compact ? "h-12" : "h-16"}`} />)}</div>;
 }
 
-export default function MarketplaceLeaderboardCard({ itemId, compact = false, limit = 10 }: MarketplaceLeaderboardCardProps) {
-  const { entries, loading, error, refetch } = useMarketplaceLeaderboard(itemId, limit);
+export default function MarketplaceLeaderboardCard({ itemId, versionId, compact = false, limit = 10 }: MarketplaceLeaderboardCardProps) {
+  const id = versionId ?? itemId ?? "";
+  const { entries, loading, error, refetch } = useMarketplaceLeaderboard(id, limit, versionId ? "version" : "item");
   const padding = compact ? "p-4" : "p-5 sm:p-6";
   const backToTop = () => {
     const dashboardScroll = document.querySelector<HTMLElement>("[data-dashboard-scroll]");

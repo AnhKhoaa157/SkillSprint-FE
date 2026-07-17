@@ -8,6 +8,7 @@ import type { ChallengeResult, ChallengeSession, CoinTopUpPackage, CoinTopUpPaym
 import workspaceService, { type WorkspaceResponse } from "../../../api/utilities/workspaceService";
 import MarketplaceLeaderboardCard from "../../components/marketplace/MarketplaceLeaderboardCard";
 import { refreshMarketplaceLeaderboard } from "../../../api/marketplace/useMarketplaceLeaderboard";
+import RankedQuizExperience from "./RankedQuizExperience";
 
 const fmt = new Intl.NumberFormat("vi-VN");
 const date = (v?: string | null) => v ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(v)) : "—";
@@ -267,7 +268,7 @@ export function MyPacksPageDashboard() {
 }
 
 export function MyPackLearningPageDashboard() {
-  return <div className="[&>div>header]:hidden"><MyPackLearningPage /></div>;
+  return <RankedQuizExperience />;
 }
 
 export function WalletPageDashboard() {
