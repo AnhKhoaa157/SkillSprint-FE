@@ -43,7 +43,9 @@ import CommunityRooms from "./pages/community/CommunityRooms";
 import CommunityRoomChat from "./pages/community/CommunityRoomChat";
 import { MarketplaceCatalogDashboard, MarketplaceItemPageDashboard, MyPackLearningPageDashboard, MyPacksPageDashboard, WalletPageDashboard } from "./pages/marketplace/MarketplaceViews";
 import MarketplaceAdmin from "./pages/admin/MarketplaceAdmin";
+import MarketplacePayouts from "./pages/admin/MarketplacePayouts";
 import { CreatorQuizPackCreate, CreatorQuizPackDashboard, CreatorQuizPackValidation } from "./pages/marketplace/CreatorQuizPackFlow";
+import CreatorMarketplaceEarnings from "./pages/marketplace/CreatorMarketplaceEarnings";
 
 export const routeRegistry = {
   public: {
@@ -73,6 +75,7 @@ export const routeRegistry = {
     creatorMarketplace: "/creator/marketplace",
     creatorMarketplaceCreate: "/creator/marketplace/create",
     creatorMarketplaceValidation: "/creator/marketplace/:itemId/validation",
+    creatorEarnings: "/creator/earnings",
   },
   admin: {
     root: "/admin",
@@ -84,6 +87,7 @@ export const routeRegistry = {
     feedback: "feedback",
     communityModeration: "community/moderation",
     marketplace: "marketplace",
+    marketplacePayouts: "marketplace/payouts",
     marketplaceDetail: "marketplace/:itemId",
   },
   app: {
@@ -95,6 +99,7 @@ export const routeRegistry = {
     creatorMarketplace: "creator/marketplace",
     creatorMarketplaceCreate: "creator/marketplace/create",
     creatorMarketplaceValidation: "creator/marketplace/:itemId/validation",
+    creatorEarnings: "creator/earnings",
     marketplaceItem: "marketplace/items/:itemId",
     myPacks: "my-packs",
     myPack: "my-packs/:itemId",
@@ -169,6 +174,7 @@ export const router = createBrowserRouter([
       { path: publicRoutes.creatorMarketplace, element: React.createElement(Navigate, { to: "/app/creator/marketplace", replace: true }) },
       { path: publicRoutes.creatorMarketplaceCreate, element: React.createElement(Navigate, { to: "/app/creator/marketplace/create", replace: true }) },
       { path: publicRoutes.creatorMarketplaceValidation, Component: CreatorValidationRouteRedirect },
+      { path: publicRoutes.creatorEarnings, element: React.createElement(Navigate, { to: "/app/creator/earnings", replace: true }) },
       {
         path: adminRoutes.root,
         Component: ProtectedAdminLayout,
@@ -181,6 +187,7 @@ export const router = createBrowserRouter([
           { path: adminRoutes.health, Component: AdminHealth },
           { path: adminRoutes.feedback, Component: AdminFeedback },
           { path: adminRoutes.communityModeration, Component: AdminCommunityModeration },
+          { path: adminRoutes.marketplacePayouts, Component: MarketplacePayouts },
           { path: adminRoutes.marketplace, Component: MarketplaceAdmin },
           { path: adminRoutes.marketplaceDetail, Component: MarketplaceAdmin },
         ],
@@ -204,6 +211,7 @@ export const router = createBrowserRouter([
           { path: appRoutes.creatorMarketplace, Component: CreatorQuizPackDashboard },
           { path: appRoutes.creatorMarketplaceCreate, Component: CreatorQuizPackCreate },
           { path: appRoutes.creatorMarketplaceValidation, Component: CreatorQuizPackValidation },
+          { path: appRoutes.creatorEarnings, Component: CreatorMarketplaceEarnings },
           { path: appRoutes.workspaces.list, Component: Workspaces },
           { path: appRoutes.workspaces.new, Component: WorkspacesNew },
           { path: appRoutes.workspaces.detail, Component: WorkspaceDetail },

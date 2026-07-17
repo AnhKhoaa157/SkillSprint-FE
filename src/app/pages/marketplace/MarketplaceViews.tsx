@@ -350,7 +350,12 @@ export function MarketplaceItemPage() {
   const buy = async () => {
     if (!item) return;
     setBuying(true);
-    try { await marketplaceService.purchase(item.itemId); toast.success("Đã mua gói học liệu."); go(`/app/my-packs/${item.itemId}`); }
+    try {
+      if (item.versionId) await marketplaceService.purchaseVersion(item.versionId, crypto.randomUUID());
+      else await marketplaceService.purchase(item.itemId);
+      toast.success("Đã mua gói học liệu.");
+      go(`/app/my-packs/${item.itemId}`);
+    }
     catch (error) { toast.error(message(error)); } finally { setBuying(false); }
   };
   const saveReview = async () => {

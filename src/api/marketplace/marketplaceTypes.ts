@@ -22,6 +22,9 @@ export interface MarketplaceChapter {
 
 export interface MarketplaceItemSummary {
   itemId: string;
+  packId?: string | null;
+  versionId?: string | null;
+  versionNo?: number | null;
   title: string;
   description: string;
   subject: string;
@@ -206,4 +209,78 @@ export interface CreatorValidationResult extends CreatorMarketplaceItem {
   questionCount: number;
   durationSeconds: number;
   completedAt: string;
+}
+
+export type CreatorPayoutStatus = "REQUESTED" | "APPROVED" | "PROCESSING" | "COMPLETED" | "REJECTED" | "FAILED";
+
+export interface MarketplaceVersionPurchaseReceipt {
+  saleId: string;
+  entitlementId: string;
+  packId: string;
+  packVersionId: string;
+  versionNo: number;
+  upgrade: boolean;
+  originalGrossCoinAmount: number;
+  discountCoinAmount: number;
+  grossCoinAmount: number;
+  creatorAmount: number;
+  platformAmount: number;
+  remainingCoinBalance: number;
+  purchasedAt: string | null;
+}
+
+export interface CreatorEarning {
+  earningEntryId: string;
+  settlementId: string;
+  saleId: string;
+  amount: number;
+  availableAmount: number;
+  reservedAmount: number;
+  paidAmount: number;
+  state: string;
+  createdAt: string | null;
+}
+
+export interface CreatorEarnings {
+  pendingAmount: number;
+  reservedAmount: number;
+  paidAmount: number;
+  availableAmount: number;
+  earnings: CreatorEarning[];
+}
+
+export interface CreatorPayoutDestination {
+  destinationId: string;
+  bankName: string;
+  bankCode: string | null;
+  accountHolder: string;
+  accountNumberMasked: string | null;
+  qrViewUrl: string | null;
+  updatedAt: string | null;
+}
+
+export interface CreatorPayout {
+  payoutId: string;
+  creatorUserId: string;
+  creatorName: string;
+  creatorEmail: string;
+  requestedAmount: number;
+  status: CreatorPayoutStatus;
+  bankName: string;
+  bankCode: string | null;
+  accountHolder: string;
+  accountNumberMasked: string | null;
+  qrViewUrl: string | null;
+  adminActorUserId: string | null;
+  externalTransferReference: string | null;
+  rejectionReason: string | null;
+  notes: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface CreatorPayoutQrUploadUrl {
+  uploadUrl: string;
+  objectKey: string;
+  expiresAt: string;
 }

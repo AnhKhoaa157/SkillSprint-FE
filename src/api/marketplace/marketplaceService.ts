@@ -4,11 +4,22 @@ import type {
   CreatorMarketplaceItem, CreatorValidationPackResponse, CreatorValidationRequest, CreatorValidationResult, MarketplaceItemDetail, MarketplaceItemSummary,
   CoinTopUpPackage, CoinTopUpPayment, MarketplaceLeaderboardEntry, MarketplaceReview, MarketplaceTransaction, MarketplaceWallet,
   MarketplaceChapter, MarketplaceOption, MarketplaceQuestion, PurchasedMarketplacePack, PurchasedPackApiResponse, PurchasedPackDetail,
+  CreatorEarnings, CreatorPayout, CreatorPayoutDestination, CreatorPayoutQrUploadUrl, MarketplaceVersionPurchaseReceipt,
 } from "./marketplaceTypes";
+
+const CREATOR_PAYOUT_QR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const CREATOR_PAYOUT_QR_MAX_BYTES = 5 * 1024 * 1024;
 
 function unwrap<T>(payload: ApiResponse<T>): T {
   if (!payload || payload.data == null) throw new Error(payload?.message || "Không nhận được dữ liệu từ máy chủ.");
   return payload.data;
+}
+
+function statusOf(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("response" in error)) return undefined;
+  const response = error.response;
+  if (typeof response !== "object" || response === null || !("status" in response)) return undefined;
+  return typeof response.status === "number" ? response.status : undefined;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -87,6 +98,11 @@ const marketplaceService = {
   async purchase(itemId: string) {
     return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplaceWallet>>(`/api/marketplace/items/${itemId}/purchase/coins`)).data);
   },
+  async purchaseVersion(versionId: string, idempotencyKey: string): Promise<MarketplaceVersionPurchaseReceipt> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplaceVersionPurchaseReceipt>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/purchase/coins`, { idempotencyKey },
+    )).data);
+  },
   async getMyPacks() {
     return unwrap((await skillSprintApiClient.get<ApiResponse<PurchasedMarketplacePack[]>>("/api/marketplace/my-packs")).data);
   },
@@ -135,6 +151,54 @@ const marketplaceService = {
   },
   async submitForReview(itemId: string) {
     return unwrap((await skillSprintApiClient.post<ApiResponse<CreatorMarketplaceItem>>(`/api/marketplace/items/${itemId}/submit-review`)).data);
+  },
+  async getCreatorEarnings(): Promise<CreatorEarnings> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<CreatorEarnings>>("/api/marketplace/creator/earnings")).data);
+  },
+  async getCreatorPayoutDestination(): Promise<CreatorPayoutDestination | null> {
+    try {
+      return unwrap((await skillSprintApiClient.get<ApiResponse<CreatorPayoutDestination>>("/api/marketplace/creator/payout-destination")).data);
+    } catch (error) {
+      if (statusOf(error) === 404) return null;
+      throw error;
+    }
+  },
+  async createCreatorPayoutQrUploadUrl(fileName: string, contentType: string): Promise<CreatorPayoutQrUploadUrl> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<CreatorPayoutQrUploadUrl>>(
+      "/api/marketplace/creator/payout-destination/qr-upload-url", { fileName, contentType },
+    )).data);
+  },
+  async uploadCreatorPayoutQr(file: File): Promise<string> {
+    if (!CREATOR_PAYOUT_QR_ALLOWED_TYPES.includes(file.type)) {
+      throw new Error("Ảnh QR phải ở định dạng JPEG, PNG hoặc WebP.");
+    }
+    if (file.size > CREATOR_PAYOUT_QR_MAX_BYTES) {
+      throw new Error("Ảnh QR không được vượt quá 5 MB.");
+    }
+
+    const { uploadUrl, objectKey } = await this.createCreatorPayoutQrUploadUrl(file.name, file.type);
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    if (!uploadResponse.ok) {
+      throw new Error("Không thể tải ảnh QR lên. Vui lòng thử lại.");
+    }
+    return objectKey;
+  },
+  async saveCreatorPayoutDestination(request: { bankName: string; bankCode?: string; accountHolder: string; qrObjectKey: string }): Promise<CreatorPayoutDestination> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<CreatorPayoutDestination>>(
+      "/api/marketplace/creator/payout-destination", request,
+    )).data);
+  },
+  async createCreatorPayout(amount: number): Promise<CreatorPayout> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<CreatorPayout>>(
+      "/api/marketplace/creator/payouts", { amount },
+    )).data);
+  },
+  async getCreatorPayouts(): Promise<CreatorPayout[]> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<CreatorPayout[]>>("/api/marketplace/creator/payouts")).data);
   },
 };
 
