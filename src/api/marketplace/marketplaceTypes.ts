@@ -144,6 +144,63 @@ export interface ChallengeResult {
   completedAt: string;
 }
 
+export type MarketplaceRankedAttemptStatus = "IN_PROGRESS" | "COMPLETED" | "EXPIRED" | "ABANDONED";
+
+export interface MarketplaceRankedOption {
+  optionId: string;
+  label: string;
+  text: string;
+}
+
+/** Buyer-safe question snapshot. Correct-answer data is never part of this contract. */
+export interface MarketplaceRankedQuestion {
+  questionId: string;
+  type: string;
+  text: string;
+  options: MarketplaceRankedOption[];
+}
+
+export interface MarketplaceRankedAttempt {
+  attemptId: string;
+  versionId: string;
+  versionNo: number;
+  status: MarketplaceRankedAttemptStatus;
+  attemptDate: string;
+  attemptNumber: number;
+  startedAt: string;
+  expiresAt: string;
+  totalQuestionCount: number;
+  attemptsRemaining: number;
+  questions: MarketplaceRankedQuestion[];
+}
+
+export interface MarketplaceRankedAttemptResult {
+  attemptId: string;
+  versionId: string;
+  score: number;
+  correctCount: number;
+  questionCount: number;
+  durationSeconds: number;
+  completedAt: string;
+  suspicious: boolean;
+  leaderboardEligible: boolean;
+}
+
+export interface MarketplaceRankedAttemptHistory {
+  attemptId: string;
+  attemptDate: string;
+  attemptNumber: number;
+  status: MarketplaceRankedAttemptStatus;
+  score: number | null;
+  correctCount: number | null;
+  questionCount: number;
+  durationSeconds: number | null;
+  startedAt: string;
+  expiresAt: string;
+  completedAt: string | null;
+  leaderboardEligible: boolean;
+}
+
 export interface CreateMarketplaceItemRequest {
   workspaceId: string;
   title: string;
