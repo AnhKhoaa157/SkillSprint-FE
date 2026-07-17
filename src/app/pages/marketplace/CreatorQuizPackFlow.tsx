@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { AlertTriangle, ArrowLeft, ArrowRight, BookOpen, CheckCircle2, ChevronDown, ChevronLeft, CircleAlert, ClipboardCheck, Clock3, Coins, FileQuestion, Layers3, LoaderCircle, PackagePlus, RefreshCw, Send, Sparkles, Trophy, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, BanknoteArrowDown, BookOpen, CheckCircle2, ChevronDown, ChevronLeft, CircleAlert, ClipboardCheck, Clock3, Coins, FileQuestion, Layers3, LoaderCircle, PackagePlus, RefreshCw, Send, Sparkles, Trophy, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { marketplaceService, type CreatorMarketplaceItem, type CreatorValidationPackResponse, type CreatorValidationResult } from "../../../api/marketplace";
 import { getCurrentSubscription } from "../../../api/billing/subscriptionsService";
@@ -131,8 +131,9 @@ export function CreatorQuizPackDashboard() {
     <section className="mt-10 sm:mt-12">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#FF6B00]">Thư viện Creator</p><h2 className="mt-2 text-2xl font-black tracking-[-0.025em] text-slate-950 sm:text-3xl">Quiz Pack của bạn</h2><p className="mt-2 text-sm text-slate-500">Quản lý nội dung, Validation và trạng thái xét duyệt tại một nơi.</p></div>
-        {!loading && !failed && <div className="flex w-fit items-center gap-2.5">
+        {!loading && !failed && <div className="flex w-fit flex-wrap items-center gap-2.5">
           <span className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-600 shadow-sm">{items.length} Quiz Pack</span>
+          <Link to="/app/creator/earnings" className="inline-flex h-10 items-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-bold text-[#FF6B00] shadow-sm transition hover:bg-orange-50"><BanknoteArrowDown className="h-4 w-4" />Thu nhập</Link>
           {items.length > 0 && <Link to="/app/creator/marketplace/create"><Button className="h-10 px-4"><PackagePlus className="h-4 w-4" />Tạo Quiz Pack</Button></Link>}
         </div>}
       </div>

@@ -52,6 +52,7 @@ const CRUMBS: Record<string,string> = {
   "/app/marketplace":"Marketplace",
   "/app/my-packs":"Gói học của tôi",
   "/app/wallet":"Ví Coin",
+  "/app/creator/earnings":"Thu nhập & rút tiền",
 };
 
 type RoadmapSidebarWorkspace = {
@@ -318,6 +319,8 @@ function DashboardLayoutContent() {
   }
   if (loc.pathname.startsWith("/app/marketplace/items/")) crumb = "Marketplace > Chi tiết Quiz Pack";
   if (loc.pathname.startsWith("/app/my-packs/")) crumb = "Gói học của tôi > Học Quiz Pack";
+  if (loc.pathname.startsWith("/app/creator/marketplace")) crumb = "Creator > Đóng gói Quiz";
+  if (loc.pathname === "/app/creator/earnings") crumb = "Creator > Thu nhập & rút tiền";
 
   useEffect(() => {
     contentScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
