@@ -49,6 +49,31 @@ describe("marketplaceService creator snapshot endpoints", () => {
     expect(skillSprintApiClient.patch).toHaveBeenCalledWith("/api/marketplace/wallet/top-ups/payment-1/cancel");
   });
 
+  it("purchases a pack version with the supplied idempotency key", async () => {
+    const receipt = { saleId: "sale-1", entitlementId: "entitlement-1", packId: "pack-1", packVersionId: "version-2", versionNo: 2, upgrade: true, originalGrossCoinAmount: 100, discountCoinAmount: 20, grossCoinAmount: 80, creatorAmount: 64, platformAmount: 16, remainingCoinBalance: 920, purchasedAt: "2026-07-17T00:00:00Z" };
+    vi.mocked(skillSprintApiClient.post).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: receipt } } as never);
+
+    await expect(marketplaceService.purchaseVersion("version-2", "key-1")).resolves.toEqual(receipt);
+    expect(skillSprintApiClient.post).toHaveBeenCalledWith("/api/marketplace/versions/version-2/purchase/coins", { idempotencyKey: "key-1" });
+  });
+
+  it("returns no destination when a Creator has not saved payout details yet", async () => {
+    vi.mocked(skillSprintApiClient.get).mockRejectedValueOnce({ response: { status: 404 } });
+
+    await expect(marketplaceService.getCreatorPayoutDestination()).resolves.toBeNull();
+  });
+
+  it("gets the Creator earnings and payout history", async () => {
+    const earnings = { pendingAmount: 25, reservedAmount: 10, paidAmount: 40, availableAmount: 15, earnings: [] };
+    const payouts = [{ payoutId: "payout-1", requestedAmount: 10, status: "REQUESTED" }];
+    vi.mocked(skillSprintApiClient.get).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: earnings } } as never).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: payouts } } as never);
+
+    await expect(marketplaceService.getCreatorEarnings()).resolves.toEqual(earnings);
+    await expect(marketplaceService.getCreatorPayouts()).resolves.toEqual(payouts);
+    expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(1, "/api/marketplace/creator/earnings");
+    expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(2, "/api/marketplace/creator/payouts");
+  });
+
   it("normalizes purchased pack content for the learning page", async () => {
     const pack = {
       itemId: "pack-1",
