@@ -1,57 +1,49 @@
 import { useNavigate } from "react-router";
-import { motion, AnimatePresence } from "framer-motion"; // Đã đồng bộ về thư viện chuẩn
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { useAdminAuth } from "./useAdminAuth";
-import { BrandPanel, LoginView, ForgotStep1View, ForgotStep2View } from "./components";
+import { BrandPanel, ForgotStep1View, ForgotStep2View, LoginView } from "./components";
 
-export default function AdminAuth() {
+export default function AdminAuthPage() {
   const navigate = useNavigate();
   const auth = useAdminAuth();
+  const prefersReducedMotion = useReducedMotion();
+  const pageAnimation = prefersReducedMotion
+    ? { initial: false, animate: { opacity: 1 }, transition: { duration: 0 } }
+    : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25, ease: "easeOut" as const } };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-[#FDFBF7] font-sans">
-      {/* Grid Coordinates Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#f1e9db_1px,transparent_1px),linear-gradient(to_bottom,#f1e9db_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none z-0 opacity-45" />
+    <main className="relative flex min-h-[100dvh] flex-col overflow-x-hidden bg-[#fdfbf7] font-sans">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(249,115,22,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(249,115,22,0.08)_1px,transparent_1px)] bg-[size:24px_24px]" aria-hidden="true" />
+      <div className="pointer-events-none absolute -right-48 -top-44 size-[620px] rounded-full bg-orange-200/20 blur-[110px]" aria-hidden="true" />
+      <div className="pointer-events-none absolute -bottom-60 -left-52 size-[620px] rounded-full bg-amber-100/55 blur-[110px]" aria-hidden="true" />
 
-      {/* Background glow */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-5%] right-[-5%] w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-[#FF8533]/12 to-[#FFA066]/6 blur-[120px]" />
-        <div className="absolute bottom-[-5%] left-[-5%] w-[500px] h-[500px] rounded-full bg-gradient-to-br from-[#FF8533]/6 to-transparent blur-[100px]" />
-      </div>
+      <header className="relative z-10 flex px-4 pt-4 sm:px-6 sm:pt-6">
+        <button
+          type="button"
+          onClick={() => navigate("/login")}
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3.5 text-sm font-bold text-slate-600 shadow-sm transition-[border-color,background-color,color,box-shadow] hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#F86206]/20"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Quay lại đăng nhập học viên
+        </button>
+      </header>
 
-      {/* Back to student login */}
-      <button
-        onClick={() => navigate("/login")}
-        className="absolute z-20 top-6 left-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 bg-white/85 backdrop-blur-md border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all duration-200 hover:bg-slate-50 hover:border-slate-350 hover:text-slate-800 hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)] active:scale-95 cursor-pointer"
-      >
-        <ArrowLeft className="w-4 h-4 text-slate-450" />
-        Quay lại đăng nhập sinh viên
-      </button>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-[920px]"
-      >
-        <div className="relative bg-white/90 backdrop-blur-xl rounded-[2.2rem] border border-white/60 shadow-[0_0_0_1px_rgba(0,0,0,0.01),0_10px_30px_-10px_rgba(0,0,0,0.04),0_35px_70px_-15px_rgba(255,107,0,0.06),0_50px_100px_-20px_rgba(0,0,0,0.02)] overflow-hidden grid grid-cols-1 md:grid-cols-[1.15fr_1fr]">
-          {/* Top Accent Gradient Bar */}
-          <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-[#FFAC75] via-[#FF8533] to-[#FF6A00] z-20" />
-
-          {/* ── Left — static branding ── */}
-          <BrandPanel />
-
-          {/* ── Right — animated content ── */}
-          <div className="p-8 sm:p-10 md:p-12 min-h-[500px] flex flex-col justify-center bg-white">
-            <AnimatePresence mode="wait">
-              {auth.view === "login" && <LoginView auth={auth} />}
-              {auth.view === "fp-step1" && <ForgotStep1View auth={auth} />}
-              {auth.view === "fp-step2" && <ForgotStep2View auth={auth} />}
-            </AnimatePresence>
+      <section className="relative z-10 flex min-w-0 flex-1 items-center justify-center px-4 pb-8 pt-6 sm:px-6 sm:pb-10 sm:pt-8 lg:px-10">
+        <motion.div {...pageAnimation} className="min-w-0 w-full max-w-[1040px]">
+          <div className="relative min-w-0 overflow-hidden rounded-[30px] border border-orange-100 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.12)] lg:grid lg:grid-cols-[1.08fr_0.92fr] lg:rounded-[34px]">
+            <div className="absolute left-0 right-0 top-0 z-10 h-[3px] bg-[#F86206]" aria-hidden="true" />
+            <BrandPanel />
+            <div className="flex min-h-[540px] min-w-0 items-center bg-white p-6 sm:p-8 lg:min-h-[590px] lg:p-12">
+              <AnimatePresence mode="wait">
+                {auth.view === "login" ? <LoginView key="login" auth={auth} /> : null}
+                {auth.view === "fp-step1" ? <ForgotStep1View key="fp-step1" auth={auth} /> : null}
+                {auth.view === "fp-step2" ? <ForgotStep2View key="fp-step2" auth={auth} /> : null}
+              </AnimatePresence>
+            </div>
           </div>
-
-        </div>
-      </motion.div>
-    </div>
+        </motion.div>
+      </section>
+    </main>
   );
 }
