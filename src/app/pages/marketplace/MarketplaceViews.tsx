@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { marketplaceService } from "../../../api/marketplace";
 import type { ChallengeResult, ChallengeSession, CoinTopUpPackage, CoinTopUpPayment, CreatorMarketplaceItem, MarketplaceChapter, MarketplaceItemDetail, MarketplaceQuestion, MarketplaceReview, MarketplaceTransaction, MarketplaceWallet, PurchasedMarketplacePack, PurchasedPackDetail } from "../../../api/marketplace";
 import workspaceService, { type WorkspaceResponse } from "../../../api/utilities/workspaceService";
+import MarketplaceCreatorIdentity from "../../components/marketplace/MarketplaceCreatorIdentity";
 import MarketplaceLeaderboardCard from "../../components/marketplace/MarketplaceLeaderboardCard";
 import { refreshMarketplaceLeaderboard } from "../../../api/marketplace/useMarketplaceLeaderboard";
 import RankedQuizExperience from "./RankedQuizExperience";
@@ -300,7 +301,7 @@ function MarketplaceItemHeader({ item }: { item: MarketplaceItemDetail }) {
     <div className="border-b border-orange-100 bg-gradient-to-r from-orange-50 via-white to-amber-50 px-6 py-6 sm:px-8 sm:py-7">
       <div className="flex flex-wrap items-center justify-between gap-3"><span className="rounded-full bg-orange-100 px-3 py-1.5 text-xs font-bold text-[#FF6B00]">{item.subject}</span><span className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-600"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{item.averageRating.toFixed(1)} <span className="font-medium text-slate-400">({item.reviewCount} đánh giá)</span></span></div>
       <h1 className="mt-5 max-w-3xl text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl">{item.title}</h1>
-      <p className="mt-3 text-sm font-semibold text-slate-600">Tạo bởi <span className="text-slate-900">{item.creatorName}</span></p>
+      <MarketplaceCreatorIdentity creatorName={item.creatorName} creatorAvatarUrl={item.creatorAvatarUrl} />
       <p className="mt-5 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-slate-600">{item.description}</p>
     </div>
     <div className="grid grid-cols-3 divide-x divide-slate-100 bg-white text-center"><div className="px-3 py-4"><p className="text-lg font-black text-slate-900">{item.chapterCount}</p><p className="mt-0.5 text-xs text-slate-500">chương</p></div><div className="px-3 py-4"><p className="text-lg font-black text-slate-900">{item.quizCount}</p><p className="mt-0.5 text-xs text-slate-500">quiz</p></div><div className="px-3 py-4"><p className="text-lg font-black text-slate-900">{item.questionCount}</p><p className="mt-0.5 text-xs text-slate-500">câu hỏi</p></div></div>
