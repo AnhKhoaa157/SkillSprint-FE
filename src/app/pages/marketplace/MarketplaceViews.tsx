@@ -9,7 +9,7 @@ import workspaceService, { type WorkspaceResponse } from "../../../api/utilities
 import MarketplaceCreatorIdentity from "../../components/marketplace/MarketplaceCreatorIdentity";
 import MarketplaceLeaderboardCard from "../../components/marketplace/MarketplaceLeaderboardCard";
 import { refreshMarketplaceLeaderboard } from "../../../api/marketplace/useMarketplaceLeaderboard";
-import RankedQuizExperience from "./RankedQuizExperience";
+import MarketplaceLearningHub from "./MarketplaceLearningHub";
 
 const fmt = new Intl.NumberFormat("vi-VN");
 const date = (v?: string | null) => v ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(v)) : "—";
@@ -266,7 +266,7 @@ export function MyPacksPageDashboard() {
 }
 
 export function MyPackLearningPageDashboard() {
-  return <RankedQuizExperience />;
+  return <MarketplaceLearningHub />;
 }
 
 export function WalletPageDashboard() {
