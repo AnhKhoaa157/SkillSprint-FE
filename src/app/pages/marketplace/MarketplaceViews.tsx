@@ -86,7 +86,7 @@ function MarketplacePackCard({ item }: { item: PurchasedMarketplacePack }) {
     <div className="relative flex items-start justify-between gap-3"><span className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#FF6B00]">{item.subject}</span><span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-100 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-sm"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />{item.averageRating.toFixed(1)} <span className="font-medium text-slate-400">({item.reviewCount})</span></span></div>
     <h2 className="relative mt-5 line-clamp-2 text-xl font-black leading-7 tracking-[-0.02em] text-slate-950 transition group-hover:text-[#C2410C]">{item.title}</h2>
     <p className="relative mt-2 line-clamp-2 text-sm leading-6 text-slate-500">{item.description}</p>
-    <div className="relative mt-5 flex items-center gap-2.5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-950 text-xs font-black uppercase text-white">{item.creatorName?.charAt(0) || "S"}</span><span className="min-w-0"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Creator</span><span className="block truncate text-xs font-bold text-slate-700">{item.creatorName}</span></span></div>
+    <div className="relative"><MarketplaceCreatorIdentity creatorName={item.creatorName} creatorAvatarUrl={item.creatorAvatarUrl} variant="compact" /></div>
     <div className="relative mt-4 grid grid-cols-3 divide-x divide-orange-100 rounded-2xl border border-orange-100 bg-orange-50/55 py-3 text-center text-[11px] font-semibold text-slate-500"><span><b className="block text-base font-black text-slate-950">{item.chapterCount}</b>chương</span><span><b className="block text-base font-black text-slate-950">{item.quizCount}</b>quiz</span><span><b className="block text-base font-black text-slate-950">{item.questionCount}</b>câu hỏi</span></div>
     <div className="relative mt-auto flex items-center justify-between pt-5"><span className="rounded-full bg-amber-50 px-3 py-2 text-sm"><Coin value={item.priceCoins} /></span><span className="grid h-10 w-10 place-items-center rounded-full bg-slate-950 text-white transition duration-300 group-hover:translate-x-1 group-hover:bg-[#FF6B00]"><ArrowRight className="h-4 w-4" /></span></div>
   </Link>;
@@ -118,10 +118,7 @@ function FeaturedMarketplacePackCard({ item }: { item: PurchasedMarketplacePack 
           <p className="relative mt-3 max-w-2xl line-clamp-3 text-sm leading-7 text-slate-600">{item.description}</p>
 
           <div className="relative mt-auto flex flex-wrap items-center justify-between gap-4 pt-7">
-            <span className="flex min-w-0 items-center gap-2.5 text-xs font-semibold text-slate-500">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#FFF4E9] to-[#FFE4CA] font-black uppercase text-[#F06414] ring-1 ring-[#FFD7B4] shadow-[0_7px_18px_rgba(255,107,0,0.09)]">{item.creatorName?.charAt(0) || "S"}</span>
-              <span className="min-w-0"><span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Creator</span><span className="block truncate font-bold text-slate-700">{item.creatorName}</span></span>
-            </span>
+            <MarketplaceCreatorIdentity creatorName={item.creatorName} creatorAvatarUrl={item.creatorAvatarUrl} variant="compact" />
             <span className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF7817] to-[#F45A1C] px-4 py-2.5 text-xs font-bold text-white shadow-[0_9px_22px_rgba(255,107,0,0.2)] transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_13px_28px_rgba(255,107,0,0.28)] group-active:translate-y-0">Khám phá pack <ArrowRight className="h-4 w-4 transition duration-300 group-hover:translate-x-1" /></span>
           </div>
         </div>
