@@ -29,6 +29,8 @@ export interface MarketplaceItemSummary {
   description: string;
   subject: string;
   creatorName: string;
+  /** Short-lived S3 view URL returned for the current marketplace-list request. */
+  creatorAvatarUrl?: string | null;
   priceCoins: number;
   chapterCount: number;
   quizCount: number;
@@ -39,8 +41,6 @@ export interface MarketplaceItemSummary {
 }
 
 export interface MarketplaceItemDetail extends MarketplaceItemSummary {
-  /** Short-lived S3 view URL returned for the current item-detail request. */
-  creatorAvatarUrl?: string | null;
   chapters: MarketplaceChapter[];
   previewQuestions: MarketplaceQuestion[];
 }
