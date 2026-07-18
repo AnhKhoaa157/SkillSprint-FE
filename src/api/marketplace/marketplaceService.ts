@@ -6,6 +6,7 @@ import type {
   MarketplaceChapter, MarketplaceOption, MarketplaceQuestion, PurchasedMarketplacePack, PurchasedPackApiResponse, PurchasedPackDetail,
   CreatorEarnings, CreatorPayout, CreatorPayoutDestination, CreatorPayoutQrUploadUrl, MarketplaceVersionPurchaseReceipt,
   MarketplaceRankedAttempt, MarketplaceRankedAttemptHistory, MarketplaceRankedAttemptResult,
+  MarketplacePracticeAttempt, MarketplacePracticeAttemptHistory, MarketplacePracticeAttemptResult, MarketplaceVersionProgress,
 } from "./marketplaceTypes";
 
 const CREATOR_PAYOUT_QR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -147,6 +148,38 @@ const marketplaceService = {
   async getRankedAttemptHistory(versionId: string): Promise<MarketplaceRankedAttemptHistory[]> {
     return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceRankedAttemptHistory[]>>(
       `/api/marketplace/versions/${encodeURIComponent(versionId)}/ranked-attempts/me`,
+    )).data);
+  },
+  async startOrResumePracticeAttempt(versionId: string, chapterSequenceNo: number): Promise<MarketplacePracticeAttempt> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplacePracticeAttempt>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/practice-attempts`,
+      { chapterSequenceNo },
+    )).data);
+  },
+  async getInProgressPracticeAttempt(versionId: string, chapterSequenceNo: number): Promise<MarketplacePracticeAttempt> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplacePracticeAttempt>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/practice-attempts/me/in-progress`,
+      { params: { chapterSequenceNo } },
+    )).data);
+  },
+  async submitPracticeAttempt(
+    versionId: string,
+    attemptId: string,
+    request: { idempotencyKey: string; answers: Array<{ questionId: string; optionId: string }> },
+  ): Promise<MarketplacePracticeAttemptResult> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplacePracticeAttemptResult>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/practice-attempts/${encodeURIComponent(attemptId)}/submit`,
+      request,
+    )).data);
+  },
+  async getPracticeAttemptHistory(versionId: string): Promise<MarketplacePracticeAttemptHistory[]> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplacePracticeAttemptHistory[]>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/practice-attempts/me`,
+    )).data);
+  },
+  async getVersionProgress(versionId: string): Promise<MarketplaceVersionProgress> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceVersionProgress>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/progress/me`,
     )).data);
   },
   async review(itemId: string, request: { rating: number; comment?: string }) {

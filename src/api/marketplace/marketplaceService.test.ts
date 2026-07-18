@@ -88,6 +88,52 @@ describe("marketplaceService creator snapshot endpoints", () => {
     expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(2, "/api/marketplace/versions/version-1/ranked-attempts/me");
   });
 
+  it("uses the version-scoped Practice Quiz and progress endpoints", async () => {
+    const attempt = {
+      attemptId: "practice-1", versionId: "version-1", versionNo: 2, chapterSequenceNo: 3,
+      chapterTitle: "Chapter 3", quizTitle: "Practice", status: "IN_PROGRESS",
+      startedAt: "2026-07-18T00:00:00Z", questionCount: 5, questions: [],
+    };
+    const result = {
+      attemptId: "practice-1", versionId: "version-1", chapterSequenceNo: 3,
+      score: 80, correctCount: 4, questionCount: 5, completedAt: "2026-07-18T00:02:00Z",
+    };
+    const history = [{
+      attemptId: "practice-1", chapterSequenceNo: 3, status: "COMPLETED", score: 80,
+      correctCount: 4, questionCount: 5, startedAt: "2026-07-18T00:00:00Z",
+      completedAt: "2026-07-18T00:02:00Z",
+    }];
+    const progress = {
+      versionId: "version-1", versionNo: 2, totalChapterCount: 9, totalQuizCount: 9,
+      completedChapterCount: 1, completedQuizCount: 1, completionPercent: 11.11,
+      firstActivityAt: "2026-07-18T00:00:00Z", lastActivityAt: "2026-07-18T00:02:00Z",
+      reviewEligible: true, chapters: [],
+    };
+    vi.mocked(skillSprintApiClient.post)
+      .mockResolvedValueOnce({ data: { code: 200, message: "Success", data: attempt } } as never)
+      .mockResolvedValueOnce({ data: { code: 200, message: "Success", data: result } } as never);
+    vi.mocked(skillSprintApiClient.get)
+      .mockResolvedValueOnce({ data: { code: 200, message: "Success", data: attempt } } as never)
+      .mockResolvedValueOnce({ data: { code: 200, message: "Success", data: history } } as never)
+      .mockResolvedValueOnce({ data: { code: 200, message: "Success", data: progress } } as never);
+
+    await expect(marketplaceService.startOrResumePracticeAttempt("version-1", 3)).resolves.toEqual(attempt);
+    await expect(marketplaceService.submitPracticeAttempt("version-1", "practice-1", {
+      idempotencyKey: "request-1", answers: [{ questionId: "question-1", optionId: "option-1" }],
+    })).resolves.toEqual(result);
+    await expect(marketplaceService.getInProgressPracticeAttempt("version-1", 3)).resolves.toEqual(attempt);
+    await expect(marketplaceService.getPracticeAttemptHistory("version-1")).resolves.toEqual(history);
+    await expect(marketplaceService.getVersionProgress("version-1")).resolves.toEqual(progress);
+
+    expect(skillSprintApiClient.post).toHaveBeenNthCalledWith(1, "/api/marketplace/versions/version-1/practice-attempts", { chapterSequenceNo: 3 });
+    expect(skillSprintApiClient.post).toHaveBeenNthCalledWith(2, "/api/marketplace/versions/version-1/practice-attempts/practice-1/submit", {
+      idempotencyKey: "request-1", answers: [{ questionId: "question-1", optionId: "option-1" }],
+    });
+    expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(1, "/api/marketplace/versions/version-1/practice-attempts/me/in-progress", { params: { chapterSequenceNo: 3 } });
+    expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(2, "/api/marketplace/versions/version-1/practice-attempts/me");
+    expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(3, "/api/marketplace/versions/version-1/progress/me");
+  });
+
   it("purchases a pack version with the supplied idempotency key", async () => {
     const receipt = { saleId: "sale-1", entitlementId: "entitlement-1", packId: "pack-1", packVersionId: "version-2", versionNo: 2, upgrade: true, originalGrossCoinAmount: 100, discountCoinAmount: 20, grossCoinAmount: 80, creatorAmount: 64, platformAmount: 16, remainingCoinBalance: 920, purchasedAt: "2026-07-17T00:00:00Z" };
     vi.mocked(skillSprintApiClient.post).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: receipt } } as never);
