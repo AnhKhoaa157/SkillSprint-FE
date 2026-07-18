@@ -66,6 +66,8 @@ describe("MarketplaceLearningHub", () => {
 
     expect(await screen.findByText("Luyện tập theo chương")).toBeInTheDocument();
     expect(screen.getByText("Chương nền tảng")).toBeInTheDocument();
+    expect(screen.getByText("Học tiếp theo")).toBeInTheDocument();
+    expect(screen.getByText("0/1 chương hoàn thành")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Practice" })).toHaveAttribute("aria-selected", "true");
     expect(marketplaceService.getVersionProgress).toHaveBeenCalledWith("version-1");
     expect(marketplaceService.getPracticeAttemptHistory).toHaveBeenCalledWith("version-1");
