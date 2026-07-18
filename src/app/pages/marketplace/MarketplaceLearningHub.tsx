@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   BookOpenCheck,
   CheckCircle2,
   Circle,
@@ -11,11 +12,13 @@ import {
   RotateCcw,
   Send,
   Sparkles,
+  Target,
   Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { marketplaceService } from "../../../api/marketplace";
 import type {
+  MarketplaceChapterProgress,
   MarketplacePracticeAttempt,
   MarketplacePracticeAttemptHistory,
   MarketplacePracticeAttemptResult,
@@ -34,6 +37,92 @@ function errorMessage(error: unknown) {
 
 function formatScore(value: number | null) {
   return value == null ? "—" : `${Math.round(value)} điểm`;
+}
+
+interface PracticeChapterCardProps {
+  chapter: MarketplaceChapterProgress;
+  isNext: boolean;
+  isBusy: boolean;
+  isDisabled: boolean;
+  onStart: (chapterSequenceNo: number) => void;
+}
+
+function PracticeChapterCard({ chapter, isNext, isBusy, isDisabled, onStart }: PracticeChapterCardProps) {
+  const statusLabel = chapter.completed ? "Đã hoàn thành" : isNext ? "Học tiếp theo" : "Sẵn sàng";
+  const helperText = chapter.completed
+    ? "Bạn đã ghi nhận tiến độ. Có thể luyện lại để cải thiện điểm số."
+    : isNext
+      ? "Chương được đề xuất để tiếp tục hành trình học của bạn."
+      : "Luyện bất cứ lúc nào, không giới hạn số lượt làm.";
+
+  return <article
+    aria-busy={isBusy}
+    className={`group relative flex min-h-[17rem] flex-col overflow-hidden rounded-[1.75rem] border p-5 transition duration-200 motion-reduce:transition-none sm:p-6 ${
+      chapter.completed
+        ? "border-emerald-200 bg-[linear-gradient(145deg,#FFFFFF_0%,#F0FDF4_100%)] shadow-[0_12px_30px_rgba(5,150,105,0.07)]"
+        : isNext
+          ? "border-orange-300 bg-[radial-gradient(circle_at_88%_8%,rgba(251,191,36,0.2),transparent_28%),linear-gradient(145deg,#FFFFFF_0%,#FFF7ED_100%)] shadow-[0_18px_44px_rgba(234,88,12,0.13)] xl:col-span-2"
+          : "border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-[0_18px_36px_rgba(15,23,42,0.08)] motion-reduce:hover:translate-y-0"
+    }`}
+  >
+    {isNext && <div aria-hidden="true" className="absolute right-0 top-0 h-24 w-24 rounded-bl-[4rem] bg-gradient-to-bl from-orange-100/90 to-transparent" />}
+
+    <div className="relative flex items-start justify-between gap-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl border text-sm font-black ${
+          chapter.completed
+            ? "border-emerald-200 bg-emerald-100 text-emerald-700"
+            : isNext
+              ? "border-orange-200 bg-[#FF6B00] text-white shadow-[0_8px_18px_rgba(255,107,0,0.2)]"
+              : "border-orange-100 bg-orange-50 text-[#C2410C]"
+        }`}>{chapter.completed ? <CheckCircle2 className="h-5 w-5" /> : chapter.chapterSequenceNo}</span>
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Chương {String(chapter.chapterSequenceNo).padStart(2, "0")}</p>
+          <p className="mt-1 truncate text-xs font-bold text-slate-500">Practice Quiz</p>
+        </div>
+      </div>
+      <span className={`relative shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${
+        chapter.completed
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : isNext
+            ? "border-orange-200 bg-orange-50 text-[#C2410C]"
+            : "border-slate-200 bg-slate-50 text-slate-500"
+      }`}>{statusLabel}</span>
+    </div>
+
+    <div className={`relative flex flex-1 flex-col ${isNext ? "xl:grid xl:grid-cols-[minmax(0,1fr)_17rem] xl:gap-7" : ""}`}>
+      <div className="flex flex-col">
+        <h3 className="mt-5 text-lg font-black leading-7 tracking-[-0.02em] text-slate-950">{chapter.chapterTitle}</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-500">{helperText}</p>
+      </div>
+
+      <div className={`mt-auto pt-5 ${isNext ? "xl:mt-5 xl:rounded-2xl xl:border xl:border-orange-100 xl:bg-white/80 xl:p-4 xl:pt-4" : ""}`}>
+        <dl className={`grid grid-cols-2 gap-3 text-xs ${isNext ? "border-t border-slate-200/80 pt-4 xl:border-t-0 xl:pt-0" : "border-t border-slate-200/80 pt-4"}`}>
+          <div>
+            <dt className="flex items-center gap-1.5 text-slate-500"><Target className="h-3.5 w-3.5" />Điểm tốt nhất</dt>
+            <dd className="mt-1.5 text-sm font-black text-slate-900">{formatScore(chapter.bestScore)}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Số lần làm</dt>
+            <dd className="mt-1.5 text-sm font-black text-slate-900">{chapter.attemptCount}</dd>
+          </div>
+        </dl>
+        <button
+          type="button"
+          onClick={() => onStart(chapter.chapterSequenceNo)}
+          disabled={isDisabled}
+          className={`mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-black transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none ${
+            chapter.completed
+              ? "border border-emerald-200 bg-white text-emerald-800 hover:border-emerald-300 hover:bg-emerald-50"
+              : "bg-[#FF6B00] text-white shadow-[0_10px_20px_rgba(255,107,0,0.18)] hover:bg-[#E85F00]"
+          }`}
+        >
+          {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : chapter.completed ? <RotateCcw className="h-4 w-4" /> : isNext ? <ArrowRight className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+          {isBusy ? "Đang mở..." : chapter.completed ? "Luyện lại" : "Bắt đầu"}
+        </button>
+      </div>
+    </div>
+  </article>;
 }
 
 function LearningSkeleton() {
@@ -147,6 +236,7 @@ export default function MarketplaceLearningHub() {
 
   const allAnswered = attempt?.questions.every(question => Boolean(answers[question.questionId])) ?? false;
   const completedPercent = Math.min(100, Math.max(0, progress?.completionPercent ?? 0));
+  const nextChapterSequenceNo = progress?.chapters.find(chapter => !chapter.completed)?.chapterSequenceNo ?? null;
 
   if (loading) return <LearningSkeleton />;
   if (failed || !pack?.versionId || !progress) return <section className="mx-auto max-w-3xl rounded-[2rem] border border-rose-200 bg-rose-50 p-8 text-center">
@@ -185,15 +275,33 @@ export default function MarketplaceLearningHub() {
         <div className="flex flex-wrap items-center justify-between gap-4"><div className="flex gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-600 text-white"><CheckCircle2 className="h-5 w-5" /></span><div><p className="font-black text-emerald-950">Đã hoàn thành chương {result.chapterSequenceNo}</p><p className="mt-1 text-sm text-emerald-800">{result.correctCount}/{result.questionCount} câu đúng · {Math.round(result.score)} điểm</p></div></div><button type="button" onClick={() => { setResult(null); void startPractice(result.chapterSequenceNo); }} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-300 bg-white px-4 text-sm font-bold text-emerald-800"><RotateCcw className="h-4 w-4" />Luyện lại</button></div>
       </section>}
 
-      <section>
-        <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#FF6B00]">Practice Quiz</p><h2 className="mt-1 text-2xl font-black tracking-[-0.03em] text-slate-950">Luyện tập theo chương</h2><p className="mt-2 text-sm leading-6 text-slate-500">Không giới hạn số lần làm. Mỗi chương hoàn thành chỉ được tính một lần vào tiến độ.</p></div><button type="button" onClick={() => void loadLearningData(progress.versionId)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-bold text-[#C2410C]"><RotateCcw className="h-4 w-4" />Làm mới</button></div>
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {progress.chapters.map(chapter => <article key={chapter.chapterSequenceNo} className={`rounded-[1.5rem] border bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.05)] ${chapter.completed ? "border-emerald-200" : "border-slate-200"}`}>
-            <div className="flex items-start justify-between gap-3"><span className={`grid h-10 w-10 place-items-center rounded-xl text-sm font-black ${chapter.completed ? "bg-emerald-100 text-emerald-700" : "bg-orange-50 text-[#C2410C]"}`}>{chapter.completed ? <CheckCircle2 className="h-5 w-5" /> : chapter.chapterSequenceNo}</span><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${chapter.completed ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{chapter.completed ? "Đã xong" : "Chưa học"}</span></div>
-            <h3 className="mt-4 line-clamp-2 min-h-12 text-base font-black leading-6 text-slate-950">{chapter.chapterTitle}</h3>
-            <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-xs"><div><dt className="text-slate-500">Điểm tốt nhất</dt><dd className="mt-1 font-black text-slate-900">{formatScore(chapter.bestScore)}</dd></div><div><dt className="text-slate-500">Số lần làm</dt><dd className="mt-1 font-black text-slate-900">{chapter.attemptCount}</dd></div></dl>
-            <button type="button" onClick={() => void startPractice(chapter.chapterSequenceNo)} disabled={startingChapter !== null || submitting} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-[#E85F00] disabled:cursor-not-allowed disabled:opacity-60">{startingChapter === chapter.chapterSequenceNo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : chapter.completed ? <RotateCcw className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}{startingChapter === chapter.chapterSequenceNo ? "Đang mở..." : chapter.completed ? "Luyện lại" : "Bắt đầu"}</button>
-          </article>)}
+      <section aria-labelledby="practice-chapters-title" className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50/65 p-4 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="max-w-2xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#FF6B00]">Practice Quiz</p>
+            <h2 id="practice-chapters-title" className="mt-1 text-2xl font-black tracking-[-0.03em] text-slate-950">Luyện tập theo chương</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Chọn chương bạn muốn ôn tập. Kết quả tốt nhất được lưu lại, còn tiến độ mỗi chương chỉ được ghi nhận một lần.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="inline-flex min-h-8 items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-700">{progress.completedChapterCount}/{progress.totalChapterCount} chương hoàn thành</span>
+              <span className="inline-flex min-h-8 items-center rounded-full border border-orange-200 bg-orange-50 px-3 text-xs font-bold text-[#C2410C]">Không giới hạn lượt luyện</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadLearningData(progress.versionId)}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-bold text-[#C2410C] transition hover:border-orange-300 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 motion-reduce:transition-none"
+          ><RotateCcw className="h-4 w-4" />Làm mới</button>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {progress.chapters.map(chapter => <PracticeChapterCard
+            key={chapter.chapterSequenceNo}
+            chapter={chapter}
+            isNext={chapter.chapterSequenceNo === nextChapterSequenceNo}
+            isBusy={startingChapter === chapter.chapterSequenceNo}
+            isDisabled={startingChapter !== null || submitting}
+            onStart={chapterSequenceNo => void startPractice(chapterSequenceNo)}
+          />)}
         </div>
       </section>
 
