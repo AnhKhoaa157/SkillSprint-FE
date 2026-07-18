@@ -30,10 +30,10 @@ export function InputField({
   labelAction?: React.ReactNode; trailing?: React.ReactNode; disabled?: boolean;
 }) {
   return (
-    <div className="space-y-1.5 text-left">
-      <div className="flex items-center justify-between min-h-4">
+    <div className="auth-input-field space-y-1.5 text-left">
+      <div className="auth-input-label-row flex min-h-5 items-center justify-between">
         <div className="flex items-center gap-1.5 overflow-hidden">
-          <Label htmlFor={id} className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 select-none shrink-0">
+          <Label htmlFor={id} className="shrink-0 select-none text-xs font-extrabold text-slate-700">
             {label}
           </Label>
           <AnimatePresence mode="wait">
@@ -53,10 +53,10 @@ export function InputField({
         {labelAction}
       </div>
       <div 
-        className={`relative group flex items-center h-12 rounded-xl border bg-slate-50/40 px-3.5 transition-all duration-200 ${
+        className={`auth-input-shell group relative flex h-[52px] items-center rounded-[14px] border bg-white px-4 transition-all duration-200 ${
           error
             ? "border-rose-200/90 focus-within:border-rose-450 focus-within:ring-4 focus-within:ring-rose-500/6 focus-within:bg-white shadow-[0_1px_2px_rgba(0,0,0,0.01)]"
-            : "border-slate-200/80 focus-within:border-[#FF8533] focus-within:ring-4 focus-within:ring-[#FF8533]/8 focus-within:bg-white shadow-[0_1px_2px_rgba(0,0,0,0.01)]"
+            : "border-slate-300 focus-within:border-[#FF6B00] focus-within:ring-4 focus-within:ring-[#FF6B00]/10 shadow-sm"
         } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
       >
         <Icon 
@@ -77,7 +77,7 @@ export function InputField({
           autoComplete={autoComplete} 
           aria-invalid={!!error} 
           disabled={disabled}
-          className="w-full h-full bg-transparent text-sm font-medium text-slate-800 placeholder:font-normal placeholder:text-slate-400 outline-none border-none p-0 focus:ring-0 disabled:cursor-not-allowed"
+          className="h-full w-full border-none bg-transparent p-0 text-[13px] font-medium text-slate-800 outline-none placeholder:font-normal placeholder:text-slate-400 focus:ring-0 disabled:cursor-not-allowed"
         />
         {trailing && <div className="absolute right-3.5 top-0 bottom-0 flex items-center z-10">{trailing}</div>}
       </div>
