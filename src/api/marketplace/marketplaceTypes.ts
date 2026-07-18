@@ -203,6 +203,65 @@ export interface MarketplaceRankedAttemptHistory {
   leaderboardEligible: boolean;
 }
 
+export type MarketplacePracticeAttemptStatus = "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
+
+export interface MarketplacePracticeAttempt {
+  attemptId: string;
+  versionId: string;
+  versionNo: number;
+  chapterSequenceNo: number;
+  chapterTitle: string;
+  quizTitle: string;
+  status: MarketplacePracticeAttemptStatus;
+  startedAt: string;
+  questionCount: number;
+  questions: MarketplaceRankedQuestion[];
+}
+
+export interface MarketplacePracticeAttemptResult {
+  attemptId: string;
+  versionId: string;
+  chapterSequenceNo: number;
+  score: number;
+  correctCount: number;
+  questionCount: number;
+  completedAt: string;
+}
+
+export interface MarketplacePracticeAttemptHistory {
+  attemptId: string;
+  chapterSequenceNo: number;
+  status: MarketplacePracticeAttemptStatus;
+  score: number | null;
+  correctCount: number | null;
+  questionCount: number;
+  startedAt: string;
+  completedAt: string | null;
+}
+
+export interface MarketplaceChapterProgress {
+  chapterSequenceNo: number;
+  chapterTitle: string;
+  completed: boolean;
+  bestScore: number | null;
+  attemptCount: number;
+  lastCompletedAt: string | null;
+}
+
+export interface MarketplaceVersionProgress {
+  versionId: string;
+  versionNo: number;
+  totalChapterCount: number;
+  totalQuizCount: number;
+  completedChapterCount: number;
+  completedQuizCount: number;
+  completionPercent: number;
+  firstActivityAt: string | null;
+  lastActivityAt: string | null;
+  reviewEligible: boolean;
+  chapters: MarketplaceChapterProgress[];
+}
+
 export interface CreateMarketplaceItemRequest {
   workspaceId: string;
   title: string;

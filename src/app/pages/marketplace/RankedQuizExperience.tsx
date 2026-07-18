@@ -49,7 +49,7 @@ function AttemptHistory({ attempts, loading }: { attempts: MarketplaceRankedAtte
   </section>;
 }
 
-export default function RankedQuizExperience() {
+export default function RankedQuizExperience({ embedded = false }: { embedded?: boolean }) {
   const { itemId = "" } = useParams<{ itemId: string }>();
   const [searchParams] = useSearchParams();
   const requestedVersionId = searchParams.get("versionId");
@@ -129,8 +129,8 @@ export default function RankedQuizExperience() {
   if (failed || !ownedPack || !versionId) return <section className="rounded-[2rem] border border-rose-200 bg-rose-50 p-8 text-center"><AlertTriangle className="mx-auto h-8 w-8 text-rose-600" /><h1 className="mt-4 text-xl font-black text-rose-950">Không thể mở Quiz Pack</h1><button type="button" onClick={() => void load()} className="mt-5 min-h-11 rounded-xl bg-rose-600 px-4 text-sm font-bold text-white">Thử lại</button></section>;
 
   return <div className="mx-auto max-w-6xl">
-    <Link to="/my-packs" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-[#FF6B00] transition hover:text-[#C2410C]"><ArrowLeft className="h-4 w-4" />Gói của tôi</Link>
-    <section className="relative mt-3 overflow-hidden rounded-[2rem] border border-orange-100 bg-[radial-gradient(circle_at_84%_10%,rgba(255,187,118,0.3),transparent_25%),linear-gradient(125deg,#FFF8F1_0%,#FFFFFF_64%,#FFF1E2_100%)] p-6 shadow-[0_16px_44px_rgba(194,65,12,0.08)] sm:p-8"><div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full border-[22px] border-orange-200/45" /><div className="relative"><span className="inline-flex rounded-xl border border-orange-100 bg-white/85 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#FF6B00]">Phiên bản {packVersionNo} · Quiz xếp hạng</span><h1 className="mt-4 text-3xl font-black tracking-[-0.04em] text-slate-950 sm:text-4xl">{ownedPack.title}</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Bộ câu hỏi được xáo trộn riêng cho bạn. Đáp án đúng chỉ được chấm trên máy chủ.</p></div></section>
+    {!embedded && <Link to="/my-packs" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-[#FF6B00] transition hover:text-[#C2410C]"><ArrowLeft className="h-4 w-4" />Gói của tôi</Link>}
+    {!embedded && <section className="relative mt-3 overflow-hidden rounded-[2rem] border border-orange-100 bg-[radial-gradient(circle_at_84%_10%,rgba(255,187,118,0.3),transparent_25%),linear-gradient(125deg,#FFF8F1_0%,#FFFFFF_64%,#FFF1E2_100%)] p-6 shadow-[0_16px_44px_rgba(194,65,12,0.08)] sm:p-8"><div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full border-[22px] border-orange-200/45" /><div className="relative"><span className="inline-flex rounded-xl border border-orange-100 bg-white/85 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#FF6B00]">Phiên bản {packVersionNo} · Quiz xếp hạng</span><h1 className="mt-4 text-3xl font-black tracking-[-0.04em] text-slate-950 sm:text-4xl">{ownedPack.title}</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Bộ câu hỏi được xáo trộn riêng cho bạn. Đáp án đúng chỉ được chấm trên máy chủ.</p></div></section>}
     <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_14px_36px_rgba(15,23,42,0.05)] sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#FF6B00]">Ranked Quiz</p><h2 className="mt-1 text-2xl font-black tracking-[-0.03em] text-slate-950">Thử thách kiến thức</h2><p className="mt-2 text-sm leading-6 text-slate-500">Kết quả hợp lệ đầu tiên có thể vào bảng xếp hạng của phiên bản này.</p></div>{attempt && !expired && <Countdown expiresAt={attempt.expiresAt} onExpire={onExpire} />}</div>
