@@ -133,6 +133,29 @@ async function submitLearnerLogin() {
 // including this page, when active). The login page itself must therefore carry NO maintenance
 // interception logic — a successful learner sign-in always proceeds.
 describe("Auth — no auth-layer maintenance interception", () => {
+  it("renders the branded login layout with the official logo", async () => {
+    render(<Auth />);
+
+    const logo = await screen.findByRole("img", { name: "SkillSprint" });
+
+    expect(logo).toHaveAttribute("src", "/logo.png");
+    expect(screen.getByText("Học thông minh. Tiến xa hơn.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /tiếp tục với google/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /về trang chủ skillsprint/i })).toHaveAttribute("href", "/");
+  });
+
+  it("switches to the redesigned registration form without changing the auth flow", async () => {
+    render(<Auth />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /đăng ký ngay/i }));
+
+    expect(await screen.findByRole("heading", { name: "Tạo tài khoản mới" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Họ và tên")).toBeInTheDocument();
+    expect(screen.getByLabelText("Địa chỉ email")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /tiếp tục với google/i })).toBeInTheDocument();
+    expect(navigateMock).toHaveBeenCalledWith("/login?mode=register", { replace: true });
+  });
+
   it("lets a successful learner sign-in proceed (gate owns the lockdown)", async () => {
     render(<Auth />);
 
@@ -146,5 +169,8 @@ describe("Auth — no auth-layer maintenance interception", () => {
 
     // No blocking maintenance dialog is rendered from the login page anymore.
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // Let the production redirect timer finish before jsdom tears down `window`.
+    await new Promise((resolve) => setTimeout(resolve, 120));
   });
 });
