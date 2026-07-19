@@ -24,6 +24,7 @@ export function useMarketplaceQualityJob(versionId: string | null | undefined) {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -34,19 +35,21 @@ export function useMarketplaceQualityJob(versionId: string | null | undefined) {
 
   const refetch = useCallback(async (silent = false) => {
     if (!versionId) {
+      requestIdRef.current += 1;
       setJob(null);
       setLoading(false);
       return null;
     }
 
+    const requestId = ++requestIdRef.current;
     if (!silent) setLoading(true);
     setError(null);
     try {
       const latest = await marketplaceService.getLatestCreatorQualityJob(versionId);
-      if (mountedRef.current) setJob(latest);
+      if (mountedRef.current && requestId === requestIdRef.current) setJob(latest);
       return latest;
     } catch (requestError) {
-      if (!mountedRef.current) return null;
+      if (!mountedRef.current || requestId !== requestIdRef.current) return null;
       if (statusOf(requestError) === 404) {
         setJob(null);
       } else {
@@ -54,7 +57,7 @@ export function useMarketplaceQualityJob(versionId: string | null | undefined) {
       }
       return null;
     } finally {
-      if (mountedRef.current && !silent) setLoading(false);
+      if (mountedRef.current && requestId === requestIdRef.current && !silent) setLoading(false);
     }
   }, [versionId]);
 
@@ -82,8 +85,17 @@ export function useMarketplaceQualityJob(versionId: string | null | undefined) {
 
   useEffect(() => {
     if (!job || !ACTIVE_STATUSES.has(job.status)) return;
-    const timer = window.setTimeout(() => void refetch(true), POLL_INTERVAL_MS);
-    return () => window.clearTimeout(timer);
+    let cancelled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      await refetch(true);
+      if (!cancelled) timer = window.setTimeout(() => void poll(), POLL_INTERVAL_MS);
+    };
+    timer = window.setTimeout(() => void poll(), POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
   }, [job, refetch]);
 
   return {

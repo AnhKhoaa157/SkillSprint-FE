@@ -289,6 +289,8 @@ export function CreatorQuizPackValidation() {
   const current = questions[index];
   const complete = questions.length > 0 && questions.every(question => answers[question.questionId]);
   const adminCanAutofill = isAdminDefault && questions.length > 0;
+  const persistedValidationPassed = (snapshot?.creatorValidationScore ?? 0) >= 90;
+  const qualityPanel = <CreatorQualityPanel job={quality.job} loading={quality.loading} starting={quality.starting} active={quality.active} error={quality.error} onStart={() => void quality.start()} onRetry={() => void quality.refetch()} />;
 
   useEffect(() => {
     if (result) return;
@@ -424,7 +426,7 @@ export function CreatorQuizPackValidation() {
             )}
           </div>
         </div>
-        {passed && <CreatorQualityPanel job={quality.job} loading={quality.loading} starting={quality.starting} active={quality.active} error={quality.error} onStart={() => void quality.start()} onRetry={() => void quality.refetch()} />}
+        {passed && qualityPanel}
         </div>
         {reviewConfirm && (
           <Confirm
@@ -457,6 +459,16 @@ export function CreatorQuizPackValidation() {
           {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
         </span>
       </div>
+
+      {persistedValidationPassed && (
+        <div className="mt-7 space-y-4">
+          {qualityPanel}
+          <div className="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="font-black text-emerald-950">Creator Validation đã đạt {snapshot.creatorValidationScore}/100</p><p className="mt-1 text-sm leading-5 text-emerald-800">Bạn có thể theo dõi quality gate mà không cần làm lại bài Validation.</p></div>
+            <Button disabled={!quality.passed} onClick={() => setReviewConfirm(true)}><Send className="h-4 w-4" />{quality.passed ? "Gửi Admin duyệt" : "Chờ quality gate"}</Button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-7 grid gap-5 lg:grid-cols-[minmax(0,1fr)_240px]">
         <section className="rounded-3xl border border-slate-200 bg-white p-6">
@@ -546,6 +558,15 @@ export function CreatorQuizPackValidation() {
           busy={submitting}
           onClose={() => setConfirm(false)}
           onConfirm={submit}
+        />
+      )}
+      {reviewConfirm && (
+        <Confirm
+          title="Gửi Admin duyệt"
+          text="Creator Validation và quality gate đều đã đạt. Quiz Pack sẽ chuyển sang trạng thái chờ Admin kiểm tra."
+          busy={reviewing}
+          onClose={() => setReviewConfirm(false)}
+          onConfirm={sendReview}
         />
       )}
     </CreatorShell>

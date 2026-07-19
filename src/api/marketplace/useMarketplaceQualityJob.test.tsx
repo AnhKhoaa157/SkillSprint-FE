@@ -72,6 +72,45 @@ describe("useMarketplaceQualityJob", () => {
     expect(result.current.job).toEqual(queuedJob);
   });
 
+  it("keeps polling an active job after a transient request failure", async () => {
+    vi.useFakeTimers();
+    const passedJob = { ...queuedJob, status: "PASSED", score: 100 } satisfies MarketplaceQualityJob;
+    vi.mocked(marketplaceService.getLatestCreatorQualityJob)
+      .mockResolvedValueOnce(queuedJob)
+      .mockRejectedValueOnce(new Error("Temporary network failure"))
+      .mockResolvedValueOnce(passedJob);
+
+    const { result } = renderHook(() => useMarketplaceQualityJob("version-1"));
+    await act(async () => { await Promise.resolve(); });
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(3_000); });
+    expect(result.current.error).toBe("Temporary network failure");
+    expect(result.current.active).toBe(true);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(3_000); });
+    expect(result.current.passed).toBe(true);
+    expect(result.current.error).toBeNull();
+  });
+
+  it("ignores an older version response after the route changes", async () => {
+    let resolveOld: ((job: MarketplaceQualityJob) => void) | undefined;
+    const oldRequest = new Promise<MarketplaceQualityJob>(resolve => { resolveOld = resolve; });
+    const currentJob = { ...queuedJob, jobId: "job-2", versionId: "version-2" };
+    vi.mocked(marketplaceService.getLatestCreatorQualityJob)
+      .mockReturnValueOnce(oldRequest)
+      .mockResolvedValueOnce(currentJob);
+
+    const { result, rerender } = renderHook(
+      ({ versionId }) => useMarketplaceQualityJob(versionId),
+      { initialProps: { versionId: "version-1" } },
+    );
+    rerender({ versionId: "version-2" });
+    await waitFor(() => expect(result.current.job).toEqual(currentJob));
+
+    await act(async () => { resolveOld?.(queuedJob); await oldRequest; });
+    expect(result.current.job).toEqual(currentJob);
+  });
+
   it("requires both PASSED and the current snapshot", () => {
     expect(isCurrentQualityPass({ ...queuedJob, status: "PASSED", currentSnapshot: true })).toBe(true);
     expect(isCurrentQualityPass({ ...queuedJob, status: "PASSED", currentSnapshot: false })).toBe(false);

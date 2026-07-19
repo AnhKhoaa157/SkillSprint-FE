@@ -358,6 +358,7 @@ export interface CreatorValidationPackResponse {
   chapterCount: number;
   quizCount: number;
   questionCount: number;
+  creatorValidationScore: number | null;
   chapters: CreatorValidationChapter[];
 }
 
