@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import type { MarketplaceQualityJob } from "../../../api/marketplace";
 import { AdminQualityReviewPanel } from "./AdminQualityReviewPanel";
 
@@ -37,6 +38,15 @@ describe("AdminQualityReviewPanel", () => {
 
     expect(screen.getByText(/Creator chưa chạy kiểm định/)).toBeInTheDocument();
     expect(screen.getByText("Chưa kiểm định")).toBeInTheDocument();
+  });
+
+  it("lets an admin queue validation for a legacy pending pack", async () => {
+    const onQueue = vi.fn();
+    render(<AdminQualityReviewPanel latest={null} canQueue onQueue={onQueue} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Chạy kiểm định cho pack cũ" }));
+
+    expect(onQueue).toHaveBeenCalledOnce();
   });
 
   it("recognizes only a current passed snapshot", () => {

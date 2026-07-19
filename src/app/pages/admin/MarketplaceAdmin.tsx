@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, Coins, Eye, LoaderCircle, PackageCheck, RefreshCw, ShieldCheck, Sparkles, XCircle } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
-import { getMarketplaceItems, getMarketplaceReviewDetail, updateMarketplaceReviewStatus } from "../../../api/admin/marketplaceAdminService";
+import { getMarketplaceItems, getMarketplaceReviewDetail, queueAdminMarketplaceQuality, updateMarketplaceReviewStatus } from "../../../api/admin/marketplaceAdminService";
 import type { AdminMarketplaceChapter, AdminMarketplaceDetail, AdminMarketplaceListItem, AdminMarketplaceStatus } from "../../../api/admin/marketplaceAdminTypes";
 import { AdminQualityReviewPanel } from "../../components/marketplace/AdminQualityReviewPanel";
 import { isQualityReady, QualityStatusBadge } from "../../components/marketplace/MarketplaceQualityStatus";
@@ -130,9 +130,16 @@ function MarketplaceReviewDetail({ itemId }: { itemId: string }) {
   const [action, setAction] = useState<"PUBLISHED" | "REJECTED" | "SUSPENDED" | null>(null);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [queuingQuality, setQueuingQuality] = useState(false);
   const load = useCallback(async () => { setLoading(true); setFailed(false); try { const detail = await getMarketplaceReviewDetail(itemId); setItem(detail); setNote(detail.reviewNote || ""); } catch { setFailed(true); } finally { setLoading(false); } }, [itemId]);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (item?.qualityJob?.status !== "QUEUED" && item?.qualityJob?.status !== "RUNNING") return;
+    const timer = window.setTimeout(() => void load(), 3000);
+    return () => window.clearTimeout(timer);
+  }, [item?.qualityJob?.status, item?.qualityJob?.jobId, load]);
   const publishReady = isQualityReady(item?.qualityJob?.status, item?.qualityJob?.currentSnapshot);
+  const queueQuality = async () => { if (!item) return; setQueuingQuality(true); try { await queueAdminMarketplaceQuality(item.itemId); toast.success("Đã xếp lịch kiểm định chất lượng."); await load(); } catch (error) { toast.error(errorText(error)); await load(); } finally { setQueuingQuality(false); } };
   const decide = async () => { if (!action || !item) return; if (action === "PUBLISHED" && !publishReady) { toast.error("Quiz Pack chưa đạt kiểm định chất lượng hiện hành."); setAction(null); await load(); return; } setSaving(true); try { await updateMarketplaceReviewStatus(item.itemId, { status: action, reviewNote: note.trim() || undefined }); toast.success(action === "PUBLISHED" ? "Đã xuất bản Quiz Pack." : action === "REJECTED" ? "Đã từ chối Quiz Pack." : "Đã tạm ngừng bán Quiz Pack."); setAction(null); await load(); } catch (error) { toast.error(errorText(error)); setAction(null); await load(); } finally { setSaving(false); } };
 
   if (loading) return <div className="p-7"><SkeletonRows /></div>;
@@ -158,7 +165,7 @@ function MarketplaceReviewDetail({ itemId }: { itemId: string }) {
         <main className="min-w-0 space-y-6">
           <section className="rounded-[1.75rem] border border-white bg-white/90 p-5 shadow-[0_16px_45px_rgba(71,50,35,0.06)] sm:p-6"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FF6B00]">Tổng quan</p><h2 className="mt-1 text-xl font-black tracking-[-0.02em] text-slate-950">Thông tin Quiz Pack</h2></div><span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600"><PackageCheck className="h-3.5 w-3.5" />{item.subject}</span></div><p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-600">{item.description || "Chưa có mô tả cho Quiz Pack này."}</p><div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><ReviewMetric label="Giá bán" value={`${item.priceCoins} Coin`} tone="orange" /><ReviewMetric label="Nội dung" value={`${item.chapterCount} chương · ${item.quizCount} quiz`} /><ReviewMetric label="Câu hỏi" value={`${item.questionCount} câu`} /><ReviewMetric label="Creator" value={item.creatorName || "—"} tone="emerald" /></div>{item.creatorId && <p className="mt-4 text-xs text-slate-400">Creator ID: <span className="break-all font-semibold text-slate-500">{item.creatorId}</span></p>}{item.reviewNote && <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50/80 p-4 text-sm leading-6 text-amber-950"><p className="font-black">Ghi chú duyệt trước đó</p><p className="mt-1">{item.reviewNote}</p></div>}</section>
 
-          <AdminQualityReviewPanel latest={item.qualityJob} history={item.qualityJobHistory} />
+          <AdminQualityReviewPanel latest={item.qualityJob} history={item.qualityJobHistory} canQueue={item.status === "PENDING_REVIEW"} queuing={queuingQuality} onQueue={() => void queueQuality()} />
 
           <section><div className="flex items-end justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FF6B00]">Nội dung</p><h2 className="mt-1 text-xl font-black tracking-[-0.02em] text-slate-950">Nội dung cần duyệt</h2></div><span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-500">{item.chapters.length} chương</span></div><p className="mt-2 text-sm leading-6 text-slate-500">Mở từng chương để kiểm tra quiz, câu hỏi, đáp án và phần giải thích.</p><div className="mt-4 space-y-3">{item.chapters.map((chapter, index) => <ChapterPanel key={chapter.chapterId} chapter={chapter} index={index} />)}</div></section>
         </main>

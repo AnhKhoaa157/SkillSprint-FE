@@ -8,6 +8,7 @@ import MarketplaceAdmin from "./MarketplaceAdmin";
 vi.mock("../../../api/admin/marketplaceAdminService", () => ({
   getMarketplaceItems: vi.fn(),
   getMarketplaceReviewDetail: vi.fn(),
+  queueAdminMarketplaceQuality: vi.fn(),
   updateMarketplaceReviewStatus: vi.fn(),
 }));
 

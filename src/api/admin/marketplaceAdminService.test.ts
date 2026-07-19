@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { requestJson } from "../core/apiClient";
-import { getMarketplaceItems, getMarketplaceReviewDetail, updateMarketplaceReviewStatus } from "./marketplaceAdminService";
+import { getMarketplaceItems, getMarketplaceReviewDetail, queueAdminMarketplaceQuality, updateMarketplaceReviewStatus } from "./marketplaceAdminService";
 
 vi.mock("../core/apiClient", () => ({ requestJson: vi.fn() }));
 
@@ -109,5 +109,14 @@ describe("marketplaceAdminService", () => {
       method: "PATCH",
       body: JSON.stringify({ status: "PUBLISHED", reviewNote: "Approved" }),
     });
+  });
+
+  it("queues an admin quality job for a legacy pending item", async () => {
+    const queued = { jobId: "job-1", versionId: "version-1", status: "QUEUED" };
+    vi.mocked(requestJson).mockResolvedValueOnce({ code: 1000, message: "Success", data: queued } as any);
+
+    await expect(queueAdminMarketplaceQuality("item/1")).resolves.toEqual(queued);
+
+    expect(requestJson).toHaveBeenCalledWith("/api/admin/marketplace/items/item%2F1/quality-jobs", { method: "POST" });
   });
 });

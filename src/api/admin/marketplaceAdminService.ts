@@ -1,4 +1,5 @@
 import { requestJson } from "../core/apiClient";
+import type { MarketplaceQualityJob } from "../marketplace";
 import type { AdminMarketplaceChapter, AdminMarketplaceDetail, AdminMarketplaceDetailPayload, AdminMarketplaceListItem, AdminMarketplaceQuestion, AdminMarketplaceStatus, RawAdminMarketplaceQuestion, UpdateAdminMarketplaceStatusRequest } from "./marketplaceAdminTypes";
 
 const BASE = "/api/admin/marketplace/items";
@@ -17,6 +18,12 @@ export const getPendingMarketplaceItems = () => getMarketplaceItems("PENDING_REV
 
 export async function getMarketplaceReviewDetail(itemId: string): Promise<AdminMarketplaceDetail> {
   return normalizeDetail(requireData(await requestJson<AdminMarketplaceDetailPayload>(`${BASE}/${encodeURIComponent(itemId)}`)));
+}
+
+export async function queueAdminMarketplaceQuality(itemId: string): Promise<MarketplaceQualityJob> {
+  return requireData(await requestJson<MarketplaceQualityJob>(`${BASE}/${encodeURIComponent(itemId)}/quality-jobs`, {
+    method: "POST",
+  }));
 }
 
 export async function updateMarketplaceReviewStatus(itemId: string, request: UpdateAdminMarketplaceStatusRequest): Promise<AdminMarketplaceListItem> {
