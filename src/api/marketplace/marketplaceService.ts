@@ -8,6 +8,8 @@ import type {
   MarketplaceRankedAttempt, MarketplaceRankedAttemptHistory, MarketplaceRankedAttemptResult,
   MarketplacePracticeAttempt, MarketplacePracticeAttemptHistory, MarketplacePracticeAttemptResult, MarketplaceVersionProgress,
   MarketplaceQualityJob,
+  MarketplaceReviewCollection,
+  MarketplaceReviewContext,
 } from "./marketplaceTypes";
 
 const CREATOR_PAYOUT_QR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -101,6 +103,22 @@ const marketplaceService = {
   },
   async getReviews(itemId: string) {
     return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceReview[]>>(`/api/marketplace/items/${itemId}/reviews`)).data);
+  },
+  async getVersionReviews(versionId: string): Promise<MarketplaceReviewCollection> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceReviewCollection>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/reviews`,
+    )).data);
+  },
+  async getVersionReviewContext(versionId: string): Promise<MarketplaceReviewContext> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceReviewContext>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/reviews/me`,
+    )).data);
+  },
+  async upsertVersionReview(versionId: string, request: { rating: number; comment?: string }): Promise<MarketplaceReview> {
+    return unwrap((await skillSprintApiClient.put<ApiResponse<MarketplaceReview>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/reviews/me`,
+      request,
+    )).data);
   },
   async getWallet() {
     return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceWallet>>("/api/marketplace/wallet")).data);

@@ -86,12 +86,37 @@ export interface MarketplaceLeaderboardEntry {
 }
 
 export interface MarketplaceReview {
-  reviewId?: string;
+  reviewId: string;
+  packId?: string | null;
+  versionId?: string | null;
+  versionNo?: number | null;
   reviewerName: string;
   rating: number;
   comment?: string | null;
   createdAt: string;
+  updatedAt: string;
+  /** Legacy item endpoint compatibility; canonical version context is authoritative. */
   mine?: boolean;
+}
+
+export interface MarketplaceReviewCollection {
+  packId: string;
+  versionId: string;
+  versionNo: number;
+  averageRating: number;
+  reviewCount: number;
+  reviews: MarketplaceReview[];
+}
+
+export type MarketplaceReviewIneligibilityReason = "ACCESS_REQUIRED" | "QUIZ_COMPLETION_REQUIRED";
+
+export interface MarketplaceReviewContext {
+  packId: string;
+  versionId: string;
+  versionNo: number;
+  eligible: boolean;
+  ineligibilityReason: MarketplaceReviewIneligibilityReason | null;
+  currentUserReview: MarketplaceReview | null;
 }
 
 export interface MarketplaceWallet {

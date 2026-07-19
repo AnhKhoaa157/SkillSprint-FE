@@ -3,7 +3,7 @@ import marketplaceService from "./marketplaceService";
 import { skillSprintApiClient } from "../core/skillSprintApiClient";
 
 vi.mock("../core/skillSprintApiClient", () => ({
-  skillSprintApiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn() },
+  skillSprintApiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn() },
 }));
 
 describe("marketplaceService creator snapshot endpoints", () => {
@@ -156,6 +156,24 @@ describe("marketplaceService creator snapshot endpoints", () => {
     expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(1, "/api/marketplace/versions/version-1/practice-attempts/me/in-progress", { params: { chapterSequenceNo: 3 } });
     expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(2, "/api/marketplace/versions/version-1/practice-attempts/me");
     expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(3, "/api/marketplace/versions/version-1/progress/me");
+  });
+
+  it("uses canonical version-scoped review endpoints", async () => {
+    const review = { reviewId: "review-1", packId: "pack-1", versionId: "version-1", versionNo: 1, reviewerName: "Learner", rating: 5, comment: "Great", createdAt: "2026-07-19T00:00:00Z", updatedAt: "2026-07-19T00:00:00Z" };
+    const collection = { packId: "pack-1", versionId: "version-1", versionNo: 1, averageRating: 5, reviewCount: 1, reviews: [review] };
+    const context = { packId: "pack-1", versionId: "version-1", versionNo: 1, eligible: true, ineligibilityReason: null, currentUserReview: review };
+    vi.mocked(skillSprintApiClient.get)
+      .mockResolvedValueOnce({ data: { code: 200, message: "Success", data: collection } } as never)
+      .mockResolvedValueOnce({ data: { code: 200, message: "Success", data: context } } as never);
+    vi.mocked(skillSprintApiClient.put).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: review } } as never);
+
+    await expect(marketplaceService.getVersionReviews("version/1")).resolves.toEqual(collection);
+    await expect(marketplaceService.getVersionReviewContext("version/1")).resolves.toEqual(context);
+    await expect(marketplaceService.upsertVersionReview("version/1", { rating: 5, comment: "Great" })).resolves.toEqual(review);
+
+    expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(1, "/api/marketplace/versions/version%2F1/reviews");
+    expect(skillSprintApiClient.get).toHaveBeenNthCalledWith(2, "/api/marketplace/versions/version%2F1/reviews/me");
+    expect(skillSprintApiClient.put).toHaveBeenCalledWith("/api/marketplace/versions/version%2F1/reviews/me", { rating: 5, comment: "Great" });
   });
 
   it("purchases a pack version with the supplied idempotency key", async () => {
