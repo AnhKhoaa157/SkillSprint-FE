@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { AlertTriangle, ArrowLeft, ArrowRight, BanknoteArrowDown, BookOpen, CheckCircle2, ChevronDown, ChevronLeft, CircleAlert, ClipboardCheck, Clock3, Coins, FileQuestion, Layers3, LoaderCircle, PackagePlus, RefreshCw, Send, Sparkles, Trophy, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { marketplaceService, type CreatorMarketplaceItem, type CreatorValidationPackResponse, type CreatorValidationResult } from "../../../api/marketplace";
+import { marketplaceService, useMarketplaceQualityJob, type CreatorMarketplaceItem, type CreatorValidationPackResponse, type CreatorValidationResult } from "../../../api/marketplace";
 import { getCurrentSubscription } from "../../../api/billing/subscriptionsService";
 import workspaceService, { type WorkspaceResponse } from "../../../api/utilities/workspaceService";
+import { CreatorQualityPanel, isCreatorReviewReady, QualityStatusBadge } from "../../components/marketplace/CreatorQualityPanel";
 import { buildCreatorValidationCorrectAnswers } from "./creatorValidationAdminTool";
 
 type ValidationQuestion = {
@@ -52,6 +53,7 @@ function statusMeta(status: string) {
 
 function CreatorPackCard({ item, onSendReview, onRefreshSnapshot }: { item: CreatorMarketplaceItem; onSendReview: (item: CreatorMarketplaceItem) => void; onRefreshSnapshot: (item: CreatorMarketplaceItem) => void }) {
   const score = scoreOf(item);
+  const reviewReady = isCreatorReviewReady(score, item.qualityStatus, item.qualityCurrent);
   const status = statusMeta(item.status);
   const needsRevision = item.status === "DRAFT" && Boolean(item.reviewNote);
 
@@ -60,10 +62,10 @@ function CreatorPackCard({ item, onSendReview, onRefreshSnapshot }: { item: Crea
     <div className="flex items-start justify-between gap-4"><div className="min-w-0"><span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${status.className}`}>{needsRevision ? "Bản nháp — cần chỉnh sửa" : status.label}</span><p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">{item.subject}</p><h2 className="mt-1 line-clamp-2 text-xl font-black leading-7 text-slate-900">{item.title}</h2></div><span className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-orange-50 px-3 py-2 text-sm font-black text-[#FF6B00]"><Coins className="h-4 w-4" />{item.priceCoins}</span></div>
     <p className="mt-4 line-clamp-2 min-h-10 text-sm leading-5 text-slate-500">{item.description || "Chưa có mô tả cho Quiz Pack này."}</p>
     <div className="mt-5 grid grid-cols-3 divide-x divide-slate-200 rounded-2xl border border-slate-100 bg-slate-50 px-2 py-3 text-center"><div><p className="text-lg font-black text-slate-900">{item.chapterCount}</p><p className="text-xs text-slate-500">chương</p></div><div><p className="text-lg font-black text-slate-900">{item.quizCount}</p><p className="text-xs text-slate-500">quiz</p></div><div><p className="text-lg font-black text-slate-900">{item.questionCount}</p><p className="text-xs text-slate-500">câu hỏi</p></div></div>
-    <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4 text-sm"><div><p className="text-xs font-medium text-slate-500">Validation</p><p className="mt-1 inline-flex items-center gap-1 font-black text-slate-800"><ClipboardCheck className="h-4 w-4 text-[#FF6B00]" />{score ? `${score}/100` : "Cần thực hiện lại"}</p></div><p className="text-right text-xs leading-5 text-slate-500">Tạo lúc<br /><span className="font-semibold text-slate-700">{date(item.createdAt)}</span></p></div>
+    <div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-sm"><div><p className="text-xs font-medium text-slate-500">Creator Validation</p><p className="mt-1 inline-flex items-center gap-1 font-black text-slate-800"><ClipboardCheck className="h-4 w-4 text-[#FF6B00]" />{score ? `${score}/100` : "Chưa đạt"}</p></div><div><p className="text-xs font-medium text-slate-500">Quality gate</p><div className="mt-1"><QualityStatusBadge status={item.qualityStatus} currentSnapshot={item.qualityCurrent} /></div></div></div>
     {needsRevision && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm leading-5 text-amber-950"><AlertTriangle className="mr-2 inline h-4 w-4" /><b>Admin yêu cầu chỉnh sửa:</b> {item.reviewNote}</div>}
     {item.status === "SUSPENDED" && item.reviewNote && <div className="mt-4 rounded-2xl bg-slate-100 p-3 text-sm text-slate-700">{item.reviewNote}</div>}
-    {item.status === "DRAFT" && <div className="mt-5 flex flex-wrap gap-2"><button type="button" onClick={() => onRefreshSnapshot(item)} className="inline-flex items-center gap-2 rounded-xl border border-orange-200 px-4 py-2.5 text-sm font-bold text-[#FF6B00] hover:bg-orange-50"><RefreshCw className="h-4 w-4" />Làm mới snapshot</button>{!needsRevision && <Link to={`/app/creator/marketplace/${item.itemId}/validation`} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"><ClipboardCheck className="h-4 w-4" />Làm Validation</Link>}<Button disabled={score < 90} onClick={() => onSendReview(item)}><Send className="h-4 w-4" />Gửi duyệt</Button></div>}
+    {item.status === "DRAFT" && <><div className="mt-5 flex flex-wrap gap-2"><button type="button" onClick={() => onRefreshSnapshot(item)} className="inline-flex items-center gap-2 rounded-xl border border-orange-200 px-4 py-2.5 text-sm font-bold text-[#FF6B00] hover:bg-orange-50"><RefreshCw className="h-4 w-4" />Làm mới snapshot</button>{!needsRevision && <Link to={`/app/creator/marketplace/${item.itemId}/validation`} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"><ClipboardCheck className="h-4 w-4" />Kiểm tra điều kiện</Link>}<Button disabled={!reviewReady} onClick={() => onSendReview(item)}><Send className="h-4 w-4" />Gửi duyệt</Button></div>{!reviewReady && <p className="mt-2 text-xs leading-5 text-slate-500">Cần Creator Validation ≥ 90 và quality gate đạt trên snapshot hiện tại.</p>}</>}
     {item.status === "PENDING_REVIEW" && <p className="mt-5 rounded-xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">Admin đang kiểm tra Quiz Pack này.</p>}
     {item.status === "PUBLISHED" && <div className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-emerald-700"><BookOpen className="h-4 w-4" />Đang hiển thị trên Marketplace</div>}
   </article>;
@@ -80,7 +82,7 @@ export function CreatorQuizPackDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const load = useCallback(async () => { setLoading(true); setFailed(false); try { setItems(await marketplaceService.getMine()); } catch { setFailed(true); } finally { setLoading(false); } }, []);
   useEffect(() => { void load(); }, [load]);
-  const submitReview = async () => { if (!reviewItem) return; setSending(true); try { await marketplaceService.submitForReview(reviewItem.itemId); toast.success("Đã gửi Quiz Pack chờ duyệt."); setReviewItem(null); await load(); } catch (error) { toast.error(errorText(error)); } finally { setSending(false); } };
+  const submitReview = async () => { if (!reviewItem) return; if (!isCreatorReviewReady(scoreOf(reviewItem), reviewItem.qualityStatus, reviewItem.qualityCurrent)) { toast.error("Quiz Pack chưa đạt đủ Creator Validation và quality gate."); return; } setSending(true); try { await marketplaceService.submitForReview(reviewItem.itemId); toast.success("Đã gửi Quiz Pack chờ duyệt."); setReviewItem(null); await load(); } catch (error) { toast.error(errorText(error)); } finally { setSending(false); } };
   const refreshSnapshot = async () => { if (!refreshItem) return; setRefreshing(true); try { const item = await marketplaceService.refreshCreatorSnapshot(refreshItem.itemId); toast.success("Đã làm mới snapshot. Hãy thực hiện Validation lại."); setRefreshItem(null); navigate(`/app/creator/marketplace/${item.itemId}/validation`); } catch (error) { toast.error(errorText(error)); } finally { setRefreshing(false); } };
   const processSteps = [
     { number: "01", icon: PackagePlus, title: "Chọn workspace", text: "Một workspace cho mỗi pack" },
@@ -146,7 +148,7 @@ export function CreatorQuizPackDashboard() {
         <Link to="/app/creator/marketplace/create" className="relative mt-7 inline-flex"><Button className="h-12 px-5"><PackagePlus className="h-4 w-4" />Tạo Quiz Pack<ArrowRight className="h-4 w-4" /></Button></Link>
       </div> : <div className="grid gap-5 xl:grid-cols-2">{items.map(item => <CreatorPackCard key={item.itemId} item={item} onSendReview={setReviewItem} onRefreshSnapshot={setRefreshItem} />)}</div>}</div>
     </section>
-    {reviewItem && <Confirm title="Gửi Admin duyệt" text="Sau khi gửi duyệt, Quiz Pack sẽ ở trạng thái chờ Admin kiểm tra." busy={sending} onClose={() => setReviewItem(null)} onConfirm={submitReview} />}
+    {reviewItem && <Confirm title="Gửi Admin duyệt" text="Creator Validation và quality gate đều đã đạt. Sau khi xác nhận, Quiz Pack sẽ chuyển sang trạng thái chờ Admin kiểm tra." busy={sending} onClose={() => setReviewItem(null)} onConfirm={submitReview} />}
     {refreshItem && <Confirm title="Làm mới snapshot?" text="Nội dung Quiz Pack sẽ được đóng gói lại từ Workspace hiện tại. Bạn cần thực hiện Validation lại trước khi gửi duyệt." busy={refreshing} onClose={() => setRefreshItem(null)} onConfirm={refreshSnapshot} />}
   </CreatorShell>;
 }
@@ -247,6 +249,7 @@ export function CreatorQuizPackValidation() {
   const [reviewConfirm, setReviewConfirm] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [isAdminDefault, setIsAdminDefault] = useState(false);
+  const quality = useMarketplaceQualityJob(snapshot?.versionId);
 
   const loadSnapshot = useCallback(async () => {
     setLoading(true);
@@ -349,6 +352,10 @@ export function CreatorQuizPackValidation() {
   };
 
   const sendReview = async () => {
+    if (!quality.passed) {
+      toast.error("Quality gate chưa đạt trên snapshot hiện tại.");
+      return;
+    }
     setReviewing(true);
     try {
       await marketplaceService.submitForReview(itemId);
@@ -389,7 +396,8 @@ export function CreatorQuizPackValidation() {
     const passed = result.score >= 90;
     return (
       <CreatorShell>
-        <div className={`mx-auto max-w-xl rounded-3xl border p-7 text-center ${passed ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"}`}>
+        <div className="mx-auto max-w-3xl space-y-5">
+        <div className={`rounded-3xl border p-7 text-center ${passed ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"}`}>
           <CheckCircle2 className={`mx-auto h-10 w-10 ${passed ? "text-emerald-600" : "text-rose-600"}`} />
           <h1 className="mt-4 text-2xl font-black">{passed ? "Validation đạt yêu cầu" : "Validation chưa đạt"}</h1>
           <p className="mt-2 text-sm text-slate-600">Hoàn thành {date(result.completedAt)}</p>
@@ -408,13 +416,15 @@ export function CreatorQuizPackValidation() {
           </div>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             {passed ? (
-              <Button onClick={() => setReviewConfirm(true)}>
-                <Send className="h-4 w-4" />Gửi Admin duyệt
+              <Button disabled={!quality.passed} onClick={() => setReviewConfirm(true)}>
+                <Send className="h-4 w-4" />{quality.passed ? "Gửi Admin duyệt" : "Chờ quality gate"}
               </Button>
             ) : (
               <Button onClick={retry}>Làm lại Validation</Button>
             )}
           </div>
+        </div>
+        {passed && <CreatorQualityPanel job={quality.job} loading={quality.loading} starting={quality.starting} active={quality.active} error={quality.error} onStart={() => void quality.start()} onRetry={() => void quality.refetch()} />}
         </div>
         {reviewConfirm && (
           <Confirm
