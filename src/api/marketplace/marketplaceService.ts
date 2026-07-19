@@ -7,6 +7,7 @@ import type {
   CreatorEarnings, CreatorPayout, CreatorPayoutDestination, CreatorPayoutQrUploadUrl, MarketplaceVersionPurchaseReceipt,
   MarketplaceRankedAttempt, MarketplaceRankedAttemptHistory, MarketplaceRankedAttemptResult,
   MarketplacePracticeAttempt, MarketplacePracticeAttemptHistory, MarketplacePracticeAttemptResult, MarketplaceVersionProgress,
+  MarketplaceQualityJob,
 } from "./marketplaceTypes";
 
 const CREATOR_PAYOUT_QR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -217,6 +218,16 @@ const marketplaceService = {
   },
   async submitForReview(itemId: string) {
     return unwrap((await skillSprintApiClient.post<ApiResponse<CreatorMarketplaceItem>>(`/api/marketplace/items/${itemId}/submit-review`)).data);
+  },
+  async queueCreatorQualityJob(versionId: string): Promise<MarketplaceQualityJob> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplaceQualityJob>>(
+      `/api/marketplace/creator/versions/${encodeURIComponent(versionId)}/quality-jobs`,
+    )).data);
+  },
+  async getLatestCreatorQualityJob(versionId: string): Promise<MarketplaceQualityJob> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceQualityJob>>(
+      `/api/marketplace/creator/versions/${encodeURIComponent(versionId)}/quality-jobs/latest`,
+    )).data);
   },
   async getCreatorEarnings(): Promise<CreatorEarnings> {
     return unwrap((await skillSprintApiClient.get<ApiResponse<CreatorEarnings>>("/api/marketplace/creator/earnings")).data);

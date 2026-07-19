@@ -25,6 +25,30 @@ describe("marketplaceService creator snapshot endpoints", () => {
     expect(skillSprintApiClient.post).toHaveBeenCalledWith("/api/marketplace/items/pack-1/refresh-snapshot");
   });
 
+  it("queues and reads the latest version-scoped quality job", async () => {
+    const job = {
+      jobId: "job-1",
+      versionId: "version-1",
+      status: "QUEUED",
+      score: null,
+      currentSnapshot: true,
+      retryCount: 0,
+      maxRetries: 2,
+      startedAt: null,
+      completedAt: null,
+      createdAt: "2026-07-19T00:00:00Z",
+      report: null,
+    };
+    vi.mocked(skillSprintApiClient.post).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: job } } as never);
+    vi.mocked(skillSprintApiClient.get).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: job } } as never);
+
+    await expect(marketplaceService.queueCreatorQualityJob("version/1")).resolves.toEqual(job);
+    await expect(marketplaceService.getLatestCreatorQualityJob("version/1")).resolves.toEqual(job);
+
+    expect(skillSprintApiClient.post).toHaveBeenCalledWith("/api/marketplace/creator/versions/version%2F1/quality-jobs");
+    expect(skillSprintApiClient.get).toHaveBeenCalledWith("/api/marketplace/creator/versions/version%2F1/quality-jobs/latest");
+  });
+
   it("gets the available Coin top-up packages", async () => {
     const packages = [{ packageKey: "COIN_10000", coinAmount: 10000, vndAmount: 10000, currency: "VND" }];
     vi.mocked(skillSprintApiClient.get).mockResolvedValueOnce({ data: { code: 200, message: "Success", data: packages } } as never);

@@ -1,5 +1,37 @@
 export type MarketplaceStatus = "DRAFT" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "SUSPENDED" | string;
 
+export type MarketplaceQualityJobStatus = "QUEUED" | "RUNNING" | "PASSED" | "FAILED" | "ERROR";
+
+export interface MarketplaceQualityIssue {
+  code: string;
+  severity: string;
+  chapterSequenceNo: number | null;
+  questionId: string | null;
+  message: string;
+}
+
+export interface MarketplaceQualityReport {
+  passingScore: number;
+  blockingIssueCount: number;
+  chapterCount: number;
+  questionCount: number;
+  issues: MarketplaceQualityIssue[];
+}
+
+export interface MarketplaceQualityJob {
+  jobId: string;
+  versionId: string;
+  status: MarketplaceQualityJobStatus;
+  score: number | null;
+  currentSnapshot: boolean;
+  retryCount: number;
+  maxRetries: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  report: MarketplaceQualityReport | null;
+}
+
 export interface MarketplaceOption {
   optionId: string;
   text: string;
@@ -274,6 +306,9 @@ export interface CreatorMarketplaceItem extends MarketplaceItemSummary {
   status: MarketplaceStatus;
   creatorValidationScore?: number | null;
   validationScore?: number | null;
+  qualityStatus?: MarketplaceQualityJobStatus | null;
+  qualityScore?: number | null;
+  qualityCurrent?: boolean;
   reviewNote?: string | null;
   createdAt: string;
   publishedAt?: string | null;
@@ -315,6 +350,9 @@ export interface CreatorValidationChapter {
 
 export interface CreatorValidationPackResponse {
   itemId: string;
+  packId: string;
+  versionId: string;
+  versionNo: number;
   sourceWorkspaceId: string;
   title: string;
   chapterCount: number;
