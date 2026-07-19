@@ -9,13 +9,15 @@ vi.mock("../../../api/marketplace", () => ({
     getMyPacks: vi.fn(),
     getVersionProgress: vi.fn(),
     getPracticeAttemptHistory: vi.fn(),
+    getVersionReviewContext: vi.fn(),
+    upsertVersionReview: vi.fn(),
     startOrResumePracticeAttempt: vi.fn(),
     submitPracticeAttempt: vi.fn(),
   },
 }));
 
 vi.mock("./RankedQuizExperience", () => ({
-  default: () => <div>Ranked experience</div>,
+  default: ({ onCompleted }: { onCompleted?: () => void | Promise<void> }) => <button type="button" onClick={() => void onCompleted?.()}>Hoàn thành Ranked mô phỏng</button>,
 }));
 
 const pack = {
@@ -52,6 +54,14 @@ describe("MarketplaceLearningHub", () => {
     vi.mocked(marketplaceService.getMyPacks).mockResolvedValue([pack] as never);
     vi.mocked(marketplaceService.getVersionProgress).mockResolvedValue(progress);
     vi.mocked(marketplaceService.getPracticeAttemptHistory).mockResolvedValue([]);
+    vi.mocked(marketplaceService.getVersionReviewContext).mockResolvedValue({
+      packId: "pack-1",
+      versionId: "version-1",
+      versionNo: 2,
+      eligible: false,
+      ineligibilityReason: "QUIZ_COMPLETION_REQUIRED",
+      currentUserReview: null,
+    });
     Element.prototype.scrollIntoView = vi.fn();
   });
 
@@ -71,6 +81,40 @@ describe("MarketplaceLearningHub", () => {
     expect(screen.getByRole("tab", { name: "Practice" })).toHaveAttribute("aria-selected", "true");
     expect(marketplaceService.getVersionProgress).toHaveBeenCalledWith("version-1");
     expect(marketplaceService.getPracticeAttemptHistory).toHaveBeenCalledWith("version-1");
+    expect(marketplaceService.getVersionReviewContext).toHaveBeenCalledWith("version-1");
+    expect(screen.getByText(/Hoàn thành ít nhất một Practice hoặc Ranked Quiz/)).toBeInTheDocument();
+  });
+
+  it("submits a review only through the owned version context", async () => {
+    vi.mocked(marketplaceService.getVersionReviewContext).mockResolvedValue({
+      packId: "pack-1",
+      versionId: "version-1",
+      versionNo: 2,
+      eligible: true,
+      ineligibilityReason: null,
+      currentUserReview: null,
+    });
+    vi.mocked(marketplaceService.upsertVersionReview).mockResolvedValue({
+      reviewId: "review-1",
+      packId: "pack-1",
+      versionId: "version-1",
+      versionNo: 2,
+      reviewerName: "Learner",
+      rating: 5,
+      comment: "Rất hữu ích",
+      createdAt: "2026-07-19T00:00:00Z",
+      updatedAt: "2026-07-19T00:00:00Z",
+    });
+    renderHub();
+
+    fireEvent.click(await screen.findByRole("radio", { name: "5 sao" }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Rất hữu ích" } });
+    fireEvent.click(screen.getByRole("button", { name: "Gửi đánh giá" }));
+
+    await waitFor(() => expect(marketplaceService.upsertVersionReview).toHaveBeenCalledWith("version-1", {
+      rating: 5,
+      comment: "Rất hữu ích",
+    }));
   });
 
   it("starts the selected chapter without exposing answer metadata", async () => {
@@ -98,5 +142,16 @@ describe("MarketplaceLearningHub", () => {
     await waitFor(() => expect(marketplaceService.startOrResumePracticeAttempt).toHaveBeenCalledWith("version-1", 1));
     expect(await screen.findByText("Câu hỏi an toàn")).toBeInTheDocument();
     expect(screen.queryByText(/đáp án đúng/i)).not.toBeInTheDocument();
+  });
+
+  it("refreshes review eligibility after a Ranked completion", async () => {
+    renderHub();
+    await screen.findByText("Luyện tập theo chương");
+    expect(marketplaceService.getVersionReviewContext).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Ranked" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Hoàn thành Ranked mô phỏng" }));
+
+    await waitFor(() => expect(marketplaceService.getVersionReviewContext).toHaveBeenCalledTimes(2));
   });
 });

@@ -22,9 +22,11 @@ import type {
   MarketplacePracticeAttempt,
   MarketplacePracticeAttemptHistory,
   MarketplacePracticeAttemptResult,
+  MarketplaceReviewContext,
   MarketplaceVersionProgress,
   PurchasedMarketplacePack,
 } from "../../../api/marketplace";
+import { MarketplaceReviewEditor } from "../../components/marketplace/MarketplaceReviews";
 import RankedQuizExperience from "./RankedQuizExperience";
 
 type LearningMode = "practice" | "ranked";
@@ -150,7 +152,12 @@ export default function MarketplaceLearningHub() {
   const [startingChapter, setStartingChapter] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
+  const [reviewContext, setReviewContext] = useState<MarketplaceReviewContext | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewSaving, setReviewSaving] = useState(false);
   const submitKey = useRef<string | null>(null);
+  const reviewRequestId = useRef(0);
 
   const loadLearningData = useCallback(async (versionId: string) => {
     const [nextProgress, nextHistory] = await Promise.all([
@@ -159,6 +166,23 @@ export default function MarketplaceLearningHub() {
     ]);
     setProgress(nextProgress);
     setHistory(nextHistory);
+  }, []);
+
+  const loadReviewContext = useCallback(async (versionId: string) => {
+    const requestId = ++reviewRequestId.current;
+    setReviewLoading(true);
+    setReviewError(null);
+    try {
+      const nextContext = await marketplaceService.getVersionReviewContext(versionId);
+      if (requestId === reviewRequestId.current) setReviewContext(nextContext);
+    } catch (error) {
+      if (requestId === reviewRequestId.current) {
+        setReviewContext(null);
+        setReviewError(errorMessage(error));
+      }
+    } finally {
+      if (requestId === reviewRequestId.current) setReviewLoading(false);
+    }
   }, []);
 
   const load = useCallback(async () => {
@@ -171,6 +195,8 @@ export default function MarketplaceLearningHub() {
         : ownedPacks.find(candidate => candidate.itemId === itemId);
       if (!nextPack?.versionId) throw new Error("Không tìm thấy phiên bản Quiz Pack bạn đang sở hữu.");
       setPack(nextPack);
+      setReviewContext(null);
+      void loadReviewContext(nextPack.versionId);
       await loadLearningData(nextPack.versionId);
     } catch (error) {
       setFailed(true);
@@ -178,7 +204,7 @@ export default function MarketplaceLearningHub() {
     } finally {
       setLoading(false);
     }
-  }, [itemId, loadLearningData, requestedVersionId]);
+  }, [itemId, loadLearningData, loadReviewContext, requestedVersionId]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -225,12 +251,27 @@ export default function MarketplaceLearningHub() {
       setConfirmSubmit(false);
       setAnswers({});
       submitKey.current = null;
-      await loadLearningData(pack.versionId);
+      await Promise.all([loadLearningData(pack.versionId), loadReviewContext(pack.versionId)]);
       toast.success("Đã hoàn thành bài luyện tập.");
     } catch (error) {
       toast.error(errorMessage(error));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const saveReview = async (request: { rating: number; comment?: string }) => {
+    if (!pack?.versionId) return;
+    setReviewSaving(true);
+    try {
+      await marketplaceService.upsertVersionReview(pack.versionId, request);
+      toast.success(reviewContext?.currentUserReview ? "Đã cập nhật đánh giá." : "Đã gửi đánh giá.");
+      await loadReviewContext(pack.versionId);
+    } catch (error) {
+      toast.error(errorMessage(error));
+      await loadReviewContext(pack.versionId);
+    } finally {
+      setReviewSaving(false);
     }
   };
 
@@ -270,7 +311,7 @@ export default function MarketplaceLearningHub() {
       <button type="button" role="tab" aria-selected={mode === "ranked"} onClick={() => selectMode("ranked")} className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-black transition ${mode === "ranked" ? "bg-white text-[#C2410C] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}><Trophy className="h-4 w-4" />Ranked</button>
     </div>
 
-    {mode === "ranked" ? <div className="mt-6"><RankedQuizExperience embedded /></div> : <div className="mt-6 space-y-6">
+    {mode === "ranked" ? <div className="mt-6"><RankedQuizExperience embedded onCompleted={() => pack.versionId ? loadReviewContext(pack.versionId) : undefined} /></div> : <div className="mt-6 space-y-6">
       {result && <section className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50/80 p-5">
         <div className="flex flex-wrap items-center justify-between gap-4"><div className="flex gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-600 text-white"><CheckCircle2 className="h-5 w-5" /></span><div><p className="font-black text-emerald-950">Đã hoàn thành chương {result.chapterSequenceNo}</p><p className="mt-1 text-sm text-emerald-800">{result.correctCount}/{result.questionCount} câu đúng · {Math.round(result.score)} điểm</p></div></div><button type="button" onClick={() => { setResult(null); void startPractice(result.chapterSequenceNo); }} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-300 bg-white px-4 text-sm font-bold text-emerald-800"><RotateCcw className="h-4 w-4" />Luyện lại</button></div>
       </section>}
@@ -319,6 +360,17 @@ export default function MarketplaceLearningHub() {
         <div className="mt-5 space-y-3">{history.length === 0 ? <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-7 text-center text-sm text-slate-500">Bạn chưa có lượt Practice nào ở phiên bản này.</p> : history.map(entry => <article key={entry.attemptId} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4"><div><p className="font-bold text-slate-900">Chương {entry.chapterSequenceNo} · {entry.status === "COMPLETED" ? "Đã hoàn thành" : entry.status === "IN_PROGRESS" ? "Đang làm" : "Đã bỏ"}</p><p className="mt-1 text-xs text-slate-500">{dateFormatter.format(new Date(entry.startedAt))}</p></div><div className="text-right"><p className="font-black text-slate-950">{formatScore(entry.score)}</p><p className="mt-1 text-xs text-slate-500">{entry.correctCount == null ? "Chưa chấm" : `${entry.correctCount}/${entry.questionCount} câu đúng`}</p></div></article>)}</div>
       </section>
     </div>}
+
+    <div className="mt-6">
+      <MarketplaceReviewEditor
+        context={reviewContext}
+        loading={reviewLoading}
+        error={reviewError}
+        saving={reviewSaving}
+        onRetry={() => { if (pack.versionId) void loadReviewContext(pack.versionId); }}
+        onSave={saveReview}
+      />
+    </div>
 
     {confirmSubmit && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4" role="dialog" aria-modal="true" aria-labelledby="practice-submit-title">
       <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"><h2 id="practice-submit-title" className="text-xl font-black text-slate-950">Xác nhận nộp Practice</h2><p className="mt-2 text-sm leading-6 text-slate-600">Hệ thống sẽ chấm đáp án trên máy chủ và cập nhật tiến độ của chương này.</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setConfirmSubmit(false)} disabled={submitting} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-700">Hủy</button><button type="button" onClick={() => void submitPractice()} disabled={submitting} className="inline-flex min-h-11 min-w-32 items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-4 text-sm font-bold text-white disabled:opacity-60">{submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}{submitting ? "Đang nộp..." : "Nộp bài"}</button></div></div>

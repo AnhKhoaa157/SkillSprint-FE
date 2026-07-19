@@ -49,7 +49,12 @@ function AttemptHistory({ attempts, loading }: { attempts: MarketplaceRankedAtte
   </section>;
 }
 
-export default function RankedQuizExperience({ embedded = false }: { embedded?: boolean }) {
+interface RankedQuizExperienceProps {
+  embedded?: boolean;
+  onCompleted?: () => void | Promise<void>;
+}
+
+export default function RankedQuizExperience({ embedded = false, onCompleted }: RankedQuizExperienceProps) {
   const { itemId = "" } = useParams<{ itemId: string }>();
   const [searchParams] = useSearchParams();
   const requestedVersionId = searchParams.get("versionId");
@@ -115,6 +120,7 @@ export default function RankedQuizExperience({ embedded = false }: { embedded?: 
       setResult(nextResult); setAttempt(null); setConfirmSubmit(false);
       refreshMarketplaceLeaderboard(versionId, "version");
       await loadHistory(versionId);
+      void Promise.resolve(onCompleted?.()).catch(() => undefined);
       toast.success("Đã nộp Quiz xếp hạng.");
     } catch (error) { toast.error(errorMessage(error)); }
     finally { setSubmitting(false); }

@@ -4,10 +4,11 @@ import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, ChevronDown, Clock3, Coi
 import { toast } from "sonner";
 import { motion, useReducedMotion } from "motion/react";
 import { marketplaceService } from "../../../api/marketplace";
-import type { ChallengeResult, ChallengeSession, CoinTopUpPackage, CoinTopUpPayment, CreatorMarketplaceItem, MarketplaceChapter, MarketplaceItemDetail, MarketplaceQuestion, MarketplaceReview, MarketplaceTransaction, MarketplaceWallet, PurchasedMarketplacePack, PurchasedPackDetail } from "../../../api/marketplace";
+import type { ChallengeResult, ChallengeSession, CoinTopUpPackage, CoinTopUpPayment, CreatorMarketplaceItem, MarketplaceChapter, MarketplaceItemDetail, MarketplaceQuestion, MarketplaceReview, MarketplaceReviewCollection, MarketplaceTransaction, MarketplaceWallet, PurchasedMarketplacePack, PurchasedPackDetail } from "../../../api/marketplace";
 import workspaceService, { type WorkspaceResponse } from "../../../api/utilities/workspaceService";
 import MarketplaceCreatorIdentity from "../../components/marketplace/MarketplaceCreatorIdentity";
 import MarketplaceLeaderboardCard from "../../components/marketplace/MarketplaceLeaderboardCard";
+import { MarketplaceReviewList } from "../../components/marketplace/MarketplaceReviews";
 import { refreshMarketplaceLeaderboard } from "../../../api/marketplace/useMarketplaceLeaderboard";
 import MarketplaceLearningHub from "./MarketplaceLearningHub";
 
@@ -322,25 +323,23 @@ export function MarketplaceItemPage() {
   const go = useNavigate();
   const [item, setItem] = useState<MarketplaceItemDetail | null>(null);
   const [reviews, setReviews] = useState<MarketplaceReview[]>([]);
+  const [reviewSummary, setReviewSummary] = useState<MarketplaceReviewCollection | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [wallet, setWallet] = useState<MarketplaceWallet | null>(null);
   const [buyOpen, setBuyOpen] = useState(false);
   const [buying, setBuying] = useState(false);
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [reviewing, setReviewing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setFailed(false);
     try {
-      const [nextItem, nextReviews] = await Promise.all([marketplaceService.getItem(itemId), marketplaceService.getReviews(itemId)]);
+      const nextItem = await marketplaceService.getItem(itemId);
+      const nextReviewSummary = nextItem.versionId ? await marketplaceService.getVersionReviews(nextItem.versionId) : null;
+      const nextReviews = nextReviewSummary?.reviews ?? await marketplaceService.getReviews(itemId);
       setItem(nextItem);
       setReviews(nextReviews);
-      const mine = nextReviews.find(review => review.mine);
-      if (mine) { setRating(mine.rating); setComment(mine.comment || ""); }
+      setReviewSummary(nextReviewSummary);
     } catch { setFailed(true); } finally { setLoading(false); }
   }, [itemId]);
 
@@ -350,20 +349,16 @@ export function MarketplaceItemPage() {
     if (!item) return;
     setBuying(true);
     try {
-      if (item.versionId) await marketplaceService.purchaseVersion(item.versionId, crypto.randomUUID());
-      else await marketplaceService.purchase(item.itemId);
+      let purchasedVersionId = item.versionId;
+      if (item.versionId) {
+        const receipt = await marketplaceService.purchaseVersion(item.versionId, crypto.randomUUID());
+        purchasedVersionId = receipt.packVersionId;
+      } else await marketplaceService.purchase(item.itemId);
       toast.success("Đã mua gói học liệu.");
-      go(`/app/my-packs/${item.itemId}`);
+      go(`/app/my-packs/${item.itemId}${purchasedVersionId ? `?versionId=${encodeURIComponent(purchasedVersionId)}` : ""}`);
     }
     catch (error) { toast.error(message(error)); } finally { setBuying(false); }
   };
-  const saveReview = async () => {
-    if (!item) return;
-    setReviewing(true);
-    try { await marketplaceService.review(item.itemId, { rating, comment: comment.trim() || undefined }); toast.success("Đã lưu đánh giá."); setReviewOpen(false); await load(); }
-    catch (error) { toast.error(message(error)); } finally { setReviewing(false); }
-  };
-
   if (loading) return <Shell><Loading /></Shell>;
   if (failed || !item) return <Shell><ErrorBox retry={load} /></Shell>;
   const shortage = Math.max(0, item.priceCoins - coinBalance(wallet));
@@ -375,12 +370,11 @@ export function MarketplaceItemPage() {
         <MarketplaceItemHeader item={item} />
         <ContentModern chapters={item.chapters} questions={item.previewQuestions} preview />
         <div className="mt-7"><MarketplaceLeaderboardCard itemId={itemId} /></div>
-        <section className="mt-7"><h2 className="text-xl font-black">Đánh giá</h2><div className="mt-3 space-y-3">{reviews.length ? reviews.map((review, index) => <article key={review.reviewId || index} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex justify-between"><b>{review.reviewerName}</b><Stars value={review.rating} /></div>{review.comment && <p className="mt-3 text-sm text-slate-600">{review.comment}</p>}<p className="mt-3 text-xs text-slate-400">{date(review.createdAt)}</p></article>) : <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500">Chưa có đánh giá.</p>}</div></section>
+        <section className="mt-7"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black">Đánh giá phiên bản {reviewSummary?.versionNo ?? item.versionNo ?? "hiện tại"}</h2><p className="mt-1 text-sm text-slate-500">Chỉ tổng hợp phản hồi của đúng phiên bản đang xem.</p></div>{reviewSummary && <p className="text-sm font-bold text-slate-600"><span className="text-amber-600">{reviewSummary.averageRating.toFixed(1)} ★</span> · {reviewSummary.reviewCount} đánh giá</p>}</div><div className="mt-3"><MarketplaceReviewList reviews={reviews} /></div></section>
       </div>
-      <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 lg:sticky lg:top-24"><p className="text-sm text-slate-500">Giá gói học liệu</p><p className="mt-2 text-2xl"><Coin value={item.priceCoins} /></p><button onClick={openBuy} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-black text-white"><Coins className="h-4 w-4" />Mua bằng Coin</button><div className="mt-6 border-t pt-5"><h2 className="font-black">Đánh giá của bạn</h2><div className="mt-3 flex">{[1, 2, 3, 4, 5].map(number => <button key={number} onClick={() => setRating(number)} aria-label={`${number} sao`}><Star className={`h-6 w-6 ${number <= rating ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} /></button>)}</div><textarea value={comment} onChange={event => setComment(event.target.value)} placeholder="Nhận xét (không bắt buộc)" className="mt-3 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm" /><button onClick={() => rating ? setReviewOpen(true) : toast.message("Chọn số sao trước khi gửi đánh giá.")} className="mt-3 rounded-xl border border-violet-200 px-4 py-2 text-sm font-bold text-violet-700">{reviews.some(review => review.mine) ? "Cập nhật đánh giá" : "Gửi đánh giá"}</button></div></aside>
+      <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 lg:sticky lg:top-24"><p className="text-sm text-slate-500">Giá gói học liệu</p><p className="mt-2 text-2xl"><Coin value={item.priceCoins} /></p><button onClick={openBuy} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-black text-white"><Coins className="h-4 w-4" />Mua bằng Coin</button><p className="mt-5 border-t border-slate-100 pt-5 text-sm leading-6 text-slate-500">Sau khi sở hữu và hoàn thành ít nhất một Quiz, bạn có thể đánh giá đúng phiên bản trong Learning Hub.</p></aside>
     </div>
     <Confirm open={buyOpen} title="Xác nhận mua gói" text={wallet ? `Số dư: ${fmt.format(coinBalance(wallet))} Coin.${shortage ? ` Còn thiếu ${fmt.format(shortage)} Coin. Nạp Coin qua SePay trong Ví Coin trước khi xác nhận.` : " Coin sẽ được trừ khi xác nhận."}` : "Đang kiểm tra ví."} button="Xác nhận mua" busy={buying} close={() => setBuyOpen(false)} submit={buy} />
-    <Confirm open={reviewOpen} title="Gửi đánh giá" text="Bạn xác nhận lưu đánh giá này?" button="Lưu đánh giá" busy={reviewing} close={() => setReviewOpen(false)} submit={saveReview} />
   </Shell>;
 }
 
@@ -388,7 +382,7 @@ export function MyPacksPage() {
   const [packs, setPacks] = useState<PurchasedMarketplacePack[]>([]); const [loading, setLoading] = useState(true); const [failed, setFailed] = useState(false);
   const load = useCallback(async () => { setLoading(true); setFailed(false); try { setPacks(await marketplaceService.getMyPacks()); } catch { setFailed(true); } finally { setLoading(false); } }, []);
   useEffect(() => { void load(); }, [load]);
-  return <Shell><h1 className="text-3xl font-black">Gói học của tôi</h1><p className="mt-2 text-slate-500">Tiếp tục những gói học liệu bạn đã sở hữu.</p><div className="mt-7">{loading ? <Loading /> : failed ? <ErrorBox retry={load} /> : packs.length === 0 ? <Empty title="Bạn chưa mua gói nào" text="Khám phá Marketplace để tìm học liệu phù hợp." action={<Link to="/marketplace" className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white">Khám phá Marketplace</Link>} /> : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{packs.map(pack => <article key={pack.itemId} className="rounded-3xl border border-slate-200 bg-white p-6"><span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">{pack.subject}</span><h2 className="mt-4 text-xl font-black">{pack.title}</h2><p className="mt-2 line-clamp-2 text-sm text-slate-500">{pack.description}</p><Link to={`/my-packs/${pack.itemId}`} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white"><BookOpen className="h-4 w-4" />Học ngay</Link></article>)}</div>}</div></Shell>;
+  return <Shell><h1 className="text-3xl font-black">Gói học của tôi</h1><p className="mt-2 text-slate-500">Tiếp tục những gói học liệu bạn đã sở hữu.</p><div className="mt-7">{loading ? <Loading /> : failed ? <ErrorBox retry={load} /> : packs.length === 0 ? <Empty title="Bạn chưa mua gói nào" text="Khám phá Marketplace để tìm học liệu phù hợp." action={<Link to="/marketplace" className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white">Khám phá Marketplace</Link>} /> : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{packs.map(pack => <article key={`${pack.itemId}:${pack.versionId ?? "legacy"}`} className="rounded-3xl border border-slate-200 bg-white p-6"><span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">{pack.subject}</span><h2 className="mt-4 text-xl font-black">{pack.title}</h2><p className="mt-2 line-clamp-2 text-sm text-slate-500">{pack.description}</p><Link to={`/my-packs/${pack.itemId}${pack.versionId ? `?versionId=${encodeURIComponent(pack.versionId)}` : ""}`} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white"><BookOpen className="h-4 w-4" />Học ngay</Link></article>)}</div>}</div></Shell>;
 }
 
 function Timer({ expiresAt, expire }: { expiresAt: string; expire: () => void }) { const [ms, setMs] = useState(() => Math.max(0, new Date(expiresAt).getTime() - Date.now())); useEffect(() => { const id = window.setInterval(() => { const next = Math.max(0, new Date(expiresAt).getTime() - Date.now()); setMs(next); if (!next) { clearInterval(id); expire(); } }, 1000); return () => clearInterval(id); }, [expiresAt, expire]); return <span className="inline-flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm font-black text-amber-800"><Clock3 className="h-4 w-4" />{String(Math.floor(ms / 60000)).padStart(2,"0")}:{String(Math.floor(ms / 1000) % 60).padStart(2,"0")}</span>; }
