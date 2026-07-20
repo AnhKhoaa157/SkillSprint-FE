@@ -107,26 +107,29 @@ export default function MarketplaceReportsAdmin() {
   };
 
   return (
-    <div className="p-4 sm:p-7">
-      <div className="mx-auto max-w-6xl">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <div className="relative isolate min-h-full overflow-hidden bg-[#F7F8FA] p-4 sm:p-7">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_8%_5%,rgba(255,237,223,0.9),transparent_28%),radial-gradient(circle_at_95%_11%,rgba(255,246,234,0.8),transparent_24%)]" />
+      <div className="mx-auto max-w-7xl">
+        <div className="relative overflow-hidden rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_20px_58px_rgba(71,50,35,0.07)] backdrop-blur-xl sm:p-7">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full border-[20px] border-orange-100/70" />
+        <div className="relative flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-[#FF6B00]">
               <ShieldAlert className="h-3 w-3" />Marketplace reports
             </p>
-            <h1 className="mt-1 text-2xl font-black text-slate-900">Báo cáo nội dung</h1>
-            <p className="mt-2 text-sm text-slate-500">Xem xét và xử lý báo cáo về nội dung hoặc chất lượng Quiz Pack.</p>
+            <h1 className="mt-1 text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl">Báo cáo nội dung</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Xem xét, lưu vết và xử lý báo cáo chất lượng từ người học đã sở hữu Quiz Pack.</p>
           </div>
           <button
             onClick={() => void load()}
             disabled={loading}
-            className="inline-flex h-11 w-fit items-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-bold text-[#FF6B00] hover:bg-orange-50 disabled:opacity-50"
+            className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-bold text-[#FF6B00] shadow-sm transition hover:bg-orange-50 disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />Làm mới
           </button>
-        </div>
+        </div></div>
 
-        <div className="mt-6 flex flex-wrap gap-2 rounded-2xl bg-slate-100/75 p-1.5">
+        <div className="mt-6 flex flex-wrap gap-2 rounded-[1.5rem] border border-white bg-white/80 p-2 shadow-[0_12px_36px_rgba(71,50,35,0.05)]">
           {STATUS_FILTERS.map(filter => (
             <button
               key={filter.value}
@@ -139,9 +142,9 @@ export default function MarketplaceReportsAdmin() {
           ))}
         </div>
 
-        <section className="mt-6">
+        <section className="mt-6 rounded-[1.75rem] border border-white bg-white/90 p-4 shadow-[0_16px_45px_rgba(71,50,35,0.06)] sm:p-5">
           {loading ? (
-            <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-20 animate-pulse rounded-2xl bg-slate-100" />)}</div>
+            <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />)}</div>
           ) : failed ? (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center">
               <CircleAlert className="mx-auto h-6 w-6 text-rose-600" />
@@ -162,17 +165,17 @@ export default function MarketplaceReportsAdmin() {
                   key={report.reportId}
                   type="button"
                   onClick={() => void openDetail(report.reportId)}
-                  className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-orange-200 hover:bg-orange-50/30"
+                  className="group flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.025)] transition hover:-translate-y-0.5 hover:border-orange-200 hover:bg-orange-50/30 hover:shadow-[0_12px_28px_rgba(194,65,12,0.07)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"
                 >
                   <div className="min-w-0">
-                    <p className="font-bold text-slate-900">
+                    <p className="font-black text-slate-950">
                       {CATEGORY_LABELS[report.category]} · {TARGET_LABELS[report.targetType]}
                     </p>
                     <p className="mt-1 truncate text-xs text-slate-500">
                       {report.versionTitle || "—"}{report.versionNo != null ? ` · v${report.versionNo}` : ""} · {date(report.createdAt)}
                     </p>
                   </div>
-                  <StatusBadge status={report.status} />
+                  <span className="flex items-center gap-3"><span className="hidden text-xs font-bold text-[#FF6B00] opacity-0 transition group-hover:opacity-100 sm:inline">Xem chi tiết</span><StatusBadge status={report.status} /></span>
                 </button>
               ))}
             </div>
@@ -224,17 +227,17 @@ function ReportDetailDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40" role="dialog" aria-modal="true" aria-label="Chi tiết báo cáo">
-      <div className="h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-2xl">
-        <div className="flex items-start justify-between gap-3">
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/45 sm:p-3" role="dialog" aria-modal="true" aria-label="Chi tiết báo cáo">
+      <div className="h-full w-full max-w-lg overflow-y-auto rounded-none bg-white shadow-2xl sm:rounded-[1.75rem]">
+        <div className="border-b border-orange-100 bg-[linear-gradient(120deg,#FFF8F1_0%,#FFFFFF_72%)] px-6 py-6"><div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FF6B00]">Chi tiết báo cáo</p>
             <h2 className="mt-1 text-lg font-black text-slate-900">{CATEGORY_LABELS[report.category]}</h2>
           </div>
           <StatusBadge status={report.status} />
-        </div>
+        </div></div>
 
-        <dl className="mt-5 space-y-3 text-sm">
+        <div className="p-6"><dl className="space-y-3 text-sm">
           <Row label="Đối tượng" value={`${TARGET_LABELS[report.targetType]}${report.targetRef ? ` · ${report.targetRef}` : ""}`} />
           <Row label="Phiên bản" value={`${report.versionTitle || "—"}${report.versionNo != null ? ` · v${report.versionNo}` : ""}`} />
           <Row label="Người báo cáo" value={report.reporterName || report.reporterId || "—"} />
@@ -259,11 +262,11 @@ function ReportDetailDrawer({
             maxLength={2000}
             onChange={event => setNote(event.target.value)}
             placeholder="Ghi lại quyết định xử lý (không bắt buộc)"
-            className="mt-2 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal outline-none focus:border-[#FF6B00]"
+            className="mt-2 min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal leading-6 outline-none transition focus:border-[#FF6B00] focus:ring-4 focus:ring-orange-100"
           />
         </label>
 
-        <div className="mt-5 flex flex-col gap-2">
+        <div className="mt-6 flex flex-col gap-2">
           {transitions.length === 0 ? (
             <p className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm leading-6 text-slate-500">
               Báo cáo đã ở trạng thái cuối, không còn hành động khả dụng.
@@ -275,16 +278,16 @@ function ReportDetailDrawer({
                 type="button"
                 onClick={() => void apply(status)}
                 disabled={saving !== null}
-                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold text-white disabled:opacity-50 ${status === "RESOLVED" ? "bg-emerald-600 hover:bg-emerald-700" : status === "DISMISSED" ? "bg-slate-700 hover:bg-slate-800" : "bg-sky-600 hover:bg-sky-700"}`}
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 ${status === "RESOLVED" ? "bg-emerald-600 hover:bg-emerald-700" : status === "DISMISSED" ? "bg-slate-700 hover:bg-slate-800" : "bg-sky-600 hover:bg-sky-700"}`}
               >
                 {saving === status ? <Loader2 className="h-4 w-4 animate-spin" /> : STATUS_LABELS[status]}
               </button>
             ))
           )}
-          <button type="button" onClick={onClose} className="mt-1 inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">
+          <button type="button" onClick={onClose} className="mt-1 inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
             Đóng
           </button>
-        </div>
+        </div></div>
       </div>
     </div>
   );

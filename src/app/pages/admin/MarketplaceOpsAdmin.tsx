@@ -73,17 +73,20 @@ const STATUS_FILTERS: Array<{ value: MarketplaceDisputeStatus | "ALL"; label: st
 export default function MarketplaceOpsAdmin() {
   const [tab, setTab] = useState<"disputes" | "metrics">("disputes");
   return (
-    <div className="p-4 sm:p-7">
-      <div className="mx-auto max-w-6xl">
-        <div>
+    <div className="relative isolate min-h-full overflow-hidden bg-[#F7F8FA] p-4 sm:p-7">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_8%_5%,rgba(255,237,223,0.9),transparent_28%),radial-gradient(circle_at_95%_11%,rgba(255,246,234,0.8),transparent_24%)]" />
+      <div className="mx-auto max-w-7xl">
+        <div className="relative overflow-hidden rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_20px_58px_rgba(71,50,35,0.07)] backdrop-blur-xl sm:p-7">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full border-[20px] border-orange-100/70" />
+        <div className="relative">
           <p className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-[#FF6B00]">
             <Scale className="h-3 w-3" />Marketplace operations
           </p>
-          <h1 className="mt-1 text-2xl font-black text-slate-900">Vận hành Marketplace</h1>
-          <p className="mt-2 text-sm text-slate-500">Xử lý tranh chấp hoàn tiền và theo dõi chỉ số chất lượng theo phiên bản.</p>
-        </div>
+          <h1 className="mt-1 text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl">Vận hành Marketplace</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Xử lý tranh chấp hoàn tiền và theo dõi chỉ số chất lượng theo từng phiên bản Quiz Pack.</p>
+        </div></div>
 
-        <div className="mt-6 flex gap-2 rounded-2xl bg-slate-100/75 p-1.5">
+        <div className="mt-6 flex flex-wrap gap-2 rounded-[1.5rem] border border-white bg-white/80 p-2 shadow-[0_12px_36px_rgba(71,50,35,0.05)]">
           <TabButton active={tab === "disputes"} onClick={() => setTab("disputes")} icon={<Scale className="h-4 w-4" />} label="Tranh chấp hoàn tiền" />
           <TabButton active={tab === "metrics"} onClick={() => setTab("metrics")} icon={<BarChart3 className="h-4 w-4" />} label="Chỉ số chất lượng" />
         </div>
@@ -99,7 +102,7 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${active ? "bg-white text-[#FF6B00] shadow-sm ring-1 ring-slate-200/70" : "text-slate-500 hover:bg-white/60 hover:text-slate-800"}`}
+      className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition ${active ? "bg-orange-50 text-[#FF6B00] shadow-sm ring-1 ring-orange-100" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
     >
       {icon}
       {label}
@@ -141,22 +144,22 @@ function DisputesTab() {
 
   return (
     <>
-      <div className="flex flex-wrap gap-2 rounded-2xl bg-slate-100/60 p-1.5">
+      <div className="flex flex-wrap gap-2 rounded-[1.5rem] border border-white bg-white/80 p-2 shadow-[0_12px_36px_rgba(71,50,35,0.05)]">
         {STATUS_FILTERS.map(filter => (
           <button
             key={filter.value}
             type="button"
             onClick={() => setStatusFilter(filter.value)}
-            className={`rounded-xl px-3.5 py-2 text-sm font-bold transition ${statusFilter === filter.value ? "bg-white text-[#FF6B00] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+            className={`min-h-10 rounded-xl px-3.5 text-sm font-bold transition ${statusFilter === filter.value ? "bg-orange-50 text-[#FF6B00] shadow-sm ring-1 ring-orange-100" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
           >
             {filter.label}
           </button>
         ))}
       </div>
 
-      <section className="mt-5">
+      <section className="mt-5 rounded-[1.75rem] border border-white bg-white/90 p-4 shadow-[0_16px_45px_rgba(71,50,35,0.06)] sm:p-5">
         {loading ? (
-          <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-20 animate-pulse rounded-2xl bg-slate-100" />)}</div>
+          <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />)}</div>
         ) : failed ? (
           <ErrorState onRetry={() => void load()} />
         ) : disputes.length === 0 ? (
@@ -168,15 +171,15 @@ function DisputesTab() {
                 key={dispute.disputeId}
                 type="button"
                 onClick={() => void openDetail(dispute.disputeId)}
-                className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-orange-200 hover:bg-orange-50/30"
+                className="group flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.025)] transition hover:-translate-y-0.5 hover:border-orange-200 hover:bg-orange-50/30 hover:shadow-[0_12px_28px_rgba(194,65,12,0.07)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"
               >
                 <div className="min-w-0">
-                  <p className="font-bold text-slate-900">{REASON_LABELS[dispute.reason]} · {dispute.saleCoinAmount ?? 0} Coin</p>
+                  <p className="font-black text-slate-950">{REASON_LABELS[dispute.reason]} · {dispute.saleCoinAmount ?? 0} Coin</p>
                   <p className="mt-1 truncate text-xs text-slate-500">
                     {dispute.versionTitle || "—"}{dispute.versionNo != null ? ` · v${dispute.versionNo}` : ""} · {dispute.buyerName || dispute.buyerId || "—"} · {date(dispute.createdAt)}
                   </p>
                 </div>
-                <StatusBadge status={dispute.status} />
+                <span className="flex items-center gap-3"><span className="hidden text-xs font-bold text-[#FF6B00] opacity-0 transition group-hover:opacity-100 sm:inline">Xử lý</span><StatusBadge status={dispute.status} /></span>
               </button>
             ))}
           </div>
@@ -322,15 +325,15 @@ function MetricsTab() {
 
   return (
     <>
-      <form onSubmit={lookup} className="flex flex-col gap-2 sm:flex-row">
+      <form onSubmit={lookup} className="flex flex-col gap-2 rounded-[1.75rem] border border-white bg-white/90 p-4 shadow-[0_16px_45px_rgba(71,50,35,0.06)] sm:flex-row sm:items-center sm:p-5">
         <input
           value={versionId}
           onChange={event => setVersionId(event.target.value)}
           placeholder="Nhập Version ID của phiên bản Quiz Pack"
-          className="min-h-11 flex-1 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#FF6B00]"
+          className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-[#FF6B00] focus:ring-4 focus:ring-orange-100"
           aria-label="Version ID"
         />
-        <button type="submit" disabled={loading || !versionId.trim()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-4 text-sm font-bold text-white disabled:opacity-50">
+        <button type="submit" disabled={loading || !versionId.trim()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-4 text-sm font-bold text-white shadow-[0_8px_18px_rgba(255,107,0,0.2)] transition hover:-translate-y-0.5 hover:bg-[#E85F00] disabled:opacity-50 disabled:hover:translate-y-0">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}Xem chỉ số
         </button>
       </form>
@@ -364,7 +367,7 @@ function MetricsTab() {
 function MetricCard({ icon, label, value, sub, tone = "neutral" }: { icon: React.ReactNode; label: string; value: string; sub: string; tone?: "neutral" | "ok" | "warn" }) {
   const toneClass = tone === "warn" ? "ring-amber-100 bg-amber-50" : tone === "ok" ? "ring-emerald-100 bg-emerald-50" : "ring-slate-100 bg-white";
   return (
-    <div className={`rounded-2xl p-4 ring-1 ${toneClass}`}>
+    <div className={`rounded-2xl p-4 shadow-[0_8px_24px_rgba(15,23,42,0.025)] ring-1 ${toneClass}`}>
       <p className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">{icon}{label}</p>
       <p className="mt-2 text-2xl font-black text-slate-900">{value}</p>
       <p className="mt-1 text-xs text-slate-500">{sub}</p>

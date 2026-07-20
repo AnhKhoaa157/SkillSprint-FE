@@ -37,7 +37,7 @@ export function AdminQualityReviewPanel({ latest, history = [], canQueue = false
         {!latest ? (
           <div className="flex items-start gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
             <CircleDashed className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
-            <span>Creator chưa chạy kiểm định cho phiên bản này. Admin vẫn có thể từ chối và ghi rõ yêu cầu chỉnh sửa, nhưng chưa thể xuất bản.{canQueue && <button type="button" onClick={onQueue} disabled={queuing} className="mt-3 block rounded-xl bg-slate-950 px-4 py-2 text-xs font-black text-white disabled:opacity-50">{queuing ? "Đang xếp lịch..." : "Chạy kiểm định cho pack cũ"}</button>}</span>
+            <div>Creator chưa chạy kiểm định cho phiên bản này. Admin vẫn có thể từ chối và ghi rõ yêu cầu chỉnh sửa, nhưng chưa thể xuất bản.{canQueue && <button type="button" onClick={onQueue} disabled={queuing} className="mt-3 inline-flex min-h-10 items-center rounded-xl bg-slate-950 px-4 text-xs font-black text-white transition hover:bg-slate-700 disabled:opacity-50">{queuing ? "Đang xếp lịch..." : "Chạy kiểm định cho pack cũ"}</button>}</div>
           </div>
         ) : (
           <>
@@ -49,7 +49,7 @@ export function AdminQualityReviewPanel({ latest, history = [], canQueue = false
 
             {!currentPass && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950"><p className="font-black">Chưa đủ điều kiện xuất bản</p><p className="mt-1">{latest.currentSnapshot ? "Creator cần xử lý lỗi và chạy kiểm định lại." : "Nội dung đã thay đổi sau lần kiểm định gần nhất; cần kiểm định lại snapshot hiện tại."}</p></div>}
 
-            {canQueue && !active && !currentPass && <button type="button" onClick={onQueue} disabled={queuing} className="mt-4 rounded-xl border border-orange-200 bg-white px-4 py-2.5 text-sm font-black text-[#FF6B00] disabled:opacity-50">{queuing ? "Đang xếp lịch..." : "Chạy lại kiểm định"}</button>}
+            {canQueue && !active && !currentPass && <button type="button" onClick={onQueue} disabled={queuing} className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-orange-200 bg-white px-4 text-sm font-black text-[#FF6B00] transition hover:bg-orange-50 disabled:opacity-50">{queuing ? "Đang xếp lịch..." : "Chạy lại kiểm định"}</button>}
 
             {issues.length > 0 && <div className="mt-5"><div className="flex items-center justify-between gap-3"><h3 className="text-sm font-black text-slate-900">Vấn đề cần kiểm tra</h3><span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-black text-amber-800">{issues.length} vấn đề</span></div><ul className="mt-3 space-y-2">{issues.map((issue, index) => <li key={`${issue.code}-${issue.questionId ?? index}`} className="rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3"><div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.1em]"><span className="text-amber-700">{issue.severity}</span><span className="text-slate-300">•</span><span className="text-slate-500">{issue.code}</span><span className="text-slate-300">•</span><span className="text-slate-500">{issueLocation(issue)}</span></div><p className="mt-1.5 text-sm leading-6 text-slate-700">{issue.message}</p></li>)}</ul></div>}
           </>

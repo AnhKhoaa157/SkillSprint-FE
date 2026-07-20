@@ -117,30 +117,33 @@ export function MarketplaceReportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-slate-900">
-            <ShieldAlert className="h-5 w-5 text-[#FF6B00]" aria-hidden="true" />
+      <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-xl overflow-y-auto rounded-[1.75rem] border-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+        <DialogHeader className="border-b border-orange-100 bg-[linear-gradient(120deg,#FFF8F1_0%,#FFFFFF_72%)] px-5 py-5 pr-14 sm:px-6">
+          <DialogTitle className="flex items-center gap-2 text-slate-950">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-orange-100 text-[#FF6B00]">
+              <ShieldAlert className="h-4 w-4" aria-hidden="true" />
+            </span>
             Báo cáo nội dung
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="max-w-lg leading-6">
             Gửi báo cáo về nội dung hoặc chất lượng. Báo cáo được xử lý bởi đội ngũ kiểm duyệt và
             không tự động thay đổi Quiz Pack.
           </DialogDescription>
         </DialogHeader>
 
+        <div className="p-5 sm:p-6">
         {phase === "success" ? (
-          <div className="flex flex-col items-center gap-3 py-6 text-center" role="status" aria-live="polite">
-            <CheckCircle2 className="h-10 w-10 text-emerald-600" aria-hidden="true" />
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/70 py-7 text-center" role="status" aria-live="polite">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-600 text-white"><CheckCircle2 className="h-6 w-6" aria-hidden="true" /></span>
             <p className="text-sm font-bold text-slate-900">Đã gửi báo cáo</p>
             <p className="max-w-sm text-sm text-slate-500">Cảm ơn bạn. Đội ngũ kiểm duyệt sẽ xem xét báo cáo này.</p>
-            <DialogClose className="mt-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-700">
+            <DialogClose className="mt-2 inline-flex min-h-11 items-center rounded-xl bg-slate-900 px-4 text-sm font-bold text-white transition hover:bg-slate-700">
               Đóng
             </DialogClose>
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
               <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Nội dung báo cáo</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {TARGET_TYPE_LABELS[target.targetType]} · {target.label}
@@ -166,7 +169,7 @@ export function MarketplaceReportDialog({
                 {(Object.keys(CATEGORY_LABELS) as MarketplaceReportCategory[]).map(value => (
                   <label
                     key={value}
-                    className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-orange-200 hover:bg-orange-50/40 has-[:checked]:border-[#FF6B00] has-[:checked]:bg-orange-50"
+                    className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-orange-200 hover:bg-orange-50/40 focus-within:ring-4 focus-within:ring-orange-100 has-[:checked]:border-[#FF6B00] has-[:checked]:bg-orange-50"
                   >
                     <RadioGroupItem value={value} />
                     {CATEGORY_LABELS[value]}
@@ -182,7 +185,7 @@ export function MarketplaceReportDialog({
                 maxLength={MAX_DESCRIPTION}
                 onChange={event => setDescription(event.target.value)}
                 placeholder="Mô tả vấn đề bạn gặp (không bắt buộc)"
-                className="mt-2 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal outline-none focus:border-[#FF6B00]"
+                className="mt-2 min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal leading-6 outline-none transition focus:border-[#FF6B00] focus:ring-4 focus:ring-orange-100"
               />
               <span className="mt-1 block text-right text-xs font-normal text-slate-400">
                 {description.length}/{MAX_DESCRIPTION}
@@ -202,7 +205,7 @@ export function MarketplaceReportDialog({
                 />
                 <label
                   htmlFor="report-evidence"
-                  className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-orange-200 hover:bg-orange-50/40"
+                  className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-orange-200 hover:bg-orange-50/40 focus-within:ring-4 focus-within:ring-orange-100"
                 >
                   <Paperclip className="h-4 w-4" aria-hidden="true" />
                   Chọn ảnh
@@ -239,20 +242,21 @@ export function MarketplaceReportDialog({
             )}
 
             <div className="flex justify-end gap-3 pt-1">
-              <DialogClose className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">
+              <DialogClose className="inline-flex min-h-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
                 Hủy
               </DialogClose>
               <button
                 type="button"
                 onClick={() => void submit()}
                 disabled={!category || phase === "submitting"}
-                className="inline-flex min-w-28 items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#e85f00] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex min-h-11 min-w-32 items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-4 text-sm font-bold text-white shadow-[0_8px_18px_rgba(255,107,0,0.2)] transition hover:-translate-y-0.5 hover:bg-[#e85f00] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
               >
                 {phase === "submitting" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : "Gửi báo cáo"}
               </button>
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -284,7 +288,7 @@ export function MarketplaceReportButton({
         onClick={() => setState(true)}
         className={
           className ??
-          "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
+          "inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-transparent px-3 text-xs font-bold text-slate-500 transition hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-100"
         }
       >
         <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />

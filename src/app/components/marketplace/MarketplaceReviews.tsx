@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { AlertTriangle, LoaderCircle, LockKeyhole, RefreshCw, Star } from "lucide-react";
+import { AlertTriangle, LoaderCircle, LockKeyhole, MessageSquareQuote, RefreshCw, Star } from "lucide-react";
 import type { MarketplaceReview, MarketplaceReviewContext, MarketplaceReviewUpsertRequest } from "../../../api/marketplace";
-import { MarketplaceReportButton } from "./MarketplaceReportDialog";
 
 const dateFormatter = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" });
 
@@ -20,41 +19,26 @@ function ReviewStars({ value }: { value: number }) {
   </span>;
 }
 
-export function MarketplaceReviewList({
-  reviews,
-  packVersionId,
-}: {
-  reviews: MarketplaceReview[];
-  packVersionId?: string | null;
-}) {
+export function MarketplaceReviewList({ reviews }: { reviews: MarketplaceReview[] }) {
   if (reviews.length === 0) {
-    return <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-      Phiên bản này chưa có đánh giá.
-    </p>;
+    return <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50/70 p-7 text-center text-sm leading-6 text-slate-500">
+      <MessageSquareQuote className="mx-auto h-6 w-6 text-slate-300" aria-hidden="true" />
+      <p className="mt-2 font-semibold">Phiên bản này chưa có đánh giá.</p>
+    </div>;
   }
 
   return <div className="space-y-3">
-    {reviews.map(review => <article key={review.reviewId} className="rounded-2xl border border-slate-200 bg-white p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <b className="text-slate-900">{review.reviewerName}</b>
-        <ReviewStars value={review.rating} />
+    {reviews.map(review => <article key={review.reviewId} className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_10px_28px_rgba(15,23,42,0.035)] transition hover:border-orange-100 hover:shadow-[0_14px_34px_rgba(194,65,12,0.07)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-orange-50 text-sm font-black text-[#FF6B00]" aria-hidden="true">
+            {(review.reviewerName || "N").trim().charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0"><b className="block truncate text-slate-950">{review.reviewerName}</b><p className="mt-1 text-xs text-slate-400">Cập nhật {formatDate(review.updatedAt ?? review.createdAt)}</p></div>
+        </div>
+        <span className="inline-flex shrink-0 rounded-xl bg-amber-50 px-2.5 py-1.5"><ReviewStars value={review.rating} /></span>
       </div>
-      {review.comment && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{review.comment}</p>}
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-slate-400">Cập nhật {formatDate(review.updatedAt ?? review.createdAt)}</p>
-        {packVersionId && !review.mine && (
-          <MarketplaceReportButton
-            target={{
-              packVersionId,
-              targetType: "REVIEW",
-              targetRef: review.reviewId,
-              label: `Đánh giá của ${review.reviewerName}`,
-            }}
-            label="Báo cáo đánh giá"
-            className="inline-flex min-h-9 items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
-          />
-        )}
-      </div>
+      {review.comment && <p className="mt-4 whitespace-pre-wrap border-l-2 border-orange-200 pl-3 text-sm leading-6 text-slate-600">{review.comment}</p>}
     </article>)}
   </div>;
 }
@@ -83,7 +67,7 @@ export function MarketplaceReviewEditor({ context, loading, error, saving, onRet
   }, [context?.versionId, context?.currentUserReview?.reviewId, context?.currentUserReview?.updatedAt]);
 
   if (loading) {
-    return <section className="rounded-[1.75rem] border border-slate-200 bg-white p-6">
+    return <section className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_14px_36px_rgba(15,23,42,0.04)]">
       <p className="inline-flex items-center gap-2 text-sm font-bold text-slate-500">
         <LoaderCircle className="h-4 w-4 animate-spin" />Đang tải quyền đánh giá...
       </p>
@@ -104,7 +88,7 @@ export function MarketplaceReviewEditor({ context, loading, error, saving, onRet
   if (!context) return null;
 
   if (!context.eligible) {
-    return <section className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6">
+    return <section className="rounded-[1.75rem] border border-slate-200 bg-slate-50/80 p-6">
       <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-500"><LockKeyhole className="h-5 w-5" /></span>
       <h2 className="mt-4 text-lg font-black text-slate-900">Đánh giá phiên bản {context.versionNo}</h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -140,7 +124,7 @@ export function MarketplaceReviewEditor({ context, loading, error, saving, onRet
         <textarea value={comment} maxLength={2000} disabled={saving} onChange={event => setComment(event.target.value)} className="mt-2 min-h-28 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal leading-6 outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-orange-100 disabled:bg-slate-50" placeholder="Chia sẻ trải nghiệm học với phiên bản này" />
         <span className="mt-1 block text-right text-xs font-medium text-slate-400">{comment.length}/2000</span>
       </label>
-      <button type="submit" disabled={saving || rating === 0} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-5 text-sm font-black text-white shadow-[0_10px_22px_rgba(255,107,0,0.2)] disabled:cursor-not-allowed disabled:opacity-50">
+      <button type="submit" disabled={saving || rating === 0} className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-5 text-sm font-black text-white shadow-[0_10px_22px_rgba(255,107,0,0.2)] transition hover:-translate-y-0.5 hover:bg-[#E85F00] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0">
         {saving && <LoaderCircle className="h-4 w-4 animate-spin" />}
         {context.currentUserReview ? "Cập nhật đánh giá" : "Gửi đánh giá"}
       </button>
