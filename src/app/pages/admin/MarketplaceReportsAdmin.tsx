@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { CircleAlert, FileWarning, Loader2, RefreshCw, ShieldAlert } from "lucide-react";
+import { createPortal } from "react-dom";
+import { CircleAlert, FileWarning, Loader2, RefreshCw, ShieldAlert, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   getAdminMarketplaceReport,
@@ -183,7 +184,7 @@ export default function MarketplaceReportsAdmin() {
         </section>
       </div>
 
-      {selected && (
+      {selected && createPortal(
         <ReportDetailDrawer
           report={selected}
           onClose={() => setSelected(null)}
@@ -191,7 +192,8 @@ export default function MarketplaceReportsAdmin() {
             setSelected(updated);
             await load();
           }}
-        />
+        />,
+        document.body,
       )}
     </div>
   );
@@ -227,77 +229,99 @@ function ReportDetailDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/45 sm:p-3" role="dialog" aria-modal="true" aria-label="Chi tiết báo cáo">
-      <div className="h-full w-full max-w-lg overflow-y-auto rounded-none bg-white shadow-2xl sm:rounded-[1.75rem]">
-        <div className="border-b border-orange-100 bg-[linear-gradient(120deg,#FFF8F1_0%,#FFFFFF_72%)] px-6 py-6"><div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FF6B00]">Chi tiết báo cáo</p>
-            <h2 className="mt-1 text-lg font-black text-slate-900">{CATEGORY_LABELS[report.category]}</h2>
+    <div className="fixed inset-0 z-[70] flex justify-end bg-slate-950/45 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="Chi tiết báo cáo">
+      <aside className="flex h-[100dvh] w-full max-w-[34rem] flex-col bg-white shadow-2xl">
+        <header className="sticky top-0 z-10 border-b border-orange-100 bg-[linear-gradient(120deg,#FFF8F1_0%,#FFFFFF_72%)] px-5 py-5 sm:px-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-[#E85F00] shadow-[0_8px_18px_rgba(255,107,0,0.12)]">
+              <FileWarning className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FF6B00]">Chi tiết báo cáo</p>
+                <StatusBadge status={report.status} />
+              </div>
+              <h2 className="mt-1 text-lg font-black leading-6 text-slate-900">{CATEGORY_LABELS[report.category]}</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Theo dõi nội dung và lưu lại quyết định xử lý.</p>
+            </div>
+            <button type="button" onClick={onClose} aria-label="Đóng chi tiết báo cáo" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-white text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[#E85F00] focus:outline-none focus:ring-4 focus:ring-orange-100">
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
           </div>
-          <StatusBadge status={report.status} />
-        </div></div>
+        </header>
 
-        <div className="p-6"><dl className="space-y-3 text-sm">
-          <Row label="Đối tượng" value={`${TARGET_LABELS[report.targetType]}${report.targetRef ? ` · ${report.targetRef}` : ""}`} />
-          <Row label="Phiên bản" value={`${report.versionTitle || "—"}${report.versionNo != null ? ` · v${report.versionNo}` : ""}`} />
-          <Row label="Người báo cáo" value={report.reporterName || report.reporterId || "—"} />
-          <Row label="Thời điểm" value={date(report.createdAt)} />
-          {report.reviewedByName && <Row label="Xử lý bởi" value={`${report.reviewedByName} · ${date(report.reviewedAt)}`} />}
-        </dl>
+        <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+          <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4" aria-label="Thông tin báo cáo">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Thông tin báo cáo</p>
+            <dl className="divide-y divide-slate-200/80 text-sm">
+              <Row label="Đối tượng" value={`${TARGET_LABELS[report.targetType]}${report.targetRef ? ` · ${report.targetRef}` : ""}`} />
+              <Row label="Phiên bản" value={`${report.versionTitle || "—"}${report.versionNo != null ? ` · v${report.versionNo}` : ""}`} />
+              <Row label="Người báo cáo" value={report.reporterName || report.reporterId || "—"} />
+              <Row label="Thời điểm" value={date(report.createdAt)} />
+              {report.reviewedByName && <Row label="Xử lý bởi" value={`${report.reviewedByName} · ${date(report.reviewedAt)}`} />}
+            </dl>
+          </section>
 
-        {report.description && (
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-700">{report.description}</div>
-        )}
-
-        {report.hasEvidence && report.evidenceUrl && (
-          <a href={report.evidenceUrl} target="_blank" rel="noreferrer" className="mt-3 block overflow-hidden rounded-xl border border-slate-200">
-            <img src={report.evidenceUrl} alt="Ảnh minh chứng báo cáo" className="max-h-64 w-full object-contain" />
-          </a>
-        )}
-
-        <label className="mt-5 block text-sm font-bold text-slate-700">
-          Ghi chú xử lý
-          <textarea
-            value={note}
-            maxLength={2000}
-            onChange={event => setNote(event.target.value)}
-            placeholder="Ghi lại quyết định xử lý (không bắt buộc)"
-            className="mt-2 min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal leading-6 outline-none transition focus:border-[#FF6B00] focus:ring-4 focus:ring-orange-100"
-          />
-        </label>
-
-        <div className="mt-6 flex flex-col gap-2">
-          {transitions.length === 0 ? (
-            <p className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm leading-6 text-slate-500">
-              Báo cáo đã ở trạng thái cuối, không còn hành động khả dụng.
-            </p>
-          ) : (
-            transitions.map(status => (
-              <button
-                key={status}
-                type="button"
-                onClick={() => void apply(status)}
-                disabled={saving !== null}
-                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 ${status === "RESOLVED" ? "bg-emerald-600 hover:bg-emerald-700" : status === "DISMISSED" ? "bg-slate-700 hover:bg-slate-800" : "bg-sky-600 hover:bg-sky-700"}`}
-              >
-                {saving === status ? <Loader2 className="h-4 w-4 animate-spin" /> : STATUS_LABELS[status]}
-              </button>
-            ))
+          {report.description && (
+            <section className="mt-4 rounded-2xl border border-orange-100 bg-orange-50/45 p-4" aria-label="Mô tả báo cáo">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#E85F00]">Mô tả từ người báo cáo</p>
+              <p className="mt-2 text-sm leading-6 text-slate-700">{report.description}</p>
+            </section>
           )}
-          <button type="button" onClick={onClose} className="mt-1 inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
+
+          {report.hasEvidence && report.evidenceUrl && (
+            <section className="mt-4" aria-label="Ảnh minh chứng">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Ảnh minh chứng</p>
+              <a href={report.evidenceUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 transition hover:border-orange-200 focus:outline-none focus:ring-4 focus:ring-orange-100">
+                <img src={report.evidenceUrl} alt="Ảnh minh chứng báo cáo" className="max-h-72 w-full object-contain" />
+              </a>
+            </section>
+          )}
+
+          <label className="mt-5 block text-sm font-bold text-slate-800">
+            Ghi chú xử lý <span className="font-normal text-slate-400">(không bắt buộc)</span>
+            <textarea
+              value={note}
+              maxLength={2000}
+              onChange={event => setNote(event.target.value)}
+              placeholder="Ghi lại quyết định xử lý để các quản trị viên khác có đủ bối cảnh"
+              className="mt-2 min-h-28 w-full resize-y rounded-2xl border border-slate-200 bg-white p-3 text-sm font-normal leading-6 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#FF6B00] focus:ring-4 focus:ring-orange-100"
+            />
+          </label>
+        </div>
+
+        <footer className="border-t border-slate-100 bg-white px-5 py-4 shadow-[0_-10px_24px_rgba(15,23,42,0.04)] sm:px-6">
+          {transitions.length === 0 ? (
+            <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-5 text-slate-500">Báo cáo đã ở trạng thái cuối, không còn hành động khả dụng.</p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {transitions.map(status => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => void apply(status)}
+                  disabled={saving !== null}
+                  className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-50 ${status === "RESOLVED" ? "bg-emerald-600 text-white shadow-[0_8px_18px_rgba(5,150,105,0.18)] hover:bg-emerald-700 focus:ring-emerald-100" : status === "DISMISSED" ? "border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 focus:ring-slate-100" : "border border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100 focus:ring-sky-100"}`}
+                >
+                  {saving === status ? <Loader2 className="h-4 w-4 animate-spin" /> : STATUS_LABELS[status]}
+                </button>
+              ))}
+            </div>
+          )}
+          <button type="button" onClick={onClose} className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100">
             Đóng
           </button>
-        </div></div>
-      </div>
+        </footer>
+      </aside>
     </div>
   );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-3">
+    <div className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
       <dt className="shrink-0 text-slate-400">{label}</dt>
-      <dd className="text-right font-semibold text-slate-800">{value}</dd>
+      <dd className="max-w-[62%] text-right font-semibold leading-5 text-slate-800">{value}</dd>
     </div>
   );
 }
