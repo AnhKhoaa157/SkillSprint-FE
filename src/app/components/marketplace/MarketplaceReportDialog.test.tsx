@@ -22,6 +22,7 @@ describe("MarketplaceReportDialog", () => {
     vi.mocked(marketplaceService.createContentReport).mockResolvedValue({} as never);
     render(<MarketplaceReportDialog open target={target} onOpenChange={vi.fn()} />);
 
+    expect(screen.getByRole("dialog")).toHaveClass("bg-white", "text-slate-900");
     await userEvent.click(screen.getByRole("radio", { name: "Đáp án sai" }));
     await userEvent.type(screen.getByRole("textbox"), "Câu này sai đáp án");
     await userEvent.click(screen.getByRole("button", { name: "Gửi báo cáo" }));
