@@ -14,12 +14,13 @@ import AdminLeaderboard from "../sections/leaderboard";
 import AdminCommunityModeration from "../sections/community/AdminCommunityModeration";
 import AdminCommunityRooms from "../sections/community/AdminCommunityRooms";
 import MarketplaceAdmin from "../MarketplaceAdmin";
+import MarketplaceReportsAdmin from "../MarketplaceReportsAdmin";
 import MarketplacePayouts from "../MarketplacePayouts";
 import CoinWalletSection from "../sections/wallet/CoinWalletSection";
 import AdminUserDetail from "../userDetail";
 import healthService from "../../../../api/system/healthService";
 
-type AdminNavSection = "financials" | "users" | "payments" | "wallet" | "feedback" | "subscriptions" | "system" | "leaderboard" | "community" | "communityRooms" | "marketplace" | "payouts";
+type AdminNavSection = "financials" | "users" | "payments" | "wallet" | "feedback" | "subscriptions" | "system" | "leaderboard" | "community" | "communityRooms" | "marketplace" | "marketplaceReports" | "payouts";
 
 function getRequestedAdminSection(state: unknown): AdminNavSection | null {
   if (!state || typeof state !== "object") return null;
@@ -27,7 +28,8 @@ function getRequestedAdminSection(state: unknown): AdminNavSection | null {
   const section = (state as { adminSection?: unknown }).adminSection;
   return section === "financials" || section === "users" || section === "payments" || section === "wallet" ||
     section === "feedback" || section === "subscriptions" || section === "system" || section === "leaderboard" ||
-    section === "community" || section === "communityRooms" || section === "marketplace" || section === "payouts"
+    section === "community" || section === "communityRooms" || section === "marketplace" ||
+    section === "marketplaceReports" || section === "payouts"
     ? section
     : null;
 }
@@ -93,6 +95,7 @@ export default function AdminDashboard() {
     { id: "feedback",      label: "Feedback người dùng", icon: MessageSquare },
     { id: "community",     label: "Kiểm duyệt cộng đồng", icon: ShieldAlert },
     { id: "marketplace",   label: "Duyệt Quiz Pack", icon: Store },
+    { id: "marketplaceReports", label: "Báo cáo Marketplace", icon: ShieldAlert },
     { id: "payouts",       label: "Yêu cầu rút tiền", icon: HandCoins },
     { id: "communityRooms", label: "Phòng cộng đồng", icon: Megaphone },
     { id: "system",        label: "Hệ thống & Cảnh báo", icon: ServerCog   },
@@ -125,6 +128,7 @@ export default function AdminDashboard() {
     feedback:      { title: "Feedback người dùng", sub: "Xem và quản lý phản hồi từ người dùng" },
     community:     { title: "Kiểm duyệt cộng đồng", sub: "Duyệt bài viết · Bình luận · Report · Từ khóa cấm" },
     marketplace:   { title: "Duyệt Quiz Pack", sub: "Kiểm tra nội dung và xuất bản Quiz Pack" },
+    marketplaceReports: { title: "Báo cáo Marketplace", sub: "Xem xét và xử lý báo cáo nội dung Quiz Pack" },
     payouts:       { title: "Yêu cầu rút tiền", sub: "Duyệt và đối soát chuyển khoản cho Creator" },
     communityRooms: { title: "Quản lý Phòng Cộng Đồng", sub: "Danh sách phòng · Tin nhắn · Trạng thái" },
     system:        { title: "Hệ thống & Cảnh báo", sub: "Bảo trì hệ thống · Thông báo chung" },
@@ -165,6 +169,7 @@ export default function AdminDashboard() {
     { id: "goto-payments", label: "Đi tới Quản lý thanh toán", keywords: "payments transactions giao dịch thanh toán", action: () => setActiveNav("payments") },
     { id: "goto-system", label: "Đi tới Hệ thống & Cảnh báo", keywords: "system maintenance bảo trì trạng thái hệ thống vận hành thông báo announcements", action: () => setActiveNav("system") },
     { id: "goto-marketplace", label: "Đi tới Duyệt Quiz Pack", keywords: "marketplace quiz pack duyệt xuất bản", action: () => setActiveNav("marketplace") },
+    { id: "goto-marketplace-reports", label: "Đi tới Báo cáo Marketplace", keywords: "marketplace report báo cáo nội dung vi phạm", action: () => setActiveNav("marketplaceReports") },
     { id: "goto-payouts", label: "Đi tới Yêu cầu rút tiền", keywords: "payout creator withdrawal rút tiền chuyển khoản", action: () => setActiveNav("payouts") },
     { id: "export", label: "Xuất dữ liệu màn hình hiện tại", keywords: "export csv download", action: handleExport },
     { id: "sync", label: "Đồng bộ dữ liệu admin", keywords: "sync refresh", action: handleSync },
@@ -412,6 +417,7 @@ export default function AdminDashboard() {
           {activeNav === "feedback" && <AdminFeedback isDashboard={true} />}
           {activeNav === "community" && <AdminCommunityModeration isDashboard={true} />}
           {activeNav === "marketplace" && <MarketplaceAdmin />}
+          {activeNav === "marketplaceReports" && <MarketplaceReportsAdmin />}
           {activeNav === "payouts" && <MarketplacePayouts />}
           {activeNav === "communityRooms" && <AdminCommunityRooms isDashboard={true} />}
           {activeNav === "system" && (
