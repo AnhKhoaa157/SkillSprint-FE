@@ -522,3 +522,48 @@ export interface MarketplaceReportEvidenceUploadUrl {
   objectKey: string;
   expiresAt: string;
 }
+
+// --- Marketplace refund disputes (Plan 6E) ---
+
+export type MarketplaceDisputeReason =
+  | "NOT_AS_DESCRIBED"
+  | "POOR_QUALITY"
+  | "TECHNICAL_ISSUE"
+  | "ACCIDENTAL_PURCHASE"
+  | "OTHER";
+
+export type MarketplaceDisputeStatus = "OPEN" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "REFUNDED";
+
+export interface MarketplaceDispute {
+  disputeId: string;
+  saleId: string;
+  packVersionId: string;
+  packId: string;
+  versionNo: number | null;
+  versionTitle: string | null;
+  saleCoinAmount: number | null;
+  reason: MarketplaceDisputeReason;
+  description: string | null;
+  status: MarketplaceDisputeStatus;
+  decisionNote: string | null;
+  decidedAt: string | null;
+  refundedAt: string | null;
+  refundCoinAmount: number | null;
+  refundWalletTransactionId: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  allowedActions: string[];
+}
+
+export interface MarketplaceDisputeEligibility {
+  saleId: string | null;
+  eligible: boolean;
+  ineligibilityReason: string | null;
+  existingDispute: MarketplaceDispute | null;
+}
+
+export interface CreateMarketplaceDisputeRequest {
+  saleId: string;
+  reason: MarketplaceDisputeReason;
+  description?: string;
+}

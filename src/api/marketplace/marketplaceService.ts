@@ -14,6 +14,9 @@ import type {
   MarketplaceContentReport,
   CreateMarketplaceContentReportRequest,
   MarketplaceReportEvidenceUploadUrl,
+  MarketplaceDispute,
+  MarketplaceDisputeEligibility,
+  CreateMarketplaceDisputeRequest,
 } from "./marketplaceTypes";
 
 const CREATOR_PAYOUT_QR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -313,6 +316,19 @@ const marketplaceService = {
     return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplaceReportEvidenceUploadUrl>>(
       "/api/marketplace/reports/evidence-upload-url", { fileName, contentType },
     )).data);
+  },
+  async getVersionDisputeEligibility(versionId: string): Promise<MarketplaceDisputeEligibility> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceDisputeEligibility>>(
+      `/api/marketplace/versions/${encodeURIComponent(versionId)}/dispute-eligibility`,
+    )).data);
+  },
+  async createDispute(request: CreateMarketplaceDisputeRequest): Promise<MarketplaceDispute> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplaceDispute>>(
+      "/api/marketplace/disputes", request,
+    )).data);
+  },
+  async getMyDisputes(): Promise<MarketplaceDispute[]> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceDispute[]>>("/api/marketplace/disputes/me")).data);
   },
   async uploadReportEvidence(file: File): Promise<string> {
     if (!REPORT_EVIDENCE_ALLOWED_TYPES.includes(file.type)) {

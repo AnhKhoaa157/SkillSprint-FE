@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { MarketplaceReportButton } from "../../components/marketplace/MarketplaceReportDialog";
+import { MarketplaceDisputeButton } from "../../components/marketplace/MarketplaceDisputePanel";
 import { marketplaceService } from "../../../api/marketplace";
 import type {
   MarketplaceChapterProgress,
@@ -306,10 +307,13 @@ export default function MarketplaceLearningHub() {
   return <div className="mx-auto max-w-6xl">
     <div className="flex items-center justify-between gap-3">
       <Link to="/my-packs" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-[#FF6B00] transition hover:text-[#C2410C]"><ArrowLeft className="h-4 w-4" />Gói của tôi</Link>
-      <MarketplaceReportButton
-        target={{ packVersionId: pack.versionId, targetType: "VERSION", label: pack.title }}
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
-      />
+      <div className="flex items-center gap-1">
+        <MarketplaceDisputeButton versionId={pack.versionId} />
+        <MarketplaceReportButton
+          target={{ packVersionId: pack.versionId, targetType: "VERSION", label: pack.title }}
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
+        />
+      </div>
     </div>
 
     <section className="relative mt-3 overflow-hidden rounded-[2rem] border border-orange-100 bg-[radial-gradient(circle_at_86%_8%,rgba(255,187,118,0.32),transparent_26%),linear-gradient(125deg,#FFF8F1_0%,#FFFFFF_64%,#FFF1E2_100%)] p-6 shadow-[0_16px_44px_rgba(194,65,12,0.08)] sm:p-8">
