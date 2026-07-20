@@ -352,6 +352,7 @@ function MetricsTab() {
               <MetricCard icon={<Scale className="h-4 w-4" />} label="Lượt Ranked nghi vấn" value={pct(metrics.suspiciousRankedAttemptRate)} sub={`${metrics.suspiciousRankedAttemptCount}/${metrics.rankedAttemptCount} lượt`} tone={metrics.suspiciousRankedAttemptCount > 0 ? "warn" : "ok"} />
               <MetricCard icon={<Coins className="h-4 w-4" />} label="Tỷ lệ hoàn tiền" value={pct(metrics.refundRate)} sub={`${metrics.refundedDisputeCount}/${metrics.disputeCount} tranh chấp`} tone={metrics.refundedDisputeCount > 0 ? "warn" : "ok"} />
               <MetricCard icon={<Coins className="h-4 w-4" />} label="Tổng Coin đã hoàn" value={`${metrics.refundedCoinAmount}`} sub="Coin" />
+              <MetricCard icon={<Coins className="h-4 w-4" />} label="Doanh thu nền tảng ghi nhận" value={`${metrics.recognizedPlatformRevenue}`} sub="Coin, đã loại giao dịch hoàn tiền" tone="ok" />
             </div>
           </div>
         )}

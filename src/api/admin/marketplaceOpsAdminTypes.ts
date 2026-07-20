@@ -71,4 +71,5 @@ export interface MarketplaceVersionMetrics {
   refundedDisputeCount: number;
   refundRate: number;
   refundedCoinAmount: number;
+  recognizedPlatformRevenue: number;
 }

@@ -38,7 +38,7 @@ const metrics: MarketplaceVersionMetrics = {
   averageRating: 4.5, reviewCount: 8,
   reportCount: 5, openReportCount: 2, openReportRate: 0.4,
   rankedAttemptCount: 20, suspiciousRankedAttemptCount: 1, suspiciousRankedAttemptRate: 0.05,
-  disputeCount: 3, refundedDisputeCount: 2, refundRate: 0.2, refundedCoinAmount: 200,
+  disputeCount: 3, refundedDisputeCount: 2, refundRate: 0.2, refundedCoinAmount: 200, recognizedPlatformRevenue: 160,
 };
 
 describe("MarketplaceOpsAdmin", () => {
