@@ -473,3 +473,52 @@ export interface CreatorPayoutQrUploadUrl {
   objectKey: string;
   expiresAt: string;
 }
+
+// --- Marketplace content reports (Plan 6D) ---
+
+export type MarketplaceReportTargetType = "VERSION" | "CHAPTER" | "QUESTION" | "CREATOR";
+
+export type MarketplaceReportCategory =
+  | "INCORRECT_ANSWER"
+  | "AMBIGUOUS"
+  | "BROKEN"
+  | "DUPLICATE"
+  | "MISLEADING"
+  | "COPYRIGHT"
+  | "INAPPROPRIATE"
+  | "OTHER";
+
+export type MarketplaceReportStatus = "OPEN" | "IN_REVIEW" | "RESOLVED" | "DISMISSED";
+
+export interface MarketplaceContentReport {
+  reportId: string;
+  packVersionId: string;
+  packId: string;
+  versionNo: number | null;
+  versionTitle: string | null;
+  targetType: MarketplaceReportTargetType;
+  targetRef: string | null;
+  category: MarketplaceReportCategory;
+  description: string | null;
+  status: MarketplaceReportStatus;
+  resolutionNote: string | null;
+  hasEvidence: boolean;
+  reviewedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface CreateMarketplaceContentReportRequest {
+  packVersionId: string;
+  targetType: MarketplaceReportTargetType;
+  targetRef?: string | null;
+  category: MarketplaceReportCategory;
+  description?: string;
+  evidenceObjectKey?: string;
+}
+
+export interface MarketplaceReportEvidenceUploadUrl {
+  uploadUrl: string;
+  objectKey: string;
+  expiresAt: string;
+}

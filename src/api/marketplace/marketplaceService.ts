@@ -11,10 +11,15 @@ import type {
   MarketplaceReviewCollection,
   MarketplaceReviewContext,
   MarketplaceReviewUpsertRequest,
+  MarketplaceContentReport,
+  CreateMarketplaceContentReportRequest,
+  MarketplaceReportEvidenceUploadUrl,
 } from "./marketplaceTypes";
 
 const CREATOR_PAYOUT_QR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const CREATOR_PAYOUT_QR_MAX_BYTES = 5 * 1024 * 1024;
+const REPORT_EVIDENCE_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const REPORT_EVIDENCE_MAX_BYTES = 5 * 1024 * 1024;
 
 function unwrap<T>(payload: ApiResponse<T>): T {
   if (!payload || payload.data == null) throw new Error(payload?.message || "Không nhận được dữ liệu từ máy chủ.");
@@ -295,6 +300,37 @@ const marketplaceService = {
   },
   async getCreatorPayouts(): Promise<CreatorPayout[]> {
     return unwrap((await skillSprintApiClient.get<ApiResponse<CreatorPayout[]>>("/api/marketplace/creator/payouts")).data);
+  },
+  async createContentReport(request: CreateMarketplaceContentReportRequest): Promise<MarketplaceContentReport> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplaceContentReport>>(
+      "/api/marketplace/reports", request,
+    )).data);
+  },
+  async getMyContentReports(): Promise<MarketplaceContentReport[]> {
+    return unwrap((await skillSprintApiClient.get<ApiResponse<MarketplaceContentReport[]>>("/api/marketplace/reports/me")).data);
+  },
+  async createReportEvidenceUploadUrl(fileName: string, contentType: string): Promise<MarketplaceReportEvidenceUploadUrl> {
+    return unwrap((await skillSprintApiClient.post<ApiResponse<MarketplaceReportEvidenceUploadUrl>>(
+      "/api/marketplace/reports/evidence-upload-url", { fileName, contentType },
+    )).data);
+  },
+  async uploadReportEvidence(file: File): Promise<string> {
+    if (!REPORT_EVIDENCE_ALLOWED_TYPES.includes(file.type)) {
+      throw new Error("Ảnh minh chứng phải ở định dạng JPEG, PNG, WebP hoặc GIF.");
+    }
+    if (file.size > REPORT_EVIDENCE_MAX_BYTES) {
+      throw new Error("Ảnh minh chứng không được vượt quá 5 MB.");
+    }
+    const { uploadUrl, objectKey } = await this.createReportEvidenceUploadUrl(file.name, file.type);
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    if (!uploadResponse.ok) {
+      throw new Error("Không thể tải ảnh minh chứng lên. Vui lòng thử lại.");
+    }
+    return objectKey;
   },
 };
 
