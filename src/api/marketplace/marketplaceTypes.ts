@@ -476,7 +476,7 @@ export interface CreatorPayoutQrUploadUrl {
 
 // --- Marketplace content reports (Plan 6D) ---
 
-export type MarketplaceReportTargetType = "VERSION" | "CHAPTER" | "QUESTION" | "CREATOR";
+export type MarketplaceReportTargetType = "VERSION" | "CHAPTER" | "QUESTION" | "CREATOR" | "REVIEW";
 
 export type MarketplaceReportCategory =
   | "INCORRECT_ANSWER"

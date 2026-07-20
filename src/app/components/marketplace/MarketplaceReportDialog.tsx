@@ -39,6 +39,7 @@ const TARGET_TYPE_LABELS: Record<MarketplaceReportTargetType, string> = {
   CHAPTER: "Chương",
   QUESTION: "Câu hỏi",
   CREATOR: "Người tạo",
+  REVIEW: "Đánh giá",
 };
 
 const MAX_DESCRIPTION = 2000;

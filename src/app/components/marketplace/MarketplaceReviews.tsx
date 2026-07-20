@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { AlertTriangle, LoaderCircle, LockKeyhole, RefreshCw, Star } from "lucide-react";
 import type { MarketplaceReview, MarketplaceReviewContext, MarketplaceReviewUpsertRequest } from "../../../api/marketplace";
+import { MarketplaceReportButton } from "./MarketplaceReportDialog";
 
 const dateFormatter = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" });
 
@@ -19,7 +20,13 @@ function ReviewStars({ value }: { value: number }) {
   </span>;
 }
 
-export function MarketplaceReviewList({ reviews }: { reviews: MarketplaceReview[] }) {
+export function MarketplaceReviewList({
+  reviews,
+  packVersionId,
+}: {
+  reviews: MarketplaceReview[];
+  packVersionId?: string | null;
+}) {
   if (reviews.length === 0) {
     return <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
       Phiên bản này chưa có đánh giá.
@@ -33,7 +40,21 @@ export function MarketplaceReviewList({ reviews }: { reviews: MarketplaceReview[
         <ReviewStars value={review.rating} />
       </div>
       {review.comment && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{review.comment}</p>}
-      <p className="mt-3 text-xs text-slate-400">Cập nhật {formatDate(review.updatedAt ?? review.createdAt)}</p>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-slate-400">Cập nhật {formatDate(review.updatedAt ?? review.createdAt)}</p>
+        {packVersionId && !review.mine && (
+          <MarketplaceReportButton
+            target={{
+              packVersionId,
+              targetType: "REVIEW",
+              targetRef: review.reviewId,
+              label: `Đánh giá của ${review.reviewerName}`,
+            }}
+            label="Báo cáo đánh giá"
+            className="inline-flex min-h-9 items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+          />
+        )}
+      </div>
     </article>)}
   </div>;
 }

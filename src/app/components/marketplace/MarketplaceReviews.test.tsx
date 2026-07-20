@@ -32,11 +32,18 @@ describe("MarketplaceReviews", () => {
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 
-  it("renders a version review list without editing controls", () => {
-    render(<MarketplaceReviewList reviews={[{ reviewId: "review-1", reviewerName: "Learner", rating: 5, comment: "Tốt", createdAt: "2026-07-19T00:00:00Z", updatedAt: "2026-07-19T00:00:00Z" }]} />);
+  it("renders a report action for another learner's review without editing controls", () => {
+    render(<MarketplaceReviewList packVersionId="version-1" reviews={[{ reviewId: "review-1", reviewerName: "Learner", rating: 5, comment: "Tốt", createdAt: "2026-07-19T00:00:00Z", updatedAt: "2026-07-19T00:00:00Z" }]} />);
 
     expect(screen.getByText("Learner")).toBeInTheDocument();
     expect(screen.getByLabelText("5 trên 5 sao")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Báo cáo đánh giá" })).toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+  });
+
+  it("does not let a learner report their own review", () => {
+    render(<MarketplaceReviewList packVersionId="version-1" reviews={[{ reviewId: "review-1", reviewerName: "Me", mine: true, rating: 5, createdAt: "2026-07-19T00:00:00Z", updatedAt: "2026-07-19T00:00:00Z" }]} />);
+
+    expect(screen.queryByRole("button", { name: "Báo cáo đánh giá" })).not.toBeInTheDocument();
   });
 });
