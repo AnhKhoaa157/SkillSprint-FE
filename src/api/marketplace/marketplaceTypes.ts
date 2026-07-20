@@ -119,6 +119,11 @@ export interface MarketplaceReviewContext {
   currentUserReview: MarketplaceReview | null;
 }
 
+export interface MarketplaceReviewUpsertRequest {
+  rating: number;
+  comment?: string;
+}
+
 export interface MarketplaceWallet {
   /** `balance` is the current API field; `balanceCoins` keeps old deployments compatible. */
   balance?: number;

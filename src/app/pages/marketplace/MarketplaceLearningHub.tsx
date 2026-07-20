@@ -23,6 +23,7 @@ import type {
   MarketplacePracticeAttemptHistory,
   MarketplacePracticeAttemptResult,
   MarketplaceReviewContext,
+  MarketplaceReviewUpsertRequest,
   MarketplaceVersionProgress,
   PurchasedMarketplacePack,
 } from "../../../api/marketplace";
@@ -158,12 +159,15 @@ export default function MarketplaceLearningHub() {
   const [reviewSaving, setReviewSaving] = useState(false);
   const submitKey = useRef<string | null>(null);
   const reviewRequestId = useRef(0);
+  const activeVersionId = useRef<string | null>(requestedVersionId);
+  const loadRequestId = useRef(0);
 
   const loadLearningData = useCallback(async (versionId: string) => {
     const [nextProgress, nextHistory] = await Promise.all([
       marketplaceService.getVersionProgress(versionId),
       marketplaceService.getPracticeAttemptHistory(versionId),
     ]);
+    if (activeVersionId.current !== versionId) return;
     setProgress(nextProgress);
     setHistory(nextHistory);
   }, []);
@@ -174,35 +178,43 @@ export default function MarketplaceLearningHub() {
     setReviewError(null);
     try {
       const nextContext = await marketplaceService.getVersionReviewContext(versionId);
-      if (requestId === reviewRequestId.current) setReviewContext(nextContext);
+      if (requestId === reviewRequestId.current && activeVersionId.current === versionId) setReviewContext(nextContext);
     } catch (error) {
-      if (requestId === reviewRequestId.current) {
+      if (requestId === reviewRequestId.current && activeVersionId.current === versionId) {
         setReviewContext(null);
         setReviewError(errorMessage(error));
       }
     } finally {
-      if (requestId === reviewRequestId.current) setReviewLoading(false);
+      if (requestId === reviewRequestId.current && activeVersionId.current === versionId) setReviewLoading(false);
     }
   }, []);
 
   const load = useCallback(async () => {
+    const requestId = ++loadRequestId.current;
+    activeVersionId.current = requestedVersionId;
+    reviewRequestId.current += 1;
     setLoading(true);
     setFailed(false);
+    setReviewContext(null);
+    setReviewError(null);
+    setReviewSaving(false);
     try {
       const ownedPacks = await marketplaceService.getMyPacks();
       const nextPack = requestedVersionId
         ? ownedPacks.find(candidate => candidate.versionId === requestedVersionId)
         : ownedPacks.find(candidate => candidate.itemId === itemId);
+      if (requestId !== loadRequestId.current) return;
       if (!nextPack?.versionId) throw new Error("Không tìm thấy phiên bản Quiz Pack bạn đang sở hữu.");
+      activeVersionId.current = nextPack.versionId;
       setPack(nextPack);
-      setReviewContext(null);
       void loadReviewContext(nextPack.versionId);
       await loadLearningData(nextPack.versionId);
     } catch (error) {
+      if (requestId !== loadRequestId.current) return;
       setFailed(true);
       toast.error(errorMessage(error));
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestId.current) setLoading(false);
     }
   }, [itemId, loadLearningData, loadReviewContext, requestedVersionId]);
 
@@ -260,18 +272,21 @@ export default function MarketplaceLearningHub() {
     }
   };
 
-  const saveReview = async (request: { rating: number; comment?: string }) => {
+  const saveReview = async (request: MarketplaceReviewUpsertRequest) => {
     if (!pack?.versionId) return;
+    const versionId = pack.versionId;
     setReviewSaving(true);
     try {
-      await marketplaceService.upsertVersionReview(pack.versionId, request);
+      await marketplaceService.upsertVersionReview(versionId, request);
+      if (activeVersionId.current !== versionId) return;
       toast.success(reviewContext?.currentUserReview ? "Đã cập nhật đánh giá." : "Đã gửi đánh giá.");
-      await loadReviewContext(pack.versionId);
+      await loadReviewContext(versionId);
     } catch (error) {
+      if (activeVersionId.current !== versionId) return;
       toast.error(errorMessage(error));
-      await loadReviewContext(pack.versionId);
+      await loadReviewContext(versionId);
     } finally {
-      setReviewSaving(false);
+      if (activeVersionId.current === versionId) setReviewSaving(false);
     }
   };
 
@@ -329,7 +344,7 @@ export default function MarketplaceLearningHub() {
           </div>
           <button
             type="button"
-            onClick={() => void loadLearningData(progress.versionId)}
+            onClick={() => void Promise.all([loadLearningData(progress.versionId), loadReviewContext(progress.versionId)])}
             className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-bold text-[#C2410C] transition hover:border-orange-300 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 motion-reduce:transition-none"
           ><RotateCcw className="h-4 w-4" />Làm mới</button>
         </div>

@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router";
 import { marketplaceService } from "../../../api/marketplace";
 import MarketplaceLearningHub from "./MarketplaceLearningHub";
 
@@ -47,6 +47,20 @@ const progress = {
     lastCompletedAt: null,
   }],
 };
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(next => { resolve = next; });
+  return { promise, resolve };
+}
+
+function LearningHubVersionHarness() {
+  const navigate = useNavigate();
+  return <>
+    <button type="button" onClick={() => navigate("/my-packs/pack-1?versionId=version-2")}>Đổi phiên bản</button>
+    <Routes><Route path="/my-packs/:itemId" element={<MarketplaceLearningHub />} /></Routes>
+  </>;
+}
 
 describe("MarketplaceLearningHub", () => {
   beforeEach(() => {
@@ -153,5 +167,58 @@ describe("MarketplaceLearningHub", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Hoàn thành Ranked mô phỏng" }));
 
     await waitFor(() => expect(marketplaceService.getVersionReviewContext).toHaveBeenCalledTimes(2));
+  });
+
+  it("refreshes progress and review eligibility from the manual refresh action", async () => {
+    renderHub();
+    await screen.findByText("Luyện tập theo chương");
+
+    fireEvent.click(screen.getByRole("button", { name: "Làm mới" }));
+
+    await waitFor(() => expect(marketplaceService.getVersionProgress).toHaveBeenCalledTimes(2));
+    expect(marketplaceService.getVersionReviewContext).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not restore an old review context when a save finishes after changing versions", async () => {
+    const pendingSave = deferred<Awaited<ReturnType<typeof marketplaceService.upsertVersionReview>>>();
+    const secondPack = { ...pack, versionId: "version-2", versionNo: 3 };
+    vi.mocked(marketplaceService.getMyPacks).mockResolvedValue([pack, secondPack] as never);
+    vi.mocked(marketplaceService.getVersionProgress).mockImplementation(async versionId => ({
+      ...progress,
+      versionId,
+      versionNo: versionId === "version-2" ? 3 : 2,
+    }));
+    vi.mocked(marketplaceService.getVersionReviewContext).mockImplementation(async versionId => ({
+      packId: "pack-1",
+      versionId,
+      versionNo: versionId === "version-2" ? 3 : 2,
+      eligible: true,
+      ineligibilityReason: null,
+      currentUserReview: null,
+    }));
+    vi.mocked(marketplaceService.upsertVersionReview).mockReturnValue(pendingSave.promise);
+    render(<MemoryRouter initialEntries={["/my-packs/pack-1?versionId=version-1"]}><LearningHubVersionHarness /></MemoryRouter>);
+
+    fireEvent.click(await screen.findByRole("radio", { name: "5 sao" }));
+    fireEvent.click(screen.getByRole("button", { name: "Gửi đánh giá" }));
+    await waitFor(() => expect(marketplaceService.upsertVersionReview).toHaveBeenCalledWith("version-1", { rating: 5, comment: undefined }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Đổi phiên bản" }));
+    expect(await screen.findByText("Đánh giá phiên bản 3")).toBeInTheDocument();
+
+    await act(async () => {
+      pendingSave.resolve({
+        reviewId: "review-1",
+        reviewerName: "Learner",
+        rating: 5,
+        comment: null,
+        createdAt: "2026-07-19T00:00:00Z",
+        updatedAt: "2026-07-19T00:00:00Z",
+      });
+      await pendingSave.promise;
+    });
+
+    expect(screen.getByText("Đánh giá phiên bản 3")).toBeInTheDocument();
+    expect(vi.mocked(marketplaceService.getVersionReviewContext).mock.calls.filter(([versionId]) => versionId === "version-1")).toHaveLength(1);
   });
 });

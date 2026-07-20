@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { AlertTriangle, LoaderCircle, LockKeyhole, RefreshCw, Star } from "lucide-react";
-import type { MarketplaceReview, MarketplaceReviewContext } from "../../../api/marketplace";
+import type { MarketplaceReview, MarketplaceReviewContext, MarketplaceReviewUpsertRequest } from "../../../api/marketplace";
 
 const dateFormatter = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" });
 
@@ -49,7 +49,7 @@ interface MarketplaceReviewEditorProps {
   error: string | null;
   saving: boolean;
   onRetry: () => void;
-  onSave: (request: { rating: number; comment?: string }) => Promise<void>;
+  onSave: (request: MarketplaceReviewUpsertRequest) => Promise<void>;
 }
 
 export function MarketplaceReviewEditor({ context, loading, error, saving, onRetry, onSave }: MarketplaceReviewEditorProps) {

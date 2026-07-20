@@ -10,6 +10,7 @@ import type {
   MarketplaceQualityJob,
   MarketplaceReviewCollection,
   MarketplaceReviewContext,
+  MarketplaceReviewUpsertRequest,
 } from "./marketplaceTypes";
 
 const CREATOR_PAYOUT_QR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -114,7 +115,7 @@ const marketplaceService = {
       `/api/marketplace/versions/${encodeURIComponent(versionId)}/reviews/me`,
     )).data);
   },
-  async upsertVersionReview(versionId: string, request: { rating: number; comment?: string }): Promise<MarketplaceReview> {
+  async upsertVersionReview(versionId: string, request: MarketplaceReviewUpsertRequest): Promise<MarketplaceReview> {
     return unwrap((await skillSprintApiClient.put<ApiResponse<MarketplaceReview>>(
       `/api/marketplace/versions/${encodeURIComponent(versionId)}/reviews/me`,
       request,

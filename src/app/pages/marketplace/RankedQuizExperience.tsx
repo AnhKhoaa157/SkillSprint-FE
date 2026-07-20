@@ -120,7 +120,7 @@ export default function RankedQuizExperience({ embedded = false, onCompleted }: 
       setResult(nextResult); setAttempt(null); setConfirmSubmit(false);
       refreshMarketplaceLeaderboard(versionId, "version");
       await loadHistory(versionId);
-      void Promise.resolve(onCompleted?.()).catch(() => undefined);
+      void Promise.resolve().then(() => onCompleted?.()).catch(() => undefined);
       toast.success("Đã nộp Quiz xếp hạng.");
     } catch (error) { toast.error(errorMessage(error)); }
     finally { setSubmitting(false); }
