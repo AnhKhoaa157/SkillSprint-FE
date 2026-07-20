@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3, Store, WalletCards, HandCoins } from "lucide-react";
+import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3, Store, WalletCards, HandCoins, Scale } from "lucide-react";
 import { Link, useLocation, useMatch, useNavigate } from "react-router";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminHealth from "../sections/health";
@@ -15,12 +15,13 @@ import AdminCommunityModeration from "../sections/community/AdminCommunityModera
 import AdminCommunityRooms from "../sections/community/AdminCommunityRooms";
 import MarketplaceAdmin from "../MarketplaceAdmin";
 import MarketplaceReportsAdmin from "../MarketplaceReportsAdmin";
+import MarketplaceOpsAdmin from "../MarketplaceOpsAdmin";
 import MarketplacePayouts from "../MarketplacePayouts";
 import CoinWalletSection from "../sections/wallet/CoinWalletSection";
 import AdminUserDetail from "../userDetail";
 import healthService from "../../../../api/system/healthService";
 
-type AdminNavSection = "financials" | "users" | "payments" | "wallet" | "feedback" | "subscriptions" | "system" | "leaderboard" | "community" | "communityRooms" | "marketplace" | "marketplaceReports" | "payouts";
+type AdminNavSection = "financials" | "users" | "payments" | "wallet" | "feedback" | "subscriptions" | "system" | "leaderboard" | "community" | "communityRooms" | "marketplace" | "marketplaceReports" | "marketplaceOps" | "payouts";
 
 function getRequestedAdminSection(state: unknown): AdminNavSection | null {
   if (!state || typeof state !== "object") return null;
@@ -29,7 +30,7 @@ function getRequestedAdminSection(state: unknown): AdminNavSection | null {
   return section === "financials" || section === "users" || section === "payments" || section === "wallet" ||
     section === "feedback" || section === "subscriptions" || section === "system" || section === "leaderboard" ||
     section === "community" || section === "communityRooms" || section === "marketplace" ||
-    section === "marketplaceReports" || section === "payouts"
+    section === "marketplaceReports" || section === "marketplaceOps" || section === "payouts"
     ? section
     : null;
 }
@@ -96,6 +97,7 @@ export default function AdminDashboard() {
     { id: "community",     label: "Kiểm duyệt cộng đồng", icon: ShieldAlert },
     { id: "marketplace",   label: "Duyệt Quiz Pack", icon: Store },
     { id: "marketplaceReports", label: "Báo cáo Marketplace", icon: ShieldAlert },
+    { id: "marketplaceOps", label: "Vận hành Marketplace", icon: Scale },
     { id: "payouts",       label: "Yêu cầu rút tiền", icon: HandCoins },
     { id: "communityRooms", label: "Phòng cộng đồng", icon: Megaphone },
     { id: "system",        label: "Hệ thống & Cảnh báo", icon: ServerCog   },
@@ -129,6 +131,7 @@ export default function AdminDashboard() {
     community:     { title: "Kiểm duyệt cộng đồng", sub: "Duyệt bài viết · Bình luận · Report · Từ khóa cấm" },
     marketplace:   { title: "Duyệt Quiz Pack", sub: "Kiểm tra nội dung và xuất bản Quiz Pack" },
     marketplaceReports: { title: "Báo cáo Marketplace", sub: "Xem xét và xử lý báo cáo nội dung Quiz Pack" },
+    marketplaceOps: { title: "Vận hành Marketplace", sub: "Tranh chấp hoàn tiền · Chỉ số chất lượng phiên bản" },
     payouts:       { title: "Yêu cầu rút tiền", sub: "Duyệt và đối soát chuyển khoản cho Creator" },
     communityRooms: { title: "Quản lý Phòng Cộng Đồng", sub: "Danh sách phòng · Tin nhắn · Trạng thái" },
     system:        { title: "Hệ thống & Cảnh báo", sub: "Bảo trì hệ thống · Thông báo chung" },
@@ -170,6 +173,7 @@ export default function AdminDashboard() {
     { id: "goto-system", label: "Đi tới Hệ thống & Cảnh báo", keywords: "system maintenance bảo trì trạng thái hệ thống vận hành thông báo announcements", action: () => setActiveNav("system") },
     { id: "goto-marketplace", label: "Đi tới Duyệt Quiz Pack", keywords: "marketplace quiz pack duyệt xuất bản", action: () => setActiveNav("marketplace") },
     { id: "goto-marketplace-reports", label: "Đi tới Báo cáo Marketplace", keywords: "marketplace report báo cáo nội dung vi phạm", action: () => setActiveNav("marketplaceReports") },
+    { id: "goto-marketplace-ops", label: "Đi tới Vận hành Marketplace", keywords: "marketplace dispute refund hoàn tiền tranh chấp chỉ số metrics", action: () => setActiveNav("marketplaceOps") },
     { id: "goto-payouts", label: "Đi tới Yêu cầu rút tiền", keywords: "payout creator withdrawal rút tiền chuyển khoản", action: () => setActiveNav("payouts") },
     { id: "export", label: "Xuất dữ liệu màn hình hiện tại", keywords: "export csv download", action: handleExport },
     { id: "sync", label: "Đồng bộ dữ liệu admin", keywords: "sync refresh", action: handleSync },
@@ -418,6 +422,7 @@ export default function AdminDashboard() {
           {activeNav === "community" && <AdminCommunityModeration isDashboard={true} />}
           {activeNav === "marketplace" && <MarketplaceAdmin />}
           {activeNav === "marketplaceReports" && <MarketplaceReportsAdmin />}
+          {activeNav === "marketplaceOps" && <MarketplaceOpsAdmin />}
           {activeNav === "payouts" && <MarketplacePayouts />}
           {activeNav === "communityRooms" && <AdminCommunityRooms isDashboard={true} />}
           {activeNav === "system" && (
