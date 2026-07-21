@@ -105,7 +105,11 @@ export function deriveTimerSnapshot(
   // portion while the Pomodoro is still runnable, otherwise a COMPLETED phase
   // (remaining 0) would falsely add a whole focus cycle.
   let studySeconds = Math.max(0, Math.floor((pomodoro.completedFocusMinutes ?? 0) * 60));
-  if (phase === "FOCUS" && runnable) {
+  // A legacy server response may contain PAUSED + 0 seconds before it has
+  // actually credited the just-ended focus phase. Never manufacture a full
+  // focus cycle on the client from that inconsistent snapshot.
+  const isUncreditedPausedExpiry = pomodoroStatus === "PAUSED" && remaining === 0;
+  if (phase === "FOCUS" && runnable && !isUncreditedPausedExpiry) {
     studySeconds += Math.max(0, focusSeconds - remaining);
   }
 

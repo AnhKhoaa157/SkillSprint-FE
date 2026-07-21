@@ -136,6 +136,24 @@ describe("deriveTimerSnapshot", () => {
     expect(snap.studySeconds).toBe(180);
   });
 
+  it("does not award a full focus cycle from a paused zero-second legacy snapshot", () => {
+    const session = makeSession({
+      pomodoro: makePomodoro({
+        status: "PAUSED",
+        currentPhase: "FOCUS",
+        completedFocusMinutes: 0,
+        remainingSeconds: 0,
+      }),
+    });
+
+    const snap = deriveTimerSnapshot(session, NOW);
+
+    expect(snap.phase).toBe("FOCUS");
+    expect(snap.isRunning).toBe(false);
+    expect(snap.timeLeft).toBe(0);
+    expect(snap.studySeconds).toBe(0);
+  });
+
   it("returns an empty snapshot when there is no Pomodoro", () => {
     const snap = deriveTimerSnapshot(makeSession({ pomodoro: null }), NOW);
     expect(snap.hasRunnableTimer).toBe(false);

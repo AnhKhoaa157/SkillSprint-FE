@@ -820,14 +820,24 @@ export default function CoursePlayer() {
 
   const handlePausePomodoro = async () => {
     if (!activeSessionId || isSubActionLoading) return;
+    // Freeze the local interval before the request so a queued final tick cannot
+    // change phase or add study time while the server is resolving the pause.
+    pauseTimer();
     setIsSubActionLoading(true);
     try {
       const updated = await studySessionService.pausePomodoro(activeSessionId);
       applyServerPomodoro(updated);
       await fetchUpdatedDetail();
       showToast("success", "⏸️ Đã tạm dừng đồng hồ Pomodoro.");
-    } catch (err: any) {
-      showToast("warning", err?.message || "Không thể tạm dừng.");
+    } catch (err: unknown) {
+      try {
+        const latestSession = await studySessionService.getStudySessionState(activeSessionId);
+        await reconcileServerState(latestSession);
+      } catch {
+        // Keep the local timer frozen when the authoritative state cannot be fetched.
+      }
+      const message = err instanceof Error ? err.message : "Không thể tạm dừng.";
+      showToast("warning", message);
     } finally {
       setIsSubActionLoading(false);
     }
@@ -1515,7 +1525,9 @@ export default function CoursePlayer() {
                     <p className="mt-1 text-[8px] font-extrabold uppercase tracking-widest text-slate-400">
                       {isPomodoroSyncLocked
                         ? pomodoroSyncState === "syncing" ? "ĐANG ĐỒNG BỘ VỚI MÁY CHỦ" : "CẦN ĐỒNG BỘ LẠI"
-                        : isTimerRunning ? "ĐANG TẬP TRUNG" : "ĐÃ TẠM DỪNG"}
+                        : isPomodoroExhausted
+                          ? "CHU KỲ ĐÃ KẾT THÚC"
+                          : isTimerRunning ? "ĐANG TẬP TRUNG" : "ĐÃ TẠM DỪNG"}
                     </p>
 
                     <div className={`mt-3 font-mono text-[3.8rem] font-black tracking-tight tabular-nums leading-none transition-colors duration-500 ${

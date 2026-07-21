@@ -46,4 +46,27 @@ describe("PomodoroContext natural-expiry signal", () => {
 
     expect(result.current.naturalExpirySignal).toBe(0);
   });
+
+  it("does not advance a queued final tick after the user pauses", () => {
+    const { result } = renderPomodoro();
+
+    act(() => {
+      result.current.hydrateTimer({
+        stepId: "step-1",
+        phase: "FOCUS",
+        timeLeft: 1,
+        isRunning: true,
+        studySeconds: 0,
+      });
+      result.current.pauseTimer();
+    });
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+
+    expect(result.current.naturalExpirySignal).toBe(0);
+    expect(result.current.pomodoroPhase).toBe("FOCUS");
+    expect(result.current.timeLeft).toBe(1);
+    expect(result.current.actualStudySeconds).toBe(0);
+  });
 });

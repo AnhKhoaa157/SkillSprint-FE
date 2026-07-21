@@ -116,6 +116,11 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
   const activeStepIdRef = useRef<string | null>(null);
   activeStepIdRef.current = activeStepId;
 
+  // A pause click must win over an interval tick already queued by the browser.
+  // Without this guard, a final tick could advance the local phase while the
+  // pause request is still travelling to the server.
+  const isPausePendingRef = useRef(false);
+
   // ── Navigation blocker ───────────────────────────────────────────────────────
   // Block any navigation that leaves the Safe Focus Zone while the timer runs.
   const blockerFn = useCallback(
@@ -151,10 +156,12 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
     if (!isTimerRunning) return;
 
     const id = setInterval(() => {
+      if (isPausePendingRef.current) return;
       if (phaseRef.current === "FOCUS") {
         setActualStudySeconds((s) => s + 1);
       }
       setTimeLeft((prev) => {
+        if (isPausePendingRef.current) return prev;
         if (prev <= 1) {
           // Calling state setters from inside an updater is batched correctly
           // in React 18 — this is the idiomatic pattern for countdown timers.
@@ -177,6 +184,7 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
    * - Different stepId → full reset before starting, as if a new session began.
    */
   const startTimer = useCallback((stepId: string) => {
+    isPausePendingRef.current = false;
     const isNewSession = activeStepIdRef.current !== stepId;
     if (isNewSession) {
       setPomodoroPhase("FOCUS");
@@ -189,16 +197,19 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const pauseTimer = useCallback(() => {
+    isPausePendingRef.current = true;
     setIsTimerRunning(false);
   }, []);
 
   const resetTimer = useCallback(() => {
+    isPausePendingRef.current = true;
     setIsTimerRunning(false);
     setPomodoroPhase("FOCUS");
     setTimeLeft(PHASE_DURATIONS.FOCUS);
   }, []);
 
   const skipToNextPhase = useCallback(() => {
+    isPausePendingRef.current = false;
     setPomodoroPhase((prev) => {
       const next: PomodoroPhase = prev === "FOCUS" ? "SHORT_BREAK" : "FOCUS";
       if (prev === "FOCUS") setFocusCount((c) => c + 1);
@@ -209,6 +220,7 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clearTimerContext = useCallback(() => {
+    isPausePendingRef.current = true;
     setIsTimerRunning(false);
     setPomodoroPhase("FOCUS");
     setTimeLeft(PHASE_DURATIONS.FOCUS);
@@ -229,6 +241,7 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
    */
   const hydrateTimer = useCallback((snapshot: PomodoroHydrationState) => {
     const safeTimeLeft = Math.max(0, Math.floor(snapshot.timeLeft));
+    isPausePendingRef.current = !snapshot.isRunning;
     setActiveStepId(snapshot.stepId);
     setPomodoroPhase(snapshot.phase);
     setTimeLeft(safeTimeLeft);
