@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { motion } from "motion/react";
 import { Search, Users, ShieldCheck, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -140,9 +140,10 @@ export default function AdminUsers() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [localSearch, setLocalSearch] = useState(searchParams.get("search") || "");
   const [search, setSearch] = useState(searchParams.get("search") || "");
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(() => Math.max(0, parseInt(searchParams.get("page") || "0", 10) || 0));
   const [size] = useState(10);
   const [allUsers, setAllUsers] = useState<AdminUserDetail[]>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState(searchParams.get("role") || "");
@@ -153,7 +154,7 @@ export default function AdminUsers() {
 
   // Derived state for filtering and stats
   const stats = {
-    total: allUsers.length,
+    total: totalUsers,
     LEARNER: allUsers.filter(u => u.role === "LEARNER").length,
     ADMIN: allUsers.filter(u => u.role === "ADMIN").length,
   };
@@ -167,16 +168,16 @@ export default function AdminUsers() {
     return matchesSearch && matchesRole;
   });
 
-  const total = filteredUsers.length;
+  const total = totalUsers;
   const totalPages = Math.max(1, Math.ceil(total / size));
-  const displayedUsers = filteredUsers.slice(page * size, (page + 1) * size);
+  const displayedUsers = filteredUsers;
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       // Cơ chế cách ly lỗi cô lập giúp bảo toàn dữ liệu bảng người dùng khi endpoint gói dịch vụ bị nghẽn 
       const [usersRes, plansRes] = await Promise.all([
-        adminUserService.getAdminUsers(undefined, 0, 1000).catch(err => {
+        adminUserService.getAdminUsers(search || undefined, page, size).catch(err => {
           console.error("Failed to fetch admin users:", err);
           return { content: [], totalElements: 0 };
         }),
@@ -187,6 +188,7 @@ export default function AdminUsers() {
       ]);
 
       setAllUsers(usersRes.content || []);
+      setTotalUsers(usersRes.totalElements || 0);
 
       const extractedPlans = Array.isArray((plansRes as any)?.data)
         ? (plansRes as any).data
@@ -201,7 +203,7 @@ export default function AdminUsers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, size]);
 
   // Master useEffect for Debounce Search Pipeline
   useEffect(() => {
@@ -237,16 +239,11 @@ export default function AdminUsers() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localSearch]);
 
-  // On mount, honor a deep-linked ?page= so the active indicator and the fetch
-  // parameter start in sync.
+  // Fetch each API page independently. The backend caps a single request at 100
+  // records, so client-side pagination over one response would hide later users.
   useEffect(() => {
-    const initialPage = Math.max(0, parseInt(searchParams.get("page") || "0", 10) || 0);
-    const initialRole = searchParams.get("role") || "";
-    setSelectedRole(initialRole);
-    setPage(initialPage);
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void load();
+  }, [load]);
 
   // Mirror the live currentPage and search back into the URL so it survives reloads
   // and stays the single source of truth for both fetch + indicator.
@@ -269,13 +266,13 @@ export default function AdminUsers() {
 
   useEffect(() => {
     const handlePlansUpdated = () => {
-      load();
+      void load();
     };
     window.addEventListener("subscription-plans-updated", handlePlansUpdated);
     return () => {
       window.removeEventListener("subscription-plans-updated", handlePlansUpdated);
     };
-  }, []);
+  }, [load]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-6xl mx-auto space-y-6" style={{ fontFamily: "'Inter',sans-serif" }}>

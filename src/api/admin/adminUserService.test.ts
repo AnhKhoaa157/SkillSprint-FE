@@ -33,7 +33,7 @@ describe("adminUserService", () => {
 
   describe("getAdminUsers", () => {
     it("should fetch admin users", async () => {
-      const mockData = { items: [{ userId: "u1" }] };
+      const mockData = { items: [{ userId: "u1" }], totalItems: 21 };
       vi.mocked(global.fetch).mockResolvedValueOnce({
         status: 200,
         ok: true,
@@ -51,6 +51,7 @@ describe("adminUserService", () => {
       );
       // getAdminUsers maps the items to content:
       expect(result.content[0].id).toBe("u1");
+      expect(result.totalElements).toBe(21);
     });
 
     it("should trigger session expiry on 401", async () => {
