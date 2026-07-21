@@ -174,21 +174,21 @@ export default function AdminProfile() {
   const hasChanges = fullName !== (profile?.fullName || "") || !!avatarFile;
 
   return (
-    <div className="min-h-screen p-6 md:p-10 bg-[#F8F9FA] bg-[radial-gradient(at_top_left,_rgba(255,107,0,0.05)_0%,_transparent_40%),_radial-gradient(at_bottom_right,_rgba(139,92,246,0.04)_0%,_transparent_45%)]">
+    <div className="min-h-screen bg-[#F8F9FA] bg-[radial-gradient(at_top_left,_rgba(255,107,0,0.08)_0%,_transparent_36%),_radial-gradient(at_bottom_right,_rgba(139,92,246,0.06)_0%,_transparent_42%)] p-4 sm:p-6 md:p-10">
       <AvatarCropDialog
         imageUrl={avatarCropSource}
         fileName={avatarCropFileName}
         onCancel={closeAvatarCropper}
         onCropped={handleCroppedAvatar}
       />
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="mx-auto max-w-6xl space-y-5">
         {/* ── Top action bar ── */}
         <motion.button
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/admin")}
           className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-[#FF6B00] uppercase tracking-wider transition-colors mb-4"
         >
           <ArrowLeft size={16} />
@@ -200,15 +200,16 @@ export default function AdminProfile() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_12px_40px_rgba(30,41,59,0.04)] rounded-2xl p-6 relative flex flex-col sm:flex-row items-center gap-6"
+          className="relative flex flex-col items-center gap-5 overflow-hidden rounded-3xl border border-white/70 bg-gradient-to-br from-white via-orange-50/40 to-violet-50/50 p-5 shadow-[0_16px_45px_rgba(30,41,59,0.07)] sm:flex-row sm:p-6"
         >
+          <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-orange-200/20 blur-3xl" />
           {/* Avatar + interactive upload */}
           <div className="relative flex-shrink-0">
-            <motion.div
-              animate={{ y: [0, -5, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            <button
+              type="button"
+              aria-label="Đổi ảnh đại diện"
               onClick={() => fileInputRef.current?.click()}
-              className="w-20 h-20 rounded-full bg-gradient-to-r from-[#FF6B00] to-[#8B5CF6] p-1 shadow-[0_0_15px_rgba(255,107,0,0.2)] cursor-pointer group"
+              className="group h-20 w-20 rounded-full bg-gradient-to-r from-[#FF6B00] to-[#8B5CF6] p-1 shadow-[0_0_15px_rgba(255,107,0,0.2)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200"
             >
               <div className="w-full h-full rounded-full bg-white border-2 border-white overflow-hidden flex items-center justify-center text-[#FF6B00] text-xl font-black relative">
                 {avatarPreview || profile?.avatarUrl
@@ -222,7 +223,7 @@ export default function AdminProfile() {
                     : <><Camera size={14} className="mb-1" />Đổi ảnh</>}
                 </div>
               </div>
-            </motion.div>
+            </button>
             <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-white flex items-center justify-center shadow">
               <Shield size={12} className="text-[#FF6B00]" />
             </div>
@@ -231,6 +232,7 @@ export default function AdminProfile() {
 
           {/* Identity text block */}
           <div className="flex-1 min-w-0 text-center sm:text-left">
+            <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-600">Hồ sơ quản trị</p>
             <h1 className="text-xl font-black text-slate-900 tracking-tight truncate">
               {profile?.fullName || "Admin"}
             </h1>
@@ -245,6 +247,13 @@ export default function AdminProfile() {
               </span>
             </div>
           </div>
+          <div className="relative hidden min-w-52 rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-left shadow-sm lg:block">
+            <div className="flex items-center gap-2 text-slate-900">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-50 text-violet-600"><Shield size={16} /></span>
+              <p className="text-sm font-black">Quyền quản trị</p>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-slate-500">Bạn đang có quyền truy cập các khu vực vận hành hệ thống.</p>
+          </div>
         </motion.div>
 
         {/* ── Dual-column dashboard grid ── */}
@@ -254,7 +263,7 @@ export default function AdminProfile() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="lg:col-span-2 bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_12px_40px_rgba(30,41,59,0.04)] rounded-2xl p-6 flex flex-col justify-between min-h-[400px]"
+            className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-[0_12px_40px_rgba(30,41,59,0.05)] sm:p-6 lg:col-span-2"
           >
             <div className="space-y-5">
               <div className="flex items-center gap-2.5">
@@ -266,7 +275,7 @@ export default function AdminProfile() {
 
               {/* Email (read-only) */}
               <div>
-                <label className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2 block">
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">
                   Email
                 </label>
                 <div className="flex items-center gap-2.5 w-full px-4 py-3 bg-[#F1F5F9]/60 border border-slate-200/60 shadow-[inner_0_2px_4px_rgba(0,0,0,0.03)] rounded-xl text-sm text-slate-400 cursor-not-allowed select-all transition-all duration-200">
@@ -278,11 +287,12 @@ export default function AdminProfile() {
 
               {/* Full name */}
               <div>
-                <label className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2 block">
+                <label htmlFor="admin-full-name" className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">
                   Họ và tên
                 </label>
                 <input
                   type="text"
+                  id="admin-full-name"
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
                   placeholder="Nhập họ và tên của admin..."
@@ -292,11 +302,14 @@ export default function AdminProfile() {
             </div>
 
             {/* Save action */}
-            <div className="pt-6">
+            <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className={`text-xs ${hasChanges ? "font-semibold text-orange-600" : "text-slate-400"}`}>
+                {hasChanges ? "Bạn có thay đổi chưa được lưu." : "Thông tin tài khoản đã được đồng bộ."}
+              </p>
               <button
                 onClick={handleSave}
                 disabled={saving || !hasChanges}
-                className="bg-gradient-to-r from-[#FF6B00] to-[#EA580C] text-white font-semibold shadow-[0_8px_20px_rgba(255,107,0,0.3)] hover:shadow-[0_12px_24px_rgba(255,107,0,0.4)] hover:scale-[1.02] active:scale-95 active:translate-y-0.5 transition-all duration-150 rounded-xl px-6 py-2.5 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-[0_8px_20px_rgba(255,107,0,0.3)] disabled:active:scale-100 disabled:active:translate-y-0"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#EA580C] px-6 py-2.5 font-semibold text-white shadow-[0_8px_20px_rgba(255,107,0,0.3)] transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_12px_24px_rgba(255,107,0,0.4)] active:translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-[0_8px_20px_rgba(255,107,0,0.3)] disabled:active:translate-y-0 disabled:active:scale-100"
               >
                 {saving ? (
                   <><LoaderCircle size={16} className="animate-spin" />Đang lưu...</>
@@ -312,7 +325,7 @@ export default function AdminProfile() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_12px_40px_rgba(30,41,59,0.04)] rounded-2xl p-6 min-h-[400px] flex flex-col justify-between"
+            className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-[0_12px_40px_rgba(30,41,59,0.05)] sm:p-6"
           >
             <div>
               <div className="flex items-center gap-2.5 mb-5">
@@ -329,9 +342,11 @@ export default function AdminProfile() {
                   <div className={`border rounded-lg p-3 font-mono text-xs flex justify-between items-center transition-colors duration-200 ${copied ? "bg-emerald-500/10 border-emerald-500/20" : "bg-slate-900/5 border-slate-900/10"}`}>
                     <span className="text-slate-600 break-all leading-relaxed flex-1 mr-2">{profile?.userId}</span>
                     <button
+                      type="button"
                       onClick={handleCopyId}
                       title="Copy User ID"
-                      className="p-1.5 hover:bg-slate-200/50 rounded-md transition-colors shrink-0 flex items-center justify-center"
+                      aria-label="Sao chép User ID"
+                      className="flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-md p-1.5 transition-colors hover:bg-slate-200/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-200"
                     >
                       {copied ? <CheckCircle size={14} className="text-emerald-500" /> : <Copy size={14} className="text-slate-400" />}
                     </button>

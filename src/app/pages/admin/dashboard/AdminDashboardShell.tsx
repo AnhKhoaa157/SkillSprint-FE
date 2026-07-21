@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3, Store, WalletCards, HandCoins, Scale } from "lucide-react";
+import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3, Store, WalletCards, HandCoins, Scale, ChevronDown, LogOut, UserRound } from "lucide-react";
 import { Link, useLocation, useMatch, useNavigate } from "react-router";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminHealth from "../sections/health";
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
   const [activeNav, setActiveNav] = useState<AdminNavSection>(() => requestedSection ?? (isUserDetailRoute ? "users" : "financials"));
   const [, setLastSync] = useState(new Date());
   const [actionMessage, setActionMessage] = useState("");
-  const [currentUser, setCurrentUser] = useState<{ fullName?: string; roles?: string[]; avatarUrl?: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ fullName?: string; email?: string; roles?: string[]; avatarUrl?: string } | null>(null);
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -142,8 +142,15 @@ export default function AdminDashboard() {
         setUserMenuOpen(false);
       }
     }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setUserMenuOpen(false);
+    }
     document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('click', onDocClick);
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   const headerLabels: Record<string, { title: string; sub: string }> = {
@@ -397,23 +404,38 @@ export default function AdminDashboard() {
             {/* User menu */}
             <div ref={userMenuRef} style={{ position: 'relative', zIndex: 99 }}>
               <button
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm"
-                style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}
+                type="button"
+                className="flex min-h-11 items-center gap-2 rounded-xl px-2.5 text-sm transition hover:border-orange-200 hover:bg-orange-50/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"
+                style={{ background: userMenuOpen ? '#FFF7ED' : '#FFFFFF', border: userMenuOpen ? '1px solid #FED7AA' : '1px solid #E5E7EB' }}
                 onClick={() => setUserMenuOpen(v => !v)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setUserMenuOpen(v => !v); } }}
                 aria-expanded={userMenuOpen}
+                aria-haspopup="menu"
               >
                 <AdminNavAvatar avatarUrl={currentUser?.avatarUrl} fullName={currentUser?.fullName} />
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>Quản trị</span>
-                  <span style={{ fontSize: '10px', color: '#9CA3AF' }}>Admin</span>
+                <div className="hidden max-w-28 min-w-0 flex-col text-left sm:flex" style={{ lineHeight: 1 }}>
+                  <span className="truncate text-[0.78rem] font-bold text-slate-800">{currentUser?.fullName || "Quản trị"}</span>
+                  <span className="mt-1 text-[10px] font-medium text-slate-400">Admin</span>
                 </div>
+                <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180 text-orange-500" : ""}`} aria-hidden="true" />
               </button>
               {userMenuOpen && (
-                <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 220, background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 8px 24px rgba(2,6,23,0.12)', padding: 8, zIndex: 9999 }}>
-                  <Link to="/admin/profile" className="w-full text-left px-3 py-2 rounded" style={{ display: 'block', color: '#111827', fontWeight: 700 }}>Hồ sơ</Link>
-                  <div style={{ height: 1, background: '#F1F5F9', margin: '6px 0' }} />
-                  <button onClick={handleLogout} className="w-full text-left px-3 py-2 rounded" style={{ display: 'block', color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer' }}>← Đăng xuất</button>
+                <div role="menu" className="absolute right-0 top-[calc(100%+10px)] z-[9999] w-72 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-2 shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
+                  <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50/60 px-3 py-3">
+                    <AdminNavAvatar avatarUrl={currentUser?.avatarUrl} fullName={currentUser?.fullName} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-slate-900">{currentUser?.fullName || "Quản trị viên"}</p>
+                      <p className="mt-0.5 truncate text-xs text-slate-500">{currentUser?.email || "Tài khoản quản trị"}</p>
+                    </div>
+                  </div>
+                  <div className="my-2 h-px bg-slate-100" />
+                  <Link to="/admin/profile" role="menuitem" onClick={() => setUserMenuOpen(false)} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-slate-700 transition hover:bg-slate-50 hover:text-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-orange-600"><UserRound size={16} /></span>
+                    <span className="flex-1">Hồ sơ của tôi</span>
+                  </Link>
+                  <button type="button" role="menuitem" onClick={handleLogout} className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-rose-600 transition hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600"><LogOut size={16} /></span>
+                    <span>Đăng xuất</span>
+                  </button>
                 </div>
               )}
             </div>
