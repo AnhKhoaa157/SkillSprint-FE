@@ -241,7 +241,7 @@ export default function AdminDashboard() {
       {/* ── SIDEBAR ── */}
       <aside
         className="flex flex-col h-full shrink-0"
-        style={{ width: "224px", background: "linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)", borderRight: "1px solid #E2E8F0" }}
+        style={{ width: "248px", background: "linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)", borderRight: "1px solid #E2E8F0" }}
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5"
@@ -292,10 +292,7 @@ export default function AdminDashboard() {
                 onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#334155"; } }}
               >
                 <item.icon size={15} style={{ color: isActive ? "#FF6B00" : "#64748B", flexShrink: 0 }} />
-                <span style={{ flex: 1 }}>{item.label}</span>
-                {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#FF6B00" }} />
-                )}
+                <span className="min-w-0 flex-1 truncate whitespace-nowrap" title={item.label}>{item.label}</span>
               </button>
             );
           })}
