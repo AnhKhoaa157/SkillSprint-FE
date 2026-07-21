@@ -53,17 +53,33 @@ export type PaymentStats = {
   revenueTotal: number;
   revenueToday: number;
   revenueThisMonth: number;
+  coinTopUpTotal?: number;
+  coinTopUpToday?: number;
+  coinTopUpThisMonth?: number;
 };
 
-export type ChartDataPoint = {
+export type RevenueChartDataPoint = {
   date: string;
-  revenue?: number;
+  amount: number;
+};
+
+export type MarketplaceCommissionChartDataPoint = {
+  date: string;
+  grossCommissionCoin: number;
+  refundedCommissionCoin: number;
+  netCommissionCoin: number;
+};
+
+export type CountChartDataPoint = {
+  date: string;
   count?: number;
 };
 
 export type ChartStats = {
-  revenueByDay: ChartDataPoint[];
-  newUsersByDay: ChartDataPoint[];
+  revenueByDay: RevenueChartDataPoint[];
+  coinTopUpByDay?: RevenueChartDataPoint[];
+  marketplaceCommissionByDay?: MarketplaceCommissionChartDataPoint[];
+  newUsersByDay: CountChartDataPoint[];
 };
 
 export type AlertStats = {
