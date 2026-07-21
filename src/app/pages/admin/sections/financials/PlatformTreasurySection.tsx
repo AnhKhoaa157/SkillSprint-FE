@@ -57,7 +57,7 @@ export function PlatformTreasurySection() {
     { label: "Hoa hồng Marketplace", value: `${coin.format(summary.commissionCoinNetPosition)} Coin`, tone: "text-emerald-700", icon: Coins, note: `Đã hoàn: ${coin.format(summary.commissionCoinReversed)} Coin` },
   ] : [];
 
-  return <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+  return <section id="platform-treasury-ledger" className="mt-6 scroll-mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
     <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <span className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#FF6B00]"><WalletCards className="h-3.5 w-3.5" />System treasury</span>
