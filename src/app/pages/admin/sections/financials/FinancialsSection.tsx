@@ -1,5 +1,15 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
+import {
+  Activity,
+  BarChart3,
+  Building2,
+  ChevronRight,
+  Coins,
+  DollarSign,
+  RefreshCw,
+  UsersRound,
+} from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -9,460 +19,502 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Activity, ArrowUpRight, Coins, DollarSign, Repeat } from "lucide-react";
 import { toast } from "sonner";
-import { getAdminDashboardAnalytics, type AdminDashboardResponse } from "../../../../../api/admin/adminDashboardService";
+import {
+  getAdminDashboardAnalytics,
+  type AdminDashboardResponse,
+} from "../../../../../api/admin/adminDashboardService";
 import { PlatformTreasurySection } from "./PlatformTreasurySection";
 
 const ACCENT = "#FF6B00";
 
-/* ─────────────────────────────────────────────────────────
-   Mini Sparkline
-───────────────────────────────────────────────────────── */
-export function Sparkline({ data, color, width = 80, height = 28 }: { data: number[]; color: string; width?: number; height?: number }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - ((v - min) / range) * (height - 4) - 2;
-    return `${x},${y}`;
-  }).join(" ");
-  const fillPts = `0,${height} ${pts} ${width},${height}`;
-  return (
-    <svg width={width} height={height} style={{ overflow: "visible" }}>
-      <defs>
-        <linearGradient id={`sg-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={fillPts} fill={`url(#sg-${color.replace("#", "")})`} />
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-        style={{ filter: `drop-shadow(0 0 3px ${color}80)` }} />
-    </svg>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────
-   Hàm Helper format tiền tệ chuẩn Việt Nam
-───────────────────────────────────────────────────────── */
-const formatCompactNumber = (value: number) => {
-  const absoluteValue = Math.abs(value);
-  if (absoluteValue < 1_000) return value.toLocaleString("vi-VN");
-  const divisor = absoluteValue >= 1_000_000 ? 1_000_000 : 1_000;
-  const suffix = divisor === 1_000_000 ? "M" : "K";
-  const compact = value / divisor;
-  return `${compact.toLocaleString("en-US", { maximumFractionDigits: 1 })}${suffix}`;
-};
-
-const formatCurrency = (value: number) => `${formatCompactNumber(value)} ₫`;
-const formatCoin = (value: number) => `${formatCompactNumber(value)} Coin`;
-
-// Hàm xử lý chuỗi ngày tháng thông minh từ Backend gửi ra trục X
-const formatChartDate = (dateStr: string) => {
-  if (!dateStr) return "";
-  // Nếu chuỗi có dạng định dạng chuẩn yyyy-MM-dd, ta cắt lấy MM-dd
-  if (dateStr.includes("-") && dateStr.length >= 10) {
-    const parts = dateStr.split("-");
-    return `${parts[1]}-${parts[2]}`; // Trả về dạng MM-dd
-  }
-  return dateStr; // Dữ liệu fallback nếu BE đã tự tối ưu sẵn chuỗi ngắn
-};
-
-/* ─────────────────────────────────────────────────────────
-   Custom Tooltip hiển thị tiền tệ lung linh
-───────────────────────────────────────────────────────── */
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "10px 14px", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
-      <p style={{ color: "#9CA3AF", fontSize: "11px", marginBottom: "6px", fontWeight: 700 }}>Ngày: {label}</p>
-      {payload.map((p: any, i: number) => (
-        <p key={i} style={{ color: p.color || p.fill, fontSize: "13px", fontWeight: 700 }}>
-          {p.name}: {p.value?.toLocaleString()} ₫
-        </p>
-      ))}
-    </div>
-  );
-}
+type FinancialMetricKey = "subscriptionRevenue" | "coinTopUp" | "marketplaceCommission";
 
 type FinancialChartDatum = {
   date: string;
   amount: number;
 };
 
-function FinancialAreaChart({
-  title,
-  description,
-  data,
-  color,
-}: {
-  title: string;
-  description: string;
-  data: FinancialChartDatum[];
-  color: string;
-}) {
-  const tickFormatter = (value: number) => {
-    return value >= 1_000_000 ? `${(value / 1_000_000).toFixed(1)}M` : `${Math.round(value / 1_000)}K`;
-  };
+type ChartTooltipPayload = {
+  color?: string;
+  value?: number | string;
+};
+
+function formatCompactNumber(value: number): string {
+  const absoluteValue = Math.abs(value);
+  if (absoluteValue < 1_000) return value.toLocaleString("vi-VN");
+
+  const divisor = absoluteValue >= 1_000_000 ? 1_000_000 : 1_000;
+  const suffix = divisor === 1_000_000 ? "M" : "K";
+  const compact = value / divisor;
+
+  return `${compact.toLocaleString("en-US", { maximumFractionDigits: 1 })}${suffix}`;
+}
+
+function formatCurrency(value: number): string {
+  return `${formatCompactNumber(value)} đ`;
+}
+
+function formatCoin(value: number): string {
+  return `${formatCompactNumber(value)} Coin`;
+}
+
+function formatChartDate(date: string): string {
+  if (!date || !date.includes("-") || date.length < 10) return date;
+
+  const [, month, day] = date.split("-");
+  return `${month}-${day}`;
+}
+
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  const width = 76;
+  const height = 28;
+  const safeData = data.length > 1 ? data : [0, 0];
+  const max = Math.max(...safeData);
+  const min = Math.min(...safeData);
+  const range = max - min || 1;
+  const points = safeData
+    .map((value, index) => {
+      const x = (index / (safeData.length - 1)) * width;
+      const y = height - ((value - min) / range) * (height - 6) - 3;
+      return `${x},${y}`;
+    })
+    .join(" ");
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl p-6"
-      style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
-    >
-      <div className="mb-5">
-        <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>{title}</p>
-        <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>{description}</p>
-      </div>
-      <div style={{ height: "220px" }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 5, right: 10, left: -5, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-            <XAxis dataKey="date" stroke="#E5E7EB" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
-            <YAxis stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={tickFormatter} />
-            <Tooltip content={<CustomTooltip />} />
-            <Area type="monotone" dataKey="amount" name={title}
-              stroke={color} strokeWidth={2.5} fill={color} fillOpacity={0.12} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    </motion.div>
+    <svg aria-hidden="true" className="overflow-visible" width={width} height={height}>
+      <polyline
+        fill="none"
+        points={points}
+        stroke={color}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
   );
 }
 
-/* ─────────────────────────────────────────────────────────
-   ── FINANCIALS view ──
-───────────────────────────────────────────────────────── */
-export function FinancialsView() {
-  const [dashData, setDashData] = useState<AdminDashboardResponse | null>(null);
-  const [dashLoading, setDashLoading] = useState(true);
-  const [dashError, setDashError] = useState("");
+function FinancialChartTooltip({
+  active,
+  label,
+  payload,
+  formatValue,
+}: {
+  active?: boolean;
+  label?: string;
+  payload?: ChartTooltipPayload[];
+  formatValue: (value: number) => string;
+}) {
+  const datum = payload?.[0];
+  const value = typeof datum?.value === "number" ? datum.value : Number(datum?.value ?? 0);
 
-  function fetchDash() {
-    setDashLoading(true);
-    setDashError("");
-    getAdminDashboardAnalytics()
-      .then(setDashData)
-      .catch((err: Error) => {
-        const msg = err.message || "Không tải được dữ liệu tài chính";
-        setDashError(msg);
-        toast.error(msg);
-      })
-      .finally(() => setDashLoading(false));
-  }
-
-  useEffect(() => {
-    let mounted = true;
-    setDashLoading(true);
-    getAdminDashboardAnalytics()
-      .then((d) => { if (mounted) setDashData(d); })
-      .catch((err: Error) => {
-        if (!mounted) return;
-        const msg = err.message || "Không tải được dữ liệu tài chính";
-        setDashError(msg);
-        toast.error(msg);
-      })
-      .finally(() => { if (mounted) setDashLoading(false); });
-    return () => { mounted = false; };
-  }, []);
-
-  if (dashLoading) {
-    return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-2xl p-5 animate-pulse"
-              style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", height: 130 }}>
-              <div className="h-3 rounded w-1/2 mb-3" style={{ background: "#F3F4F6" }} />
-              <div className="h-7 rounded w-3/4 mb-2" style={{ background: "#F3F4F6" }} />
-              <div className="h-2 rounded w-full" style={{ background: "#F3F4F6" }} />
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
-          <div className="xl:col-span-3 animate-pulse rounded-2xl"
-            style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", height: 420 }} />
-          <div className="xl:col-span-2 animate-pulse rounded-2xl"
-            style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", height: 420 }} />
-        </div>
-      </motion.div>
-    );
-  }
-
-  if (dashError && !dashData) {
-    return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        className="rounded-2xl p-10 text-center"
-        style={{ background: "#FFFFFF", border: "1px solid #FCA5A5" }}>
-        <p style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 4 }}>Không tải được dữ liệu tài chính</p>
-        <p style={{ color: "#6B7280", fontSize: "0.82rem", marginBottom: 16 }}>{dashError}</p>
-        <button onClick={fetchDash}
-          className="px-4 py-2 rounded-xl text-xs font-semibold"
-          style={{ background: ACCENT, color: "#fff" }}>
-          Thử lại
-        </button>
-      </motion.div>
-    );
-  }
-
-  /* ---------- Mapping dữ liệu thẻ KPI ---------- */
-  const kpiCards = dashData ? [
-    {
-      id: "subscription-revenue",
-      label: "Doanh thu gói dịch vụ",
-      value: formatCurrency(dashData.overview.totalRevenue),
-      sub: `Hôm nay: ${formatCurrency(dashData.overview.todayRevenue)}`,
-      context: "Không gồm nạp Coin",
-      color: "#FF6B00",
-      icon: DollarSign,
-      sparkline: dashData.charts.revenueByDay.slice(-9).map(d => d.amount ?? 0),
-    },
-    {
-      id: "coin-top-up",
-      label: "Tiền nạp Coin",
-      value: formatCurrency(dashData.payments.coinTopUpTotal ?? 0),
-      sub: `Tháng này: ${formatCurrency(dashData.payments.coinTopUpThisMonth ?? 0)}`,
-      context: "Tiền giữ hộ ví user",
-      color: "#2563EB",
-      icon: Coins,
-      sparkline: (dashData.charts.coinTopUpByDay ?? []).slice(-9).map(d => d.amount ?? 0),
-    },
-    {
-      id: "active-subs",
-      label: "Subscription hoạt động",
-      value: dashData.overview.activeSubscriptions.toLocaleString(),
-      sub: `Premium: ${dashData.subscriptions.premium} · Builder: ${dashData.subscriptions.skillBuilder}`,
-      context: `Free: ${dashData.subscriptions.free}`,
-      color: "#F97316",
-      icon: Repeat,
-      sparkline: [
-        dashData.subscriptions.free,
-        dashData.subscriptions.skillBuilder,
-        dashData.subscriptions.premium,
-        dashData.subscriptions.active,
-      ],
-    },
-    {
-      id: "marketplace-commission",
-      label: "Hoa hồng Marketplace",
-      value: formatCoin((dashData.charts.marketplaceCommissionByDay ?? []).reduce((sum, point) => sum + point.netCommissionCoin, 0)),
-      sub: "Số ròng trong khoảng dữ liệu đang xem",
-      context: "Đã trừ phần hoàn tiền",
-      color: "#059669",
-      icon: Activity,
-      sparkline: (dashData.charts.marketplaceCommissionByDay ?? []).slice(-9).map(d => d.netCommissionCoin ?? 0),
-    },
-  ] : [];
-
-  // 🟢 Đã sửa: Map trục X an toàn bằng hàm formatChartDate giải quyết lỗi phẳng 0K
-  const revenueChartData = (dashData?.charts.revenueByDay ?? []).map(d => ({
-    date: formatChartDate(d.date),
-    amount: d.amount ?? 0,
-  }));
-
-  const coinTopUpChartData = (dashData?.charts.coinTopUpByDay ?? []).map(d => ({
-    date: formatChartDate(d.date),
-    amount: d.amount ?? 0,
-  }));
-
-  const marketplaceCommission = (dashData?.charts.marketplaceCommissionByDay ?? []).reduce(
-    (total, point) => ({
-      gross: total.gross + point.grossCommissionCoin,
-      refunded: total.refunded + point.refundedCommissionCoin,
-      net: total.net + point.netCommissionCoin,
-    }),
-    { gross: 0, refunded: 0, net: 0 },
-  );
-
-  const usersChartData = (dashData?.charts.newUsersByDay ?? []).map(d => ({
-    date: formatChartDate(d.date),
-    count: d.count ?? 0,
-  }));
-
-  const summaryStats = dashData ? [
-    {
-      label: "Doanh thu gói dịch vụ",
-      value: formatCurrency(dashData.payments.revenueTotal),
-      color: "#22c55e",
-      sub: `Hôm nay: ${formatCurrency(dashData.payments.revenueToday)}`,
-    },
-    {
-      label: "Tiền nạp Coin tháng này",
-      value: formatCurrency(dashData.payments.coinTopUpThisMonth ?? 0),
-      color: "#2563EB",
-      sub: "Không tính là doanh thu gói",
-    },
-    {
-      label: "Hoa hồng Marketplace",
-      value: formatCoin(marketplaceCommission.net),
-      color: "#059669",
-      sub: `Gross: ${formatCoin(marketplaceCommission.gross)} · Hoàn: ${formatCoin(marketplaceCommission.refunded)}`,
-    },
-    {
-      label: "Giao dịch thanh toán thành công",
-      value: String(dashData.payments.paid),
-      color: "#d97706",
-      sub: "Bao gồm gói dịch vụ và nạp Coin",
-    },
-  ] : [];
+  if (!active || !datum || Number.isNaN(value)) return null;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg">
+      <p className="text-[11px] font-semibold text-slate-400">Ngày {label}</p>
+      <p className="mt-0.5 text-sm font-black" style={{ color: datum.color }}>
+        {formatValue(value)}
+      </p>
+    </div>
+  );
+}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {kpiCards.map((kpi, i) => {
+function EmptyChartState({ description }: { description: string }) {
+  return (
+    <div className="flex h-[230px] flex-col items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-orange-50/40 px-6 text-center">
+      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[#FF6B00] shadow-sm">
+        <BarChart3 className="h-5 w-5" />
+      </span>
+      <p className="mt-3 text-sm font-black text-slate-800">Chưa có dữ liệu trong khoảng này</p>
+      <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">{description}</p>
+    </div>
+  );
+}
+
+function FinancialAreaChart({
+  data,
+  color,
+  description,
+  formatValue,
+  label,
+}: {
+  data: FinancialChartDatum[];
+  color: string;
+  description: string;
+  formatValue: (value: number) => string;
+  label: string;
+}) {
+  const hasData = data.some((datum) => datum.amount !== 0);
+
+  if (!hasData) return <EmptyChartState description={description} />;
+
+  return (
+    <div className="h-[230px]" aria-label={label}>
+      <ResponsiveContainer height="100%" width="100%">
+        <AreaChart data={data} margin={{ top: 12, right: 8, left: -18, bottom: 0 }}>
+          <defs>
+            <linearGradient id="financial-chart-fill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.22} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.01} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="#EEF2F7" strokeDasharray="3 4" vertical={false} />
+          <XAxis
+            dataKey="date"
+            axisLine={false}
+            tick={{ fill: "#94A3B8", fontSize: 10 }}
+            tickLine={false}
+          />
+          <YAxis
+            axisLine={false}
+            tick={{ fill: "#94A3B8", fontSize: 10 }}
+            tickFormatter={(value: number) => formatCompactNumber(value)}
+            tickLine={false}
+          />
+          <Tooltip content={<FinancialChartTooltip formatValue={formatValue} />} cursor={{ stroke: "#CBD5E1" }} />
+          <Area
+            dataKey="amount"
+            fill="url(#financial-chart-fill)"
+            name={label}
+            stroke={color}
+            strokeWidth={2.5}
+            type="monotone"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export function FinancialsView() {
+  const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [selectedMetric, setSelectedMetric] = useState<FinancialMetricKey>("subscriptionRevenue");
+  const mountedRef = useRef(true);
+
+  const loadDashboard = useCallback(async () => {
+    if (mountedRef.current) {
+      setLoading(true);
+      setError("");
+    }
+
+    try {
+      const nextDashboard = await getAdminDashboardAnalytics();
+      if (mountedRef.current) setDashboard(nextDashboard);
+    } catch (loadError) {
+      const message = loadError instanceof Error ? loadError.message : "Không thể tải dữ liệu tài chính";
+      if (mountedRef.current) {
+        setError(message);
+        toast.error(message);
+      }
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    void loadDashboard();
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [loadDashboard]);
+
+  const marketplaceCommission = useMemo(
+    () => (dashboard?.charts.marketplaceCommissionByDay ?? []).reduce(
+      (total, point) => ({
+        gross: total.gross + point.grossCommissionCoin,
+        refunded: total.refunded + point.refundedCommissionCoin,
+        net: total.net + point.netCommissionCoin,
+      }),
+      { gross: 0, refunded: 0, net: 0 },
+    ),
+    [dashboard],
+  );
+
+  const chartMetrics = useMemo(() => {
+    const revenueData = (dashboard?.charts.revenueByDay ?? []).map((point) => ({
+      date: formatChartDate(point.date),
+      amount: point.amount ?? 0,
+    }));
+    const topUpData = (dashboard?.charts.coinTopUpByDay ?? []).map((point) => ({
+      date: formatChartDate(point.date),
+      amount: point.amount ?? 0,
+    }));
+    const commissionData = (dashboard?.charts.marketplaceCommissionByDay ?? []).map((point) => ({
+      date: formatChartDate(point.date),
+      amount: point.netCommissionCoin ?? 0,
+    }));
+
+    return {
+      subscriptionRevenue: {
+        color: ACCENT,
+        data: revenueData,
+        description: "Chỉ tính các thanh toán subscription đã thành công.",
+        formatValue: formatCurrency,
+        label: "Doanh thu dịch vụ",
+      },
+      coinTopUp: {
+        color: "#2563EB",
+        data: topUpData,
+        description: "Dòng tiền người dùng nạp vào ví Coin, được theo dõi riêng khỏi doanh thu.",
+        formatValue: formatCurrency,
+        label: "Tiền nạp Coin",
+      },
+      marketplaceCommission: {
+        color: "#059669",
+        data: commissionData,
+        description: "Hoa hồng Marketplace ròng, sau các điều chỉnh hoàn tiền trong khoảng đang xem.",
+        formatValue: formatCoin,
+        label: "Hoa hồng Marketplace",
+      },
+    } satisfies Record<FinancialMetricKey, {
+      color: string;
+      data: FinancialChartDatum[];
+      description: string;
+      formatValue: (value: number) => string;
+      label: string;
+    }>;
+  }, [dashboard]);
+
+  if (loading && !dashboard) {
+    return (
+      <div className="space-y-5" aria-busy="true">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-40 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+          ))}
+        </div>
+        <div className="grid gap-5 xl:grid-cols-5">
+          <div className="h-96 animate-pulse rounded-2xl border border-slate-200 bg-white xl:col-span-3" />
+          <div className="h-96 animate-pulse rounded-2xl border border-slate-200 bg-white xl:col-span-2" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !dashboard) {
+    return (
+      <section className="rounded-2xl border border-rose-200 bg-white p-10 text-center">
+        <p className="text-base font-black text-rose-700">Không thể tải dữ liệu tài chính</p>
+        <p className="mt-2 text-sm text-slate-500">{error}</p>
+        <button
+          className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-[#FF6B00] px-4 text-sm font-bold text-white hover:bg-[#EA580C]"
+          onClick={() => void loadDashboard()}
+          type="button"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Thử lại
+        </button>
+      </section>
+    );
+  }
+
+  if (!dashboard) return null;
+
+  const activeMetric = chartMetrics[selectedMetric];
+  const activePlanCount = dashboard.subscriptions.free + dashboard.subscriptions.skillBuilder + dashboard.subscriptions.premium;
+  const planDistribution = [
+    { color: "#94A3B8", label: "Free", value: dashboard.subscriptions.free },
+    { color: "#FB923C", label: "Skill Builder", value: dashboard.subscriptions.skillBuilder },
+    { color: ACCENT, label: "Premium", value: dashboard.subscriptions.premium },
+  ];
+  const kpis = [
+    {
+      color: ACCENT,
+      context: "Không gồm nạp Coin",
+      icon: DollarSign,
+      label: "Doanh thu gói dịch vụ",
+      sparkline: chartMetrics.subscriptionRevenue.data.slice(-8).map((point) => point.amount),
+      sub: `Hôm nay: ${formatCurrency(dashboard.overview.todayRevenue)}`,
+      value: formatCurrency(dashboard.overview.totalRevenue),
+    },
+    {
+      color: "#2563EB",
+      context: "Tiền giữ hộ ví user",
+      icon: Coins,
+      label: "Tiền nạp Coin",
+      sparkline: chartMetrics.coinTopUp.data.slice(-8).map((point) => point.amount),
+      sub: `Tháng này: ${formatCurrency(dashboard.payments.coinTopUpThisMonth ?? 0)}`,
+      value: formatCurrency(dashboard.payments.coinTopUpTotal ?? 0),
+    },
+    {
+      color: "#059669",
+      context: "Đã trừ phần hoàn tiền",
+      icon: Activity,
+      label: "Hoa hồng Marketplace",
+      sparkline: chartMetrics.marketplaceCommission.data.slice(-8).map((point) => point.amount),
+      sub: `Gross: ${formatCoin(marketplaceCommission.gross)}`,
+      value: formatCoin(marketplaceCommission.net),
+    },
+    {
+      color: "#7C3AED",
+      context: `Free: ${dashboard.subscriptions.free.toLocaleString("vi-VN")}`,
+      icon: UsersRound,
+      label: "Gói đang hoạt động",
+      sparkline: [
+        dashboard.subscriptions.free,
+        dashboard.subscriptions.skillBuilder,
+        dashboard.subscriptions.premium,
+        dashboard.subscriptions.active,
+      ],
+      sub: `Premium: ${dashboard.subscriptions.premium} · Builder: ${dashboard.subscriptions.skillBuilder}`,
+      value: dashboard.overview.activeSubscriptions.toLocaleString("vi-VN"),
+    },
+  ];
+
+  return (
+    <motion.div animate={{ opacity: 1 }} className="space-y-5" initial={{ opacity: 0 }}>
+      <section aria-label="Tổng quan tài chính" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {kpis.map((kpi, index) => {
           const Icon = kpi.icon;
-          const sparkData = kpi.sparkline.length >= 2 ? kpi.sparkline : [0, 1];
           return (
-            <motion.div key={kpi.id}
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-              className="relative rounded-2xl p-5 overflow-hidden"
-              style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-              <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none"
-                style={{ background: `radial-gradient(circle, ${kpi.color}10 0%, transparent 70%)`, transform: "translate(30%,-30%)" }} />
-              <div className="flex items-start justify-between mb-3 relative z-10">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-                  style={{ background: `${kpi.color}10`, border: `1px solid ${kpi.color}22` }}>
-                  <Icon size={14} style={{ color: kpi.color }} />
-                </div>
-                <div className="text-xs px-2 py-0.5 rounded-full"
-                  style={{ background: "#F8FAFC", color: "#64748B", border: "1px solid #E2E8F0", fontWeight: 700 }}>
+            <motion.article
+              key={kpi.label}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative min-h-40 overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+              initial={{ opacity: 0, y: 10 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <span
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: `${kpi.color}12`, color: kpi.color }}
+                >
+                  <Icon aria-hidden="true" className="h-5 w-5" />
+                </span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-right text-[10px] font-bold text-slate-500">
                   {kpi.context}
-                </div>
+                </span>
               </div>
-              <p className="relative z-10 mb-0.5"
-                style={{ fontWeight: 800, fontSize: "1.5rem", letterSpacing: "-0.05em", lineHeight: 1, color: "#111827" }}>
-                {kpi.value}
-              </p>
-              <p className="relative z-10 text-xs mb-3" style={{ color: "#6B7280" }}>{kpi.label}</p>
-              <div className="relative z-10 flex items-end justify-between">
-                <Sparkline data={sparkData} color={kpi.color} width={75} height={26} />
-                <p style={{ fontSize: "9px", color: "#9CA3AF", textAlign: "right", maxWidth: 90 }}>{kpi.sub}</p>
+              <p className="mt-4 text-2xl font-black tracking-[-0.045em] text-slate-950">{kpi.value}</p>
+              <p className="mt-1 text-sm font-medium text-slate-600">{kpi.label}</p>
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <Sparkline color={kpi.color} data={kpi.sparkline} />
+                <p className="max-w-28 text-right text-[10px] leading-4 text-slate-400">{kpi.sub}</p>
               </div>
-            </motion.div>
+            </motion.article>
           );
         })}
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
-        <div className="xl:col-span-3 space-y-5">
+      <section className="grid gap-5 xl:grid-cols-5">
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 xl:col-span-3">
+          <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Phân tích dòng tiền</p>
+              <h2 className="mt-1 text-lg font-black tracking-[-0.025em] text-slate-950">Dòng tiền theo thời gian</h2>
+            </div>
+            <div aria-label="Chỉ số biểu đồ" className="inline-flex w-full rounded-xl bg-slate-100 p-1 sm:w-auto" role="tablist">
+              {(
+                [
+                  ["subscriptionRevenue", "Doanh thu"],
+                  ["coinTopUp", "Nạp Coin"],
+                  ["marketplaceCommission", "Hoa hồng"],
+                ] as const
+              ).map(([metric, label]) => (
+                <button
+                  aria-selected={selectedMetric === metric}
+                  className={`min-h-9 flex-1 rounded-lg px-3 text-xs font-bold transition-colors sm:flex-none ${selectedMetric === metric ? "bg-white text-[#FF6B00] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                  key={metric}
+                  onClick={() => setSelectedMetric(metric)}
+                  role="tab"
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="pt-5">
+            <FinancialAreaChart {...activeMetric} />
+          </div>
+        </article>
 
-          <FinancialAreaChart
-            title="Doanh thu gói dịch vụ"
-            description="Chỉ ghi nhận thanh toán subscription thành công"
-            data={revenueChartData}
-            color={ACCENT}
-          />
+        <article className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-5 shadow-sm sm:p-6 xl:col-span-2">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">Đối soát Marketplace</p>
+              <h2 className="mt-1 text-lg font-black tracking-[-0.025em] text-slate-950">Hoa hồng ròng</h2>
+            </div>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm">
+              <Building2 aria-hidden="true" className="h-5 w-5" />
+            </span>
+          </div>
+          <p className="mt-8 text-3xl font-black tracking-[-0.05em] text-emerald-700">{formatCoin(marketplaceCommission.net)}</p>
+          <dl className="mt-6 space-y-3 border-y border-emerald-100 py-4 text-sm">
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-slate-500">Gross đã ghi nhận</dt>
+              <dd className="font-black text-slate-800">{formatCoin(marketplaceCommission.gross)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-slate-500">Điều chỉnh hoàn tiền</dt>
+              <dd className="font-black text-rose-600">{formatCoin(-marketplaceCommission.refunded)}</dd>
+            </div>
+          </dl>
+          <p className="mt-4 text-xs leading-5 text-slate-500">Số liệu đối soát nội bộ, không phải số dư tài khoản ngân hàng có thể rút.</p>
+          <button
+            className="mt-5 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 text-sm font-bold text-emerald-700 hover:bg-emerald-50"
+            onClick={() => document.getElementById("platform-treasury-ledger")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            type="button"
+          >
+            Xem sổ chi tiết
+            <ChevronRight aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </article>
+      </section>
 
-          <FinancialAreaChart
-            title="Tiền nạp Coin"
-            description="Dòng tiền người dùng nạp vào ví Coin — tách riêng khỏi doanh thu gói"
-            data={coinTopUpChartData}
-            color="#2563EB"
-          />
-
-          {/* Người dùng mới theo ngày */}
-          {usersChartData.length > 0 && (
-            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
-              className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-              <div className="flex items-start justify-between mb-5">
-                <div>
-                  <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>Người dùng mới</p>
-                  <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>Đăng ký theo ngày</p>
+      <section className="grid gap-5 xl:grid-cols-5">
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 xl:col-span-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Tăng trưởng người dùng</p>
+              <h2 className="mt-1 text-lg font-black tracking-[-0.025em] text-slate-950">Phân bổ gói người dùng</h2>
+            </div>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600">
+              {activePlanCount.toLocaleString("vi-VN")} tài khoản
+            </span>
+          </div>
+          <div className="mt-6 space-y-5">
+            {planDistribution.map((plan) => {
+              const percentage = activePlanCount === 0 ? 0 : Math.round((plan.value / activePlanCount) * 100);
+              return (
+                <div key={plan.label}>
+                  <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                    <span className="font-bold text-slate-700">{plan.label}</span>
+                    <span className="text-slate-500">{plan.value.toLocaleString("vi-VN")} tài khoản ({percentage}%)</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full rounded-full" style={{ backgroundColor: plan.color, width: `${percentage}%` }} />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full"
-                  style={{ background: "rgba(6,182,212,0.08)", color: "#0891b2", border: "1px solid rgba(6,182,212,0.2)", fontWeight: 700 }}>
-                  <ArrowUpRight size={11} /> {dashData?.overview.totalUsers.toLocaleString()} Tổng số
-                </div>
-              </div>
-              <div style={{ height: "200px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={usersChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                    <XAxis dataKey="date" stroke="#E5E7EB" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
-                    <YAxis stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="count" name="Người dùng mới"
-                      stroke="#06b6d4" strokeWidth={2} fill="#06b6d4" fillOpacity={0.1} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        </article>
 
-        {/* Tóm tắt chỉ số phụ + Phân bổ gói */}
-        <div className="xl:col-span-2 space-y-5">
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="grid grid-cols-2 gap-3">
-            {summaryStats.map(s => (
-              <div key={s.label} className="rounded-xl p-4"
-                style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                <p style={{ fontSize: "9px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>{s.label}</p>
-                <p style={{ fontWeight: 800, fontSize: "1.25rem", color: s.color, letterSpacing: "-0.04em", lineHeight: 1 }}>{s.value}</p>
-                <p style={{ fontSize: "10px", color: "#9CA3AF", marginTop: "4px" }}>{s.sub}</p>
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 xl:col-span-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Thanh toán</p>
+          <h2 className="mt-1 text-lg font-black tracking-[-0.025em] text-slate-950">Tình trạng giao dịch</h2>
+          <dl className="mt-6 divide-y divide-slate-100 border-y border-slate-100">
+            {[
+              { label: "Thành công", value: dashboard.payments.paid, tone: "text-emerald-600" },
+              { label: "Đang chờ xử lý", value: dashboard.payments.pending, tone: "text-amber-600" },
+              { label: "Thất bại", value: dashboard.payments.failed, tone: "text-rose-600" },
+            ].map((stat) => (
+              <div className="flex items-center justify-between py-3" key={stat.label}>
+                <dt className="text-sm text-slate-500">{stat.label}</dt>
+                <dd className={`text-sm font-black ${stat.tone}`}>{stat.value.toLocaleString("vi-VN")}</dd>
               </div>
             ))}
-          </motion.div>
+          </dl>
+          <p className="mt-4 text-xs leading-5 text-slate-500">Bao gồm thanh toán gói dịch vụ và các giao dịch nạp Coin.</p>
+        </article>
+      </section>
 
-          {dashData && (
-            <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.28 }}
-              className="rounded-xl p-5"
-              style={{ background: "#F8FAFC", border: "1px solid #DCE7F5" }}
-            >
-              <p style={{ fontSize: "11px", color: "#2563EB", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
-                Sổ đối soát Marketplace
-              </p>
-              <p style={{ fontWeight: 800, fontSize: "1.35rem", color: "#065F46", letterSpacing: "-0.04em" }}>
-                {formatCoin(marketplaceCommission.net)}
-              </p>
-              <div className="mt-3 space-y-1.5" style={{ fontSize: "11px", color: "#64748B" }}>
-                <p className="flex justify-between gap-4"><span>Hoa hồng ghi nhận</span><strong style={{ color: "#0F766E" }}>{formatCoin(marketplaceCommission.gross)}</strong></p>
-                <p className="flex justify-between gap-4"><span>Điều chỉnh hoàn tiền</span><strong style={{ color: "#E11D48" }}>−{formatCoin(marketplaceCommission.refunded)}</strong></p>
-              </div>
-              <p className="mt-3" style={{ fontSize: "10px", lineHeight: 1.5, color: "#94A3B8" }}>
-                Đây là sổ đối soát commission từ giao dịch Marketplace, không phải số dư tài khoản ngân hàng hay “ví hệ thống” có thể chi trả.
-              </p>
-            </motion.div>
-          )}
-
-          {/* Phân bổ các gói Subs */}
-          {dashData && (
-            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-              className="rounded-xl p-5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-              <p style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 16 }}>Phân bổ gói người dùng</p>
-              {[
-                { label: "Free", value: dashData.subscriptions.free, color: "#94A3B8" },
-                { label: "Skill Builder", value: dashData.subscriptions.skillBuilder, color: "#FB923C" },
-                { label: "Premium", value: dashData.subscriptions.premium, color: ACCENT },
-              ].map(tier => {
-                const tierTotal = dashData.subscriptions.free + dashData.subscriptions.skillBuilder + dashData.subscriptions.premium || 1;
-                const pct = Math.round((tier.value / tierTotal) * 100);
-                return (
-                  <div key={tier.label} className="mb-4 last:mb-0">
-                    <div className="flex justify-between mb-1.5">
-                      <span style={{ fontSize: "12px", color: "#374151", fontWeight: 600 }}>{tier.label}</span>
-                      <span style={{ fontSize: "12px", color: "#6B7280", fontWeight: 500 }}>{tier.value.toLocaleString()} tài khoản ({pct}%)</span>
-                    </div>
-                    <div className="h-2 rounded-full" style={{ background: "#F3F4F6" }}>
-                      <div className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${pct}%`, background: tier.color }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </motion.div>
-          )}
-        </div>
-      </div>
       <PlatformTreasurySection />
     </motion.div>
   );
