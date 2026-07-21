@@ -181,201 +181,138 @@ export default function AdminProfile() {
         onCancel={closeAvatarCropper}
         onCropped={handleCroppedAvatar}
       />
-      <div className="mx-auto max-w-6xl space-y-5">
-        {/* ── Top action bar ── */}
-        <motion.button
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
-          type="button"
-          onClick={() => navigate("/admin")}
-          className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-[#FF6B00] uppercase tracking-wider transition-colors mb-4"
-        >
-          <ArrowLeft size={16} />
-          Quay lại Dashboard
-        </motion.button>
-
-        {/* ── Hero identity card ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="relative flex flex-col items-center gap-5 overflow-hidden rounded-3xl border border-white/70 bg-gradient-to-br from-white via-orange-50/40 to-violet-50/50 p-5 shadow-[0_16px_45px_rgba(30,41,59,0.07)] sm:flex-row sm:p-6"
-        >
-          <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-orange-200/20 blur-3xl" />
-          {/* Avatar + interactive upload */}
-          <div className="relative flex-shrink-0">
+      <div className="mx-auto max-w-5xl">
+        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
             <button
               type="button"
-              aria-label="Đổi ảnh đại diện"
-              onClick={() => fileInputRef.current?.click()}
-              className="group h-20 w-20 rounded-full bg-gradient-to-r from-[#FF6B00] to-[#8B5CF6] p-1 shadow-[0_0_15px_rgba(255,107,0,0.2)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200"
+              onClick={() => navigate("/admin")}
+              className="mb-3 inline-flex min-h-11 items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 transition hover:text-[#FF6B00] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"
             >
-              <div className="w-full h-full rounded-full bg-white border-2 border-white overflow-hidden flex items-center justify-center text-[#FF6B00] text-xl font-black relative">
-                {avatarPreview || profile?.avatarUrl
-                  ? <img src={avatarPreview || profile?.avatarUrl} alt={profile?.fullName || "Avatar"} className="w-full h-full object-cover" />
-                  : <span>{initials}</span>}
-                
-                {/* Hover overlay */}
-                <div className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-black uppercase tracking-wider">
-                  {saving && avatarFile
-                    ? <LoaderCircle size={16} className="animate-spin" />
-                    : <><Camera size={14} className="mb-1" />Đổi ảnh</>}
+              <ArrowLeft size={16} />
+              Quay lại Dashboard
+            </button>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-600">Tài khoản</p>
+            <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950">Hồ sơ quản trị</h1>
+            <p className="mt-1 text-sm text-slate-500">Quản lý danh tính và thông tin tài khoản của bạn.</p>
+          </div>
+          <div className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black ${isActive ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-100 text-slate-600"}`}>
+            <span className={`h-2 w-2 rounded-full ${isActive ? "bg-emerald-500" : "bg-slate-400"}`} />
+            {isActive ? "Tài khoản hoạt động" : "Tài khoản không hoạt động"}
+          </div>
+        </header>
+
+        <div className="grid items-start gap-5 lg:grid-cols-[20rem_minmax(0,1fr)]">
+          <motion.aside
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35 }}
+            className="relative overflow-hidden rounded-3xl bg-slate-950 p-6 text-white shadow-[0_18px_45px_rgba(15,23,42,0.22)]"
+          >
+            <div className="pointer-events-none absolute -right-20 -top-16 h-52 w-52 rounded-full bg-orange-500/30 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-16 h-48 w-48 rounded-full bg-violet-500/25 blur-3xl" />
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="Đổi ảnh đại diện"
+                onClick={() => fileInputRef.current?.click()}
+                className="group relative h-24 w-24 rounded-3xl bg-gradient-to-br from-orange-400 to-violet-500 p-1 shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300"
+              >
+                <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[1.35rem] bg-slate-900 text-2xl font-black text-orange-300">
+                  {avatarPreview || profile?.avatarUrl
+                    ? <img src={avatarPreview || profile?.avatarUrl} alt={profile?.fullName || "Avatar"} className="h-full w-full object-cover" />
+                    : <span>{initials}</span>}
+                  <span className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/70 text-[10px] font-black uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
+                    {saving && avatarFile ? <LoaderCircle size={18} className="animate-spin" /> : <><Camera size={16} className="mb-1" />Đổi ảnh</>}
+                  </span>
+                </div>
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
+
+              <p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-orange-300">Quản trị viên</p>
+              <h2 className="mt-1 truncate text-2xl font-black tracking-tight">{profile?.fullName || "Admin"}</h2>
+              <p className="mt-1 truncate text-sm text-slate-300">{profile?.email}</p>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {(profile?.roles || ["ADMIN"]).map(role => (
+                  <span key={role} className="rounded-full border border-violet-300/30 bg-violet-400/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-violet-100">{role}</span>
+                ))}
+              </div>
+
+              <div className="my-6 h-px bg-white/10" />
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-200"><Shield size={15} className="text-orange-300" />Quyền truy cập</div>
+                  <p className="mt-1.5 text-xs leading-5 text-slate-400">Tài khoản có quyền vận hành các khu vực quản trị hệ thống.</p>
+                </div>
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">User ID</p>
+                    <button type="button" onClick={handleCopyId} aria-label="Sao chép User ID" className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300">
+                      {copied ? <CheckCircle size={15} className="text-emerald-300" /> : <Copy size={15} />}
+                    </button>
+                  </div>
+                  <p className="break-all font-mono text-[11px] leading-5 text-slate-400">{profile?.userId}</p>
                 </div>
               </div>
-            </button>
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-white flex items-center justify-center shadow">
-              <Shield size={12} className="text-[#FF6B00]" />
             </div>
-            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
-          </div>
+          </motion.aside>
 
-          {/* Identity text block */}
-          <div className="flex-1 min-w-0 text-center sm:text-left">
-            <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-600">Hồ sơ quản trị</p>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight truncate">
-              {profile?.fullName || "Admin"}
-            </h1>
-            <p className="text-sm text-slate-500 font-medium mt-0.5 truncate">{profile?.email}</p>
-            <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap mt-3">
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-purple-50 text-purple-600 uppercase tracking-wide hover:scale-105 duration-200 transition-transform cursor-default">
-                {roles}
-              </span>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide hover:scale-105 duration-200 transition-transform cursor-default ${isActive ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-slate-400"}`} />
-                {isActive ? "Đang hoạt động" : "Không hoạt động"}
-              </span>
-            </div>
-          </div>
-          <div className="relative hidden min-w-52 rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-left shadow-sm lg:block">
-            <div className="flex items-center gap-2 text-slate-900">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-50 text-violet-600"><Shield size={16} /></span>
-              <p className="text-sm font-black">Quyền quản trị</p>
-            </div>
-            <p className="mt-2 text-xs leading-5 text-slate-500">Bạn đang có quyền truy cập các khu vực vận hành hệ thống.</p>
-          </div>
-        </motion.div>
-
-        {/* ── Dual-column dashboard grid ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* Personal information (cols 1-2) */}
-          <motion.div
+          <motion.section
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-[0_12px_40px_rgba(30,41,59,0.05)] sm:p-6 lg:col-span-2"
+            transition={{ duration: 0.35, delay: 0.08 }}
+            className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] sm:p-7"
           >
-            <div className="space-y-5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center">
-                  <User size={15} className="text-[#FF6B00]" />
+            <div className="flex items-start gap-3 border-b border-slate-100 pb-6">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-600"><User size={19} /></span>
+              <div>
+                <h2 className="text-xl font-black tracking-tight text-slate-950">Thông tin cá nhân</h2>
+                <p className="mt-1 text-sm leading-5 text-slate-500">Cập nhật tên hiển thị và ảnh đại diện của tài khoản.</p>
+              </div>
+            </div>
+
+            <div className="mt-7 space-y-6">
+              <div>
+                <label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-400">Email đăng nhập</label>
+                <div className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-500">
+                  <Mail size={16} className="shrink-0 text-slate-400" />
+                  <span className="truncate font-medium">{profile?.email}</span>
+                  <span className="ml-auto hidden rounded-full bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-500 sm:inline">Không thể thay đổi</span>
                 </div>
-                <h2 className="text-base font-black text-slate-900">Thông tin cá nhân</h2>
               </div>
 
-              {/* Email (read-only) */}
               <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Email
-                </label>
-                <div className="flex items-center gap-2.5 w-full px-4 py-3 bg-[#F1F5F9]/60 border border-slate-200/60 shadow-[inner_0_2px_4px_rgba(0,0,0,0.03)] rounded-xl text-sm text-slate-400 cursor-not-allowed select-all transition-all duration-200">
-                  <Mail size={14} className="text-slate-300 shrink-0" />
-                  <span className="truncate">{profile?.email}</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1.5 ml-1">Email không thể thay đổi</p>
-              </div>
-
-              {/* Full name */}
-              <div>
-                <label htmlFor="admin-full-name" className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Họ và tên
-                </label>
+                <label htmlFor="admin-full-name" className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-400">Tên hiển thị</label>
                 <input
                   type="text"
                   id="admin-full-name"
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
                   placeholder="Nhập họ và tên của admin..."
-                  className="w-full px-4 py-3 bg-[#F1F5F9]/60 border border-slate-200/60 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-[#FF6B00]/10 focus-visible:border-[#FF6B00] shadow-[inner_0_2px_4px_rgba(0,0,0,0.03)] rounded-xl text-slate-800 text-sm font-semibold focus:outline-none transition-all duration-200"
+                  className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm outline-none transition focus-visible:border-orange-400 focus-visible:ring-4 focus-visible:ring-orange-100"
                 />
               </div>
+
+              <div className="rounded-2xl border border-orange-100 bg-orange-50/60 p-4">
+                <p className="text-sm font-bold text-slate-800">Ảnh đại diện</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Chọn ảnh ở panel bên trái. Ảnh JPG, PNG hoặc WEBP, tối đa 5 MB.</p>
+                {avatarFile && <p className="mt-2 text-xs font-bold text-orange-700">Ảnh mới đã sẵn sàng để lưu.</p>}
+              </div>
             </div>
 
-            {/* Save action */}
-            <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className={`text-xs ${hasChanges ? "font-semibold text-orange-600" : "text-slate-400"}`}>
-                {hasChanges ? "Bạn có thay đổi chưa được lưu." : "Thông tin tài khoản đã được đồng bộ."}
-              </p>
+            <div className="mt-8 flex flex-col gap-4 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className={`text-xs ${hasChanges ? "font-bold text-orange-600" : "text-slate-400"}`}>{hasChanges ? "Bạn có thay đổi chưa được lưu." : "Chưa có thay đổi nào cần lưu."}</p>
               <button
+                type="button"
                 onClick={handleSave}
                 disabled={saving || !hasChanges}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#EA580C] px-6 py-2.5 font-semibold text-white shadow-[0_8px_20px_rgba(255,107,0,0.3)] transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_12px_24px_rgba(255,107,0,0.4)] active:translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-[0_8px_20px_rgba(255,107,0,0.3)] disabled:active:translate-y-0 disabled:active:scale-100"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white shadow-lg shadow-slate-900/15 transition hover:bg-[#FF6B00] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-45"
               >
-                {saving ? (
-                  <><LoaderCircle size={16} className="animate-spin" />Đang lưu...</>
-                ) : (
-                  <><Save size={16} />Lưu thông tin</>
-                )}
+                {saving ? <><LoaderCircle size={16} className="animate-spin" />Đang lưu...</> : <><Save size={16} />Lưu thay đổi</>}
               </button>
             </div>
-          </motion.div>
-
-          {/* System metadata (col 3) */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-[0_12px_40px_rgba(30,41,59,0.05)] sm:p-6"
-          >
-            <div>
-              <div className="flex items-center gap-2.5 mb-5">
-                <div className="w-8 h-8 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center">
-                  <Shield size={15} className="text-purple-500" />
-                </div>
-                <h2 className="text-base font-black text-slate-900">Hệ thống</h2>
-              </div>
-
-              <div className="divide-y divide-slate-100/50">
-                {/* User ID */}
-                <div className="pb-5">
-                  <p className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2">User ID</p>
-                  <div className={`border rounded-lg p-3 font-mono text-xs flex justify-between items-center transition-colors duration-200 ${copied ? "bg-emerald-500/10 border-emerald-500/20" : "bg-slate-900/5 border-slate-900/10"}`}>
-                    <span className="text-slate-600 break-all leading-relaxed flex-1 mr-2">{profile?.userId}</span>
-                    <button
-                      type="button"
-                      onClick={handleCopyId}
-                      title="Copy User ID"
-                      aria-label="Sao chép User ID"
-                      className="flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-md p-1.5 transition-colors hover:bg-slate-200/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-200"
-                    >
-                      {copied ? <CheckCircle size={14} className="text-emerald-500" /> : <Copy size={14} className="text-slate-400" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* System roles */}
-                <div className="py-5">
-                  <p className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2.5">Vai trò hệ thống</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(profile?.roles || ["ADMIN"]).map(r => (
-                      <span key={r} className="px-3 py-1.5 text-xs font-black bg-purple-50 text-purple-600 rounded-full hover:scale-105 duration-200 transition-transform cursor-default shadow-sm border border-purple-100/50">
-                        {r}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Account status */}
-                <div className="pt-5">
-                  <p className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2.5">Trạng thái tài khoản</p>
-                  <span className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-black rounded-full hover:scale-105 duration-200 transition-transform cursor-default shadow-sm border ${isActive ? "bg-emerald-50 text-emerald-600 border-emerald-100/50" : "bg-slate-100 text-slate-500 border-slate-200/50"}`}>
-                    <span className={`w-2 h-2 rounded-full ${isActive ? "bg-emerald-500 shadow-[0_0_6px_#22c55e]" : "bg-slate-400"}`} />
-                    {isActive ? "Đang hoạt động" : "Không hoạt động"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+          </motion.section>
         </div>
       </div>
     </div>
