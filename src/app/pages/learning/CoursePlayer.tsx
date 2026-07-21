@@ -36,12 +36,15 @@ import {
   CalendarDays,
 } from "lucide-react";
 import studySessionService from "../../../api/learning/studySessionService";
-import type { StudySessionDetailResponse } from "../../../api/learning/studySessionService";
+import type { StudySessionDetailResponse, StudySessionResponse } from "../../../api/learning/studySessionService";
+import { deriveTimerSnapshot, shouldClearSessionPointer } from "./pomodoroHydration";
+import { resolveReconciledSession } from "./pomodoroReconcile";
+import { useNaturalExpirySync } from "./useNaturalExpirySync";
 import materialService, { type UploadedMaterialResponse } from "../../../api/learning/materialService";
 import quizService from "../../../api/learning/quizService";
 import roadmapService from "../../../api/learning/roadmapService";
 import type { QuizAttemptResponse } from "../../../api/learning/quizService";
-import { usePomodoro, type PomodoroPhase } from "../../contexts/PomodoroContext";
+import { usePomodoro } from "../../contexts/PomodoroContext";
 import { toast } from "sonner";
 import { useSubscription } from "../../../hooks/useSubscription";
 import { PricingModal } from "../../components/modals/PricingModal";
@@ -181,9 +184,9 @@ export default function CoursePlayer() {
     pomodoroPhase,
     actualStudySeconds,
     activeStepId,
+    naturalExpirySignal,
     startTimer,
     pauseTimer,
-    skipToNextPhase,
     clearTimerContext,
     hydrateTimer,
     isNavigationBlocked,
@@ -208,6 +211,7 @@ export default function CoursePlayer() {
   const [viewingMaterialId, setViewingMaterialId] = useState<string | null>(null);
 
   const [isSubActionLoading, setIsSubActionLoading] = useState(false);
+  const [pomodoroSyncState, setPomodoroSyncState] = useState<"idle" | "syncing" | "retry-required">("idle");
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleTaskInfo, setRescheduleTaskInfo] = useState<{
     taskId: string;
@@ -253,6 +257,19 @@ export default function CoursePlayer() {
     || isCompletedTaskStatus(roadmapStep?.status);
 
   const hasStartedSession = Boolean(activeSessionId) && !isSessionCompleted;
+
+  // Backend is the authority on the Pomodoro's runnability. `detail.session` is
+  // reloaded on mount/F5 and after every timer action, so these flags stay in sync
+  // with the server without extra local bookkeeping.
+  const serverPomodoroStatus = String(detail?.session?.pomodoro?.status ?? "").toUpperCase();
+  const hasRunnablePomodoro =
+    serverPomodoroStatus === "IN_PROGRESS" || serverPomodoroStatus === "PAUSED";
+  // Pomodoro finished/interrupted while the StudySession is still open.
+  const isPomodoroExhausted = Boolean(detail?.session?.pomodoro) && !hasRunnablePomodoro;
+  const isPomodoroSyncLocked = pomodoroSyncState !== "idle";
+  // Session is open but nothing is runnable (exhausted OR no Pomodoro at all):
+  // offer a fresh cycle instead of a broken Resume control.
+  const showStartCycleCta = hasStartedSession && !hasRunnablePomodoro;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -323,77 +340,144 @@ export default function CoursePlayer() {
     };
   }, [taskId]);
 
-  // ── F5 RESILIENCY: re-hydrate the live Pomodoro from the backend on mount ──
-  // A hard refresh wipes the in-memory PomodoroContext (timer resets to 25:00),
-  // but the BE session keeps ticking. On a cold load we fetch the authoritative
-  // session state and recompute the TRUE remaining time against the backend
-  // timestamp, then re-seed the timer so the countdown UI continues seamlessly.
-  const didHydrateRef = useRef(false);
+  const fetchUpdatedDetail = useCallback(async () => {
+    if (!taskId) return null;
+    try {
+      const freshDetail = await studySessionService.getStudySessionDetail(taskId);
+      setDetail(freshDetail);
+      return freshDetail;
+    } catch (err) {
+      console.error("Failed to refetch detail", err);
+      return null;
+    }
+  }, [taskId]);
+
+  // Component-lifetime mount flag: async reconciliation must never seed the shared
+  // Pomodoro context after the player unmounts (that would start a phantom timer
+  // on a page the user already left). Component-lifetime — not a per-effect-run
+  // flag — so it stays correct under React Strict Mode's double-invoke.
+  const isMountedRef = useRef(true);
   useEffect(() => {
-    if (didHydrateRef.current) return;
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Re-seed the in-memory timer from an authoritative backend session snapshot
+  // instead of advancing local state blindly. Used after pause / resume / manual
+  // skip / start / hydration / focus reconciliation. Always follows the server —
+  // including terminal (completed/non-runnable) snapshots, which hydrate to the
+  // server phase at 00:00, paused, with accumulated study seconds preserved.
+  const applyServerPomodoro = useCallback(
+    (session: StudySessionResponse) => {
+      setDetail((current) => (current ? { ...current, session } : current));
+      const snapshot = deriveTimerSnapshot(session);
+      const stepId =
+        activeStepId ?? session.roadmapStepId ?? roadmapStep?.stepId ?? taskId ?? session.sessionId ?? "";
+      hydrateTimer({
+        stepId,
+        phase: snapshot.phase,
+        timeLeft: snapshot.timeLeft,
+        isRunning: snapshot.isRunning,
+        studySeconds: snapshot.studySeconds,
+      });
+      return snapshot;
+    },
+    [activeStepId, hydrateTimer, roadmapStep?.stepId, taskId],
+  );
+
+  // Single reconciliation entry point for a freshly fetched server session. An
+  // already-expired running phase is advanced server-side exactly once (never
+  // resumed); everything else hydrates straight from the snapshot.
+  const reconcileServerState = useCallback(
+    async (session: StudySessionResponse | null) => {
+      if (!isMountedRef.current || !session) return;
+      const resolved = await resolveReconciledSession(session, activeSessionId);
+      if (!isMountedRef.current || !resolved) return;
+      if (resolved.kind === "retry-required") {
+        setPomodoroSyncState("retry-required");
+        return;
+      }
+      setPomodoroSyncState("idle");
+      applyServerPomodoro(resolved.session);
+      if (resolved.didAdvance) void fetchUpdatedDetail();
+    },
+    [activeSessionId, applyServerPomodoro, fetchUpdatedDetail],
+  );
+
+  // ── F5 RESILIENCY: re-hydrate the live Pomodoro from the backend on mount ──
+  // A hard refresh wipes the in-memory PomodoroContext (timer resets to 25:00), but
+  // the BE session keeps ticking. On a cold load we fetch the authoritative session
+  // state and reconcile it (advancing an already-expired phase) so the countdown UI
+  // continues seamlessly. Runs once per mount; the ref guard is Strict Mode-safe.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (hydratedRef.current) return;
     if (!activeSessionId) return;
     // If the in-memory timer is already tracking a step, this is a normal
     // navigation (not a cold reload) — never clobber a running session.
     if (activeStepId) return;
 
-    let cancelled = false;
-    didHydrateRef.current = true;
+    hydratedRef.current = true;
 
     studySessionService
       .getStudySessionState(activeSessionId)
       .then((session) => {
-        if (cancelled) return;
-        const pomodoro = session?.pomodoro;
-        if (!pomodoro) return;
-
-        const status = String(pomodoro.status ?? "").toUpperCase();
-        // A finished/closed session must never resurrect a timer — clean up the
-        // stale pointer instead so the page falls back to its "start" state.
-        if (status === "COMPLETED") {
+        if (!isMountedRef.current) return;
+        // Clear the stored pointer ONLY when the authoritative StudySession is
+        // COMPLETED. A COMPLETED/absent Pomodoro must never close an IN_PROGRESS
+        // StudySession or make it disappear on refresh.
+        if (shouldClearSessionPointer(session)) {
           if (taskId) clearStoredSessionId(taskId);
+          setPomodoroSyncState("idle");
           setActiveSessionId(null);
           return;
         }
-
-        const isRunning = status === "IN_PROGRESS";
-        const phase = (String(pomodoro.currentPhase ?? "FOCUS").toUpperCase() as PomodoroPhase);
-        const stepId =
-          session.roadmapStepId ?? roadmapStep?.stepId ?? taskId ?? activeSessionId;
-
-        // True remaining seconds: while running, derive from phaseEndAt vs. the
-        // wall clock so the F5 doesn't rewind time; otherwise (paused) trust the
-        // stored remainingSeconds snapshot.
-        let remaining = Math.max(0, Math.floor(pomodoro.remainingSeconds ?? 0));
-        if (isRunning && pomodoro.phaseEndAt) {
-          const endMs = new Date(pomodoro.phaseEndAt).getTime();
-          if (!Number.isNaN(endMs)) {
-            remaining = Math.max(0, Math.round((endMs - Date.now()) / 1000));
-          }
-        }
-
-        // Re-derive accumulated study time: completed focus minutes + the time
-        // already elapsed inside the current focus phase (only while ticking).
-        let studySeconds = Math.max(0, Math.floor((pomodoro.completedFocusMinutes ?? 0) * 60));
-        if (phase === "FOCUS" && isRunning && pomodoro.phaseStartedAt) {
-          const startedMs = new Date(pomodoro.phaseStartedAt).getTime();
-          if (!Number.isNaN(startedMs)) {
-            studySeconds += Math.max(0, Math.round((Date.now() - startedMs) / 1000));
-          }
-        }
-
-        hydrateTimer({ stepId, phase, timeLeft: remaining, isRunning, studySeconds });
+        return reconcileServerState(session);
       })
       .catch((err: unknown) => {
         // Soft-fail: a rehydration miss must never brick the page. Allow a retry
         // on a later mount by releasing the guard.
         console.error("Failed to rehydrate Pomodoro session", err);
-        didHydrateRef.current = false;
+        hydratedRef.current = false;
       });
+  }, [activeSessionId, activeStepId, reconcileServerState, taskId]);
 
-    return () => {
-      cancelled = true;
+  // ── BACKGROUND-RETURN RECONCILIATION ──
+  // A backgrounded/throttled tab freezes the local countdown, so on return it can
+  // still show time for a phase that already expired on the server. When the tab
+  // becomes visible again with a running timer, re-fetch and reconcile so a throttled
+  // tab can never resume a stale countdown. Guarded against overlapping runs.
+  const visibilitySyncingRef = useRef(false);
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!activeSessionId || !isTimerRunning) return;
+      if (visibilitySyncingRef.current) return;
+      visibilitySyncingRef.current = true;
+      studySessionService
+        .getStudySessionState(activeSessionId)
+        .then((session) => {
+          if (!isMountedRef.current) return;
+          if (shouldClearSessionPointer(session)) {
+            if (taskId) clearStoredSessionId(taskId);
+            setPomodoroSyncState("idle");
+            setActiveSessionId(null);
+            return;
+          }
+          return reconcileServerState(session);
+        })
+        .catch((err: unknown) => {
+          console.error("Failed to reconcile Pomodoro on tab focus", err);
+        })
+        .finally(() => {
+          visibilitySyncingRef.current = false;
+        });
     };
-  }, [activeSessionId, activeStepId, hydrateTimer, roadmapStep?.stepId, taskId]);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [activeSessionId, isTimerRunning, reconcileServerState, taskId]);
 
   // Surface the XP a roadmap-step completion actually earned. We never assume the
   // amount client-side: the backend gates the 120 XP step reward behind a per-step
@@ -436,17 +520,35 @@ export default function CoursePlayer() {
     [showToast],
   );
 
-  const fetchUpdatedDetail = async () => {
-    if (!taskId) return;
-    try {
-      const freshDetail = await studySessionService.getStudySessionDetail(taskId);
-      setDetail(freshDetail);
-      return freshDetail;
-    } catch (err) {
-      console.error("Failed to refetch detail", err);
-      return null;
-    }
-  };
+  // When a phase runs out on its own, sync it to the backend exactly once and let
+  // the authoritative response drive local state. Manual skip/pause/resume never
+  // reach here (they don't bump the natural-expiry signal).
+  const handleNaturalExpirySynced = useCallback(
+    (session: StudySessionResponse) => {
+      applyServerPomodoro(session);
+      void fetchUpdatedDetail();
+    },
+    [applyServerPomodoro, fetchUpdatedDetail],
+  );
+  const handleNaturalExpiryError = useCallback(() => {
+    showToast("warning", "Không thể đồng bộ chu kỳ Pomodoro với máy chủ. Đang khôi phục trạng thái…");
+    if (!activeSessionId) return;
+    // Reconcile from the authoritative server state so we never keep showing an
+    // invented credited time — and an expired phase still gets advanced, not resumed.
+    void studySessionService
+      .getStudySessionState(activeSessionId)
+      .then((session) => reconcileServerState(session))
+      .catch(() => undefined)
+      .finally(() => {
+        void fetchUpdatedDetail();
+      });
+  }, [activeSessionId, fetchUpdatedDetail, reconcileServerState, showToast]);
+  useNaturalExpirySync({
+    naturalExpirySignal,
+    activeSessionId,
+    onSynced: handleNaturalExpirySynced,
+    onError: handleNaturalExpiryError,
+  });
 
   // NÂNG CẤP BỘ ĐỆM: Đồng bộ chuẩn chỉ hasQuizCreated kể cả khi Backend bắn 404 attempts
   useEffect(() => {
@@ -720,8 +822,8 @@ export default function CoursePlayer() {
     if (!activeSessionId || isSubActionLoading) return;
     setIsSubActionLoading(true);
     try {
-      await studySessionService.pausePomodoro(activeSessionId);
-      pauseTimer();
+      const updated = await studySessionService.pausePomodoro(activeSessionId);
+      applyServerPomodoro(updated);
       await fetchUpdatedDetail();
       showToast("success", "⏸️ Đã tạm dừng đồng hồ Pomodoro.");
     } catch (err: any) {
@@ -735,8 +837,8 @@ export default function CoursePlayer() {
     if (!activeSessionId || isSubActionLoading) return;
     setIsSubActionLoading(true);
     try {
-      await studySessionService.resumePomodoro(activeSessionId);
-      startTimer(activeStepId ?? roadmapStep?.stepId ?? taskId ?? "");
+      const updated = await studySessionService.resumePomodoro(activeSessionId);
+      applyServerPomodoro(updated);
       await fetchUpdatedDetail();
       showToast("success", "▶️ Tiếp tục chu kỳ tập trung.");
     } catch (err: any) {
@@ -746,16 +848,79 @@ export default function CoursePlayer() {
     }
   };
 
-  const handleNextPhase = async () => {
+  // Manual "Bỏ qua": skip the current phase via the dedicated skip endpoint, which
+  // credits only the focus time actually spent (never the full cycle). The local
+  // timer follows the authoritative backend response instead of advancing blindly.
+  const handleSkipPhase = async () => {
     if (!activeSessionId || isSubActionLoading || !taskId) return;
     setIsSubActionLoading(true);
     try {
-      await studySessionService.nextPomodoroPhase(activeSessionId);
+      const updated = await studySessionService.skipPomodoroPhase(activeSessionId);
+      const snapshot = applyServerPomodoro(updated);
       await fetchUpdatedDetail();
-      skipToNextPhase();
-      showToast("success", "⏭️ Đã chuyển sang chu kỳ tiếp theo.");
+      if (snapshot.isPomodoroExhausted) {
+        showToast(
+          "success",
+          "✅ Đã hoàn tất chu kỳ Pomodoro. Bạn có thể bắt đầu chu kỳ mới hoặc kết thúc phiên học.",
+        );
+      } else {
+        showToast("success", "⏭️ Đã bỏ qua phase. Thời gian tập trung bị bỏ qua sẽ không được tính.");
+      }
     } catch (err: any) {
       showToast("warning", err?.message || "Không thể bỏ qua phase.");
+    } finally {
+      setIsSubActionLoading(false);
+    }
+  };
+
+  // An expired phase that could not be advanced (for example, a transient 503)
+  // must not become resumable locally. Retry starts from a fresh server snapshot
+  // and only unlocks the controls after reconciliation succeeds.
+  const handleRetryPomodoroSync = async () => {
+    if (!activeSessionId || pomodoroSyncState === "syncing") return;
+    setPomodoroSyncState("syncing");
+    try {
+      const session = await studySessionService.getStudySessionState(activeSessionId);
+      if (!session) {
+        setPomodoroSyncState("retry-required");
+        showToast("warning", "Không tìm thấy trạng thái Pomodoro để đồng bộ. Vui lòng thử lại.");
+        return;
+      }
+      if (shouldClearSessionPointer(session)) {
+        if (taskId) clearStoredSessionId(taskId);
+        setPomodoroSyncState("idle");
+        setActiveSessionId(null);
+        return;
+      }
+      await reconcileServerState(session);
+    } catch (err: unknown) {
+      setPomodoroSyncState("retry-required");
+      const message = err instanceof Error ? err.message : "Không thể đồng bộ Pomodoro. Vui lòng thử lại.";
+      showToast("warning", message);
+    }
+  };
+
+  // Start a fresh Pomodoro on the SAME IN_PROGRESS StudySession after the previous
+  // timer was exhausted. The backend reuses the open session and attaches a new
+  // Pomodoro, so the learning record is preserved.
+  const handleStartNewPomodoroCycle = async () => {
+    if (!activeSessionId || !taskId || isSubActionLoading) return;
+    setIsSubActionLoading(true);
+    try {
+      const updated = await studySessionService.startStudySession(taskId, {
+        usePomodoro: true,
+        focusMinutes: 25,
+        shortBreakMinutes: 5,
+        longBreakMinutes: 15,
+        totalCycles: 4,
+      });
+      setActiveSessionId(updated.sessionId);
+      storeSessionId(taskId, updated.sessionId);
+      applyServerPomodoro(updated);
+      await fetchUpdatedDetail();
+      showToast("success", "🍅 Đã bắt đầu chu kỳ Pomodoro mới, tiếp tục tập trung!");
+    } catch (err: any) {
+      showToast("warning", err?.message || "Không thể bắt đầu chu kỳ mới.");
     } finally {
       setIsSubActionLoading(false);
     }
@@ -1336,7 +1501,9 @@ export default function CoursePlayer() {
                     <p className={`text-[9px] font-black uppercase tracking-[0.25em] ${
                       pomodoroPhase !== "FOCUS" ? "text-emerald-600" : "text-orange-600"
                     }`}>
-                      {pomodoroPhase === "SHORT_BREAK" ? (
+                      {isPomodoroSyncLocked ? (
+                        <span className="inline-flex items-center gap-1.5"><RefreshCw size={14} className="mb-0.5" /> Đồng bộ Pomodoro</span>
+                      ) : pomodoroPhase === "SHORT_BREAK" ? (
                         <span className="inline-flex items-center gap-1.5"><Coffee size={14} className="mb-0.5" /> Nghỉ giải lao (5 phút)</span>
                       ) : pomodoroPhase === "LONG_BREAK" ? (
                         <span className="inline-flex items-center gap-1.5"><Leaf size={14} className="mb-0.5" /> Nghỉ dài (15 phút)</span>
@@ -1346,13 +1513,15 @@ export default function CoursePlayer() {
                     </p>
 
                     <p className="mt-1 text-[8px] font-extrabold uppercase tracking-widest text-slate-400">
-                      {isTimerRunning ? "ĐANG TẬP TRUNG" : "ĐÃ TẠM DỪNG"}
+                      {isPomodoroSyncLocked
+                        ? pomodoroSyncState === "syncing" ? "ĐANG ĐỒNG BỘ VỚI MÁY CHỦ" : "CẦN ĐỒNG BỘ LẠI"
+                        : isTimerRunning ? "ĐANG TẬP TRUNG" : "ĐÃ TẠM DỪNG"}
                     </p>
 
                     <div className={`mt-3 font-mono text-[3.8rem] font-black tracking-tight tabular-nums leading-none transition-colors duration-500 ${
                       pomodoroPhase !== "FOCUS" ? "text-emerald-600" : "text-orange-600"
                     } ${isTimerRunning && timeLeft <= 10 ? "animate-pulse text-red-500" : ""}`}>
-                      {formatTimer(timeLeft)}
+                      {isPomodoroSyncLocked ? "--:--" : formatTimer(timeLeft)}
                     </div>
 
                     <div className="mt-4 flex items-center justify-center gap-2.5 text-[11px] font-semibold">
@@ -1368,43 +1537,91 @@ export default function CoursePlayer() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    {isTimerRunning ? (
+                  {isPomodoroSyncLocked ? (
+                    <div
+                      role="alert"
+                      className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 text-center"
+                    >
+                      <p className="text-[11px] font-semibold leading-5 text-amber-800">
+                        {pomodoroSyncState === "syncing"
+                          ? "Đang lấy lại trạng thái Pomodoro từ máy chủ."
+                          : "Pomodoro vừa hết giờ nhưng chưa thể đồng bộ. Hãy thử lại trước khi tiếp tục."}
+                      </p>
                       <button
                         type="button"
-                        onClick={handlePausePomodoro}
-                        disabled={isSubActionLoading}
-                        className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50/80 py-3 text-xs font-bold text-amber-800 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:opacity-50"
+                        onClick={handleRetryPomodoroSync}
+                        disabled={pomodoroSyncState === "syncing"}
+                        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-white py-3 text-xs font-bold text-amber-800 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:cursor-wait disabled:opacity-60"
                       >
-                        <PauseCircle size={14} className="stroke-[2.5]" /> Tạm dừng
+                        {pomodoroSyncState === "syncing"
+                          ? <LoaderCircle size={14} className="animate-spin" />
+                          : <RefreshCw size={14} className="stroke-[2.5]" />}
+                        {pomodoroSyncState === "syncing" ? "Đang đồng bộ" : "Thử đồng bộ lại"}
                       </button>
-                    ) : (
+                    </div>
+                  ) : showStartCycleCta ? (
+                    <div className="space-y-2.5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-center text-[11px] font-semibold leading-5 text-slate-500">
+                        {isPomodoroExhausted
+                          ? "Chu kỳ Pomodoro đã kết thúc. Phiên học vẫn đang mở — hãy bắt đầu một chu kỳ mới hoặc kết thúc phiên học bên dưới."
+                          : "Chưa có chu kỳ Pomodoro nào đang chạy. Hãy bắt đầu một chu kỳ mới hoặc kết thúc phiên học bên dưới."}
+                      </div>
                       <button
                         type="button"
-                        onClick={handleResumePomodoro}
+                        onClick={handleStartNewPomodoroCycle}
                         disabled={isSubActionLoading}
-                        className={`col-span-2 flex items-center justify-center gap-1.5 rounded-xl border py-3 text-xs font-bold shadow-sm transition active:scale-95 disabled:opacity-50 ${
-                          pomodoroPhase !== "FOCUS"
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                            : "border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100"
-                        }`}
+                        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 py-3 text-xs font-bold text-orange-800 shadow-sm transition hover:bg-orange-100 active:scale-95 disabled:opacity-50"
                       >
                         {isSubActionLoading
                           ? <LoaderCircle size={14} className="animate-spin" />
-                          : <Play size={14} className="stroke-[2.5]" />}
-                        {" "}Bắt đầu
+                          : <RefreshCw size={14} className="stroke-[2.5]" />}
+                        {" "}Bắt đầu chu kỳ Pomodoro mới
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleNextPhase}
-                      disabled={isSubActionLoading}
-                      className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 py-3 text-xs font-bold text-slate-500 shadow-sm transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
-                      title="Bỏ qua phase"
-                    >
-                      <SkipForward size={14} /> Bỏ qua
-                    </button>
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      {isTimerRunning ? (
+                        <button
+                          type="button"
+                          onClick={handlePausePomodoro}
+                          disabled={isSubActionLoading}
+                          className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50/80 py-3 text-xs font-bold text-amber-800 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:opacity-50"
+                        >
+                          <PauseCircle size={14} className="stroke-[2.5]" /> Tạm dừng
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleResumePomodoro}
+                          disabled={isSubActionLoading}
+                          className={`col-span-2 flex items-center justify-center gap-1.5 rounded-xl border py-3 text-xs font-bold shadow-sm transition active:scale-95 disabled:opacity-50 ${
+                            pomodoroPhase !== "FOCUS"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                              : "border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100"
+                          }`}
+                        >
+                          {isSubActionLoading
+                            ? <LoaderCircle size={14} className="animate-spin" />
+                            : <Play size={14} className="stroke-[2.5]" />}
+                          {" "}Bắt đầu
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleSkipPhase}
+                        disabled={isSubActionLoading}
+                        className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 py-3 text-xs font-bold text-slate-500 shadow-sm transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
+                        title="Bỏ qua phase — thời gian tập trung bị bỏ qua sẽ không được tính vào tiến độ"
+                      >
+                        <SkipForward size={14} /> Bỏ qua
+                      </button>
+                    </div>
+                  )}
+                  {!showStartCycleCta && !isPomodoroSyncLocked && (
+                    <p className="text-center text-[10px] font-semibold leading-4 text-slate-400">
+                      Bỏ qua phase tập trung sẽ không được tính vào thời gian học.
+                    </p>
+                  )}
                 </div>
               )}
 
