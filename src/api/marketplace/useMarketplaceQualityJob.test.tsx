@@ -19,6 +19,7 @@ const queuedJob: MarketplaceQualityJob = {
   currentSnapshot: true,
   retryCount: 0,
   maxRetries: 2,
+  errorCode: null,
   startedAt: null,
   completedAt: null,
   createdAt: "2026-07-19T00:00:00Z",

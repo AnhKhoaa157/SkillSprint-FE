@@ -11,6 +11,7 @@ const job: MarketplaceQualityJob = {
   currentSnapshot: true,
   retryCount: 0,
   maxRetries: 2,
+  errorCode: null,
   startedAt: "2026-07-19T00:00:01Z",
   completedAt: "2026-07-19T00:00:02Z",
   createdAt: "2026-07-19T00:00:00Z",
@@ -40,6 +41,14 @@ describe("CreatorQualityPanel", () => {
     expect(screen.getByText("Kiểm định chưa tạo được báo cáo lỗi")).toBeInTheDocument();
     expect(screen.getByText(/Không có lỗi nội dung cụ thể để bạn sửa/)).toBeInTheDocument();
     expect(screen.queryByText("Cần xử lý trước khi gửi duyệt")).not.toBeInTheDocument();
+  });
+
+  it("shows a system error code instead of asking the Creator to fix content", () => {
+    render(<CreatorQualityPanel job={{ ...job, status: "ERROR", retryCount: 2, errorCode: "QUALITY_VALIDATION_ERROR", report: null }} loading={false} starting={false} active={false} error={null} onStart={vi.fn()} onRetry={vi.fn()} />);
+
+    expect(screen.getByText("Kiểm định gặp lỗi hệ thống")).toBeInTheDocument();
+    expect(screen.getByText("Mã lỗi: QUALITY_VALIDATION_ERROR")).toBeInTheDocument();
+    expect(screen.queryByText("Kiểm định chưa tạo được báo cáo lỗi")).not.toBeInTheDocument();
   });
 
   it("distinguishes a stale pass from a current pass", () => {

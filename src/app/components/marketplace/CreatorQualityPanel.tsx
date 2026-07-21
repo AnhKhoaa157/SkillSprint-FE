@@ -17,8 +17,9 @@ interface CreatorQualityPanelProps {
 export function CreatorQualityPanel({ job, loading, starting, active, error, onStart, onRetry }: CreatorQualityPanelProps) {
   const currentPass = isQualityReady(job?.status, job?.currentSnapshot);
   const issues = job?.report?.issues ?? [];
-  const needsContentRevision = !active && !currentPass && job?.currentSnapshot && issues.length > 0;
-  const lacksIssueDetails = !active && !currentPass && job?.currentSnapshot && issues.length === 0;
+  const systemError = job?.status === "ERROR";
+  const needsContentRevision = !systemError && !active && !currentPass && job?.currentSnapshot && issues.length > 0;
+  const lacksIssueDetails = !systemError && !active && !currentPass && job?.currentSnapshot && issues.length === 0;
   const snapshotChanged = !active && !currentPass && !job?.currentSnapshot;
 
   return (
@@ -80,6 +81,19 @@ export function CreatorQualityPanel({ job, loading, starting, active, error, onS
                   <div>
                     <p className="font-bold text-rose-950">Kiểm định chưa tạo được báo cáo lỗi</p>
                     <p className="mt-1 max-w-xl text-sm leading-5 text-rose-900">Không có lỗi nội dung cụ thể để bạn sửa. Hãy chạy lại kiểm định; nếu vẫn lặp lại, hãy thử lại sau hoặc liên hệ quản trị viên.</p>
+                  </div>
+                  <button type="button" onClick={onStart} disabled={starting} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-rose-300 bg-white px-3 text-sm font-black text-rose-800 transition hover:bg-rose-100/50 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${starting ? "animate-spin" : ""}`} />Chạy lại</button>
+                </div>
+              </div>
+            )}
+
+            {systemError && (
+              <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-bold text-rose-950">Kiểm định gặp lỗi hệ thống</p>
+                    <p className="mt-1 max-w-xl text-sm leading-5 text-rose-900">Hệ thống đã thử lại {job.retryCount}/{job.maxRetries} lần nhưng chưa thể xử lý snapshot. Bạn có thể chạy lại; nếu lỗi lặp lại, gửi mã bên dưới cho quản trị viên.</p>
+                    <p className="mt-2 font-mono text-xs font-bold text-rose-800">Mã lỗi: {job.errorCode ?? "QUALITY_VALIDATION_ERROR"}</p>
                   </div>
                   <button type="button" onClick={onStart} disabled={starting} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-rose-300 bg-white px-3 text-sm font-black text-rose-800 transition hover:bg-rose-100/50 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${starting ? "animate-spin" : ""}`} />Chạy lại</button>
                 </div>
