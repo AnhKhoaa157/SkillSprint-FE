@@ -7,6 +7,7 @@ import {
   pausePomodoro,
   resumePomodoro,
   nextPomodoroPhase,
+  skipPomodoroPhase,
   finishPomodoro,
   finishStudySession,
 } from "./studySessionService";
@@ -80,13 +81,31 @@ describe("studySessionService", () => {
       expect(result).toEqual(mockDetail);
     });
 
-    it("getStudySessionState should fetch session state", async () => {
-      vi.mocked(requestJson).mockResolvedValueOnce({ data: mockSessionResponse, success: true, code: 200, message: "ok" });
+    it("getStudySessionState should unwrap the nested session from the detail envelope", async () => {
+      vi.mocked(requestJson).mockResolvedValueOnce({
+        data: { session: mockSessionResponse, task: {}, actions: {} },
+        success: true,
+        code: 200,
+        message: "ok",
+      });
 
       const result = await getStudySessionState(mockSessionId);
 
       expect(requestJson).toHaveBeenCalledWith(`/api/study-sessions/${mockSessionId}`, { method: "GET" });
       expect(result).toEqual(mockSessionResponse);
+    });
+
+    it("getStudySessionState returns null when the detail has no session", async () => {
+      vi.mocked(requestJson).mockResolvedValueOnce({
+        data: { session: null, task: {}, actions: {} },
+        success: true,
+        code: 200,
+        message: "ok",
+      });
+
+      const result = await getStudySessionState(mockSessionId);
+
+      expect(result).toBeNull();
     });
   });
 
@@ -107,6 +126,12 @@ describe("studySessionService", () => {
       vi.mocked(requestJson).mockResolvedValueOnce({ data: mockSessionResponse, success: true, code: 200, message: "ok" });
       await nextPomodoroPhase(mockSessionId);
       expect(requestJson).toHaveBeenCalledWith(`/api/study-sessions/${mockSessionId}/pomodoro/next-phase`, { method: "POST" });
+    });
+
+    it("skipPomodoroPhase should call the dedicated manual-skip endpoint", async () => {
+      vi.mocked(requestJson).mockResolvedValueOnce({ data: mockSessionResponse, success: true, code: 200, message: "ok" });
+      await skipPomodoroPhase(mockSessionId);
+      expect(requestJson).toHaveBeenCalledWith(`/api/study-sessions/${mockSessionId}/pomodoro/skip`, { method: "POST" });
     });
 
     it("finishPomodoro should finish pomodoro", async () => {

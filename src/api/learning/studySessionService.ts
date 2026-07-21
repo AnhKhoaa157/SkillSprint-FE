@@ -96,6 +96,9 @@ export type StudySessionActionsResponse = {
 };
 
 export type StudySessionDetailResponse = {
+  // The authoritative StudySession snapshot (status + latest Pomodoro). Nested by
+  // the backend; may be null when the task has no session yet.
+  session: StudySessionResponse | null;
   task: CalendarTaskResponse;
   roadmapStep: RoadmapStepStudyResponse;
   practice: PracticePromptResponse;
@@ -202,12 +205,15 @@ export async function getStudySession(sessionId: string): Promise<StudySessionDe
  * snapshot (remainingSeconds, currentPhase, phaseEndAt, status). Used to
  * re-hydrate the timer after an F5 refresh without resetting the BE session.
  */
-export async function getStudySessionState(sessionId: string): Promise<StudySessionResponse> {
-  const res = await requestJson<StudySessionResponse>(`/api/study-sessions/${sessionId}`, {
+export async function getStudySessionState(sessionId: string): Promise<StudySessionResponse | null> {
+  const res = await requestJson<StudySessionDetailResponse>(`/api/study-sessions/${sessionId}`, {
     method: "GET",
   });
 
-  return unwrapData<StudySessionResponse>(res);
+  // GET /api/study-sessions/{sessionId} returns the session detail envelope; the
+  // authoritative timer snapshot lives under `.session`.
+  const detail = unwrapData<StudySessionDetailResponse>(res);
+  return detail.session ?? null;
 }
 
 // ==================================================================
@@ -241,6 +247,22 @@ export async function resumePomodoro(sessionId: string): Promise<StudySessionRes
  */
 export async function nextPomodoroPhase(sessionId: string): Promise<StudySessionResponse> {
   const res = await requestJson<StudySessionResponse>(`/api/study-sessions/${sessionId}/pomodoro/next-phase`, {
+    method: "POST",
+  });
+
+  return unwrapData<StudySessionResponse>(res);
+}
+
+/**
+ * POST /api/study-sessions/{sessionId}/pomodoro/skip
+ *
+ * Manual "Bỏ qua" (skip) of the current phase. Distinct from `nextPomodoroPhase`
+ * (natural expiry): the backend credits only the focus minutes actually spent —
+ * measured server-side — so skipping a focus phase never awards the full cycle.
+ * Always trust the returned session/pomodoro snapshot as the source of truth.
+ */
+export async function skipPomodoroPhase(sessionId: string): Promise<StudySessionResponse> {
+  const res = await requestJson<StudySessionResponse>(`/api/study-sessions/${sessionId}/pomodoro/skip`, {
     method: "POST",
   });
 
@@ -285,6 +307,7 @@ export default {
   pausePomodoro,
   resumePomodoro,
   nextPomodoroPhase,
+  skipPomodoroPhase,
   finishPomodoro,
   finishStudySession,
 };
