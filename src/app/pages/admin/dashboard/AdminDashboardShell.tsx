@@ -86,21 +86,47 @@ export default function AdminDashboard() {
     if (requestedSection) setActiveNav(requestedSection);
   }, [requestedSection]);
 
-  const navItems = [
-    { id: "financials",    label: "Tài chính",           icon: TrendingUp  },
-    { id: "users",         label: "Quản lý người dùng",  icon: ShieldCheck },
-    { id: "leaderboard",   label: "Quản lý bảng điểm",   icon: BarChart3   },
-    { id: "payments",      label: "Quản lý thanh toán",  icon: DollarSign  },
-    { id: "wallet",        label: "Quản lý ví Coin",       icon: WalletCards },
-    { id: "subscriptions", label: "Gói dịch vụ",         icon: Layers      },
-    { id: "feedback",      label: "Feedback người dùng", icon: MessageSquare },
-    { id: "community",     label: "Kiểm duyệt cộng đồng", icon: ShieldAlert },
-    { id: "marketplace",   label: "Duyệt Quiz Pack", icon: Store },
-    { id: "marketplaceReports", label: "Báo cáo Marketplace", icon: ShieldAlert },
-    { id: "marketplaceOps", label: "Vận hành Marketplace", icon: Scale },
-    { id: "payouts",       label: "Yêu cầu rút tiền", icon: HandCoins },
-    { id: "communityRooms", label: "Phòng cộng đồng", icon: Megaphone },
-    { id: "system",        label: "Hệ thống & Cảnh báo", icon: ServerCog   },
+  const navGroups = [
+    {
+      label: "Tổng quan",
+      items: [{ id: "financials", label: "Dashboard", icon: TrendingUp }],
+    },
+    {
+      label: "Người dùng",
+      items: [
+        { id: "users", label: "Quản lý người dùng", icon: ShieldCheck },
+        { id: "subscriptions", label: "Gói dịch vụ", icon: Layers },
+        { id: "leaderboard", label: "Quản lý bảng điểm", icon: BarChart3 },
+      ],
+    },
+    {
+      label: "Tài chính",
+      items: [
+        { id: "payments", label: "Quản lý thanh toán", icon: DollarSign },
+        { id: "wallet", label: "Quản lý ví Coin", icon: WalletCards },
+        { id: "payouts", label: "Yêu cầu rút tiền", icon: HandCoins },
+      ],
+    },
+    {
+      label: "Marketplace",
+      items: [
+        { id: "marketplace", label: "Duyệt Quiz Pack", icon: Store },
+        { id: "marketplaceReports", label: "Báo cáo Marketplace", icon: ShieldAlert },
+        { id: "marketplaceOps", label: "Vận hành Marketplace", icon: Scale },
+      ],
+    },
+    {
+      label: "Cộng đồng & hỗ trợ",
+      items: [
+        { id: "community", label: "Kiểm duyệt cộng đồng", icon: ShieldAlert },
+        { id: "communityRooms", label: "Phòng cộng đồng", icon: Megaphone },
+        { id: "feedback", label: "Feedback người dùng", icon: MessageSquare },
+      ],
+    },
+    {
+      label: "Hệ thống",
+      items: [{ id: "system", label: "Hệ thống & Cảnh báo", icon: ServerCog }],
+    },
   ] as const;
 
   const handleLogout = () => {
@@ -266,36 +292,38 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Section label */}
-        <div className="px-5 pt-5 pb-2">
-          <p style={{ color: "#64748B", fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-            Điều hướng
-          </p>
-        </div>
-
         {/* Nav */}
-        <nav className="flex-1 px-3 space-y-0.5">
-          {navItems.map(item => {
-            const isActive = activeNav === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNavigation(item.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 text-left"
-                style={{
-                  background: isActive ? "rgba(255,107,0,0.07)" : "transparent",
-                  border: isActive ? "1px solid rgba(255,107,0,0.18)" : "1px solid transparent",
-                  color: isActive ? "#C2410C" : "#334155",
-                  fontWeight: isActive ? 700 : 400,
-                }}
-                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(148,163,184,0.10)"; e.currentTarget.style.color = "#0F172A"; } }}
-                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#334155"; } }}
-              >
-                <item.icon size={15} style={{ color: isActive ? "#FF6B00" : "#64748B", flexShrink: 0 }} />
-                <span className="min-w-0 flex-1 truncate whitespace-nowrap" title={item.label}>{item.label}</span>
-              </button>
-            );
-          })}
+        <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4">
+          {navGroups.map(group => (
+            <div key={group.label}>
+              <p className="px-3 pb-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                {group.label}
+              </p>
+              <div className="space-y-0.5">
+                {group.items.map(item => {
+                  const isActive = activeNav === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavigation(item.id)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 text-left"
+                      style={{
+                        background: isActive ? "rgba(255,107,0,0.07)" : "transparent",
+                        border: isActive ? "1px solid rgba(255,107,0,0.18)" : "1px solid transparent",
+                        color: isActive ? "#C2410C" : "#334155",
+                        fontWeight: isActive ? 700 : 400,
+                      }}
+                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(148,163,184,0.10)"; e.currentTarget.style.color = "#0F172A"; } }}
+                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#334155"; } }}
+                    >
+                      <item.icon size={15} style={{ color: isActive ? "#FF6B00" : "#64748B", flexShrink: 0 }} />
+                      <span className="min-w-0 flex-1 truncate whitespace-nowrap" title={item.label}>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Direct management link removed — moved to user dropdown */}
