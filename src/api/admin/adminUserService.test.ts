@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   getAdminUsers,
+  getAdminUserSummary,
   getAdminUser,
   updateUserStatus,
   updateUserRole,
@@ -41,10 +42,10 @@ describe("adminUserService", () => {
         json: async () => ({ success: true, data: mockData }),
       } as any);
 
-      const result = await getAdminUsers("test", 1, 20);
+      const result = await getAdminUsers("test", 1, 20, "LEARNER");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/admin/users?search=test&page=1&size=20"),
+        expect.stringContaining("/api/admin/users?search=test&role=LEARNER&page=1&size=20"),
         expect.objectContaining({
           headers: expect.objectContaining({ Authorization: "Bearer token" }),
         })
@@ -52,6 +53,21 @@ describe("adminUserService", () => {
       // getAdminUsers maps the items to content:
       expect(result.content[0].id).toBe("u1");
       expect(result.totalElements).toBe(21);
+    });
+
+    it("should fetch the global user summary", async () => {
+      const summary = { totalUsers: 108, activeUsers: 100, learnerUsers: 104, adminUsers: 4 };
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        status: 200,
+        ok: true,
+        text: async () => JSON.stringify({ success: true, data: summary }),
+      } as any);
+
+      await expect(getAdminUserSummary("test")).resolves.toEqual(summary);
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/admin/users/summary?search=test"),
+        expect.any(Object),
+      );
     });
 
     it("should trigger session expiry on 401", async () => {
