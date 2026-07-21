@@ -122,3 +122,22 @@ export function deriveTimerSnapshot(
     studySeconds,
   };
 }
+
+/**
+ * Server-authoritative studied minutes for gating quiz / task-completion / the
+ * "đã học" progress readout. Derived ONLY from the backend snapshot: credited
+ * whole {@code completedFocusMinutes} plus the seconds already spent in the
+ * current running FOCUS phase, measured against the server phase clock. It never
+ * reads the client's free-running visual counter, so a client tick, a stale
+ * hydration, or a pause race can never inflate it.
+ *
+ * A single active FOCUS at 24:56 remaining with no prior completed focus minutes
+ * yields 0 — it cannot display or unlock 25 minutes. Only a real prior cycle
+ * (completedFocusMinutes) can. `now` is injectable for deterministic tests.
+ */
+export function authoritativeStudiedMinutes(
+  session: StudySessionResponse | null | undefined,
+  now: number = Date.now(),
+): number {
+  return Math.floor(deriveTimerSnapshot(session, now).studySeconds / 60);
+}

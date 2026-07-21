@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import studySessionService from "../../../api/learning/studySessionService";
 import type { StudySessionDetailResponse, StudySessionResponse } from "../../../api/learning/studySessionService";
-import { deriveTimerSnapshot, shouldClearSessionPointer } from "./pomodoroHydration";
+import { authoritativeStudiedMinutes, deriveTimerSnapshot, shouldClearSessionPointer } from "./pomodoroHydration";
 import { resolveReconciledSession } from "./pomodoroReconcile";
 import { useNaturalExpirySync } from "./useNaturalExpirySync";
 import materialService, { type UploadedMaterialResponse } from "../../../api/learning/materialService";
@@ -182,7 +182,6 @@ export default function CoursePlayer() {
     timeLeft,
     isTimerRunning,
     pomodoroPhase,
-    actualStudySeconds,
     activeStepId,
     naturalExpirySignal,
     startTimer,
@@ -291,7 +290,14 @@ export default function CoursePlayer() {
 
   const taskDuration = task?.durationMinutes ?? 0;
   const minimumRequiredMinutes = useMemo(() => computeMinimumRequiredMinutes(taskDuration), [taskDuration]);
-  const elapsedStudyMinutes = Math.floor(actualStudySeconds / 60);
+  // Quiz / task-completion gates and the "đã học" readout are SERVER-authoritative:
+  // they derive from the backend Pomodoro snapshot (completedFocusMinutes + seconds
+  // spent in the current FOCUS phase against the server clock), never from the
+  // client's free-running visual counter. Recomputed each render — CoursePlayer
+  // re-renders every countdown second — so the live clock stays fresh while a phase
+  // runs, without ever letting a client tick or pause race inflate eligibility.
+  // The visual live timer (timeLeft / formattedStudyTime) stays separate.
+  const elapsedStudyMinutes = authoritativeStudiedMinutes(detail?.session ?? null);
   const hasMetMinimum = elapsedStudyMinutes >= minimumRequiredMinutes;
 
   useEffect(() => {
