@@ -26,6 +26,7 @@ export interface MarketplaceQualityJob {
   currentSnapshot: boolean;
   retryCount: number;
   maxRetries: number;
+  errorCode: string | null;
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;

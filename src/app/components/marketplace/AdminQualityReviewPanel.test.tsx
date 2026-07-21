@@ -12,6 +12,7 @@ const failedJob: MarketplaceQualityJob = {
   currentSnapshot: true,
   retryCount: 0,
   maxRetries: 2,
+  errorCode: null,
   startedAt: "2026-07-19T00:00:00Z",
   completedAt: "2026-07-19T00:01:00Z",
   createdAt: "2026-07-19T00:00:00Z",

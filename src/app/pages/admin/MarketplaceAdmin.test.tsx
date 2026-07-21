@@ -74,6 +74,7 @@ describe("MarketplaceAdmin moderation detail", () => {
         currentSnapshot: true,
         retryCount: 0,
         maxRetries: 2,
+        errorCode: null,
         startedAt: null,
         completedAt: "2026-07-19T00:01:00Z",
         createdAt: "2026-07-19T00:00:00Z",
