@@ -34,6 +34,14 @@ describe("CreatorQualityPanel", () => {
     expect(onStart).toHaveBeenCalledOnce();
   });
 
+  it("does not tell the Creator to fix hidden issues when the job has no report", () => {
+    render(<CreatorQualityPanel job={{ ...job, report: null }} loading={false} starting={false} active={false} error={null} onStart={vi.fn()} onRetry={vi.fn()} />);
+
+    expect(screen.getByText("Kiểm định chưa tạo được báo cáo lỗi")).toBeInTheDocument();
+    expect(screen.getByText(/Không có lỗi nội dung cụ thể để bạn sửa/)).toBeInTheDocument();
+    expect(screen.queryByText("Cần xử lý trước khi gửi duyệt")).not.toBeInTheDocument();
+  });
+
   it("distinguishes a stale pass from a current pass", () => {
     const { rerender } = render(<QualityStatusBadge status="PASSED" currentSnapshot={false} />);
     expect(screen.getByText("Cần kiểm định lại")).toBeInTheDocument();
