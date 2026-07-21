@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { deriveTimerSnapshot, isExpiredRunningPhase, shouldClearSessionPointer } from "./pomodoroHydration";
+import {
+  authoritativeStudiedMinutes,
+  deriveTimerSnapshot,
+  isExpiredRunningPhase,
+  shouldClearSessionPointer,
+} from "./pomodoroHydration";
 import type {
   PomodoroTimerResponse,
   StudySessionResponse,
@@ -182,6 +187,86 @@ describe("deriveTimerSnapshot", () => {
     expect(snap.isRunning).toBe(false);
     expect(snap.hasRunnableTimer).toBe(false);
     expect(snap.studySeconds).toBe(50 * 60); // accumulated study preserved
+  });
+});
+
+describe("authoritativeStudiedMinutes (server-authoritative quiz/completion gate)", () => {
+  // The 24:56 screenshot, proven as Case B: a single active FOCUS phase, 4 seconds
+  // in (24:56 remaining), with NO prior completed focus minutes. The gate must read
+  // ~0 minutes and cannot satisfy a 25-minute (or even the 20-minute) requirement —
+  // regardless of whatever the client's visual counter shows.
+  it("credits ~0 minutes for a fresh FOCUS at 24:56 with no completed cycles, failing the gate", () => {
+    const phaseEndAt = new Date(NOW + 1496 * 1000).toISOString(); // 24:56 remaining
+    const session = makeSession({
+      pomodoro: makePomodoro({
+        status: "IN_PROGRESS",
+        currentPhase: "FOCUS",
+        completedFocusMinutes: 0,
+        phaseEndAt,
+      }),
+    });
+
+    const minutes = authoritativeStudiedMinutes(session, NOW);
+
+    expect(minutes).toBe(0); // 4 seconds of study — never 25
+    expect(minutes >= 25).toBe(false);
+    expect(minutes >= 20).toBe(false); // cannot unlock the minimum gate either
+  });
+
+  // Case A: one genuinely completed 25-minute focus cycle already credited, plus a
+  // brand-new FOCUS phase 4 seconds in. The gate must reflect the real 25 completed
+  // minutes and only ~4 seconds of the current cycle.
+  it("credits exactly the prior completed cycle plus current-cycle seconds", () => {
+    const phaseEndAt = new Date(NOW + 1496 * 1000).toISOString(); // new FOCUS, 24:56 left
+    const session = makeSession({
+      pomodoro: makePomodoro({
+        status: "IN_PROGRESS",
+        currentPhase: "FOCUS",
+        currentCycle: 2,
+        completedFocusMinutes: 25,
+        phaseEndAt,
+      }),
+    });
+
+    const snap = deriveTimerSnapshot(session, NOW);
+    expect(snap.studySeconds).toBe(25 * 60 + 4); // 25 completed minutes + 4 seconds
+
+    const minutes = authoritativeStudiedMinutes(session, NOW);
+    expect(minutes).toBe(25);
+    expect(minutes >= 20).toBe(true); // a real completed cycle DOES satisfy the gate
+  });
+
+  it("does not unlock the gate from a paused zero-second legacy snapshot", () => {
+    const session = makeSession({
+      pomodoro: makePomodoro({
+        status: "PAUSED",
+        currentPhase: "FOCUS",
+        completedFocusMinutes: 0,
+        remainingSeconds: 0,
+      }),
+    });
+
+    expect(authoritativeStudiedMinutes(session, NOW)).toBe(0);
+  });
+
+  it("counts credited focus minutes on a paused mid-focus snapshot without client input", () => {
+    // Paused with 5 minutes left of a 25-minute focus → 20 authoritative minutes,
+    // enough to satisfy a 20-minute minimum with no client counter involved.
+    const session = makeSession({
+      pomodoro: makePomodoro({
+        status: "PAUSED",
+        currentPhase: "FOCUS",
+        completedFocusMinutes: 0,
+        remainingSeconds: 5 * 60,
+      }),
+    });
+
+    expect(authoritativeStudiedMinutes(session, NOW)).toBe(20);
+  });
+
+  it("returns 0 when there is no session or Pomodoro (no client fallback)", () => {
+    expect(authoritativeStudiedMinutes(null, NOW)).toBe(0);
+    expect(authoritativeStudiedMinutes(makeSession({ pomodoro: null }), NOW)).toBe(0);
   });
 });
 
