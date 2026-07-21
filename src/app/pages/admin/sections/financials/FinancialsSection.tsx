@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Activity, ArrowUpRight, DollarSign, Repeat, TrendingUp } from "lucide-react";
+import { Activity, ArrowUpRight, Coins, DollarSign, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { getAdminDashboardAnalytics, type AdminDashboardResponse } from "../../../../../api/admin/adminDashboardService";
 
@@ -56,6 +56,8 @@ const formatCurrency = (value: number) => {
   return `${value} ₫`;
 };
 
+const formatCoin = (value: number) => `${value.toLocaleString("vi-VN")} Coin`;
+
 // Hàm xử lý chuỗi ngày tháng thông minh từ Backend gửi ra trục X
 const formatChartDate = (dateStr: string) => {
   if (!dateStr) return "";
@@ -81,6 +83,53 @@ function CustomTooltip({ active, payload, label }: any) {
         </p>
       ))}
     </div>
+  );
+}
+
+type FinancialChartDatum = {
+  date: string;
+  amount: number;
+};
+
+function FinancialAreaChart({
+  title,
+  description,
+  data,
+  color,
+}: {
+  title: string;
+  description: string;
+  data: FinancialChartDatum[];
+  color: string;
+}) {
+  const tickFormatter = (value: number) => {
+    return value >= 1_000_000 ? `${(value / 1_000_000).toFixed(1)}M` : `${Math.round(value / 1_000)}K`;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl p-6"
+      style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
+    >
+      <div className="mb-5">
+        <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>{title}</p>
+        <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>{description}</p>
+      </div>
+      <div style={{ height: "220px" }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 5, right: 10, left: -5, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+            <XAxis dataKey="date" stroke="#E5E7EB" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
+            <YAxis stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={tickFormatter} />
+            <Tooltip content={<CustomTooltip />} />
+            <Area type="monotone" dataKey="amount" name={title}
+              stroke={color} strokeWidth={2.5} fill={color} fillOpacity={0.12} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </motion.div>
   );
 }
 
@@ -162,31 +211,31 @@ export function FinancialsView() {
   /* ---------- Mapping dữ liệu thẻ KPI ---------- */
   const kpiCards = dashData ? [
     {
-      id: "total-revenue",
-      label: "Tổng doanh thu",
+      id: "subscription-revenue",
+      label: "Doanh thu gói dịch vụ",
       value: formatCurrency(dashData.overview.totalRevenue),
       sub: `Hôm nay: ${formatCurrency(dashData.overview.todayRevenue)}`,
-      delta: `${dashData.overview.paidUsers} trả phí`,
+      context: "Không gồm nạp Coin",
       color: "#FF6B00",
       icon: DollarSign,
-      sparkline: dashData.charts.revenueByDay.slice(-9).map(d => d.revenue ?? 0),
+      sparkline: dashData.charts.revenueByDay.slice(-9).map(d => d.amount ?? 0),
     },
     {
-      id: "month-revenue",
-      label: "Doanh thu tháng này",
-      value: formatCurrency(dashData.payments.revenueThisMonth),
-      sub: `${dashData.payments.paid}/${dashData.payments.total} giao dịch`,
-      delta: `+${dashData.payments.paid} OK`,
-      color: "#FB923C",
-      icon: TrendingUp,
-      sparkline: dashData.charts.revenueByDay.slice(-9).map(d => (d.revenue ?? 0) * 0.85),
+      id: "coin-top-up",
+      label: "Tiền nạp Coin",
+      value: formatCurrency(dashData.payments.coinTopUpTotal ?? 0),
+      sub: `Tháng này: ${formatCurrency(dashData.payments.coinTopUpThisMonth ?? 0)}`,
+      context: "Tiền giữ hộ ví user",
+      color: "#2563EB",
+      icon: Coins,
+      sparkline: (dashData.charts.coinTopUpByDay ?? []).slice(-9).map(d => d.amount ?? 0),
     },
     {
       id: "active-subs",
       label: "Subscription hoạt động",
       value: dashData.overview.activeSubscriptions.toLocaleString(),
       sub: `Premium: ${dashData.subscriptions.premium} · Builder: ${dashData.subscriptions.skillBuilder}`,
-      delta: `Free: ${dashData.subscriptions.free}`,
+      context: `Free: ${dashData.subscriptions.free}`,
       color: "#F97316",
       icon: Repeat,
       sparkline: [
@@ -197,22 +246,36 @@ export function FinancialsView() {
       ],
     },
     {
-      id: "paid-users",
-      label: "Người dùng trả phí",
-      value: dashData.overview.paidUsers.toLocaleString(),
-      sub: `Tổng tài khoản: ${dashData.overview.totalUsers.toLocaleString()}`,
-      delta: `${dashData.overview.activeUsers} đang hoạt động`,
-      color: "#EA580C",
+      id: "marketplace-commission",
+      label: "Hoa hồng Marketplace",
+      value: formatCoin((dashData.charts.marketplaceCommissionByDay ?? []).reduce((sum, point) => sum + point.netCommissionCoin, 0)),
+      sub: "Số ròng trong khoảng dữ liệu đang xem",
+      context: "Đã trừ phần hoàn tiền",
+      color: "#059669",
       icon: Activity,
-      sparkline: dashData.charts.newUsersByDay.slice(-9).map(d => d.count ?? 0),
+      sparkline: (dashData.charts.marketplaceCommissionByDay ?? []).slice(-9).map(d => d.netCommissionCoin ?? 0),
     },
   ] : [];
 
   // 🟢 Đã sửa: Map trục X an toàn bằng hàm formatChartDate giải quyết lỗi phẳng 0K
   const revenueChartData = (dashData?.charts.revenueByDay ?? []).map(d => ({
     date: formatChartDate(d.date),
-    revenue: d.revenue ?? 0,
+    amount: d.amount ?? 0,
   }));
+
+  const coinTopUpChartData = (dashData?.charts.coinTopUpByDay ?? []).map(d => ({
+    date: formatChartDate(d.date),
+    amount: d.amount ?? 0,
+  }));
+
+  const marketplaceCommission = (dashData?.charts.marketplaceCommissionByDay ?? []).reduce(
+    (total, point) => ({
+      gross: total.gross + point.grossCommissionCoin,
+      refunded: total.refunded + point.refundedCommissionCoin,
+      net: total.net + point.netCommissionCoin,
+    }),
+    { gross: 0, refunded: 0, net: 0 },
+  );
 
   const usersChartData = (dashData?.charts.newUsersByDay ?? []).map(d => ({
     date: formatChartDate(d.date),
@@ -221,28 +284,28 @@ export function FinancialsView() {
 
   const summaryStats = dashData ? [
     {
-      label: "Tổng doanh thu",
+      label: "Doanh thu gói dịch vụ",
       value: formatCurrency(dashData.payments.revenueTotal),
       color: "#22c55e",
       sub: `Hôm nay: ${formatCurrency(dashData.payments.revenueToday)}`,
     },
     {
-      label: "Người dùng hoạt động",
-      value: dashData.overview.activeUsers.toLocaleString(),
-      color: "#06b6d4",
-      sub: `Tổng: ${dashData.overview.totalUsers.toLocaleString()} tài khoản`,
+      label: "Tiền nạp Coin tháng này",
+      value: formatCurrency(dashData.payments.coinTopUpThisMonth ?? 0),
+      color: "#2563EB",
+      sub: "Không tính là doanh thu gói",
     },
     {
-      label: "Thanh toán đang chờ",
-      value: String(dashData.overview.pendingPayments),
-      color: dashData.overview.pendingPayments > 0 ? "#f59e0b" : "#FF6B00",
-      sub: `Thất bại: ${dashData.overview.failedPayments}`,
+      label: "Hoa hồng Marketplace",
+      value: formatCoin(marketplaceCommission.net),
+      color: "#059669",
+      sub: `Gross: ${formatCoin(marketplaceCommission.gross)} · Hoàn: ${formatCoin(marketplaceCommission.refunded)}`,
     },
     {
-      label: "Tháng này",
-      value: formatCurrency(dashData.payments.revenueThisMonth),
+      label: "Giao dịch thanh toán thành công",
+      value: String(dashData.payments.paid),
       color: "#d97706",
-      sub: `${dashData.payments.paid} giao dịch thành công`,
+      sub: "Bao gồm gói dịch vụ và nạp Coin",
     },
   ] : [];
 
@@ -266,9 +329,9 @@ export function FinancialsView() {
                   style={{ background: `${kpi.color}10`, border: `1px solid ${kpi.color}22` }}>
                   <Icon size={14} style={{ color: kpi.color }} />
                 </div>
-                <div className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
-                  style={{ background: "rgba(34,197,94,0.08)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.2)", fontWeight: 700 }}>
-                  <ArrowUpRight size={10} /> {kpi.delta}
+                <div className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: "#F8FAFC", color: "#64748B", border: "1px solid #E2E8F0", fontWeight: 700 }}>
+                  {kpi.context}
                 </div>
               </div>
               <p className="relative z-10 mb-0.5"
@@ -288,29 +351,19 @@ export function FinancialsView() {
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
         <div className="xl:col-span-3 space-y-5">
 
-          {/* 🟢 BIỂU ĐỒ DOANH THU THỰC TẾ ĐÃ ĐƯỢC FIX LỖI 0K */}
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-            className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-            <div className="flex items-start justify-between mb-5">
-              <div>
-                <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.12em" }}>Doanh thu theo ngày</p>
-                <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827" }}>Biểu đồ doanh thu thực tế</p>
-              </div>
-            </div>
-            <div style={{ height: "220px" }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueChartData} margin={{ top: 5, right: 10, left: -5, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                  <XAxis dataKey="date" stroke="#E5E7EB" tick={{ fill: "#9CA3AF", fontSize: 10 }} />
-                  {/* Format lại cột mốc tiền tệ cho mượt mắt */}
-                  <YAxis stroke="#F3F4F6" tick={{ fill: "#9CA3AF", fontSize: 10 }} tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : `${(v / 1000).toFixed(0)}K`} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="revenue" name="Doanh thu"
-                    stroke={ACCENT} strokeWidth={2.5} fill={ACCENT} fillOpacity={0.12} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
+          <FinancialAreaChart
+            title="Doanh thu gói dịch vụ"
+            description="Chỉ ghi nhận thanh toán subscription thành công"
+            data={revenueChartData}
+            color={ACCENT}
+          />
+
+          <FinancialAreaChart
+            title="Tiền nạp Coin"
+            description="Dòng tiền người dùng nạp vào ví Coin — tách riêng khỏi doanh thu gói"
+            data={coinTopUpChartData}
+            color="#2563EB"
+          />
 
           {/* Người dùng mới theo ngày */}
           {usersChartData.length > 0 && (
@@ -355,6 +408,30 @@ export function FinancialsView() {
               </div>
             ))}
           </motion.div>
+
+          {dashData && (
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.28 }}
+              className="rounded-xl p-5"
+              style={{ background: "#F8FAFC", border: "1px solid #DCE7F5" }}
+            >
+              <p style={{ fontSize: "11px", color: "#2563EB", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
+                Sổ đối soát Marketplace
+              </p>
+              <p style={{ fontWeight: 800, fontSize: "1.35rem", color: "#065F46", letterSpacing: "-0.04em" }}>
+                {formatCoin(marketplaceCommission.net)}
+              </p>
+              <div className="mt-3 space-y-1.5" style={{ fontSize: "11px", color: "#64748B" }}>
+                <p className="flex justify-between gap-4"><span>Hoa hồng ghi nhận</span><strong style={{ color: "#0F766E" }}>{formatCoin(marketplaceCommission.gross)}</strong></p>
+                <p className="flex justify-between gap-4"><span>Điều chỉnh hoàn tiền</span><strong style={{ color: "#E11D48" }}>−{formatCoin(marketplaceCommission.refunded)}</strong></p>
+              </div>
+              <p className="mt-3" style={{ fontSize: "10px", lineHeight: 1.5, color: "#94A3B8" }}>
+                Đây là sổ đối soát commission từ giao dịch Marketplace, không phải số dư tài khoản ngân hàng hay “ví hệ thống” có thể chi trả.
+              </p>
+            </motion.div>
+          )}
 
           {/* Phân bổ các gói Subs */}
           {dashData && (
