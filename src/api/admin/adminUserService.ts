@@ -55,6 +55,11 @@ export type AdminUserDetail = AdminUserSummary & {
   lastLoginAt?: string | null;
 };
 
+export type AdminUserPage = {
+  content: AdminUserDetail[];
+  totalElements: number;
+};
+
 export type SubscriptionPlanType = "FREE" | "SKILL_BUILDER" | "PREMIUM" | "ADMIN_DEFAULT";
 
 export type UpdateUserSubscriptionRequest = {
@@ -118,7 +123,7 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<ApiRespon
   }
 }
 
-export async function getAdminUsers(search?: string, page = 0, size = 10) {
+export async function getAdminUsers(search?: string, page = 0, size = 10): Promise<AdminUserPage> {
   const q = new URLSearchParams();
   if (search) q.set("search", search);
   q.set("page", String(page));
