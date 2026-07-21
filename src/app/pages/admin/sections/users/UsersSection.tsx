@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState, useRef } from "react";
 import { motion } from "motion/react";
 import { Search, Users, ShieldCheck, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
-import adminUserService, { type AdminUserSummary, type AdminUserDetail } from "../../../../../api/admin/adminUserService";
+import adminUserService, {
+  type AdminUserDetail,
+  type AdminUserRole,
+  type AdminUserStats,
+  type AdminUserSummary,
+} from "../../../../../api/admin/adminUserService";
 import { PlanTypeBadge, PlanBadgeStyles } from "../../../../../components/admin/PlanTypeBadge";
 import type { ServicePlanType } from "../../../../../api/admin/adminSubscriptionPlansService";
 import { getSubscriptionPlans } from "../../../../../api/admin/adminSubscriptionPlansService";
@@ -12,7 +17,6 @@ import {
   SUB_TEXTS,
   resolveLivePlan,
   normalizePlanType,
-  normalizeStatus,
 } from "../../../../../utils/adminStatusHelpers";
 
 type AvatarCapableUser = AdminUserSummary & {
@@ -20,6 +24,12 @@ type AvatarCapableUser = AdminUserSummary & {
   avatar?: string | null;
   userAvatar?: string | null;
 };
+
+type RoleFilter = AdminUserRole | "";
+
+function getRoleFilter(value: string | null): RoleFilter {
+  return value === "LEARNER" || value === "ADMIN" ? value : "";
+}
 
 function getUserInitial(user: AdminUserSummary) {
   return (user.fullName || user.email || "?").charAt(0).toUpperCase();
@@ -146,7 +156,8 @@ export default function AdminUsers() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState(searchParams.get("role") || "");
+  const [selectedRole, setSelectedRole] = useState<RoleFilter>(() => getRoleFilter(searchParams.get("role")));
+  const [userSummary, setUserSummary] = useState<AdminUserStats | null>(null);
   const navigate = useNavigate();
 
   const isFirstRender = useRef(true);
@@ -154,41 +165,43 @@ export default function AdminUsers() {
 
   // Derived state for filtering and stats
   const stats = {
-    total: totalUsers,
-    LEARNER: allUsers.filter(u => u.role === "LEARNER").length,
-    ADMIN: allUsers.filter(u => u.role === "ADMIN").length,
+    total: userSummary?.totalUsers ?? totalUsers,
+    LEARNER: userSummary?.learnerUsers ?? 0,
+    ADMIN: userSummary?.adminUsers ?? 0,
+    active: userSummary?.activeUsers ?? 0,
   };
-
-  const filteredUsers = allUsers.filter(u => {
-    const matchesSearch = !search ||
-      (u.fullName || "").toLowerCase().includes(search.toLowerCase()) ||
-      (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
-      (u.id || "").toLowerCase().includes(search.toLowerCase());
-    const matchesRole = !selectedRole || u.role === selectedRole;
-    return matchesSearch && matchesRole;
-  });
 
   const total = totalUsers;
   const totalPages = Math.max(1, Math.ceil(total / size));
-  const displayedUsers = filteredUsers;
+  const displayedUsers = allUsers;
+  const roleTabs: Array<{ id: RoleFilter; label: string; count: number }> = [
+    { id: "", label: "Tất cả", count: stats.total },
+    { id: "LEARNER", label: "Learner", count: stats.LEARNER },
+    { id: "ADMIN", label: "Admin", count: stats.ADMIN },
+  ];
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       // Cơ chế cách ly lỗi cô lập giúp bảo toàn dữ liệu bảng người dùng khi endpoint gói dịch vụ bị nghẽn 
-      const [usersRes, plansRes] = await Promise.all([
-        adminUserService.getAdminUsers(search || undefined, page, size).catch(err => {
+      const [usersRes, plansRes, summaryRes] = await Promise.all([
+        adminUserService.getAdminUsers(search || undefined, page, size, selectedRole || undefined).catch(err => {
           console.error("Failed to fetch admin users:", err);
           return { content: [], totalElements: 0 };
         }),
         getSubscriptionPlans().catch(err => {
           console.error("Failed to fetch subscription plans:", err);
           return [];
-        })
+        }),
+        adminUserService.getAdminUserSummary(search || undefined).catch(err => {
+          console.error("Failed to fetch admin user summary:", err);
+          return null;
+        }),
       ]);
 
       setAllUsers(usersRes.content || []);
       setTotalUsers(usersRes.totalElements || 0);
+      setUserSummary(summaryRes);
 
       const extractedPlans = Array.isArray((plansRes as any)?.data)
         ? (plansRes as any).data
@@ -203,7 +216,7 @@ export default function AdminUsers() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, size]);
+  }, [page, search, selectedRole, size]);
 
   // Master useEffect for Debounce Search Pipeline
   useEffect(() => {
@@ -293,7 +306,7 @@ export default function AdminUsers() {
         {[
           { label: "Tổng tài khoản", value: stats.total.toLocaleString(), icon: Users, color: "#FF6B00", bg: "rgba(255,107,0,0.06)" },
           { label: "Đang hiển thị", value: String(displayedUsers.length), icon: ShieldCheck, color: "#EA580C", bg: "rgba(234,88,12,0.06)" },
-          { label: "Tài khoản hoạt động", value: filteredUsers.filter(u => normalizeStatus(u.status) === "ACTIVE").length.toString(), icon: RefreshCw, color: "#22c55e", bg: "rgba(34,197,94,0.06)" },
+          { label: "Tài khoản hoạt động", value: stats.active.toLocaleString(), icon: RefreshCw, color: "#22c55e", bg: "rgba(34,197,94,0.06)" },
         ].map((c, i) => (
           <motion.div key={c.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
             className="rounded-2xl p-4 flex items-center gap-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
@@ -362,11 +375,7 @@ export default function AdminUsers() {
 
         {/* Role Filter Tabs */}
         <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid #F1F5F9" }}>
-          {[
-            { id: "", label: "Tất cả", count: stats.total },
-            { id: "LEARNER", label: "Learner", count: stats.LEARNER },
-            { id: "ADMIN", label: "Admin", count: stats.ADMIN },
-          ].map((tab) => {
+          {roleTabs.map((tab) => {
             const isActive = selectedRole === tab.id;
             return (
               <button
@@ -415,7 +424,7 @@ export default function AdminUsers() {
                   ))}
                 </tr>
               ))}
-              {!loading && filteredUsers.length === 0 && (
+              {!loading && displayedUsers.length === 0 && (
                 <tr>
                   <td colSpan={6} style={{ padding: "32px 0", textAlign: "center", color: "#94A3B8", fontSize: "0.85rem" }}>
                     Không có người dùng phù hợp.

@@ -60,6 +60,15 @@ export type AdminUserPage = {
   totalElements: number;
 };
 
+export type AdminUserRole = "LEARNER" | "ADMIN";
+
+export type AdminUserStats = {
+  totalUsers: number;
+  activeUsers: number;
+  learnerUsers: number;
+  adminUsers: number;
+};
+
 export type SubscriptionPlanType = "FREE" | "SKILL_BUILDER" | "PREMIUM" | "ADMIN_DEFAULT";
 
 export type UpdateUserSubscriptionRequest = {
@@ -123,9 +132,15 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<ApiRespon
   }
 }
 
-export async function getAdminUsers(search?: string, page = 0, size = 10): Promise<AdminUserPage> {
+export async function getAdminUsers(
+  search?: string,
+  page = 0,
+  size = 10,
+  role?: AdminUserRole,
+): Promise<AdminUserPage> {
   const q = new URLSearchParams();
   if (search) q.set("search", search);
+  if (role) q.set("role", role);
   q.set("page", String(page));
   q.set("size", String(size));
   q.set("_t", String(Date.now())); // Bypass browser/proxy HTTP caches
@@ -141,6 +156,15 @@ export async function getAdminUsers(search?: string, page = 0, size = 10): Promi
     })),
     totalElements: resp.data.totalItems ?? resp.data.totalElements ?? 0,
   };
+}
+
+export async function getAdminUserSummary(search?: string): Promise<AdminUserStats> {
+  const q = new URLSearchParams();
+  if (search) q.set("search", search);
+  q.set("_t", String(Date.now()));
+  const resp = await authFetch<AdminUserStats>(`/api/admin/users/summary?${q.toString()}`);
+  if (!resp.data) throw new Error(resp.message || "Empty response");
+  return resp.data;
 }
 
 export async function getAdminUser(userId: string) {
@@ -197,4 +221,4 @@ export async function updateUserSubscription(
   return resp.data;
 }
 
-export default { getAdminUsers, getAdminUser, updateUserStatus, updateUserRole, updateUserSubscription };
+export default { getAdminUsers, getAdminUserSummary, getAdminUser, updateUserStatus, updateUserRole, updateUserSubscription };
