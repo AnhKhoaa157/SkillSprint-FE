@@ -607,7 +607,6 @@ export default function CoursePlayer() {
       // Auto-complete active study session on backend if running
       if (activeSessionId) {
         try {
-          await studySessionService.finishPomodoro(activeSessionId);
           await studySessionService.finishStudySession(activeSessionId, {
             notes: "Hoàn thành phiên học qua Quiz",
             focusScore: 5,
@@ -999,7 +998,6 @@ export default function CoursePlayer() {
     setError(null);
 
     try {
-      await studySessionService.finishPomodoro(activeSessionId);
       const finishedSession = await studySessionService.finishStudySession(activeSessionId, {
         notes: reviewNotes.trim() || "Hoàn thành phiên học thực tế",
         focusScore: reviewFocusScore,
