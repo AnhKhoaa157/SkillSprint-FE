@@ -12,6 +12,7 @@ import {
 import { Activity, ArrowUpRight, Coins, DollarSign, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { getAdminDashboardAnalytics, type AdminDashboardResponse } from "../../../../../api/admin/adminDashboardService";
+import { PlatformTreasurySection } from "./PlatformTreasurySection";
 
 const ACCENT = "#FF6B00";
 
@@ -46,17 +47,17 @@ export function Sparkline({ data, color, width = 80, height = 28 }: { data: numb
 /* ─────────────────────────────────────────────────────────
    Hàm Helper format tiền tệ chuẩn Việt Nam
 ───────────────────────────────────────────────────────── */
-const formatCurrency = (value: number) => {
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)}M ₫`;
-  }
-  if (value >= 1_000) {
-    return `${(value / 1_000).toFixed(0)}K ₫`;
-  }
-  return `${value} ₫`;
+const formatCompactNumber = (value: number) => {
+  const absoluteValue = Math.abs(value);
+  if (absoluteValue < 1_000) return value.toLocaleString("vi-VN");
+  const divisor = absoluteValue >= 1_000_000 ? 1_000_000 : 1_000;
+  const suffix = divisor === 1_000_000 ? "M" : "K";
+  const compact = value / divisor;
+  return `${compact.toLocaleString("en-US", { maximumFractionDigits: 1 })}${suffix}`;
 };
 
-const formatCoin = (value: number) => `${value.toLocaleString("vi-VN")} Coin`;
+const formatCurrency = (value: number) => `${formatCompactNumber(value)} ₫`;
+const formatCoin = (value: number) => `${formatCompactNumber(value)} Coin`;
 
 // Hàm xử lý chuỗi ngày tháng thông minh từ Backend gửi ra trục X
 const formatChartDate = (dateStr: string) => {
@@ -462,6 +463,7 @@ export function FinancialsView() {
           )}
         </div>
       </div>
+      <PlatformTreasurySection />
     </motion.div>
   );
 }

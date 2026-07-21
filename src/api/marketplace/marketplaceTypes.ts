@@ -454,6 +454,7 @@ export interface CreatorPayout {
   creatorName: string;
   creatorEmail: string;
   requestedAmount: number;
+  paidVndAmount: number | null;
   status: CreatorPayoutStatus;
   bankName: string;
   bankCode: string | null;

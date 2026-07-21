@@ -16,6 +16,7 @@ import {
   completeAdminDisputeRefund,
   decideAdminDispute,
   getAdminDispute,
+  getAdminDisputeTimeline,
   getAdminDisputes,
   getAdminVersionMetrics,
 } from "../../../api/admin/marketplaceOpsAdminService";
@@ -25,6 +26,7 @@ import type {
   MarketplaceDisputeStatus,
   MarketplaceVersionMetrics,
 } from "../../../api/admin/marketplaceOpsAdminTypes";
+import type { MarketplaceAuditTimelineEvent } from "../../../api/admin/marketplaceOpsAdminService";
 
 const date = (value?: string | null) =>
   value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
@@ -214,6 +216,15 @@ function DisputeDrawer({
 }) {
   const [note, setNote] = useState(dispute.decisionNote ?? "");
   const [busy, setBusy] = useState<string | null>(null);
+  const [timeline, setTimeline] = useState<MarketplaceAuditTimelineEvent[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.resolve(getAdminDisputeTimeline(dispute.disputeId))
+      .then(events => { if (active) setTimeline(events ?? []); })
+      .catch(() => { if (active) setTimeline([]); });
+    return () => { active = false; };
+  }, [dispute.disputeId]);
 
   const runAction = async (action: string) => {
     setBusy(action);
@@ -286,6 +297,11 @@ function DisputeDrawer({
               <p className="mt-2 text-sm leading-6 text-emerald-800">Thực hiện hoàn tiền để trả Coin cho người mua, đảo settlement/thu nhập Creator và thu hồi quyền truy cập.</p>
             </section>
           )}
+
+          <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4" aria-label="Nhật ký xử lý">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Nhật ký xử lý</p>
+            <div className="mt-3 space-y-3">{timeline.length === 0 ? <p className="text-sm text-slate-500">Chưa có hoạt động được ghi nhận.</p> : timeline.map(event => <div key={event.logId} className="border-l-2 border-orange-200 pl-3"><p className="text-sm font-bold text-slate-800">{event.title ?? event.actionType}</p><p className="mt-1 text-xs text-slate-500">{event.actorName ?? "Hệ thống"} · {date(event.occurredAt)}</p></div>)}</div>
+          </section>
 
           {dispute.allowedActions.some(needsNote) && (
             <label className="mt-5 block text-sm font-bold text-slate-800">

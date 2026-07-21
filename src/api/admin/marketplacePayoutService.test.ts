@@ -9,12 +9,11 @@ describe("marketplacePayoutService", () => {
 
   it("lists payout requests with an optional status filter", async () => {
     vi.mocked(requestJson).mockResolvedValueOnce({ success: true, code: 200, message: "Success", data: [] });
-
     await expect(getAdminMarketplacePayouts("REQUESTED")).resolves.toEqual([]);
     expect(requestJson).toHaveBeenCalledWith("/api/admin/marketplace/payouts?status=REQUESTED");
   });
 
-  it("uses the lifecycle endpoints and exact completion payload", async () => {
+  it("uses lifecycle endpoints and sends the paid VND amount", async () => {
     const payout = { payoutId: "payout-1" };
     vi.mocked(requestJson)
       .mockResolvedValueOnce({ success: true, code: 200, message: "Success", data: payout })
@@ -24,12 +23,12 @@ describe("marketplacePayoutService", () => {
 
     await approveMarketplacePayout("payout-1");
     await startMarketplacePayoutProcessing("payout-1");
-    await completeMarketplacePayout("payout-1", "FT-1", "Đã đối soát");
-    await rejectMarketplacePayout("payout-1", "QR không hợp lệ", true);
+    await completeMarketplacePayout("payout-1", "FT-1", 80000, "reconciled");
+    await rejectMarketplacePayout("payout-1", "invalid QR", true);
 
     expect(requestJson).toHaveBeenNthCalledWith(1, "/api/admin/marketplace/payouts/payout-1/approve", { method: "PATCH" });
     expect(requestJson).toHaveBeenNthCalledWith(2, "/api/admin/marketplace/payouts/payout-1/processing", { method: "PATCH" });
-    expect(requestJson).toHaveBeenNthCalledWith(3, "/api/admin/marketplace/payouts/payout-1/complete", { method: "PATCH", body: JSON.stringify({ externalTransferReference: "FT-1", notes: "Đã đối soát" }) });
-    expect(requestJson).toHaveBeenNthCalledWith(4, "/api/admin/marketplace/payouts/payout-1/fail", { method: "PATCH", body: JSON.stringify({ reason: "QR không hợp lệ" }) });
+    expect(requestJson).toHaveBeenNthCalledWith(3, "/api/admin/marketplace/payouts/payout-1/complete", { method: "PATCH", body: JSON.stringify({ externalTransferReference: "FT-1", paidVndAmount: 80000, notes: "reconciled" }) });
+    expect(requestJson).toHaveBeenNthCalledWith(4, "/api/admin/marketplace/payouts/payout-1/fail", { method: "PATCH", body: JSON.stringify({ reason: "invalid QR" }) });
   });
 });
