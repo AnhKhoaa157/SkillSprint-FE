@@ -70,6 +70,12 @@ interface PomodoroContextValue {
   actualStudySeconds: number;
   focusCount: number;
   activeStepId: string | null;
+  /**
+   * Monotonic counter bumped once each time a phase runs out on its own (the
+   * countdown hits 0). Consumers watch this to sync the natural expiry to the
+   * backend exactly once — it never changes for manual skip/pause/resume/hydrate.
+   */
+  naturalExpirySignal: number;
 
   // Core actions
   startTimer: (stepId: string) => void;
@@ -100,6 +106,7 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
   const [actualStudySeconds, setActualStudySeconds] = useState(0);
   const [focusCount, setFocusCount] = useState(0);
   const [activeStepId, setActiveStepId] = useState<string | null>(null);
+  const [naturalExpirySignal, setNaturalExpirySignal] = useState(0);
 
   // Stable refs so interval callbacks always see the latest values without
   // being added to the exhaustive-deps list (which would recreate the interval).
@@ -122,6 +129,10 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
   // API sync for natural expiry is handled by CoursePlayer via a useEffect
   // watching `pomodoroPhase` changes.
   const handlePhaseExpire = useCallback((expired: PomodoroPhase) => {
+    // Signal the natural expiry so CoursePlayer can reconcile it with the backend
+    // exactly once. Local phase advance below stays for a snappy UI; the backend
+    // response is the authority and overwrites it right after.
+    setNaturalExpirySignal((n) => n + 1);
     if (expired === "FOCUS") {
       setFocusCount((c) => c + 1);
       setPomodoroPhase("SHORT_BREAK");
@@ -236,6 +247,7 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
     actualStudySeconds,
     focusCount,
     activeStepId,
+    naturalExpirySignal,
     startTimer,
     pauseTimer,
     resetTimer,
