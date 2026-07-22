@@ -129,6 +129,23 @@ export default function AdminDashboard() {
     },
   ] as const;
 
+  const activeNavGroup = navGroups.find((group) => group.items.some((item) => item.id === activeNav))?.label;
+  const [expandedNavGroups, setExpandedNavGroups] = useState<string[]>(() => [activeNavGroup ?? navGroups[0].label]);
+
+  useEffect(() => {
+    if (!activeNavGroup) return;
+
+    setExpandedNavGroups((groups) => groups.includes(activeNavGroup) ? groups : [...groups, activeNavGroup]);
+  }, [activeNavGroup]);
+
+  const toggleNavGroup = (groupLabel: string) => {
+    setExpandedNavGroups((groups) => (
+      groups.includes(groupLabel)
+        ? groups.filter((label) => label !== groupLabel)
+        : [...groups, groupLabel]
+    ));
+  };
+
   const handleLogout = () => {
     logout();
     navigate("/admin-login", { replace: true });
@@ -300,37 +317,52 @@ export default function AdminDashboard() {
         </div>
 
         {/* Nav */}
-        <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4">
-          {navGroups.map(group => (
-            <div key={group.label}>
-              <p className="px-3 pb-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                {group.label}
-              </p>
-              <div className="space-y-0.5">
-                {group.items.map(item => {
-                  const isActive = activeNav === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleNavigation(item.id)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 text-left"
-                      style={{
-                        background: isActive ? "rgba(255,107,0,0.07)" : "transparent",
-                        border: isActive ? "1px solid rgba(255,107,0,0.18)" : "1px solid transparent",
-                        color: isActive ? "#C2410C" : "#334155",
-                        fontWeight: isActive ? 700 : 400,
-                      }}
-                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(148,163,184,0.10)"; e.currentTarget.style.color = "#0F172A"; } }}
-                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#334155"; } }}
-                    >
-                      <item.icon size={15} style={{ color: isActive ? "#FF6B00" : "#64748B", flexShrink: 0 }} />
-                      <span className="min-w-0 flex-1 truncate whitespace-nowrap" title={item.label}>{item.label}</span>
-                    </button>
-                  );
-                })}
+        <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-4" aria-label="Điều hướng quản trị">
+          {navGroups.map((group, groupIndex) => {
+            const isExpanded = expandedNavGroups.includes(group.label);
+            const containsActiveItem = group.items.some((item) => item.id === activeNav);
+            const groupId = `admin-nav-group-${groupIndex}`;
+
+            return (
+              <div key={group.label} className="rounded-2xl border border-transparent bg-white/50 p-1 transition-colors hover:border-slate-100 hover:bg-white">
+                <button
+                  type="button"
+                  onClick={() => toggleNavGroup(group.label)}
+                  aria-expanded={isExpanded}
+                  aria-controls={groupId}
+                  className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-3 text-left text-[10px] font-extrabold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 ${containsActiveItem ? "text-[#C2410C]" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
+                >
+                  <span className="truncate">{group.label}</span>
+                  <span className="flex shrink-0 items-center gap-1.5 text-slate-400">
+                    <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold normal-case tracking-normal">{group.items.length}</span>
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180 text-orange-500" : ""}`} aria-hidden="true" />
+                  </span>
+                </button>
+
+                <div id={groupId} className={`grid transition-[grid-template-rows] duration-200 motion-reduce:transition-none ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                  <div className="min-h-0 overflow-hidden">
+                    <div className="space-y-0.5 px-1 pb-1 pt-1">
+                      {group.items.map((item) => {
+                        const isActive = activeNav === item.id;
+
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleNavigation(item.id)}
+                            className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 ${isActive ? "border border-orange-200 bg-orange-50 text-[#C2410C] font-bold shadow-sm" : "border border-transparent text-slate-700 hover:border-slate-100 hover:bg-slate-50 hover:text-slate-950"}`}
+                          >
+                            <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[#FF6B00]" : "text-slate-500"}`} aria-hidden="true" />
+                            <span className="min-w-0 flex-1 truncate whitespace-nowrap" title={item.label}>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
         {/* Direct management link removed — moved to user dropdown */}

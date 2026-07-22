@@ -11,7 +11,7 @@ const date = (value?: string | null) => value ? new Intl.DateTimeFormat("vi-VN",
 const score = (item: { creatorValidationScore?: number | null; validationScore?: number | null }) => item.creatorValidationScore ?? item.validationScore ?? "—";
 const errorText = (error: unknown) => error instanceof Error ? error.message : "Đã có lỗi xảy ra.";
 
-function StatusBadge({ status }: { status: AdminMarketplaceStatus }) { const style: Record<string, string> = { PENDING_REVIEW: "border-amber-200 bg-amber-50 text-amber-800 before:bg-amber-500", PUBLISHED: "border-emerald-200 bg-emerald-50 text-emerald-700 before:bg-emerald-500", REJECTED: "border-rose-200 bg-rose-50 text-rose-700 before:bg-rose-500", SUSPENDED: "border-slate-200 bg-slate-100 text-slate-700 before:bg-slate-500", DRAFT: "border-slate-200 bg-white text-slate-600 before:bg-slate-400" }; const label: Record<string, string> = { PENDING_REVIEW: "Chờ duyệt", PUBLISHED: "Đã xuất bản", REJECTED: "Từ chối", SUSPENDED: "Tạm ngưng", DRAFT: "Bản nháp" }; return <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold before:h-1.5 before:w-1.5 before:rounded-full ${style[status] || style.DRAFT}`}>{label[status] || status}</span>; }
+function StatusBadge({ status }: { status: AdminMarketplaceStatus }) { const style: Record<string, string> = { PENDING_REVIEW: "border-amber-200 bg-amber-50 text-amber-800 before:bg-amber-500", PUBLISHED: "border-emerald-200 bg-emerald-50 text-emerald-700 before:bg-emerald-500", REJECTED: "border-rose-200 bg-rose-50 text-rose-700 before:bg-rose-500", SUSPENDED: "border-slate-200 bg-slate-100 text-slate-700 before:bg-slate-500", DRAFT: "border-slate-200 bg-white text-slate-600 before:bg-slate-400" }; const label: Record<string, string> = { PENDING_REVIEW: "Chờ duyệt", PUBLISHED: "Đã xuất bản", REJECTED: "Từ chối", SUSPENDED: "Tạm ngưng", DRAFT: "Bản nháp" }; return <span className={`inline-flex whitespace-nowrap items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold before:h-1.5 before:w-1.5 before:rounded-full ${style[status] || style.DRAFT}`}>{label[status] || status}</span>; }
 function SkeletonRows() { return <div className="space-y-3 rounded-[1.75rem] border border-white bg-white/75 p-4 shadow-[0_18px_50px_rgba(71,50,35,0.05)]">{[1, 2, 3, 4].map(i => <div key={i} className="h-16 animate-pulse rounded-2xl bg-slate-100/80" />)}</div>; }
 function ErrorState({ retry }: { retry: () => void }) { return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center"><CircleAlert className="mx-auto h-6 w-6 text-rose-600" /><p className="mt-2 text-sm font-bold text-rose-900">Không thể tải dữ liệu</p><button onClick={retry} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-4 py-2 text-sm font-bold text-white"><RefreshCw className="h-4 w-4" />Thử lại</button></div>; }
 
@@ -68,9 +68,16 @@ function MarketplaceReviewList() {
   const load = useCallback(async () => { setLoading(true); setFailed(false); try { setItems(await getMarketplaceItems(status)); } catch { setFailed(true); } finally { setLoading(false); } }, [status]);
   useEffect(() => { void load(); }, [load]);
 
-  return <div className="relative isolate min-h-full overflow-hidden bg-[#F7F8FA] p-4 sm:p-7">
+  return <div className="relative isolate min-h-full overflow-hidden bg-[#F7F8FA] p-4 sm:p-7" data-marketplace-review-list>
     <div className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(circle_at_12%_5%,rgba(255,237,223,0.78),transparent_28%),radial-gradient(circle_at_92%_18%,rgba(255,246,234,0.75),transparent_25%)]" />
     <div className="pointer-events-none absolute inset-0 -z-10 opacity-20 [background-image:radial-gradient(rgba(255,107,0,0.18)_1px,transparent_1px)] [background-size:30px_30px] [mask-image:linear-gradient(to_bottom,black,transparent_48%)]" />
+    <style>{`
+      @media (min-width: 1024px) {
+        [data-marketplace-review-list] table { min-width: 1280px; }
+        [data-marketplace-review-list] table th,
+        [data-marketplace-review-list] table td { white-space: nowrap; }
+      }
+    `}</style>
     <div className="mx-auto max-w-7xl">
       <section className="relative overflow-hidden rounded-[2rem] border border-white bg-white/85 p-6 shadow-[0_22px_65px_rgba(71,50,35,0.07)] backdrop-blur-xl sm:p-8">
         <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-orange-100/60 blur-3xl" />
