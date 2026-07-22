@@ -19,14 +19,14 @@ import {
   getAdminDisputeTimeline,
   getAdminDisputes,
   getAdminVersionMetrics,
-} from "../../../api/admin/marketplaceOpsAdminService";
+} from "../../../../../api/admin/marketplaceOpsAdminService";
 import type {
   AdminMarketplaceDispute,
   MarketplaceDisputeReason,
   MarketplaceDisputeStatus,
   MarketplaceVersionMetrics,
-} from "../../../api/admin/marketplaceOpsAdminTypes";
-import type { MarketplaceAuditTimelineEvent } from "../../../api/admin/marketplaceOpsAdminService";
+} from "../../../../../api/admin/marketplaceOpsAdminTypes";
+import type { MarketplaceAuditTimelineEvent } from "../../../../../api/admin/marketplaceOpsAdminService";
 
 const date = (value?: string | null) =>
   value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";

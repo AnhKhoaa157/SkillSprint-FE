@@ -5,8 +5,8 @@ import {
   approveMarketplacePayout, completeMarketplacePayout, getAdminMarketplacePayouts,
   getMarketplacePayoutTimeline, rejectMarketplacePayout, startMarketplacePayoutProcessing,
   type MarketplaceAuditTimelineEvent,
-} from "../../../api/admin";
-import type { CreatorPayout, CreatorPayoutStatus } from "../../../api/marketplace";
+} from "../../../../../api/admin";
+import type { CreatorPayout, CreatorPayoutStatus } from "../../../../../api/marketplace";
 
 const money = new Intl.NumberFormat("vi-VN");
 const formatVnd = (value: number) => `${money.format(value)} ₫`;

@@ -42,8 +42,8 @@ import CommunityFeed from "./pages/community/CommunityFeed";
 import CommunityRooms from "./pages/community/CommunityRooms";
 import CommunityRoomChat from "./pages/community/CommunityRoomChat";
 import { MarketplaceCatalogDashboard, MarketplaceItemPageDashboard, MyPackLearningPageDashboard, MyPacksPageDashboard, WalletPageDashboard } from "./pages/marketplace/MarketplaceViews";
-import MarketplaceAdmin from "./pages/admin/MarketplaceAdmin";
-import MarketplacePayouts from "./pages/admin/MarketplacePayouts";
+import MarketplaceAdmin from "./pages/admin/sections/marketplace/MarketplaceAdmin";
+import MarketplacePayouts from "./pages/admin/sections/marketplace/MarketplacePayouts";
 import { CreatorQuizPackCreate, CreatorQuizPackDashboard, CreatorQuizPackValidation } from "./pages/marketplace/CreatorQuizPackFlow";
 import CreatorMarketplaceEarnings from "./pages/marketplace/CreatorMarketplaceEarnings";
 

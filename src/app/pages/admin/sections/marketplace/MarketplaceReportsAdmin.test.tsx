@@ -2,10 +2,10 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MarketplaceReportsAdmin from "./MarketplaceReportsAdmin";
-import type { AdminMarketplaceReport } from "../../../api/admin/marketplaceReportAdminTypes";
-import * as service from "../../../api/admin/marketplaceReportAdminService";
+import type { AdminMarketplaceReport } from "../../../../../api/admin/marketplaceReportAdminTypes";
+import * as service from "../../../../../api/admin/marketplaceReportAdminService";
 
-vi.mock("../../../api/admin/marketplaceReportAdminService");
+vi.mock("../../../../../api/admin/marketplaceReportAdminService");
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const openReport: AdminMarketplaceReport = {
