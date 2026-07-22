@@ -12,6 +12,7 @@ import AiTutorChat from "./AiTutorChat";
 import materialService, { type UploadedMaterialResponse as MaterialUploadedMaterialResponse } from "../../../api/learning/materialService.ts";
 import workspaceService from "../../../api/utilities/workspaceService";
 import { API_BASE } from "../../../api/core/config";
+import { useSubscription } from "../../../hooks/useSubscription";
 
 const PROCESSING_JOB_ACTIVE_STATES = new Set(["PENDING", "RUNNING", "REVIEW_REQUIRED", "EXTRACTING", "CLEANING", "CHUNKING", "ANALYZING"]);
 const PROCESSING_JOB_TERMINAL_STATES = new Set(["COMPLETED", "FAILED"]);
@@ -315,6 +316,9 @@ export default function WorkspaceDetail() {
   const [deleteTarget, setDeleteTarget] = useState<UploadFile | null>(null);
   const [deletingMaterial, setDeletingMaterial] = useState(false);
   const [viewingMaterialId, setViewingMaterialId] = useState<string | null>(null);
+  const [showRegenerateUpgradeModal, setShowRegenerateUpgradeModal] = useState(false);
+  const { planId, loading: subscriptionLoading } = useSubscription();
+  const isFreePlan = planId === "FREE";
 
   async function handleViewMaterial(file: UploadFile) {
     if (!id || !file.materialId) return;
@@ -360,7 +364,17 @@ export default function WorkspaceDetail() {
   }
 
   async function handleGenerate() { await triggerStructureGeneration(false); }
-  async function handleRegenerateStructure() { await triggerStructureGeneration(true); }
+  async function handleRegenerateStructure() {
+    if (subscriptionLoading) {
+      toast.info("Đang kiểm tra quyền của gói dịch vụ");
+      return;
+    }
+    if (isFreePlan) {
+      setShowRegenerateUpgradeModal(true);
+      return;
+    }
+    await triggerStructureGeneration(true);
+  }
 
   async function triggerStructureGeneration(isRegenerate: boolean) {
     if (!id) return;
@@ -723,7 +737,7 @@ export default function WorkspaceDetail() {
                       <div className="text-base font-bold text-slate-700">Chưa có cấu trúc học tập</div>
                       <div className="text-sm text-slate-400 mt-1 max-w-sm">Tải lên tài liệu và chờ xử lý xong để sinh lộ trình học bằng AI.</div>
                     </div>
-                    <button type="button" onClick={handleRegenerateStructure} disabled={generating || confirming} className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] disabled:cursor-not-allowed disabled:opacity-50 transition">
+                    <button type="button" onClick={handleGenerate} disabled={generating || confirming} className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-[#FF6B00]/20 hover:bg-[#E05E00] disabled:cursor-not-allowed disabled:opacity-50 transition">
                       <Sparkles className="h-4 w-4" />{generating ? "Đang phân tích..." : "Phân tích AI"}
                     </button>
                   </div>
@@ -737,8 +751,8 @@ export default function WorkspaceDetail() {
                       </button>
                     ) : (
                       <>
-                        <button type="button" onClick={handleRegenerateStructure} disabled={generating || confirming} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed transition">
-                          {generating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                        <button type="button" onClick={handleRegenerateStructure} disabled={generating || confirming || subscriptionLoading} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed transition">
+                          {generating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : isFreePlan ? <ShieldCheck className="h-4 w-4 text-amber-500" /> : <RefreshCw className="h-4 w-4" />}
                           {generating ? 'Đang tạo lại...' : 'Tạo lại cấu trúc'}
                         </button>
                         <button type="button" onClick={handleConfirm} disabled={confirming || generating} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-500/15 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition">
@@ -783,6 +797,25 @@ export default function WorkspaceDetail() {
         initialValues={onboarding.profile}
         mode={shouldOpenOnboarding ? "onboarding" : "edit"}
       />
+
+      {showRegenerateUpgradeModal && (
+        <div className="fixed inset-0 z-[320] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-md" onClick={() => setShowRegenerateUpgradeModal(false)}>
+          <div className="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="h-2 bg-gradient-to-r from-orange-400 via-orange-500 to-amber-400" />
+            <div className="px-7 pb-8 pt-7 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50">
+                <ShieldCheck className="h-6 w-6 text-orange-500" />
+              </div>
+              <h2 className="mb-2 text-xl font-extrabold text-slate-900">Tạo lại cấu trúc cần gói trả phí</h2>
+              <p className="mb-6 text-sm leading-relaxed text-slate-500">Gói Miễn phí chỉ hỗ trợ phân tích tài liệu lần đầu. Nâng cấp để tạo lại cấu trúc học tập bằng AI.</p>
+              <div className="flex flex-col gap-3">
+                <button type="button" onClick={() => { setShowRegenerateUpgradeModal(false); navigate("/pricing"); }} className="w-full rounded-2xl bg-[#FF6B00] py-3 text-sm font-bold text-white transition hover:bg-[#E05E00]">Nâng cấp ngay →</button>
+                <button type="button" onClick={() => setShowRegenerateUpgradeModal(false)} className="w-full py-2.5 text-sm font-semibold text-slate-500 transition hover:text-slate-700">Để sau</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Material Confirmation Modal */}
       {deleteTarget && (
