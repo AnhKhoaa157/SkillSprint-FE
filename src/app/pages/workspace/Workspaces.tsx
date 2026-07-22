@@ -540,30 +540,31 @@ export default function Workspaces() {
 
       {showCreateModal && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-md">
-          <div className="w-full max-w-3xl overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.25)]">
-            <div className="flex items-start justify-between border-b border-slate-200 bg-gradient-to-r from-[#FFF7ED] to-white p-5">
+          <div className="w-full max-w-4xl overflow-hidden rounded-[1.75rem] border border-slate-200/90 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.28)]">
+            <div className="flex items-start justify-between border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_#fff7ed,_#ffffff_45%)] px-5 py-5 sm:px-7">
               <div>
                 <h3 className="text-lg font-extrabold text-slate-900">Tạo workspace</h3>
-                <p className="mt-1 text-sm text-slate-500">Tạo nhanh từ popup hoặc chuyển sang trang tạo đầy đủ.</p>
+                <p className="mt-1 text-sm leading-6 text-slate-500">Chọn cách bắt đầu phù hợp — bạn luôn có thể bổ sung sau.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900"
+                aria-label="Đóng"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
-              <div className="space-y-4 border-b border-slate-200 p-5 lg:border-b-0 lg:border-r">
-                <div className="flex items-center gap-3 rounded-2xl border border-[#FFEDD5] bg-[#FFF7ED]/60 p-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF7E21] to-amber-500 text-white">
+            <div className="grid gap-0 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.92fr)]">
+              <div className="space-y-5 border-b border-slate-200 p-5 sm:p-7 lg:border-b-0 lg:border-r">
+                <div className="flex items-start gap-3 rounded-2xl border border-orange-100 bg-orange-50/70 p-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF7E21] to-amber-500 text-white shadow-lg shadow-orange-500/20">
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-slate-900">Tạo nhanh trong popup</div>
-                    <div className="text-sm text-slate-500">Không rời trang hiện tại, phù hợp khi cần thêm workspace ngay.</div>
+                    <div className="text-sm font-extrabold text-slate-900">Tạo nhanh</div>
+                    <div className="mt-1 text-sm leading-5 text-slate-600">Đặt tên và bắt đầu ngay mà không rời khỏi trang này.</div>
                   </div>
                 </div>
 
@@ -577,18 +578,19 @@ export default function Workspaces() {
                       setNameError(null);
                     }}
                     placeholder="Ví dụ: React Interview Prep"
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-0 transition placeholder:text-slate-400 focus:border-[#FF7E21]/50 focus:ring-4 focus:ring-[#FFF4EB]"
+                    className="mt-2 min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-0 transition placeholder:text-slate-400 focus:border-[#FF7E21]/60 focus:ring-4 focus:ring-[#FFF4EB]"
                   />
+                  <span className="mt-2 block text-xs font-medium text-slate-500">Bạn có thể thêm mô tả và mục tiêu học tập sau.</span>
                 </label>
 
-                {nameError && <p className="text-sm font-medium text-rose-600">{nameError}</p>}
+                {nameError && <p className="text-sm font-medium text-rose-600" role="alert">{nameError}</p>}
 
                 <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
                     onClick={() => void submitCreateWorkspace()}
                     disabled={actionBusy}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-md shadow-emerald-500/10 hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-3 text-sm font-bold text-white shadow-md shadow-emerald-500/15 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/25 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {actionBusy ? (
                       <><LoaderCircle className="h-4 w-4 animate-spin" />Đang tạo...</>
@@ -599,44 +601,53 @@ export default function Workspaces() {
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                    className="min-h-12 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-100"
                   >
                     Hủy
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-4 bg-slate-50 p-5">
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 border border-amber-100">
-                    <LayoutGrid className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <div className="font-bold text-slate-900">Trang tạo đầy đủ</div>
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">Sẵn sàng</span>
+              <div className="p-5 sm:p-7">
+                <div className="relative overflow-hidden rounded-[1.35rem] border border-orange-100 bg-[linear-gradient(145deg,#fff7ed_0%,#ffffff_62%)] p-5 shadow-sm">
+                  <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-orange-200/35 blur-2xl" aria-hidden="true" />
+                  <div className="relative">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-100 bg-white text-amber-600 shadow-sm">
+                        <LayoutGrid className="h-5 w-5" />
+                      </div>
+                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">Đầy đủ</span>
                     </div>
-                    <div className="text-sm text-slate-500">Dành cho trường hợp cần thêm mô tả hoặc cấu trúc chi tiết hơn.</div>
+
+                    <div className="mt-5">
+                      <h4 className="text-base font-extrabold text-slate-900">Bắt đầu với mục tiêu rõ ràng</h4>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">Thêm mô tả ngay từ đầu để AI và bạn cùng hiểu đúng hướng học tập.</p>
+                    </div>
+
+                    <ul className="mt-5 space-y-3 text-sm font-medium text-slate-600">
+                      <li className="flex items-center gap-2.5">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                          <Check className="h-3.5 w-3.5" />
+                        </span>
+                        Nêu mục tiêu học tập cụ thể
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                          <Check className="h-3.5 w-3.5" />
+                        </span>
+                        Giữ workspace dễ quản lý hơn
+                      </li>
+                    </ul>
+
+                    <button
+                      type="button"
+                      onClick={() => navigate("/app/workspaces/new")}
+                      className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF8C37] to-[#FF6B00] px-4 py-3 text-sm font-bold text-white shadow-md shadow-orange-500/15 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-orange-500/25 active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"
+                    >
+                      Đi tới form đầy đủ<ArrowRight className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-bold text-slate-900">Đi tới form đầy đủ</span>
-                    <BookOpenCheck className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Thêm mô tả mục tiêu học ngay từ đầu để workspace dễ quản lý và dùng về sau.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => navigate("/app/workspaces/new")}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF8C37] to-[#FF6B00] px-4 py-3 text-sm font-bold text-white shadow-md shadow-orange-500/10 transition hover:shadow-lg hover:shadow-orange-500/20 active:scale-[0.98]"
-                >
-                  Đi tới form đầy đủ<ArrowRight className="h-4 w-4" />
-                </button>
               </div>
             </div>
           </div>
