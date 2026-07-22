@@ -19,14 +19,14 @@ export function isCreatorReviewReady(validationScore: number, status?: Marketpla
 
 export function QualityStatusBadge({ status, currentSnapshot = false }: { status?: MarketplaceQualityJobStatus | null; currentSnapshot?: boolean }) {
   if (!status) {
-    return <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600"><CircleDashed className="h-3.5 w-3.5" />Chưa kiểm định</span>;
+    return <span className="inline-flex whitespace-nowrap items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600"><CircleDashed className="h-3.5 w-3.5" />Chưa kiểm định</span>;
   }
 
   if (status === "PASSED" && !currentSnapshot) {
-    return <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800"><AlertTriangle className="h-3.5 w-3.5" />Cần kiểm định lại</span>;
+    return <span className="inline-flex whitespace-nowrap items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800"><AlertTriangle className="h-3.5 w-3.5" />Cần kiểm định lại</span>;
   }
 
   const meta = statusContent[status];
   const Icon = status === "PASSED" ? ShieldCheck : status === "FAILED" || status === "ERROR" ? ShieldAlert : LoaderCircle;
-  return <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${meta.className}`}><Icon className={`h-3.5 w-3.5 ${status === "QUEUED" || status === "RUNNING" ? "animate-spin" : ""}`} />{meta.label}</span>;
+  return <span className={`inline-flex whitespace-nowrap items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${meta.className}`}><Icon className={`h-3.5 w-3.5 ${status === "QUEUED" || status === "RUNNING" ? "animate-spin" : ""}`} />{meta.label}</span>;
 }
