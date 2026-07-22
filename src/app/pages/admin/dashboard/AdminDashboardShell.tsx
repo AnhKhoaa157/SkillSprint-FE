@@ -89,10 +89,14 @@ export default function AdminDashboard() {
   const navGroups = [
     {
       label: "Tổng quan",
+      icon: TrendingUp,
+      iconClass: "bg-orange-50 text-[#F97316] ring-orange-100",
       items: [{ id: "financials", label: "Dashboard", icon: TrendingUp }],
     },
     {
       label: "Người dùng",
+      icon: UserRound,
+      iconClass: "bg-sky-50 text-sky-600 ring-sky-100",
       items: [
         { id: "users", label: "Quản lý người dùng", icon: ShieldCheck },
         { id: "subscriptions", label: "Gói dịch vụ", icon: Layers },
@@ -101,6 +105,8 @@ export default function AdminDashboard() {
     },
     {
       label: "Tài chính",
+      icon: WalletCards,
+      iconClass: "bg-emerald-50 text-emerald-600 ring-emerald-100",
       items: [
         { id: "payments", label: "Quản lý thanh toán", icon: DollarSign },
         { id: "wallet", label: "Quản lý ví Coin", icon: WalletCards },
@@ -109,6 +115,8 @@ export default function AdminDashboard() {
     },
     {
       label: "Marketplace",
+      icon: Store,
+      iconClass: "bg-violet-50 text-violet-600 ring-violet-100",
       items: [
         { id: "marketplace", label: "Duyệt Quiz Pack", icon: Store },
         { id: "marketplaceReports", label: "Báo cáo Marketplace", icon: ShieldAlert },
@@ -117,6 +125,8 @@ export default function AdminDashboard() {
     },
     {
       label: "Cộng đồng & hỗ trợ",
+      icon: Megaphone,
+      iconClass: "bg-blue-50 text-blue-600 ring-blue-100",
       items: [
         { id: "community", label: "Kiểm duyệt cộng đồng", icon: ShieldAlert },
         { id: "communityRooms", label: "Phòng cộng đồng", icon: Megaphone },
@@ -125,6 +135,8 @@ export default function AdminDashboard() {
     },
     {
       label: "Hệ thống",
+      icon: ServerCog,
+      iconClass: "bg-slate-100 text-slate-600 ring-slate-200",
       items: [{ id: "system", label: "Hệ thống & Cảnh báo", icon: ServerCog }],
     },
   ] as const;
@@ -322,19 +334,25 @@ export default function AdminDashboard() {
             const isExpanded = expandedNavGroups.includes(group.label);
             const containsActiveItem = group.items.some((item) => item.id === activeNav);
             const groupId = `admin-nav-group-${groupIndex}`;
+            const GroupIcon = group.icon;
 
             return (
-              <div key={group.label} className="rounded-2xl border border-transparent bg-white/50 p-1 transition-colors hover:border-slate-100 hover:bg-white">
+              <div key={group.label} className={`rounded-2xl border p-1 transition-colors ${containsActiveItem ? "border-orange-100 bg-orange-50/35 shadow-[0_8px_18px_rgba(255,107,0,0.05)]" : "border-transparent bg-white/50 hover:border-slate-100 hover:bg-white"}`}>
                 <button
                   type="button"
                   onClick={() => toggleNavGroup(group.label)}
                   aria-expanded={isExpanded}
                   aria-controls={groupId}
-                  className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-3 text-left text-[10px] font-extrabold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 ${containsActiveItem ? "text-[#C2410C]" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
+                  className={`flex min-h-12 w-full items-center justify-between gap-2 rounded-xl px-2.5 text-left text-[10px] font-extrabold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 ${containsActiveItem ? "text-[#C2410C]" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
                 >
-                  <span className="truncate">{group.label}</span>
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-1 ${group.iconClass}`}>
+                      <GroupIcon className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="truncate">{group.label}</span>
+                  </span>
                   <span className="flex shrink-0 items-center gap-1.5 text-slate-400">
-                    <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold normal-case tracking-normal">{group.items.length}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold normal-case tracking-normal ${containsActiveItem ? "bg-orange-100 text-[#C2410C]" : "bg-slate-100 text-slate-500"}`}>{group.items.length}</span>
                     <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180 text-orange-500" : ""}`} aria-hidden="true" />
                   </span>
                 </button>
