@@ -48,7 +48,7 @@ const QUADRANTS: Array<{
   {
     key:          "DELAY_OR_DELEGATE",
     numeral:      "III",
-    title:        "Để sau",
+    title:        "Ủy quyền",
     subtitle:     "Khẩn cấp, ít quan trọng",
     emptyText:    "Không có việc cần uỷ thác",
   },
