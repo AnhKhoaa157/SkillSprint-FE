@@ -62,6 +62,8 @@ type WorkspaceItem = {
 
 type SortOption = "newest" | "alphabetical" | "documents";
 
+const MAX_WORKSPACE_DESCRIPTION_LENGTH = 1000;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -196,6 +198,7 @@ export default function Workspaces() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("");
+  const [workspaceDescription, setWorkspaceDescription] = useState("");
   const [editTarget, setEditTarget] = useState<WorkspaceItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<WorkspaceItem | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
@@ -266,6 +269,7 @@ export default function Workspaces() {
   const openCreateModal = () => {
     setNameError(null);
     setWorkspaceName("");
+    setWorkspaceDescription("");
     setShowCreateModal(true);
   };
 
@@ -277,6 +281,7 @@ export default function Workspaces() {
 
   const submitCreateWorkspace = async () => {
     const trimmedName = workspaceName.trim();
+    const trimmedDescription = workspaceDescription.trim();
 
     if (!trimmedName) {
       setNameError("Vui lòng nhập tên workspace");
@@ -292,10 +297,14 @@ export default function Workspaces() {
     setActionBusy(true);
 
     try {
-      const created = await workspaceService.createWorkspace({ name: trimmedName });
+      const created = await workspaceService.createWorkspace({
+        name: trimmedName,
+        ...(trimmedDescription ? { description: trimmedDescription } : {}),
+      });
       const normalized = normalizeWorkspaceItem(created as unknown as WorkspaceApiItem, 0);
       setWorkspaces((current) => [normalized, ...current]);
       setWorkspaceName("");
+      setWorkspaceDescription("");
       setShowCreateModal(false);
       toast.success("Tạo workspace thành công");
       window.dispatchEvent(new CustomEvent("workspace_created", { detail: { workspaceId: created.workspaceId } }));
@@ -544,7 +553,7 @@ export default function Workspaces() {
             <div className="flex items-start justify-between border-b border-slate-200 bg-gradient-to-r from-[#FFF7ED] to-white p-5">
               <div>
                 <h3 className="text-lg font-extrabold text-slate-900">Tạo workspace</h3>
-                <p className="mt-1 text-sm text-slate-500">Tạo nhanh từ popup hoặc chuyển sang trang tạo đầy đủ.</p>
+                <p className="mt-1 text-sm text-slate-500">Đặt tên và mô tả mục tiêu học tập để bắt đầu có định hướng.</p>
               </div>
               <button
                 type="button"
@@ -562,8 +571,8 @@ export default function Workspaces() {
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-slate-900">Tạo nhanh trong popup</div>
-                    <div className="text-sm text-slate-500">Không rời trang hiện tại, phù hợp khi cần thêm workspace ngay.</div>
+                    <div className="font-bold text-slate-900">Bắt đầu với mục tiêu rõ ràng</div>
+                    <div className="text-sm text-slate-500">Tên và mô tả sẽ giúp bạn nhận biết workspace nhanh hơn về sau.</div>
                   </div>
                 </div>
 
@@ -579,6 +588,27 @@ export default function Workspaces() {
                     placeholder="Ví dụ: React Interview Prep"
                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-0 transition placeholder:text-slate-400 focus:border-[#FF7E21]/50 focus:ring-4 focus:ring-[#FFF4EB]"
                   />
+                </label>
+
+                <label className="block text-sm font-bold text-slate-900">
+                  <span className="flex flex-wrap items-center justify-between gap-2">
+                    <span>Mô tả <span className="font-medium text-slate-400">(không bắt buộc)</span></span>
+                    <span className="text-xs font-semibold tabular-nums text-slate-400" aria-live="polite">
+                      {workspaceDescription.length}/{MAX_WORKSPACE_DESCRIPTION_LENGTH}
+                    </span>
+                  </span>
+                  <textarea
+                    value={workspaceDescription}
+                    onChange={(event) => setWorkspaceDescription(event.target.value)}
+                    maxLength={MAX_WORKSPACE_DESCRIPTION_LENGTH}
+                    rows={4}
+                    placeholder="Ví dụ: Luyện phát triển giao diện React, từng câu hỏi phỏng vấn và kỹ năng TypeScript."
+                    aria-describedby="workspace-description-help"
+                    className="mt-2 min-h-28 w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none ring-0 transition placeholder:text-slate-400 focus:border-[#FF7E21]/50 focus:ring-4 focus:ring-[#FFF4EB]"
+                  />
+                  <span id="workspace-description-help" className="mt-2 block text-xs font-medium leading-5 text-slate-500">
+                    Mô tả mục tiêu hoặc phạm vi học tập để dễ nhận biết workspace sau này.
+                  </span>
                 </label>
 
                 {nameError && <p className="text-sm font-medium text-rose-600">{nameError}</p>}
@@ -613,30 +643,23 @@ export default function Workspaces() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="font-bold text-slate-900">Trang tạo đầy đủ</div>
-                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">Đang phát triển</span>
+                      <div className="font-bold text-slate-900">Mô tả giúp AI hiểu đúng hơn</div>
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">Mẹo</span>
                     </div>
-                    <div className="text-sm text-slate-500">Dành cho trường hợp cần thêm mô tả hoặc cấu trúc chi tiết hơn.</div>
+                    <div className="text-sm text-slate-500">Nêu chủ đề, kết quả mong muốn hoặc bối cảnh học tập của bạn.</div>
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-bold text-slate-900">Đi tới form đầy đủ</span>
+                    <span className="font-bold text-slate-900">Gợi ý viết mô tả</span>
                     <BookOpenCheck className="h-5 w-5 text-slate-400" />
                   </div>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Nếu bạn muốn chuẩn hóa mô tả mục tiêu học ngay từ đầu, hãy chuyển sang trang tạo workspace chuyên dụng.
+                    Ví dụ: “Ôn React để phỏng vấn frontend trong 6 tuần, tập trung vào hooks và TypeScript.”
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  disabled
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-bold text-slate-400 cursor-not-allowed opacity-70"
-                >
-                  Tính năng đang phát triển
-                </button>
               </div>
             </div>
           </div>
