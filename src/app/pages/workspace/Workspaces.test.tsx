@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi, describe, beforeEach, expect, it } from "vitest";
 import Workspaces from "./Workspaces";
@@ -36,33 +36,14 @@ describe("Workspaces", () => {
     vi.mocked(workspaceService.getMyWorkspaces).mockResolvedValue([]);
   });
 
-  it("sends the optional description when creating a workspace", async () => {
+  it("opens the full workspace creation form", async () => {
     const user = userEvent.setup();
-    vi.mocked(workspaceService.createWorkspace).mockResolvedValue({
-      workspaceId: "workspace-1",
-      name: "React Interview Prep",
-      description: "Ôn React và TypeScript cho phỏng vấn frontend.",
-      status: "ACTIVE",
-      createdAt: "2026-07-22T00:00:00Z",
-    });
 
     render(<Workspaces />);
 
     await user.click(await screen.findByRole("button", { name: "Tạo workspace" }));
-    await user.type(screen.getByPlaceholderText("Ví dụ: React Interview Prep"), "React Interview Prep");
-    await user.type(
-      screen.getByPlaceholderText("Ví dụ: Luyện phát triển giao diện React, từng câu hỏi phỏng vấn và kỹ năng TypeScript."),
-      "Ôn React và TypeScript cho phỏng vấn frontend.",
-    );
+    await user.click(screen.getByRole("button", { name: "Đi tới form đầy đủ" }));
 
-    const createButtons = screen.getAllByRole("button", { name: "Tạo workspace" });
-    await user.click(createButtons[createButtons.length - 1]);
-
-    await waitFor(() => {
-      expect(workspaceService.createWorkspace).toHaveBeenCalledWith({
-        name: "React Interview Prep",
-        description: "Ôn React và TypeScript cho phỏng vấn frontend.",
-      });
-    });
+    expect(navigate).toHaveBeenCalledWith("/app/workspaces/new");
   });
 });
