@@ -6,13 +6,13 @@ import {
   getAdminMarketplaceReport,
   getAdminMarketplaceReports,
   updateAdminMarketplaceReportStatus,
-} from "../../../api/admin/marketplaceReportAdminService";
+} from "../../../../../api/admin/marketplaceReportAdminService";
 import type {
   AdminMarketplaceReport,
   MarketplaceReportCategory,
   MarketplaceReportStatus,
   MarketplaceReportTargetType,
-} from "../../../api/admin/marketplaceReportAdminTypes";
+} from "../../../../../api/admin/marketplaceReportAdminTypes";
 
 const date = (value?: string | null) =>
   value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";

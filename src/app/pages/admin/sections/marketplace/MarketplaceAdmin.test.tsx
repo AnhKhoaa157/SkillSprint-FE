@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getMarketplaceReviewDetail } from "../../../api/admin/marketplaceAdminService";
-import type { AdminMarketplaceDetail } from "../../../api/admin/marketplaceAdminTypes";
+import { getMarketplaceReviewDetail } from "../../../../../api/admin/marketplaceAdminService";
+import type { AdminMarketplaceDetail } from "../../../../../api/admin/marketplaceAdminTypes";
 import MarketplaceAdmin from "./MarketplaceAdmin";
 
-vi.mock("../../../api/admin/marketplaceAdminService", () => ({
+vi.mock("../../../../../api/admin/marketplaceAdminService", () => ({
   getMarketplaceItems: vi.fn(),
   getMarketplaceReviewDetail: vi.fn(),
   queueAdminMarketplaceQuality: vi.fn(),

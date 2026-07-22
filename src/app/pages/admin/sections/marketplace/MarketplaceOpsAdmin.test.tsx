@@ -2,10 +2,10 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MarketplaceOpsAdmin from "./MarketplaceOpsAdmin";
-import type { AdminMarketplaceDispute, MarketplaceVersionMetrics } from "../../../api/admin/marketplaceOpsAdminTypes";
-import * as service from "../../../api/admin/marketplaceOpsAdminService";
+import type { AdminMarketplaceDispute, MarketplaceVersionMetrics } from "../../../../../api/admin/marketplaceOpsAdminTypes";
+import * as service from "../../../../../api/admin/marketplaceOpsAdminService";
 
-vi.mock("../../../api/admin/marketplaceOpsAdminService");
+vi.mock("../../../../../api/admin/marketplaceOpsAdminService");
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const approvedDispute: AdminMarketplaceDispute = {

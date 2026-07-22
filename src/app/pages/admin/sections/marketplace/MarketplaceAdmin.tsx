@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, Coins, Eye, LoaderCircle, PackageCheck, RefreshCw, ShieldCheck, Sparkles, XCircle } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
-import { getMarketplaceItems, getMarketplaceReviewDetail, queueAdminMarketplaceQuality, updateMarketplaceReviewStatus } from "../../../api/admin/marketplaceAdminService";
-import type { AdminMarketplaceChapter, AdminMarketplaceDetail, AdminMarketplaceListItem, AdminMarketplaceStatus } from "../../../api/admin/marketplaceAdminTypes";
-import { AdminQualityReviewPanel } from "../../components/marketplace/AdminQualityReviewPanel";
-import { isQualityReady, QualityStatusBadge } from "../../components/marketplace/MarketplaceQualityStatus";
+import { getMarketplaceItems, getMarketplaceReviewDetail, queueAdminMarketplaceQuality, updateMarketplaceReviewStatus } from "../../../../../api/admin/marketplaceAdminService";
+import type { AdminMarketplaceChapter, AdminMarketplaceDetail, AdminMarketplaceListItem, AdminMarketplaceStatus } from "../../../../../api/admin/marketplaceAdminTypes";
+import { AdminQualityReviewPanel } from "../../../../components/marketplace/AdminQualityReviewPanel";
+import { isQualityReady, QualityStatusBadge } from "../../../../components/marketplace/MarketplaceQualityStatus";
 
 const date = (value?: string | null) => value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
 const score = (item: { creatorValidationScore?: number | null; validationScore?: number | null }) => item.creatorValidationScore ?? item.validationScore ?? "—";
