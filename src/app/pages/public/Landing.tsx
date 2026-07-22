@@ -280,6 +280,189 @@ function DashboardMockup() {
   );
 }
 
+/* ─── Hero Mascots ─── */
+const mascotMarqueeRows = [
+  {
+    text: "REACT · TYPESCRIPT · NODE.JS · SQL · SYSTEM DESIGN · ",
+    top: "0%",
+    color: "rgba(15,23,42,0.055)",
+    duration: 112,
+    reverse: false,
+  },
+  {
+    text: "HTML · CSS · JAVASCRIPT · NEXT.JS · TAILWIND · ",
+    top: "22%",
+    color: "rgba(245,184,34,0.25)",
+    duration: 126,
+    reverse: true,
+  },
+  {
+    text: "AI · DATA · UI/UX · CLOUD · GIT · API · ",
+    top: "44%",
+    color: "rgba(15,23,42,0.055)",
+    duration: 104,
+    reverse: false,
+  },
+  {
+    text: "TEAMWORK · LEADERSHIP · ENGLISH · PROBLEM SOLVING · ",
+    top: "66%",
+    color: "rgba(245,184,34,0.25)",
+    duration: 134,
+    reverse: true,
+  },
+  {
+    text: "COMMUNICATION · PORTFOLIO · INTERNSHIP · CAREER · ",
+    top: "88%",
+    color: "rgba(15,23,42,0.055)",
+    duration: 120,
+    reverse: false,
+  },
+];
+
+function MascotMarqueeRow({ row }: { row: (typeof mascotMarqueeRows)[number] }) {
+  const repeatedText = row.text.repeat(3);
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        left: "50%",
+        top: row.top,
+        width: "100vw",
+        overflow: "hidden",
+        pointerEvents: "none",
+        transform: "translateX(-50%)",
+        zIndex: 0,
+      }}
+    >
+      <motion.div
+        animate={{ x: row.reverse ? ["-50%", "0%"] : ["0%", "-50%"] }}
+        transition={{ duration: row.duration, repeat: Infinity, ease: "linear" }}
+        style={{
+          display: "flex",
+          width: "max-content",
+          color: row.color,
+          fontFamily: F,
+          fontSize: "clamp(1.75rem, 4.25vw, 4.2rem)",
+          fontWeight: 900,
+          letterSpacing: "-0.025em",
+          lineHeight: 1,
+          whiteSpace: "nowrap",
+          willChange: "transform",
+        }}
+      >
+        <span style={{ paddingRight: "0.75em" }}>{repeatedText}</span>
+        <span style={{ paddingRight: "0.75em" }}>{repeatedText}</span>
+      </motion.div>
+    </div>
+  );
+}
+
+function MascotShowcase() {
+  return (
+    <motion.figure
+      initial={{ opacity: 0, y: 32, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.9, delay: 0.58, ease: [0.16, 1, 0.3, 1] }}
+      className="relative mx-auto"
+      style={{
+        width: "min(92%, 820px)",
+        marginTop: "14px",
+        isolation: "isolate",
+      }}
+      aria-label="Bộ ba linh vật rái cá SkillSprint"
+    >
+      {mascotMarqueeRows.map((row) => (
+        <MascotMarqueeRow key={row.text} row={row} />
+      ))}
+
+      <motion.div
+        aria-hidden="true"
+        animate={{ scaleX: [0.92, 1, 0.92], opacity: [0.35, 0.55, 0.35] }}
+        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          position: "absolute",
+          left: "14%",
+          right: "14%",
+          bottom: "5%",
+          height: "13%",
+          borderRadius: "50%",
+          background: "rgba(255,107,0,0.16)",
+          filter: "blur(34px)",
+          zIndex: -1,
+        }}
+      />
+
+      <div
+        className="relative aspect-[1.45/1] overflow-hidden sm:aspect-[2.12/1]"
+        style={{
+          zIndex: 4,
+          WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+          maskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+        }}
+      >
+        <img
+          src="/assets/images/skillsprint-otter-hero-transparent.png"
+          alt="Ba rái cá SkillSprint đại diện cho sinh viên, cố vấn và người hoàn thành lộ trình"
+          width={1536}
+          height={1024}
+          loading="eager"
+          decoding="async"
+          style={{
+            display: "block",
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center 47%",
+            filter: "drop-shadow(0 24px 34px rgba(31,41,55,0.08))",
+          }}
+        />
+      </div>
+    </motion.figure>
+  );
+}
+
+const mascotBenefits = [
+  { label: "Học mọi lúc, mọi nơi", icon: CheckCircle, color: "#7C6FF2" },
+  { label: "Dự án thực tế", icon: Shield, color: "#55B99A" },
+  { label: "Cố vấn đồng hành", icon: Star, color: "#F59E0B" },
+];
+
+function MascotBenefits() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.65, delay: 0.82 }}
+      className="mx-auto grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-8"
+      style={{ width: "min(92%, 720px)", marginTop: "20px" }}
+      aria-label="Lợi ích của SkillSprint"
+    >
+      {mascotBenefits.map(({ label, icon: Icon, color }) => (
+        <div
+          key={label}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "9px",
+            minHeight: "36px",
+            color: T1,
+            fontFamily: F,
+            fontSize: "clamp(0.78rem, 1.5vw, 0.9rem)",
+            fontWeight: 650,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <Icon size={19} color={color} strokeWidth={2.2} aria-hidden="true" />
+          <span>{label}</span>
+        </div>
+      ))}
+    </motion.div>
+  );
+}
+
 /* ─── Navbar ─── */
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -377,7 +560,7 @@ function Navbar() {
 /* ─── Hero ─── */
 function Hero() {
   return (
-    <section style={{ background:"transparent", paddingTop:"140px", paddingBottom:"80px", textAlign:"center", position:"relative", overflow:"hidden" }}>
+    <section style={{ background:"transparent", paddingTop:"140px", paddingBottom:"24px", textAlign:"center", position:"relative", overflow:"hidden" }}>
       <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none" }}>
         <LandingHero3DViewer />
       </div>
@@ -473,8 +656,9 @@ function Hero() {
           </div>
         </motion.div>
 
-        {/* Mockup */}
-        <DashboardMockup/>
+        {/* SkillSprint mascot journey */}
+        <MascotShowcase />
+        <MascotBenefits />
       </div>
     </section>
   );
@@ -535,7 +719,7 @@ function BentoCard({ children, className, style, borderColor = BDR, hoverBorderC
 
 function Features() {
   return (
-    <section style={{ background:"transparent", padding:"96px 16px", position:"relative", overflow:"hidden" }}>
+    <section style={{ background:"transparent", padding:"40px 16px 96px", position:"relative", overflow:"hidden" }}>
       {/* Background glow orbs */}
       <div style={{
         position:"absolute", top:"-10%", right:"-5%",
