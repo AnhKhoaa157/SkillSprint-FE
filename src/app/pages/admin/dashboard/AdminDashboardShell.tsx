@@ -302,34 +302,33 @@ export default function AdminDashboard() {
 
       {/* ── SIDEBAR ── */}
       <aside
-        className="flex flex-col h-full shrink-0"
-        style={{ width: "248px", background: "linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)", borderRight: "1px solid #E2E8F0" }}
+        className="flex h-full w-[272px] shrink-0 flex-col border-r border-slate-200/80 bg-[#FCFDFE] p-3 shadow-[12px_0_35px_rgba(15,23,42,0.025)]"
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 px-5 py-5"
-          style={{ borderBottom: "1px solid rgba(148,163,184,0.18)" }}>
+        <div className="relative overflow-hidden rounded-2xl border border-orange-100 bg-[linear-gradient(135deg,#FFF9F4_0%,#FFFFFF_62%,#FFF3E7_100%)] px-4 py-3.5 shadow-[0_8px_22px_rgba(194,65,12,0.05)]">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-5 -top-6 h-20 w-20 rounded-full border-[14px] border-orange-100/60" />
           <div
-            className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-slate-100"
-            style={{ background: "white" }}
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-[0_8px_18px_rgba(255,107,0,0.1)]"
           >
             <img
               src="/logo.png"
               alt="SkillSprint Logo"
-              className="w-full h-full object-contain p-1"
+              className="h-full w-full object-contain p-1.5"
             />
           </div>
-          <div className="flex flex-col min-w-0">
-            <p style={{ fontWeight: 800, fontSize: "0.95rem", color: "#0F172A", lineHeight: 1.2 }}>
-              SkillSprint
-            </p>
-            <p style={{ color: "#94A3B8", fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: "2px" }}>
-              CỔNG QUẢN TRỊ
-            </p>
+          <div className="relative mt-3 flex min-w-0 items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[15px] font-black tracking-[-0.03em] text-slate-950">SkillSprint</p>
+              <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Không gian quản trị</p>
+            </div>
+            <span className="rounded-lg border border-orange-100 bg-orange-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-[#C2410C]">Admin</span>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-4" aria-label="Điều hướng quản trị">
+        <nav className="min-h-0 flex-1 overflow-y-auto px-1 py-5" aria-label="Điều hướng quản trị">
+          <p className="px-3 pb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Điều hướng</p>
+          <div className="space-y-1.5">
           {navGroups.map((group, groupIndex) => {
             const isExpanded = expandedNavGroups.includes(group.label);
             const containsActiveItem = group.items.some((item) => item.id === activeNav);
@@ -337,16 +336,16 @@ export default function AdminDashboard() {
             const GroupIcon = group.icon;
 
             return (
-              <div key={group.label} className={`rounded-2xl border p-1 transition-colors ${containsActiveItem ? "border-orange-100 bg-orange-50/35 shadow-[0_8px_18px_rgba(255,107,0,0.05)]" : "border-transparent bg-white/50 hover:border-slate-100 hover:bg-white"}`}>
+              <div key={group.label} className={`rounded-2xl p-1.5 transition-colors ${containsActiveItem ? "bg-orange-50/65" : "hover:bg-slate-50/80"}`}>
                 <button
                   type="button"
                   onClick={() => toggleNavGroup(group.label)}
                   aria-expanded={isExpanded}
                   aria-controls={groupId}
-                  className={`flex min-h-12 w-full items-center justify-between gap-2 rounded-xl px-2.5 text-left text-[10px] font-extrabold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 ${containsActiveItem ? "text-[#C2410C]" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
+                  className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-2.5 text-left text-[10px] font-extrabold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 ${containsActiveItem ? "text-[#C2410C]" : "text-slate-500 hover:bg-white hover:text-slate-800"}`}
                 >
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-1 ${group.iconClass}`}>
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-1 transition-colors ${containsActiveItem ? "bg-white text-[#FF6B00] ring-orange-100 shadow-sm" : group.iconClass}`}>
                       <GroupIcon className="h-4 w-4" aria-hidden="true" />
                     </span>
                     <span className="truncate">{group.label}</span>
@@ -359,7 +358,7 @@ export default function AdminDashboard() {
 
                 <div id={groupId} className={`grid transition-[grid-template-rows] duration-200 motion-reduce:transition-none ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                   <div className="min-h-0 overflow-hidden">
-                    <div className="space-y-0.5 px-1 pb-1 pt-1">
+                    <div className="ml-5 mt-1 space-y-0.5 border-l border-orange-100/80 pb-1 pl-3 pr-1">
                       {group.items.map((item) => {
                         const isActive = activeNav === item.id;
 
@@ -368,7 +367,7 @@ export default function AdminDashboard() {
                             key={item.id}
                             type="button"
                             onClick={() => handleNavigation(item.id)}
-                            className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 ${isActive ? "border border-orange-200 bg-orange-50 text-[#C2410C] font-bold shadow-sm" : "border border-transparent text-slate-700 hover:border-slate-100 hover:bg-slate-50 hover:text-slate-950"}`}
+                            className={`relative flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 ${isActive ? "bg-white font-bold text-[#C2410C] shadow-[0_6px_16px_rgba(194,65,12,0.08)] before:absolute before:-left-[13px] before:h-6 before:w-0.5 before:rounded-full before:bg-[#FF6B00]" : "text-slate-600 hover:bg-white hover:text-slate-950"}`}
                           >
                             <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[#FF6B00]" : "text-slate-500"}`} aria-hidden="true" />
                             <span className="min-w-0 flex-1 truncate whitespace-nowrap" title={item.label}>{item.label}</span>
@@ -381,17 +380,16 @@ export default function AdminDashboard() {
               </div>
             );
           })}
+          </div>
         </nav>
 
         {/* Direct management link removed — moved to user dropdown */}
 
         {/* Bottom */}
-        <div className="px-3 pb-4 pt-3 space-y-2" style={{ borderTop: "1px solid rgba(148,163,184,0.18)" }}>
-          <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-xl transition-all text-left"
-            style={{ color: "#64748B", background: "none", border: "none", cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "#DC2626"; e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "#64748B"; e.currentTarget.style.background = "transparent"; }}>
-            ← Đăng xuất
+        <div className="mt-3 border-t border-slate-100 px-1 pt-3">
+          <button onClick={handleLogout} className="flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-left text-xs font-bold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-100">
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            Đăng xuất
           </button>
         </div>
       </aside>

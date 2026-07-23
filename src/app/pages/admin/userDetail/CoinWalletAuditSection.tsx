@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Coins, History, LoaderCircle, Minus, Plus, RefreshCw, X } from "lucide-react";
+import { Coins, History, LoaderCircle, Minus, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { adjustAdminWallet, getAdminWallet, type AdminWallet } from "../../../../api/admin/adminWalletService";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 
 const numberFormat = new Intl.NumberFormat("vi-VN");
 
@@ -101,14 +102,11 @@ export function CoinWalletAuditSection({ userId, canAdjust = false }: { userId: 
       )}
 
       {canAdjust && modalOpen && (
-        <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="wallet-adjustment-title">
-          <div className="relative w-full max-w-lg overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.32)]">
+        <Dialog open={modalOpen} onOpenChange={(open) => { if (!open) closeAdjustment(); }}>
+          <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-lg gap-0 overflow-y-auto rounded-[2rem] border-white/80 bg-white p-0 shadow-[0_28px_80px_rgba(15,23,42,0.32)] [&>button]:right-5 [&>button]:top-5 [&>button]:h-10 [&>button]:w-10 [&>button]:rounded-xl [&>button]:border [&>button]:border-slate-200 [&>button]:bg-white [&>button]:p-2 [&>button]:opacity-100 [&>button]:shadow-sm">
             <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 bg-[linear-gradient(90deg,#FF6B00,#FF9A3C)]" />
             <div className="relative p-5 sm:p-7">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[linear-gradient(135deg,#FFF3E7,#FFE2C5)] text-[#FF6B00] shadow-[0_8px_18px_rgba(255,107,0,0.12)]"><Coins className="h-5 w-5" /></span><div><p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-orange-600">Điều chỉnh có kiểm soát</p><h3 id="wallet-adjustment-title" className="mt-0.5 text-xl font-black tracking-[-0.03em] text-slate-950">Thay đổi số dư Coin</h3></div></div>
-                <button type="button" onClick={closeAdjustment} disabled={submitting} className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 disabled:opacity-50" aria-label="Đóng cửa sổ điều chỉnh Coin"><X className="h-4 w-4" /></button>
-              </div>
+              <DialogHeader className="pr-12 text-left"><div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[linear-gradient(135deg,#FFF3E7,#FFE2C5)] text-[#FF6B00] shadow-[0_8px_18px_rgba(255,107,0,0.12)]"><Coins className="h-5 w-5" /></span><div><p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-orange-600">Điều chỉnh có kiểm soát</p><DialogTitle className="mt-0.5 text-xl font-black tracking-[-0.03em] text-slate-950">Thay đổi số dư Coin</DialogTitle></div></div><DialogDescription className="sr-only">Cập nhật số dư Coin và lưu lý do điều chỉnh vào audit.</DialogDescription></DialogHeader>
 
               <div className="mt-5 grid gap-3 rounded-2xl border border-orange-100 bg-[linear-gradient(135deg,#FFF8F1,#FFFFFF)] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
                 <div><p className="text-[10px] font-black uppercase tracking-[0.13em] text-orange-600">Số dư hiện tại</p><p className="mt-1 text-xl font-black tabular-nums text-slate-950">{numberFormat.format(wallet?.balance ?? 0)} <span className="text-sm text-slate-500">Coin</span></p></div>
@@ -129,8 +127,8 @@ export function CoinWalletAuditSection({ userId, canAdjust = false }: { userId: 
               <button type="button" onClick={closeAdjustment} disabled={submitting} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50">Hủy</button>
               <button type="button" onClick={() => void submit()} disabled={!canSubmit || submitting} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(105deg,#FF6B00_0%,#FF7C16_48%,#FF9A3C_100%)] px-4 text-sm font-black text-white shadow-[0_10px_20px_rgba(255,107,0,0.2)] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none">{submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : signedAmount > 0 ? <Plus className="h-4 w-4" /> : <Minus className="h-4 w-4" />}{submitting ? "Đang lưu..." : "Xác nhận"}</button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </section>
   );
