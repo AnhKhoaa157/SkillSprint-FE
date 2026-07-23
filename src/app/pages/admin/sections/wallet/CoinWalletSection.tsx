@@ -9,23 +9,38 @@ export default function CoinWalletSection() {
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [page, setPage] = useState(0);
   const [selectedUser, setSelectedUser] = useState<AdminUserSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [loadMoreError, setLoadMoreError] = useState("");
   const reduceMotion = useReducedMotion();
+  const pageSize = 20;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await getAdminUsers(appliedQuery || undefined, 0, 20);
-      setUsers(response.content);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải danh sách người dùng.");
-    } finally {
-      setLoading(false);
+  const load = useCallback(async (nextPage = 0, append = false) => {
+    if (append) {
+      setLoadingMore(true);
+      setLoadMoreError("");
+    } else {
+      setLoading(true);
+      setError("");
     }
-  }, [appliedQuery]);
+    try {
+      const response = await getAdminUsers(appliedQuery || undefined, nextPage, pageSize);
+      setUsers(current => append ? [...current, ...response.content] : response.content);
+      setTotalUsers(response.totalElements);
+      setPage(nextPage);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "Không thể tải danh sách người dùng.";
+      if (append) setLoadMoreError(message);
+      else setError(message);
+    } finally {
+      if (append) setLoadingMore(false);
+      else setLoading(false);
+    }
+  }, [appliedQuery, pageSize]);
 
   useEffect(() => {
     void load();
@@ -93,7 +108,7 @@ export default function CoinWalletSection() {
           Không tìm thấy người dùng phù hợp.
         </div>
       ) : (
-        <section className="mt-7"><div className="mb-3 flex items-end justify-between gap-4"><div><p className="text-[11px] font-black uppercase tracking-[0.15em] text-[#FF6B00]">Kết quả tìm kiếm</p><h3 className="mt-1 text-lg font-black tracking-tight text-slate-950">Chọn một ví để quản lý</h3></div><span className="rounded-xl border border-orange-100 bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-sm">{users.length} người dùng</span></div><div className="grid gap-3 sm:grid-cols-2">
+        <section className="mt-7"><div className="mb-3 flex items-end justify-between gap-4"><div><p className="text-[11px] font-black uppercase tracking-[0.15em] text-[#FF6B00]">Kết quả tìm kiếm</p><h3 className="mt-1 text-lg font-black tracking-tight text-slate-950">Chọn một ví để quản lý</h3></div><span className="rounded-xl border border-orange-100 bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-sm">Đang hiển thị {users.length}/{totalUsers} người dùng</span></div><div className="grid gap-3 sm:grid-cols-2">
           {users.map((user, index) => (
             <motion.article key={user.id} initial={reduceMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06, type: "spring", stiffness: 220, damping: 22 }} whileHover={reduceMotion ? undefined : { y: -4 }} className="group flex min-w-0 items-center gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:border-orange-200 hover:shadow-[0_18px_34px_rgba(194,65,12,0.1)]">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-orange-100 bg-orange-50 text-[#FF6B00] transition group-hover:scale-105 group-hover:bg-[#FF6B00] group-hover:text-white">
@@ -112,7 +127,15 @@ export default function CoinWalletSection() {
               </button>
             </motion.article>
           ))}
-        </div></section>
+        </div>
+          {users.length < totalUsers && <div className="mt-5 flex flex-col items-center gap-2">
+            <button type="button" onClick={() => void load(page + 1, true)} disabled={loadingMore} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-5 text-sm font-bold text-[#FF6B00] shadow-sm transition hover:-translate-y-0.5 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60">
+              {loadingMore && <LoaderCircle className="h-4 w-4 animate-spin" />}
+              {loadingMore ? "Đang tải thêm..." : "Tải thêm người dùng"}
+            </button>
+            {loadMoreError && <p className="text-center text-xs font-medium text-rose-600">{loadMoreError}</p>}
+          </div>}
+        </section>
       )}
       <Dialog open={selectedUser !== null} onOpenChange={(open) => { if (!open) setSelectedUser(null); }}>
         <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-3xl overflow-y-auto rounded-[2rem] border-white bg-[#F8FAFC] p-0 text-slate-900 shadow-[0_28px_80px_rgba(15,23,42,0.26)] sm:max-w-3xl [&>button]:right-5 [&>button]:top-5 [&>button]:rounded-xl [&>button]:bg-white [&>button]:p-1.5 [&>button]:opacity-100 [&>button]:shadow-sm">

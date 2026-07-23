@@ -32,6 +32,26 @@ describe("CoinWalletSection", () => {
     expect(getAdminWallet).toHaveBeenCalledWith("user-1");
   });
 
+  it("loads the next user page when more results are available", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getAdminUsers)
+      .mockResolvedValueOnce({
+        content: [{ id: "user-1", email: "learner@example.com", fullName: "Nguyễn An" }],
+        totalElements: 2,
+      } as never)
+      .mockResolvedValueOnce({
+        content: [{ id: "user-2", email: "learner-2@example.com", fullName: "Trần Bình" }],
+        totalElements: 2,
+      } as never);
+
+    render(<CoinWalletSection />);
+
+    await user.click(await screen.findByRole("button", { name: "Tải thêm người dùng" }));
+
+    expect(await screen.findByText("Trần Bình")).toBeInTheDocument();
+    expect(getAdminUsers).toHaveBeenLastCalledWith(undefined, 1, 20);
+  });
+
   it("keeps wallet adjustment unavailable in user detail", async () => {
     render(<CoinWalletAuditSection userId="user-1" />);
 
