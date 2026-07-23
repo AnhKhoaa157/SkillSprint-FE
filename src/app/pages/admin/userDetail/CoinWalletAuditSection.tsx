@@ -37,6 +37,8 @@ export function CoinWalletAuditSection({ userId, canAdjust = false }: { userId: 
 
   const signedAmount = useMemo(() => Number(amount), [amount]);
   const canSubmit = Number.isInteger(signedAmount) && signedAmount !== 0 && reason.trim().length > 0 && reason.trim().length <= 500;
+  const projectedBalance = (wallet?.balance ?? 0) + (Number.isFinite(signedAmount) ? signedAmount : 0);
+  const isCreditAdjustment = signedAmount > 0;
 
   const closeAdjustment = () => {
     if (submitting) return;
@@ -99,19 +101,26 @@ export function CoinWalletAuditSection({ userId, canAdjust = false }: { userId: 
       )}
 
       {canAdjust && modalOpen && (
-        <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="wallet-adjustment-title">
-          <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.32)]">
-            <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#FF6B00,#FF9A3C)]" />
-            <div className="relative p-6 sm:p-7">
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="wallet-adjustment-title">
+          <div className="relative w-full max-w-lg overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.32)]">
+            <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 bg-[linear-gradient(90deg,#FF6B00,#FF9A3C)]" />
+            <div className="relative p-5 sm:p-7">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-orange-50 text-[#FF6B00] shadow-[0_8px_18px_rgba(255,107,0,0.12)]"><Coins className="h-5 w-5" /></span><div><p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-orange-600">Ví Coin</p><h3 id="wallet-adjustment-title" className="mt-0.5 text-xl font-black tracking-[-0.03em] text-slate-950">Điều chỉnh số dư</h3></div></div>
+                <div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[linear-gradient(135deg,#FFF3E7,#FFE2C5)] text-[#FF6B00] shadow-[0_8px_18px_rgba(255,107,0,0.12)]"><Coins className="h-5 w-5" /></span><div><p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-orange-600">Điều chỉnh có kiểm soát</p><h3 id="wallet-adjustment-title" className="mt-0.5 text-xl font-black tracking-[-0.03em] text-slate-950">Thay đổi số dư Coin</h3></div></div>
                 <button type="button" onClick={closeAdjustment} disabled={submitting} className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 disabled:opacity-50" aria-label="Đóng cửa sổ điều chỉnh Coin"><X className="h-4 w-4" /></button>
               </div>
 
-              <p className="mt-5 rounded-xl border border-orange-100 bg-orange-50/70 px-3.5 py-2.5 text-sm leading-5 text-slate-600">Nhập số dương để cộng Coin, số âm để trừ. Mọi thay đổi đều được lưu vào audit.</p>
+              <div className="mt-5 grid gap-3 rounded-2xl border border-orange-100 bg-[linear-gradient(135deg,#FFF8F1,#FFFFFF)] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                <div><p className="text-[10px] font-black uppercase tracking-[0.13em] text-orange-600">Số dư hiện tại</p><p className="mt-1 text-xl font-black tabular-nums text-slate-950">{numberFormat.format(wallet?.balance ?? 0)} <span className="text-sm text-slate-500">Coin</span></p></div>
+                <p className="max-w-52 text-xs leading-5 text-slate-500">Nhập số dương để cộng, số âm để trừ. Mọi thay đổi đều được lưu audit.</p>
+              </div>
 
               <div className="mt-5 space-y-4">
                 <label className="block text-sm font-bold text-slate-700">Số Coin<input type="number" step="1" value={amount} onChange={event => setAmount(event.target.value)} placeholder="Ví dụ: 100 hoặc -100" className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 font-semibold tabular-nums text-slate-800 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-orange-300 focus:bg-white focus:ring-4 focus:ring-orange-100" /></label>
+                <div className={`flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 ${signedAmount === 0 ? "border-slate-200 bg-slate-50 text-slate-500" : isCreditAdjustment ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-rose-100 bg-rose-50 text-rose-800"}`}>
+                  <div className="flex items-center gap-2"><span className={`grid h-8 w-8 place-items-center rounded-xl ${signedAmount === 0 ? "bg-white text-slate-400" : isCreditAdjustment ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{isCreditAdjustment ? <Plus className="h-4 w-4" /> : <Minus className="h-4 w-4" />}</span><p className="text-xs font-bold">{signedAmount === 0 ? "Nhập số Coin để xem trước" : isCreditAdjustment ? "Cộng vào số dư" : "Trừ khỏi số dư"}</p></div>
+                  <p className="text-right text-xs font-bold tabular-nums">{signedAmount === 0 ? "—" : `${isCreditAdjustment ? "+" : "−"}${numberFormat.format(Math.abs(signedAmount))} Coin`}<span className="mt-0.5 block text-[11px] font-medium opacity-70">Sau điều chỉnh: {numberFormat.format(projectedBalance)}</span></p>
+                </div>
                 <label className="block text-sm font-bold text-slate-700">Lý do<textarea value={reason} onChange={event => setReason(event.target.value)} maxLength={500} rows={3} placeholder="Ví dụ: Hỗ trợ do lỗi thanh toán" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/60 p-4 font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white focus:ring-4 focus:ring-orange-100" /></label>
                 <p className="text-right text-xs font-medium tabular-nums text-slate-400">{reason.trim().length}/500 ký tự</p>
               </div>
