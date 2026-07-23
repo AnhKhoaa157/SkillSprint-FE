@@ -32,6 +32,17 @@ describe("CoinWalletSection", () => {
     expect(getAdminWallet).toHaveBeenCalledWith("user-1");
   });
 
+  it("opens the adjustment dialog in a portal above the wallet dialog", async () => {
+    const user = userEvent.setup();
+    render(<CoinWalletSection />);
+
+    await user.click(await screen.findByRole("button", { name: "Mở ví" }));
+    await user.click(screen.getByRole("button", { name: "Điều chỉnh Coin" }));
+
+    expect(await screen.findByRole("heading", { name: "Thay đổi số dư Coin" })).toBeVisible();
+    expect(screen.getByLabelText("Số Coin")).toBeVisible();
+  });
+
   it("loads the next user page when more results are available", async () => {
     const user = userEvent.setup();
     vi.mocked(getAdminUsers)
