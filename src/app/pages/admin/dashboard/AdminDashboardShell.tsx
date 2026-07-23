@@ -308,12 +308,12 @@ export default function AdminDashboard() {
         <div className="relative overflow-hidden rounded-2xl border border-orange-100 bg-[linear-gradient(135deg,#FFF9F4_0%,#FFFFFF_62%,#FFF3E7_100%)] px-4 py-3.5 shadow-[0_8px_22px_rgba(194,65,12,0.05)]">
           <div aria-hidden="true" className="pointer-events-none absolute -right-5 -top-6 h-20 w-20 rounded-full border-[14px] border-orange-100/60" />
           <div
-            className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-orange-100 bg-white shadow-[0_8px_18px_rgba(255,107,0,0.1)]"
+            className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-[0_8px_18px_rgba(255,107,0,0.1)]"
           >
             <img
-              src="/brand-logo.svg"
-              alt="Biểu tượng SkillSprint"
-              className="h-11 w-11"
+              src="/logo.png"
+              alt="Logo SkillSprint"
+              className="absolute w-[200%] max-w-none -translate-x-[23%] -translate-y-[12%]"
             />
           </div>
           <div className="relative mt-3 flex min-w-0 items-center justify-between gap-2">
