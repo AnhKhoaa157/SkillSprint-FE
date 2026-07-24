@@ -55,6 +55,22 @@ describe("adminUserService", () => {
       expect(result.totalElements).toBe(21);
     });
 
+    it("should include plan and name sorting filters", async () => {
+      const mockData = { items: [], totalItems: 0 };
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        status: 200,
+        ok: true,
+        text: async () => JSON.stringify({ success: true, data: mockData }),
+      } as any);
+
+      await getAdminUsers(undefined, 0, 10, "ADMIN", "PREMIUM", "fullName", "ASC");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("role=ADMIN&planType=PREMIUM&page=0&size=10&sortBy=fullName&sortDirection=ASC"),
+        expect.any(Object),
+      );
+    });
+
     it("should fetch the global user summary", async () => {
       const summary = { totalUsers: 108, activeUsers: 100, learnerUsers: 104, adminUsers: 4 };
       vi.mocked(global.fetch).mockResolvedValueOnce({
