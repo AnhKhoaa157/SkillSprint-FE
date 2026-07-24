@@ -1,6 +1,7 @@
 import { getAuthHeaders } from "../core/apiClient";
 import { triggerSessionExpiry, extractAuthCode } from "../auth/sessionExpiry";
 import { API_BASE } from "../core/config";
+import type { ServicePlanType } from "./adminSubscriptionPlansService";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -61,6 +62,8 @@ export type AdminUserPage = {
 };
 
 export type AdminUserRole = "LEARNER" | "ADMIN";
+export type AdminUserSortField = "createdAt" | "fullName";
+export type AdminUserSortDirection = "ASC" | "DESC";
 
 export type AdminUserStats = {
   totalUsers: number;
@@ -137,12 +140,18 @@ export async function getAdminUsers(
   page = 0,
   size = 10,
   role?: AdminUserRole,
+  planType?: ServicePlanType,
+  sortBy: AdminUserSortField = "createdAt",
+  sortDirection: AdminUserSortDirection = "DESC",
 ): Promise<AdminUserPage> {
   const q = new URLSearchParams();
   if (search) q.set("search", search);
   if (role) q.set("role", role);
+  if (planType) q.set("planType", planType);
   q.set("page", String(page));
   q.set("size", String(size));
+  q.set("sortBy", sortBy);
+  q.set("sortDirection", sortDirection);
   q.set("_t", String(Date.now())); // Bypass browser/proxy HTTP caches
   const resp = await authFetch<any>(`/api/admin/users?${q.toString()}`);
   if (!resp.data) throw new Error(resp.message || "Empty response");

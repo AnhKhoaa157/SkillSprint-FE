@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { motion } from "motion/react";
-import { Search, Users, ShieldCheck, RefreshCw } from "lucide-react";
+import { ArrowDownAZ, ArrowUpAZ, Search, Users, ShieldCheck, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import adminUserService, {
   type AdminUserDetail,
   type AdminUserRole,
+  type AdminUserSortDirection,
+  type AdminUserSortField,
   type AdminUserStats,
   type AdminUserSummary,
 } from "../../../../../api/admin/adminUserService";
@@ -26,9 +28,30 @@ type AvatarCapableUser = AdminUserSummary & {
 };
 
 type RoleFilter = AdminUserRole | "";
+type PlanFilter = ServicePlanType | "";
+
+const planFilterOptions: Array<{ value: PlanFilter; label: string }> = [
+  { value: "", label: "Tất cả gói" },
+  { value: "FREE", label: "Free" },
+  { value: "SKILL_BUILDER", label: "Skill Builder" },
+  { value: "PREMIUM", label: "Premium" },
+  { value: "ADMIN_DEFAULT", label: "Hệ thống" },
+];
 
 function getRoleFilter(value: string | null): RoleFilter {
   return value === "LEARNER" || value === "ADMIN" ? value : "";
+}
+
+function getPlanFilter(value: string | null): PlanFilter {
+  return planFilterOptions.some(option => option.value === value) ? (value ?? "") as PlanFilter : "";
+}
+
+function getSortBy(value: string | null): AdminUserSortField {
+  return value === "fullName" ? "fullName" : "createdAt";
+}
+
+function getSortDirection(value: string | null): AdminUserSortDirection {
+  return value === "ASC" ? "ASC" : "DESC";
 }
 
 function getUserInitial(user: AdminUserSummary) {
@@ -157,6 +180,9 @@ export default function AdminUsers() {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleFilter>(() => getRoleFilter(searchParams.get("role")));
+  const [selectedPlan, setSelectedPlan] = useState<PlanFilter>(() => getPlanFilter(searchParams.get("planType")));
+  const [sortBy, setSortBy] = useState<AdminUserSortField>(() => getSortBy(searchParams.get("sortBy")));
+  const [sortDirection, setSortDirection] = useState<AdminUserSortDirection>(() => getSortDirection(searchParams.get("sortDirection")));
   const [userSummary, setUserSummary] = useState<AdminUserStats | null>(null);
   const navigate = useNavigate();
 
@@ -185,7 +211,15 @@ export default function AdminUsers() {
     try {
       // Cơ chế cách ly lỗi cô lập giúp bảo toàn dữ liệu bảng người dùng khi endpoint gói dịch vụ bị nghẽn 
       const [usersRes, plansRes, summaryRes] = await Promise.all([
-        adminUserService.getAdminUsers(search || undefined, page, size, selectedRole || undefined).catch(err => {
+        adminUserService.getAdminUsers(
+          search || undefined,
+          page,
+          size,
+          selectedRole || undefined,
+          selectedPlan || undefined,
+          sortBy,
+          sortDirection,
+        ).catch(err => {
           console.error("Failed to fetch admin users:", err);
           return { content: [], totalElements: 0 };
         }),
@@ -216,7 +250,7 @@ export default function AdminUsers() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, selectedRole, size]);
+  }, [page, search, selectedPlan, selectedRole, size, sortBy, sortDirection]);
 
   // Master useEffect for Debounce Search Pipeline
   useEffect(() => {
@@ -271,11 +305,20 @@ export default function AdminUsers() {
 
       if (selectedRole) next.set("role", selectedRole);
       else next.delete("role");
+
+      if (selectedPlan) next.set("planType", selectedPlan);
+      else next.delete("planType");
+
+      if (sortBy === "fullName") next.set("sortBy", sortBy);
+      else next.delete("sortBy");
+
+      if (sortBy === "fullName" && sortDirection === "ASC") next.set("sortDirection", sortDirection);
+      else next.delete("sortDirection");
       
       return next;
     }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, selectedRole]);
+  }, [page, search, selectedPlan, selectedRole, sortBy, sortDirection]);
 
   useEffect(() => {
     const handlePlansUpdated = () => {
@@ -343,6 +386,39 @@ export default function AdminUsers() {
               style={{ border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#0F172A" }}
             />
           </div>
+          <label className="sr-only" htmlFor="user-plan-filter">Lọc theo gói đăng ký</label>
+          <select
+            id="user-plan-filter"
+            value={selectedPlan}
+            onChange={event => {
+              setSelectedPlan(event.target.value as PlanFilter);
+              setPage(0);
+            }}
+            className="h-9 rounded-xl px-3 text-sm outline-none transition-all"
+            style={{ border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#334155" }}
+          >
+            {planFilterOptions.map(option => (
+              <option key={option.value || "all"} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => {
+              if (sortBy === "fullName") {
+                setSortDirection(direction => direction === "ASC" ? "DESC" : "ASC");
+              } else {
+                setSortBy("fullName");
+                setSortDirection("ASC");
+              }
+              setPage(0);
+            }}
+            aria-label={sortBy === "fullName" && sortDirection === "ASC" ? "Sắp xếp tên Z đến A" : "Sắp xếp tên A đến Z"}
+            className="h-9 inline-flex items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+            style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#475569" }}
+          >
+            {sortBy === "fullName" && sortDirection === "ASC" ? <ArrowDownAZ size={15} /> : <ArrowUpAZ size={15} />}
+            Tên
+          </button>
           <div className="flex items-center gap-2">
             <button onClick={() => {
                 if (timerRef.current) clearTimeout(timerRef.current);
@@ -361,6 +437,9 @@ export default function AdminUsers() {
                 setLocalSearch("");
                 setSearch("");
                 setSelectedRole("");
+                setSelectedPlan("");
+                setSortBy("createdAt");
+                setSortDirection("DESC");
                 setPage(0);
               }}
               className="px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
