@@ -179,6 +179,7 @@ export default function AdminUsers() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [usersLoadError, setUsersLoadError] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<RoleFilter>(() => getRoleFilter(searchParams.get("role")));
   const [selectedPlan, setSelectedPlan] = useState<PlanFilter>(() => getPlanFilter(searchParams.get("planType")));
   const [sortBy, setSortBy] = useState<AdminUserSortField>(() => getSortBy(searchParams.get("sortBy")));
@@ -208,6 +209,7 @@ export default function AdminUsers() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setUsersLoadError(null);
     try {
       // Cơ chế cách ly lỗi cô lập giúp bảo toàn dữ liệu bảng người dùng khi endpoint gói dịch vụ bị nghẽn 
       const [usersRes, plansRes, summaryRes] = await Promise.all([
@@ -221,6 +223,7 @@ export default function AdminUsers() {
           sortDirection,
         ).catch(err => {
           console.error("Failed to fetch admin users:", err);
+          setUsersLoadError(err instanceof Error ? err.message : "Không thể tải danh sách người dùng.");
           return { content: [], totalElements: 0 };
         }),
         getSubscriptionPlans().catch(err => {
@@ -560,6 +563,12 @@ export default function AdminUsers() {
             </tbody>
           </table>
         </div>
+
+        {usersLoadError && (
+          <div role="alert" className="mx-4 mb-3 rounded-xl px-3 py-2 text-xs font-medium text-red-700 bg-red-50 border border-red-200">
+            Không thể tải danh sách người dùng: {usersLoadError}
+          </div>
+        )}
 
         {/* Pagination */}
         <div className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap" style={{ borderTop: "1px solid #F1F5F9", background: "#FAFAFA" }}>
