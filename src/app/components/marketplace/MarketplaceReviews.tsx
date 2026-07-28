@@ -19,6 +19,17 @@ function ReviewStars({ value }: { value: number }) {
   </span>;
 }
 
+function ReviewerAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const initial = (name || "N").trim().charAt(0).toUpperCase();
+
+  return <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-2xl bg-orange-50 text-sm font-black text-[#FF6B00]" aria-hidden="true">
+    {avatarUrl && !imageFailed
+      ? <img src={avatarUrl} alt="" onError={() => setImageFailed(true)} className="h-full w-full object-cover" />
+      : initial}
+  </span>;
+}
+
 export function MarketplaceReviewList({ reviews }: { reviews: MarketplaceReview[] }) {
   if (reviews.length === 0) {
     return <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50/70 p-7 text-center text-sm leading-6 text-slate-500">
@@ -31,9 +42,7 @@ export function MarketplaceReviewList({ reviews }: { reviews: MarketplaceReview[
     {reviews.map(review => <article key={review.reviewId} className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_10px_28px_rgba(15,23,42,0.035)] transition hover:border-orange-100 hover:shadow-[0_14px_34px_rgba(194,65,12,0.07)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-orange-50 text-sm font-black text-[#FF6B00]" aria-hidden="true">
-            {(review.reviewerName || "N").trim().charAt(0).toUpperCase()}
-          </span>
+          <ReviewerAvatar name={review.reviewerName} avatarUrl={review.avatarUrl} />
           <div className="min-w-0"><b className="block truncate text-slate-950">{review.reviewerName}</b><p className="mt-1 text-xs text-slate-400">Cập nhật {formatDate(review.updatedAt ?? review.createdAt)}</p></div>
         </div>
         <span className="inline-flex shrink-0 rounded-xl bg-amber-50 px-2.5 py-1.5"><ReviewStars value={review.rating} /></span>
