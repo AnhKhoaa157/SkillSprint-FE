@@ -24,6 +24,10 @@ import {
   getAdminDashboardAnalytics,
   type AdminDashboardResponse,
 } from "../../../../../api/admin/adminDashboardService";
+import {
+  getPlatformTreasurySummary,
+  type PlatformTreasurySummary,
+} from "../../../../../api/admin/marketplaceTreasuryService";
 import { PlatformTreasurySection } from "./PlatformTreasurySection";
 
 const ACCENT = "#FF6B00";
@@ -190,6 +194,7 @@ function FinancialAreaChart({
 
 export function FinancialsView() {
   const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null);
+  const [treasurySummary, setTreasurySummary] = useState<PlatformTreasurySummary | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<FinancialMetricKey>("subscriptionRevenue");
@@ -202,8 +207,14 @@ export function FinancialsView() {
     }
 
     try {
-      const nextDashboard = await getAdminDashboardAnalytics();
-      if (mountedRef.current) setDashboard(nextDashboard);
+      const [nextDashboard, nextTreasurySummary] = await Promise.all([
+        getAdminDashboardAnalytics(),
+        getPlatformTreasurySummary(),
+      ]);
+      if (mountedRef.current) {
+        setDashboard(nextDashboard);
+        setTreasurySummary(nextTreasurySummary);
+      }
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : "Không thể tải dữ liệu tài chính";
       if (mountedRef.current) {
@@ -234,6 +245,14 @@ export function FinancialsView() {
     ),
     [dashboard],
   );
+
+  const reconciledMarketplaceCommission = treasurySummary
+    ? {
+        gross: treasurySummary.commissionCoinEarned,
+        refunded: treasurySummary.commissionCoinReversed,
+        net: treasurySummary.commissionCoinNetPosition,
+      }
+    : marketplaceCommission;
 
   const chartMetrics = useMemo(() => {
     const revenueData = (dashboard?.charts.revenueByDay ?? []).map((point) => ({
@@ -343,12 +362,12 @@ export function FinancialsView() {
     },
     {
       color: "#059669",
-      context: "Đã trừ phần hoàn tiền",
+      context: treasurySummary ? "Toàn thời gian · đã trừ hoàn tiền" : "Đã trừ phần hoàn tiền",
       icon: Activity,
       label: "Hoa hồng Marketplace",
       sparkline: chartMetrics.marketplaceCommission.data.slice(-8).map((point) => point.amount),
-      sub: `Gross: ${formatCoin(marketplaceCommission.gross)}`,
-      value: formatCoin(marketplaceCommission.net),
+      sub: `Gross: ${formatCoin(reconciledMarketplaceCommission.gross)}`,
+      value: formatCoin(reconciledMarketplaceCommission.net),
     },
     {
       color: "#7C3AED",
@@ -444,15 +463,16 @@ export function FinancialsView() {
               <Building2 aria-hidden="true" className="h-5 w-5" />
             </span>
           </div>
-          <p className="mt-8 text-3xl font-black tracking-[-0.05em] text-emerald-700">{formatCoin(marketplaceCommission.net)}</p>
+          <p className="mt-2 text-xs font-medium text-slate-500">Lũy kế toàn thời gian</p>
+          <p className="mt-5 text-3xl font-black tracking-[-0.05em] text-emerald-700">{formatCoin(reconciledMarketplaceCommission.net)}</p>
           <dl className="mt-6 space-y-3 border-y border-emerald-100 py-4 text-sm">
             <div className="flex items-center justify-between gap-4">
               <dt className="text-slate-500">Gross đã ghi nhận</dt>
-              <dd className="font-black text-slate-800">{formatCoin(marketplaceCommission.gross)}</dd>
+              <dd className="font-black text-slate-800">{formatCoin(reconciledMarketplaceCommission.gross)}</dd>
             </div>
             <div className="flex items-center justify-between gap-4">
               <dt className="text-slate-500">Điều chỉnh hoàn tiền</dt>
-              <dd className="font-black text-rose-600">{formatCoin(-marketplaceCommission.refunded)}</dd>
+              <dd className="font-black text-rose-600">{formatCoin(-reconciledMarketplaceCommission.refunded)}</dd>
             </div>
           </dl>
           <p className="mt-4 text-xs leading-5 text-slate-500">Số liệu đối soát nội bộ, không phải số dư tài khoản ngân hàng có thể rút.</p>
