@@ -92,6 +92,7 @@ export interface MarketplaceReview {
   versionId?: string | null;
   versionNo?: number | null;
   reviewerName: string;
+  avatarUrl?: string | null;
   rating: number;
   comment?: string | null;
   createdAt: string;

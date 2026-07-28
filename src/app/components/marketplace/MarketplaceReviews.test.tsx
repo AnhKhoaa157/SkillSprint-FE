@@ -33,9 +33,10 @@ describe("MarketplaceReviews", () => {
   });
 
   it("renders a version review list without editing controls", () => {
-    render(<MarketplaceReviewList reviews={[{ reviewId: "review-1", reviewerName: "Learner", rating: 5, comment: "Tốt", createdAt: "2026-07-19T00:00:00Z", updatedAt: "2026-07-19T00:00:00Z" }]} />);
+    const { container } = render(<MarketplaceReviewList reviews={[{ reviewId: "review-1", reviewerName: "Learner", avatarUrl: "data:image/svg+xml;base64,PHN2Zy8+", rating: 5, comment: "Tốt", createdAt: "2026-07-19T00:00:00Z", updatedAt: "2026-07-19T00:00:00Z" }]} />);
 
     expect(screen.getByText("Learner")).toBeInTheDocument();
+    expect(container.querySelector("img")).toHaveAttribute("src", "data:image/svg+xml;base64,PHN2Zy8+");
     expect(screen.getByLabelText("5 trên 5 sao")).toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
