@@ -105,21 +105,16 @@ function LoginForm({ props }: { props: CommonFormProps }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }} style={{ fontFamily: F }} className="relative z-[1] w-full">
-      <span className="absolute right-0 top-0 hidden min-h-[34px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white/95 px-3 text-[10px] font-extrabold uppercase tracking-[0.08em] text-slate-600 sm:inline-flex">
-        <span className="text-sm text-[#FF6B00]" aria-hidden="true">✦</span>
-        AI Learning Portal
-      </span>
-
-      <div className="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-3.5 text-[10px] font-extrabold uppercase tracking-[0.09em] text-[#EA580C]">
+      <div className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-orange-200/80 bg-orange-50/80 px-3 text-[9.5px] font-extrabold uppercase tracking-[0.09em] text-[#EA580C]">
         <Zap size={11} className="fill-[#FF6B00] text-[#FF6B00]" aria-hidden="true" />
         Nền tảng học tập AI
       </div>
 
-      <div className="mb-6 mt-7">
-        <h1 className="text-[32px] font-black leading-tight tracking-[-0.045em] text-slate-950 sm:text-[34px]">
+      <div className="mb-5 mt-5">
+        <h1 className="text-[29px] font-black leading-tight tracking-[-0.045em] text-slate-950 sm:text-[31px]">
           Chào mừng trở lại
         </h1>
-        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
+        <p className="mt-1.5 text-[13px] font-medium leading-relaxed text-slate-500">
           Đăng nhập để tiếp tục hành trình học tập của bạn.
         </p>
       </div>
@@ -130,19 +125,19 @@ function LoginForm({ props }: { props: CommonFormProps }) {
 
       <Button
         type="button" variant="outline" disabled={isSubmitting || props.isGoogleLoading || props.isMaintenanceActive} onClick={props.onContinueWithGoogle}
-        className="flex h-[52px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-[14px] border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-200 hover:border-slate-400 hover:bg-slate-50 hover:shadow-md active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-[13px] font-bold text-slate-800 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-200 hover:border-slate-400 hover:bg-slate-50 hover:shadow-md active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {props.isGoogleLoading ? <Loader2 size={15} className="animate-spin text-slate-400" /> : <GoogleIcon />}
         <span>Tiếp tục với Google</span>
       </Button>
 
-      <div className="my-[22px] flex items-center gap-3.5">
+      <div className="my-[18px] flex items-center gap-3.5">
         <div className="h-px flex-1 bg-slate-200" />
         <span className="select-none whitespace-nowrap text-[10px] font-extrabold uppercase tracking-[0.08em] text-slate-500">hoặc đăng nhập bằng email</span>
         <div className="h-px flex-1 bg-slate-200" />
       </div>
 
-      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <InputField id="auth-email" label="Địa chỉ email" icon={Mail} type="email" value={email} onChange={setEmail} onBlur={() => setTouched(t => ({ ...t, email: true }))} placeholder="student@gmail.com" autoComplete="email" error={emailError} disabled={props.isMaintenanceActive} />
         <InputField id="auth-password" label="Mật khẩu" icon={Lock} type={showPassword ? "text" : "password"} value={password} onChange={setPassword} onBlur={() => setTouched(t => ({ ...t, password: true }))} placeholder="••••••••" autoComplete="current-password" error={passwordError} disabled={props.isMaintenanceActive}
           labelAction={
@@ -166,7 +161,7 @@ function LoginForm({ props }: { props: CommonFormProps }) {
         <Button 
           type="submit" 
           disabled={isSubmitting || props.isMaintenanceActive} 
-          className={`group relative flex h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-[14px] border-none text-sm font-black uppercase tracking-[0.035em] text-white transition-[background-color,box-shadow,transform] duration-200 shadow-[0_10px_24px_rgba(248,98,6,0.24)] hover:shadow-[0_12px_28px_rgba(248,98,6,0.3)] ${
+          className={`group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border-none text-[13px] font-black uppercase tracking-[0.035em] text-white transition-[background-color,box-shadow,transform] duration-200 shadow-[0_10px_24px_rgba(248,98,6,0.22)] hover:shadow-[0_12px_28px_rgba(248,98,6,0.28)] ${
             props.isMaintenanceActive 
               ? "cursor-not-allowed bg-slate-300" 
               : "cursor-pointer bg-[#F86206] hover:bg-[#EA580C] active:scale-[0.99]"
@@ -185,7 +180,7 @@ function LoginForm({ props }: { props: CommonFormProps }) {
         </Button>
       </form>
 
-      <div className="mt-5 space-y-3.5">
+      <div className="mt-4 space-y-2.5">
         <p className="text-center text-xs text-slate-500 select-none">
           Chưa có tài khoản?{" "}
           <button type="button" onClick={() => props.onSwitchMode("signup")} className="cursor-pointer border-none bg-transparent p-0 font-extrabold text-[#FF8533] hover:text-[#FFA066] hover:underline transition-colors duration-150">Đăng ký ngay</button>
