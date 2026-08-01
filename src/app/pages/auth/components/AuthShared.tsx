@@ -53,7 +53,7 @@ export function InputField({
         {labelAction}
       </div>
       <div 
-        className={`auth-input-shell group relative flex h-[52px] items-center rounded-[14px] border bg-white px-4 transition-all duration-200 ${
+        className={`auth-input-shell group relative flex h-12 items-center rounded-xl border bg-white px-3.5 transition-all duration-200 ${
           error
             ? "border-rose-200/90 focus-within:border-rose-450 focus-within:ring-4 focus-within:ring-rose-500/6 focus-within:bg-white shadow-[0_1px_2px_rgba(0,0,0,0.01)]"
             : "border-slate-300 focus-within:border-[#FF6B00] focus-within:ring-4 focus-within:ring-[#FF6B00]/10 shadow-sm"
