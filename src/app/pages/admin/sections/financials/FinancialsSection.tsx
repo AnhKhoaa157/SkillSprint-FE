@@ -4,6 +4,7 @@ import {
   Activity,
   BarChart3,
   Building2,
+  CalendarDays,
   ChevronRight,
   Coins,
   DollarSign,
@@ -33,6 +34,12 @@ import { PlatformTreasurySection } from "./PlatformTreasurySection";
 const ACCENT = "#FF6B00";
 
 type FinancialMetricKey = "subscriptionRevenue" | "coinTopUp" | "marketplaceCommission";
+type DashboardPeriod = "CURRENT_MONTH" | "PREVIOUS_MONTH";
+
+type DashboardDateRange = {
+  from: string;
+  to: string;
+};
 
 type FinancialChartDatum = {
   date: string;
@@ -68,6 +75,28 @@ function formatChartDate(date: string): string {
 
   const [, month, day] = date.split("-");
   return `${month}-${day}`;
+}
+
+function formatDateParameter(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getDashboardDateRange(period: DashboardPeriod): DashboardDateRange {
+  const now = new Date();
+  if (period === "CURRENT_MONTH") {
+    return {
+      from: formatDateParameter(new Date(now.getFullYear(), now.getMonth(), 1)),
+      to: formatDateParameter(now),
+    };
+  }
+
+  return {
+    from: formatDateParameter(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
+    to: formatDateParameter(new Date(now.getFullYear(), now.getMonth(), 0)),
+  };
 }
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
@@ -198,7 +227,9 @@ export function FinancialsView() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<FinancialMetricKey>("subscriptionRevenue");
+  const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>("CURRENT_MONTH");
   const mountedRef = useRef(true);
+  const dashboardDateRange = useMemo(() => getDashboardDateRange(selectedPeriod), [selectedPeriod]);
 
   const loadDashboard = useCallback(async () => {
     if (mountedRef.current) {
@@ -208,7 +239,7 @@ export function FinancialsView() {
 
     try {
       const [nextDashboard, nextTreasurySummary] = await Promise.all([
-        getAdminDashboardAnalytics(),
+        getAdminDashboardAnalytics(dashboardDateRange),
         getPlatformTreasurySummary(),
       ]);
       if (mountedRef.current) {
@@ -224,7 +255,7 @@ export function FinancialsView() {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, []);
+  }, [dashboardDateRange]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -426,26 +457,48 @@ export function FinancialsView() {
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Phân tích dòng tiền</p>
               <h2 className="mt-1 text-lg font-black tracking-[-0.025em] text-slate-950">Dòng tiền theo thời gian</h2>
+              <p className="mt-1 text-xs font-medium text-slate-500">
+                {selectedPeriod === "CURRENT_MONTH" ? "Tháng này" : "Tháng trước"}: {dashboardDateRange.from} → {dashboardDateRange.to}
+              </p>
             </div>
-            <div aria-label="Chỉ số biểu đồ" className="inline-flex w-full rounded-xl bg-slate-100 p-1 sm:w-auto" role="tablist">
-              {(
-                [
-                  ["subscriptionRevenue", "Doanh thu"],
-                  ["coinTopUp", "Nạp Coin"],
-                  ["marketplaceCommission", "Hoa hồng"],
-                ] as const
-              ).map(([metric, label]) => (
-                <button
-                  aria-selected={selectedMetric === metric}
-                  className={`min-h-9 flex-1 rounded-lg px-3 text-xs font-bold transition-colors sm:flex-none ${selectedMetric === metric ? "bg-white text-[#FF6B00] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-                  key={metric}
-                  onClick={() => setSelectedMetric(metric)}
-                  role="tab"
-                  type="button"
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+              <div aria-label="Khoảng thời gian" className="inline-flex w-full rounded-xl bg-orange-50 p-1 sm:w-auto" role="group">
+                {([
+                  ["CURRENT_MONTH", "Tháng này"],
+                  ["PREVIOUS_MONTH", "Tháng trước"],
+                ] as const).map(([period, label]) => (
+                  <button
+                    aria-pressed={selectedPeriod === period}
+                    className={`inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-bold transition-colors sm:flex-none ${selectedPeriod === period ? "bg-white text-[#FF6B00] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                    key={period}
+                    onClick={() => setSelectedPeriod(period)}
+                    type="button"
+                  >
+                    <CalendarDays aria-hidden="true" className="h-3.5 w-3.5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div aria-label="Chỉ số biểu đồ" className="inline-flex w-full rounded-xl bg-slate-100 p-1 sm:w-auto" role="tablist">
+                {(
+                  [
+                    ["subscriptionRevenue", "Doanh thu"],
+                    ["coinTopUp", "Nạp Coin"],
+                    ["marketplaceCommission", "Hoa hồng"],
+                  ] as const
+                ).map(([metric, label]) => (
+                  <button
+                    aria-selected={selectedMetric === metric}
+                    className={`min-h-9 flex-1 rounded-lg px-3 text-xs font-bold transition-colors sm:flex-none ${selectedMetric === metric ? "bg-white text-[#FF6B00] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                    key={metric}
+                    onClick={() => setSelectedMetric(metric)}
+                    role="tab"
+                    type="button"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div className="pt-5">
@@ -535,7 +588,10 @@ export function FinancialsView() {
         </article>
       </section>
 
-      <PlatformTreasurySection />
+      <PlatformTreasurySection
+        dateRange={dashboardDateRange}
+        periodLabel={selectedPeriod === "CURRENT_MONTH" ? "Tháng này" : "Tháng trước"}
+      />
     </motion.div>
   );
 }

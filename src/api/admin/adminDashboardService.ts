@@ -5,6 +5,11 @@ export type DateRange = {
   to: string | null;
 };
 
+export type AdminDashboardQuery = {
+  from?: string;
+  to?: string;
+};
+
 export type OverviewStats = {
   totalUsers: number;
   activeUsers: number;
@@ -144,8 +149,12 @@ export type PageResponse<T> = {
   totalElements?: number;
 };
 
-export async function getAdminDashboardAnalytics(): Promise<AdminDashboardResponse> {
-  const res = await requestJson<AdminDashboardResponse>("/api/admin/dashboard");
+export async function getAdminDashboardAnalytics(query: AdminDashboardQuery = {}): Promise<AdminDashboardResponse> {
+  const params = new URLSearchParams();
+  if (query.from) params.set("from", query.from);
+  if (query.to) params.set("to", query.to);
+  const queryString = params.toString();
+  const res = await requestJson<AdminDashboardResponse>(`/api/admin/dashboard${queryString ? `?${queryString}` : ""}`);
   if (!res.data) throw new Error(res.message || "Không tải được dữ liệu dashboard");
   return res.data;
 }

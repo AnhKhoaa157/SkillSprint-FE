@@ -49,6 +49,8 @@ export interface TreasuryPage {
 export interface TreasuryEntriesQuery {
   asset?: PlatformTreasuryAsset;
   entryType?: PlatformTreasuryEntryType;
+  from?: string;
+  to?: string;
   page?: number;
   size?: number;
 }
@@ -66,6 +68,8 @@ export function getPlatformTreasuryEntries(query: TreasuryEntriesQuery = {}): Pr
   const params = new URLSearchParams();
   if (query.asset) params.set("asset", query.asset);
   if (query.entryType) params.set("entryType", query.entryType);
+  if (query.from) params.set("from", query.from);
+  if (query.to) params.set("to", query.to);
   params.set("page", String(query.page ?? 0));
   params.set("size", String(query.size ?? 20));
   return requestJson<TreasuryPage>(`/api/admin/marketplace/treasury/entries?${params.toString()}`).then(requireData);

@@ -26,6 +26,15 @@ describe("adminDashboardService", () => {
       expect(result).toEqual(mockData);
     });
 
+    it("should include a selected reporting range", async () => {
+      const mockData = { overview: { totalUsers: 100 } };
+      vi.mocked(requestJson).mockResolvedValueOnce({ data: mockData } as never);
+
+      await getAdminDashboardAnalytics({ from: "2026-07-01", to: "2026-07-31" });
+
+      expect(requestJson).toHaveBeenCalledWith("/api/admin/dashboard?from=2026-07-01&to=2026-07-31");
+    });
+
     it("should throw error if fetch fails", async () => {
       vi.mocked(requestJson).mockResolvedValueOnce({} as any);
       await expect(getAdminDashboardAnalytics()).rejects.toThrow("Không tải được dữ liệu dashboard");
