@@ -20,6 +20,8 @@ import {
   getAdminDisputes,
   getAdminVersionMetrics,
 } from "../../../../../api/admin/marketplaceOpsAdminService";
+import { getMarketplaceItems } from "../../../../../api/admin/marketplaceAdminService";
+import type { AdminMarketplaceListItem } from "../../../../../api/admin/marketplaceAdminTypes";
 import type {
   AdminMarketplaceDispute,
   MarketplaceDisputeReason,
@@ -349,20 +351,56 @@ function MetricsTab() {
   const [metrics, setMetrics] = useState<MarketplaceVersionMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [publishedItems, setPublishedItems] = useState<AdminMarketplaceListItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
 
-  const lookup = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!versionId.trim()) return;
+  const fetchMetricsForId = useCallback(async (targetId: string) => {
+    if (!targetId.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      setMetrics(await getAdminVersionMetrics(versionId.trim()));
+      setMetrics(await getAdminVersionMetrics(targetId.trim()));
     } catch (lookupError) {
       setMetrics(null);
       setError(errorText(lookupError));
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setLoadingItems(true);
+    getMarketplaceItems("PUBLISHED")
+      .then(items => {
+        if (!active) return;
+        setPublishedItems(items);
+        // Auto select first published version if no version selected yet
+        const firstVersionId = items[0]?.versionId || items[0]?.itemId;
+        if (firstVersionId && !versionId) {
+          setVersionId(firstVersionId);
+          void fetchMetricsForId(firstVersionId);
+        }
+      })
+      .catch(() => {
+        if (active) setPublishedItems([]);
+      })
+      .finally(() => {
+        if (active) setLoadingItems(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [fetchMetricsForId, versionId]);
+
+  const lookup = async (event: React.FormEvent) => {
+    event.preventDefault();
+    await fetchMetricsForId(versionId);
+  };
+
+  const selectPack = (targetVersionId: string) => {
+    setVersionId(targetVersionId);
+    void fetchMetricsForId(targetVersionId);
   };
 
   return (
@@ -380,16 +418,48 @@ function MetricsTab() {
         </button>
       </form>
 
+      {/* Quick Quiz Pack Version Selector Chips */}
+      {publishedItems.length > 0 && (
+        <section className="mt-4 rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Chọn nhanh phiên bản Quiz Pack</p>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {publishedItems.map(item => {
+              const targetId = item.versionId || item.itemId;
+              const isSelected = versionId === targetId;
+              return (
+                <button
+                  key={item.itemId}
+                  type="button"
+                  onClick={() => selectPack(targetId)}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                    isSelected
+                      ? "border-orange-300 bg-orange-50 text-[#FF6B00] shadow-sm ring-1 ring-orange-200"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-orange-200 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  <ShieldCheck className={`h-3.5 w-3.5 ${isSelected ? "text-[#FF6B00]" : "text-slate-400"}`} />
+                  <span>{item.title}</span>
+                  <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">v{item.versionNo ?? 1}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <div className="mt-5">
         {error ? (
           <ErrorState onRetry={() => setError(null)} message={error} />
-        ) : loading ? (
+        ) : loading || loadingItems ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />)}</div>
         ) : !metrics ? (
-          <EmptyState message="Nhập Version ID để xem chỉ số chất lượng của phiên bản." />
+          <EmptyState message="Nhập Version ID hoặc chọn phiên bản phía trên để xem chỉ số chất lượng." />
         ) : (
           <div>
-            <p className="text-sm font-bold text-slate-900">{metrics.versionTitle || "—"}{metrics.versionNo != null ? ` · v${metrics.versionNo}` : ""}</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-bold text-slate-900">{metrics.versionTitle || "—"}{metrics.versionNo != null ? ` · v${metrics.versionNo}` : ""}</p>
+              <span className="text-xs text-slate-400">ID: {metrics.versionId}</span>
+            </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <MetricCard icon={<ShieldCheck className="h-4 w-4" />} label="Tỷ lệ hoàn thành" value={pct(metrics.completionRate)} sub={`${metrics.completedLearnerCount}/${metrics.learnerCount} người học`} />
               <MetricCard icon={<BarChart3 className="h-4 w-4" />} label="Đánh giá trung bình" value={metrics.averageRating.toFixed(2)} sub={`${metrics.reviewCount} lượt đánh giá`} />
