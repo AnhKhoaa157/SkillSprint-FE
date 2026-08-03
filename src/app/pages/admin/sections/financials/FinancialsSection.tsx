@@ -23,7 +23,9 @@ import {
 import { toast } from "sonner";
 import {
   getAdminDashboardAnalytics,
+  getAdminMonthlyFinancials,
   type AdminDashboardResponse,
+  type MonthlyFinancialDataPoint,
 } from "../../../../../api/admin/adminDashboardService";
 import {
   getPlatformTreasurySummary,
@@ -34,7 +36,7 @@ import { PlatformTreasurySection } from "./PlatformTreasurySection";
 const ACCENT = "#FF6B00";
 
 type FinancialMetricKey = "subscriptionRevenue" | "coinTopUp" | "marketplaceCommission";
-type DashboardPeriod = "CURRENT_MONTH" | "PREVIOUS_MONTH";
+type DashboardPeriod = "CURRENT_MONTH" | "PREVIOUS_MONTH" | "LAST_3_MONTHS" | "LAST_6_MONTHS" | "LAST_12_MONTHS";
 
 type DashboardDateRange = {
   from: string;
@@ -77,6 +79,18 @@ function formatChartDate(date: string): string {
   return `${month}-${day}`;
 }
 
+function formatChartMonth(month: string): string {
+  const [year, monthNumber] = month.split("-");
+  return year && monthNumber ? `T${Number(monthNumber)}/${year}` : month;
+}
+
+function getHistoricalMonthCount(period: DashboardPeriod): number | null {
+  if (period === "LAST_3_MONTHS") return 3;
+  if (period === "LAST_6_MONTHS") return 6;
+  if (period === "LAST_12_MONTHS") return 12;
+  return null;
+}
+
 function formatDateParameter(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -86,7 +100,7 @@ function formatDateParameter(date: Date): string {
 
 function getDashboardDateRange(period: DashboardPeriod): DashboardDateRange {
   const now = new Date();
-  if (period === "CURRENT_MONTH") {
+  if (period !== "PREVIOUS_MONTH") {
     return {
       from: formatDateParameter(new Date(now.getFullYear(), now.getMonth(), 1)),
       to: formatDateParameter(now),
@@ -96,6 +110,17 @@ function getDashboardDateRange(period: DashboardPeriod): DashboardDateRange {
   return {
     from: formatDateParameter(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
     to: formatDateParameter(new Date(now.getFullYear(), now.getMonth(), 0)),
+  };
+}
+
+function getTreasuryDateRange(period: DashboardPeriod): DashboardDateRange {
+  const historicalMonthCount = getHistoricalMonthCount(period);
+  if (!historicalMonthCount) return getDashboardDateRange(period);
+
+  const now = new Date();
+  return {
+    from: formatDateParameter(new Date(now.getFullYear(), now.getMonth() - historicalMonthCount + 1, 1)),
+    to: formatDateParameter(now),
   };
 }
 
@@ -133,11 +158,13 @@ function FinancialChartTooltip({
   label,
   payload,
   formatValue,
+  periodUnit,
 }: {
   active?: boolean;
   label?: string;
   payload?: ChartTooltipPayload[];
   formatValue: (value: number) => string;
+  periodUnit: "Ngày" | "Tháng";
 }) {
   const datum = payload?.[0];
   const value = typeof datum?.value === "number" ? datum.value : Number(datum?.value ?? 0);
@@ -146,7 +173,7 @@ function FinancialChartTooltip({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg">
-      <p className="text-[11px] font-semibold text-slate-400">Ngày {label}</p>
+      <p className="text-[11px] font-semibold text-slate-400">{periodUnit} {label}</p>
       <p className="mt-0.5 text-sm font-black" style={{ color: datum.color }}>
         {formatValue(value)}
       </p>
@@ -172,12 +199,14 @@ function FinancialAreaChart({
   description,
   formatValue,
   label,
+  periodUnit,
 }: {
   data: FinancialChartDatum[];
   color: string;
   description: string;
   formatValue: (value: number) => string;
   label: string;
+  periodUnit: "Ngày" | "Tháng";
 }) {
   const hasData = data.some((datum) => datum.amount !== 0);
 
@@ -206,7 +235,7 @@ function FinancialAreaChart({
             tickFormatter={(value: number) => formatCompactNumber(value)}
             tickLine={false}
           />
-          <Tooltip content={<FinancialChartTooltip formatValue={formatValue} />} cursor={{ stroke: "#CBD5E1" }} />
+          <Tooltip content={<FinancialChartTooltip formatValue={formatValue} periodUnit={periodUnit} />} cursor={{ stroke: "#CBD5E1" }} />
           <Area
             dataKey="amount"
             fill="url(#financial-chart-fill)"
@@ -223,6 +252,7 @@ function FinancialAreaChart({
 
 export function FinancialsView() {
   const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null);
+  const [monthlyFinancials, setMonthlyFinancials] = useState<MonthlyFinancialDataPoint[]>([]);
   const [treasurySummary, setTreasurySummary] = useState<PlatformTreasurySummary | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -230,6 +260,8 @@ export function FinancialsView() {
   const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>("CURRENT_MONTH");
   const mountedRef = useRef(true);
   const dashboardDateRange = useMemo(() => getDashboardDateRange(selectedPeriod), [selectedPeriod]);
+  const treasuryDateRange = useMemo(() => getTreasuryDateRange(selectedPeriod), [selectedPeriod]);
+  const historicalMonthCount = getHistoricalMonthCount(selectedPeriod);
 
   const loadDashboard = useCallback(async () => {
     if (mountedRef.current) {
@@ -238,12 +270,14 @@ export function FinancialsView() {
     }
 
     try {
-      const [nextDashboard, nextTreasurySummary] = await Promise.all([
+      const [nextDashboard, nextMonthlyFinancials, nextTreasurySummary] = await Promise.all([
         getAdminDashboardAnalytics(dashboardDateRange),
+        getAdminMonthlyFinancials(historicalMonthCount ?? 6),
         getPlatformTreasurySummary(),
       ]);
       if (mountedRef.current) {
         setDashboard(nextDashboard);
+        setMonthlyFinancials(nextMonthlyFinancials);
         setTreasurySummary(nextTreasurySummary);
       }
     } catch (loadError) {
@@ -255,7 +289,7 @@ export function FinancialsView() {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [dashboardDateRange]);
+  }, [dashboardDateRange, historicalMonthCount]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -286,38 +320,35 @@ export function FinancialsView() {
     : marketplaceCommission;
 
   const chartMetrics = useMemo(() => {
-    const revenueData = (dashboard?.charts.revenueByDay ?? []).map((point) => ({
-      date: formatChartDate(point.date),
-      amount: point.amount ?? 0,
-    }));
-    const topUpData = (dashboard?.charts.coinTopUpByDay ?? []).map((point) => ({
-      date: formatChartDate(point.date),
-      amount: point.amount ?? 0,
-    }));
-    const commissionData = (dashboard?.charts.marketplaceCommissionByDay ?? []).map((point) => ({
-      date: formatChartDate(point.date),
-      amount: point.netCommissionCoin ?? 0,
-    }));
+    const revenueData = historicalMonthCount
+      ? monthlyFinancials.map((point) => ({ date: formatChartMonth(point.month), amount: point.subscriptionRevenue ?? 0 }))
+      : (dashboard?.charts.revenueByDay ?? []).map((point) => ({ date: formatChartDate(point.date), amount: point.amount ?? 0 }));
+    const topUpData = historicalMonthCount
+      ? monthlyFinancials.map((point) => ({ date: formatChartMonth(point.month), amount: point.coinTopUp ?? 0 }))
+      : (dashboard?.charts.coinTopUpByDay ?? []).map((point) => ({ date: formatChartDate(point.date), amount: point.amount ?? 0 }));
+    const commissionData = historicalMonthCount
+      ? monthlyFinancials.map((point) => ({ date: formatChartMonth(point.month), amount: point.marketplaceCommission ?? 0 }))
+      : (dashboard?.charts.marketplaceCommissionByDay ?? []).map((point) => ({ date: formatChartDate(point.date), amount: point.netCommissionCoin ?? 0 }));
 
     return {
       subscriptionRevenue: {
         color: ACCENT,
         data: revenueData,
-        description: "Chỉ tính các thanh toán subscription đã thành công.",
+        description: historicalMonthCount ? "Tổng hợp thanh toán subscription thành công theo từng tháng." : "Chỉ tính các thanh toán subscription đã thành công.",
         formatValue: formatCurrency,
         label: "Doanh thu dịch vụ",
       },
       coinTopUp: {
         color: "#2563EB",
         data: topUpData,
-        description: "Dòng tiền người dùng nạp vào ví Coin, được theo dõi riêng khỏi doanh thu.",
+        description: historicalMonthCount ? "Tổng hợp dòng tiền nạp Coin theo từng tháng, tách biệt với doanh thu." : "Dòng tiền người dùng nạp vào ví Coin, được theo dõi riêng khỏi doanh thu.",
         formatValue: formatCurrency,
         label: "Tiền nạp Coin",
       },
       marketplaceCommission: {
         color: "#059669",
         data: commissionData,
-        description: "Hoa hồng Marketplace ròng, sau các điều chỉnh hoàn tiền trong khoảng đang xem.",
+        description: historicalMonthCount ? "Tổng hợp hoa hồng Marketplace ròng theo từng tháng." : "Hoa hồng Marketplace ròng, sau các điều chỉnh hoàn tiền trong khoảng đang xem.",
         formatValue: formatCoin,
         label: "Hoa hồng Marketplace",
       },
@@ -328,7 +359,7 @@ export function FinancialsView() {
       formatValue: (value: number) => string;
       label: string;
     }>;
-  }, [dashboard]);
+  }, [dashboard, historicalMonthCount, monthlyFinancials]);
 
   if (loading && !dashboard) {
     return (
@@ -366,6 +397,9 @@ export function FinancialsView() {
   if (!dashboard) return null;
 
   const activeMetric = chartMetrics[selectedMetric];
+  const selectedPeriodLabel = historicalMonthCount
+    ? `${historicalMonthCount} tháng gần nhất`
+    : selectedPeriod === "CURRENT_MONTH" ? "Tháng này" : "Tháng trước";
   const activePlanCount = dashboard.subscriptions.free + dashboard.subscriptions.skillBuilder + dashboard.subscriptions.premium;
   const planDistribution = [
     { color: "#94A3B8", label: "Free", value: dashboard.subscriptions.free },
@@ -458,14 +492,17 @@ export function FinancialsView() {
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Phân tích dòng tiền</p>
               <h2 className="mt-1 text-lg font-black tracking-[-0.025em] text-slate-950">Dòng tiền theo thời gian</h2>
               <p className="mt-1 text-xs font-medium text-slate-500">
-                {selectedPeriod === "CURRENT_MONTH" ? "Tháng này" : "Tháng trước"}: {dashboardDateRange.from} → {dashboardDateRange.to}
+                {historicalMonthCount ? selectedPeriodLabel : `${selectedPeriodLabel}: ${dashboardDateRange.from} → ${dashboardDateRange.to}`}
               </p>
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-              <div aria-label="Khoảng thời gian" className="inline-flex w-full rounded-xl bg-orange-50 p-1 sm:w-auto" role="group">
+              <div aria-label="Khoảng thời gian" className="inline-flex w-full flex-wrap rounded-xl bg-orange-50 p-1 sm:w-auto" role="group">
                 {([
                   ["CURRENT_MONTH", "Tháng này"],
                   ["PREVIOUS_MONTH", "Tháng trước"],
+                  ["LAST_3_MONTHS", "3 tháng"],
+                  ["LAST_6_MONTHS", "6 tháng"],
+                  ["LAST_12_MONTHS", "12 tháng"],
                 ] as const).map(([period, label]) => (
                   <button
                     aria-pressed={selectedPeriod === period}
@@ -502,7 +539,7 @@ export function FinancialsView() {
             </div>
           </div>
           <div className="pt-5">
-            <FinancialAreaChart {...activeMetric} />
+            <FinancialAreaChart {...activeMetric} periodUnit={historicalMonthCount ? "Tháng" : "Ngày"} />
           </div>
         </article>
 
@@ -589,8 +626,8 @@ export function FinancialsView() {
       </section>
 
       <PlatformTreasurySection
-        dateRange={dashboardDateRange}
-        periodLabel={selectedPeriod === "CURRENT_MONTH" ? "Tháng này" : "Tháng trước"}
+        dateRange={treasuryDateRange}
+        periodLabel={selectedPeriodLabel}
       />
     </motion.div>
   );
