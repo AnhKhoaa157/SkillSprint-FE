@@ -619,6 +619,12 @@ export default function AdminCommunityModeration({ isDashboard = false }: AdminC
       )}
 
       {/* ── KPI Stats ── */}
+      <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-900">
+        <ShieldAlert size={15} className="shrink-0 text-sky-700" />
+        <span className="font-bold">Môi trường trình diễn</span>
+        <span className="text-sky-700">Nội dung mô phỏng được liên kết để kiểm tra luồng bài viết, bình luận và kiểm duyệt.</span>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {stats.map((stat) => {
           const Icon = stat.icon;
