@@ -34,9 +34,8 @@ import {
 import { PlatformTreasurySection } from "./PlatformTreasurySection";
 
 const ACCENT = "#FF6B00";
-
 type FinancialMetricKey = "subscriptionRevenue" | "coinTopUp" | "marketplaceCommission";
-type DashboardPeriod = "CURRENT_MONTH" | "PREVIOUS_MONTH" | "LAST_3_MONTHS" | "LAST_6_MONTHS" | "LAST_12_MONTHS";
+type DashboardPeriod = "REVIEW_PERIOD" | "CURRENT_MONTH" | "PREVIOUS_MONTH" | "LAST_3_MONTHS" | "LAST_6_MONTHS" | "LAST_12_MONTHS";
 
 type DashboardDateRange = {
   from: string;
@@ -100,6 +99,13 @@ function formatDateParameter(date: Date): string {
 
 function getDashboardDateRange(period: DashboardPeriod): DashboardDateRange {
   const now = new Date();
+  if (period === "REVIEW_PERIOD") {
+    return {
+      from: formatDateParameter(new Date(now.getFullYear(), 4, 1)),
+      to: formatDateParameter(now),
+    };
+  }
+
   if (period !== "PREVIOUS_MONTH") {
     return {
       from: formatDateParameter(new Date(now.getFullYear(), now.getMonth(), 1)),
@@ -257,7 +263,7 @@ export function FinancialsView() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<FinancialMetricKey>("subscriptionRevenue");
-  const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>("CURRENT_MONTH");
+  const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>("REVIEW_PERIOD");
   const mountedRef = useRef(true);
   const dashboardDateRange = useMemo(() => getDashboardDateRange(selectedPeriod), [selectedPeriod]);
   const treasuryDateRange = useMemo(() => getTreasuryDateRange(selectedPeriod), [selectedPeriod]);
@@ -396,8 +402,12 @@ export function FinancialsView() {
 
   if (!dashboard) return null;
 
+  const reviewPeriod = `${formatChartDate(dashboard.range.from ?? "")} – ${formatChartDate(dashboard.range.to ?? "")}`;
+
   const activeMetric = chartMetrics[selectedMetric];
-  const selectedPeriodLabel = historicalMonthCount
+  const selectedPeriodLabel = selectedPeriod === "REVIEW_PERIOD"
+    ? "Từ tháng 5 đến hiện tại"
+    : historicalMonthCount
     ? `${historicalMonthCount} tháng gần nhất`
     : selectedPeriod === "CURRENT_MONTH" ? "Tháng này" : "Tháng trước";
   const activePlanCount = dashboard.subscriptions.free + dashboard.subscriptions.skillBuilder + dashboard.subscriptions.premium;
@@ -452,6 +462,10 @@ export function FinancialsView() {
 
   return (
     <motion.div animate={{ opacity: 1 }} className="space-y-5" initial={{ opacity: 0 }}>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-900">
+        <span className="font-bold">Dữ liệu mô phỏng phục vụ demo · {reviewPeriod}</span>
+        <span className="text-sky-700">Biểu đồ dùng cùng khoảng thời gian; KPI lũy kế được ghi chú riêng.</span>
+      </div>
       <section aria-label="Tổng quan tài chính" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((kpi, index) => {
           const Icon = kpi.icon;
@@ -489,7 +503,7 @@ export function FinancialsView() {
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 xl:col-span-3">
           <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Phân tích dòng tiền</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Phân tích dòng tiền · {reviewPeriod}</p>
               <h2 className="mt-1 text-lg font-black tracking-[-0.025em] text-slate-950">Dòng tiền theo thời gian</h2>
               <p className="mt-1 text-xs font-medium text-slate-500">
                 {historicalMonthCount ? selectedPeriodLabel : `${selectedPeriodLabel}: ${dashboardDateRange.from} → ${dashboardDateRange.to}`}
@@ -498,6 +512,7 @@ export function FinancialsView() {
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
               <div aria-label="Khoảng thời gian" className="inline-flex w-full flex-wrap rounded-xl bg-orange-50 p-1 sm:w-auto" role="group">
                 {([
+                  ["REVIEW_PERIOD", "Từ tháng 5"],
                   ["CURRENT_MONTH", "Tháng này"],
                   ["PREVIOUS_MONTH", "Tháng trước"],
                   ["LAST_3_MONTHS", "3 tháng"],
