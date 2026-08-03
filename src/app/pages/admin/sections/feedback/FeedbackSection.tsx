@@ -72,6 +72,13 @@ export default function AdminFeedback({ isDashboard = false }: AdminFeedbackProp
           </div>
         )}
 
+        {!isDashboard && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+            <span className="font-bold">Môi trường trình diễn</span>
+            <span className="text-sky-700">Phản hồi được liên kết theo trạng thái để kiểm tra quy trình tiếp nhận và xử lý.</span>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_390px] gap-6 items-start">
           {/* ── Table Card ── */}
           <div className="min-w-0 rounded-3xl overflow-hidden bg-white/95 border border-white/80 shadow-[0_18px_50px_-34px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/70">

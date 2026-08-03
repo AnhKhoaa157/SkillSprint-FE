@@ -427,6 +427,13 @@ export default function AdminCommunityRooms({ isDashboard = false }: AdminCommun
           </div>
         )}
 
+        {!isDashboard && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+            <span className="font-bold">Môi trường trình diễn</span>
+            <span className="text-sky-700">Dữ liệu phòng và tin nhắn được liên kết để kiểm tra luồng quản trị.</span>
+          </div>
+        )}
+
         <div className="overflow-hidden rounded-[2rem] border border-white bg-white/85 shadow-[0_22px_65px_rgba(71,50,35,0.07)] backdrop-blur-xl">
           <div className="relative overflow-hidden border-b border-slate-100/80 p-5 sm:p-6">
             <div className="pointer-events-none absolute -right-24 -top-28 h-64 w-64 rounded-full bg-orange-100/55 blur-3xl" />
