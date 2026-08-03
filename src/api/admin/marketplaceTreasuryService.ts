@@ -11,6 +11,8 @@ export type PlatformTreasuryEntryType =
 
 export interface PlatformTreasurySummary {
   vndInflow: number;
+  subscriptionPaymentVnd: number;
+  coinTopUpVnd: number;
   vndOutflow: number;
   vndNetPosition: number;
   commissionCoinEarned: number;
@@ -21,11 +23,18 @@ export interface PlatformTreasurySummary {
 export interface PlatformTreasuryMonthlySummary {
   month: string;
   vndInflow: number;
+  subscriptionPaymentVnd: number;
+  subscriptionPurchaserCount: number;
+  coinTopUpVnd: number;
   vndOutflow: number;
   vndNetPosition: number;
   commissionCoinEarned: number;
   commissionCoinReversed: number;
   commissionCoinNetPosition: number;
+}
+
+export interface PlatformTreasurySubscriptionPurchaseSummary {
+  purchaserCount: number;
 }
 
 export interface PlatformTreasuryEntry {
@@ -77,6 +86,18 @@ export function getPlatformTreasurySummary(): Promise<PlatformTreasurySummary> {
 export function getPlatformTreasuryMonthlySummaries(months = 6): Promise<PlatformTreasuryMonthlySummary[]> {
   return requestJson<PlatformTreasuryMonthlySummary[]>(
     `/api/admin/marketplace/treasury/monthly-summaries?months=${months}`,
+  ).then(requireData);
+}
+
+export function getPlatformTreasurySubscriptionPurchaseSummary(query: {
+  from: string;
+  to: string;
+  planId?: string;
+}): Promise<PlatformTreasurySubscriptionPurchaseSummary> {
+  const params = new URLSearchParams({ from: query.from, to: query.to });
+  if (query.planId) params.set("planId", query.planId);
+  return requestJson<PlatformTreasurySubscriptionPurchaseSummary>(
+    `/api/admin/marketplace/treasury/subscription-purchases/summary?${params.toString()}`,
   ).then(requireData);
 }
 
