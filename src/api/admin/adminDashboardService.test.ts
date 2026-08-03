@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   getAdminDashboardAnalytics,
+  getAdminMonthlyFinancials,
   getAdminPayments,
   reconcilePayment,
 } from "./adminDashboardService";
@@ -39,6 +40,15 @@ describe("adminDashboardService", () => {
       vi.mocked(requestJson).mockResolvedValueOnce({} as any);
       await expect(getAdminDashboardAnalytics()).rejects.toThrow("Không tải được dữ liệu dashboard");
     });
+  });
+
+  it("requests monthly financial data for the selected number of months", async () => {
+    const monthlyData = [{ month: "2026-08", subscriptionRevenue: 200000, coinTopUp: 100000, marketplaceCommission: 50 }];
+    vi.mocked(requestJson).mockResolvedValueOnce({ data: monthlyData } as never);
+
+    await expect(getAdminMonthlyFinancials(12)).resolves.toEqual(monthlyData);
+
+    expect(requestJson).toHaveBeenCalledWith("/api/admin/dashboard/monthly-financials?months=12");
   });
 
   describe("getAdminPayments", () => {

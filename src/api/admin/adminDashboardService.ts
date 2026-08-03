@@ -68,6 +68,13 @@ export type RevenueChartDataPoint = {
   amount: number;
 };
 
+export type MonthlyFinancialDataPoint = {
+  month: string;
+  subscriptionRevenue: number;
+  coinTopUp: number;
+  marketplaceCommission: number;
+};
+
 export type MarketplaceCommissionChartDataPoint = {
   date: string;
   grossCommissionCoin: number;
@@ -156,6 +163,12 @@ export async function getAdminDashboardAnalytics(query: AdminDashboardQuery = {}
   const queryString = params.toString();
   const res = await requestJson<AdminDashboardResponse>(`/api/admin/dashboard${queryString ? `?${queryString}` : ""}`);
   if (!res.data) throw new Error(res.message || "Không tải được dữ liệu dashboard");
+  return res.data;
+}
+
+export async function getAdminMonthlyFinancials(months = 6): Promise<MonthlyFinancialDataPoint[]> {
+  const res = await requestJson<MonthlyFinancialDataPoint[]>(`/api/admin/dashboard/monthly-financials?months=${months}`);
+  if (!res.data) throw new Error(res.message || "Không tải được dữ liệu tài chính theo tháng");
   return res.data;
 }
 

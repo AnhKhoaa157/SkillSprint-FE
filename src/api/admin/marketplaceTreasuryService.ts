@@ -18,6 +18,16 @@ export interface PlatformTreasurySummary {
   commissionCoinNetPosition: number;
 }
 
+export interface PlatformTreasuryMonthlySummary {
+  month: string;
+  vndInflow: number;
+  vndOutflow: number;
+  vndNetPosition: number;
+  commissionCoinEarned: number;
+  commissionCoinReversed: number;
+  commissionCoinNetPosition: number;
+}
+
 export interface PlatformTreasuryEntry {
   entryId: string;
   asset: PlatformTreasuryAsset;
@@ -62,6 +72,12 @@ function requireData<T>(response: { data: T | null; message?: string }): T {
 
 export function getPlatformTreasurySummary(): Promise<PlatformTreasurySummary> {
   return requestJson<PlatformTreasurySummary>("/api/admin/marketplace/treasury/summary").then(requireData);
+}
+
+export function getPlatformTreasuryMonthlySummaries(months = 6): Promise<PlatformTreasuryMonthlySummary[]> {
+  return requestJson<PlatformTreasuryMonthlySummary[]>(
+    `/api/admin/marketplace/treasury/monthly-summaries?months=${months}`,
+  ).then(requireData);
 }
 
 export function getPlatformTreasuryEntries(query: TreasuryEntriesQuery = {}): Promise<TreasuryPage> {
