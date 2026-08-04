@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { Send, Users, Pin, ArrowLeft, Loader2, UserPlus, Shield, Lock, ShieldAlert, Hash, X, Plus, ExternalLink, Trash2, Smile, Bold, Italic, Code, Paperclip, Flag, EyeOff, MoreHorizontal, VolumeX, Ban, Unlock, UserMinus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Send, Users, Pin, ArrowLeft, Loader2, UserPlus, Shield, Lock, ShieldAlert, Hash, X, Plus, ExternalLink, Trash2, Smile, Bold, Italic, Code, Paperclip, Flag, EyeOff, MoreHorizontal, Pencil, Repeat2, VolumeX, Ban, Unlock, UserMinus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
@@ -41,6 +41,7 @@ type ActionDialog =
       defaultValue?: string;
       inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
       multiline?: boolean;
+      confirmationWord?: string;
       confirmLabel?: string;
       destructive?: boolean;
       resolve: (value: string | null) => void;
@@ -242,6 +243,8 @@ export default function CommunityRoomChat() {
     return room.myRole === "OWNER" || room.myRole === "MODERATOR";
   }, [room]);
 
+  const isRoomOwner = room?.myRole === "OWNER";
+
   useEffect(() => {
     if (subscriptionLoading) return;
     if (planId === "FREE") {
@@ -330,10 +333,62 @@ export default function CommunityRoomChat() {
     if (actionDialog.type === "confirm") {
       actionDialog.resolve(true);
     } else {
+      if (actionDialog.confirmationWord && actionDialogValue !== actionDialog.confirmationWord) {
+        toast.error(`Hãy nhập chính xác ${actionDialog.confirmationWord}`);
+        return;
+      }
       actionDialog.resolve(actionDialogValue);
     }
     setActionDialog(null);
     setActionDialogValue("");
+  };
+
+  const handleRenameRoom = async () => {
+    if (!room || !isRoomOwner) return;
+
+    const name = (await askPrompt({
+      title: "Đổi tên phòng",
+      description: "Tên mới sẽ hiển thị ngay cho các thành viên trong phòng.",
+      label: "Tên phòng mới",
+      defaultValue: room.name,
+      confirmLabel: "Lưu tên mới",
+    }))?.trim();
+    if (!name) return;
+
+    try {
+      const updatedRoom = await communityRoomService.updateRoom(room.roomId, { name });
+      setRoom(updatedRoom);
+      setMyRooms((previous) => previous.map((item) => item.roomId === updatedRoom.roomId ? updatedRoom : item));
+      toast.success("Đã đổi tên phòng");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Không thể đổi tên phòng");
+    }
+  };
+
+  const handleRoomModeChange = async () => {
+    if (!room || !isRoomOwner || (room.mode !== "PUBLIC" && room.mode !== "PRIVATE")) return;
+
+    const nextMode = room.mode === "PUBLIC" ? "PRIVATE" : "PUBLIC";
+    const confirmationWord = nextMode.toLowerCase();
+    const nextModeLabel = nextMode === "PRIVATE" ? "riêng tư" : "công khai";
+    const confirmation = await askPrompt({
+      title: `Chuyển phòng sang ${nextModeLabel}?`,
+      description: `Để xác nhận, hãy nhập chính xác ${confirmationWord}.`,
+      label: `Nhập ${confirmationWord} để xác nhận`,
+      placeholder: confirmationWord,
+      confirmationWord,
+      confirmLabel: `Chuyển sang ${nextModeLabel}`,
+    });
+    if (confirmation !== confirmationWord) return;
+
+    try {
+      const updatedRoom = await communityRoomService.updateRoom(room.roomId, { mode: nextMode });
+      setRoom(updatedRoom);
+      setMyRooms((previous) => previous.map((item) => item.roomId === updatedRoom.roomId ? updatedRoom : item));
+      toast.success(`Đã chuyển phòng sang ${nextModeLabel}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Không thể đổi chế độ phòng");
+    }
   };
 
   const handleLeaveRoom = async () => {
@@ -999,6 +1054,26 @@ export default function CommunityRoomChat() {
                   <span className="text-slate-300">•</span>
                   <Hash className="h-3.5 w-3.5 text-[#E45F2A]" /> {room.mode === "PRIVATE" ? "Riêng tư" : room.mode === "INVITE_ONLY" ? "Theo lời mời" : "Công khai"}
                 </div>
+                {isRoomOwner && (
+                  <div className="mt-3 grid grid-cols-1 gap-2 border-t border-orange-100/80 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => void handleRenameRoom()}
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-orange-200 bg-white px-3 text-[10px] font-bold text-[#C84E20] transition hover:bg-orange-50"
+                    >
+                      <Pencil className="h-3 w-3" /> Đổi tên phòng
+                    </button>
+                    {(room.mode === "PUBLIC" || room.mode === "PRIVATE") && (
+                      <button
+                        type="button"
+                        onClick={() => void handleRoomModeChange()}
+                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-sky-200 bg-white px-3 text-[10px] font-bold text-sky-700 transition hover:bg-sky-50"
+                      >
+                        <Repeat2 className="h-3 w-3" /> {room.mode === "PUBLIC" ? "Chuyển sang riêng tư" : "Chuyển sang công khai"}
+                      </button>
+                    )}
+                  </div>
+                )}
               </section>
               {isModerator && (
                 <button 
@@ -1221,12 +1296,15 @@ export default function CommunityRoomChat() {
               exit={{ scale: 0.95, y: 8 }}
               onSubmit={submitActionDialog}
               onMouseDown={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="community-action-dialog-title"
               className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 border border-slate-100 relative"
             >
               <div className={`absolute top-0 left-0 right-0 h-1 ${actionDialog.destructive ? "bg-rose-500" : "bg-[#FF6B00]"}`} />
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">{actionDialog.title}</h3>
+                  <h3 id="community-action-dialog-title" className="text-base font-bold text-slate-900">{actionDialog.title}</h3>
                   {actionDialog.description && (
                     <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">
                       {actionDialog.description}
