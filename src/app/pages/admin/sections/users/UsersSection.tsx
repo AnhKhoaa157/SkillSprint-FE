@@ -35,7 +35,7 @@ const planFilterOptions: Array<{ value: PlanFilter; label: string }> = [
   { value: "FREE", label: "Free" },
   { value: "SKILL_BUILDER", label: "Skill Builder" },
   { value: "PREMIUM", label: "Premium" },
-  { value: "ADMIN_DEFAULT", label: "Hệ thống" },
+  { value: "ADMIN_DEFAULT", label: "Admin" },
 ];
 
 function getRoleFilter(value: string | null): RoleFilter {

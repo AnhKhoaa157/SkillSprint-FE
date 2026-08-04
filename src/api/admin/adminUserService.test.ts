@@ -71,6 +71,22 @@ describe("adminUserService", () => {
       );
     });
 
+    it("should include the Admin plan filter", async () => {
+      const mockData = { items: [], totalItems: 0 };
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        status: 200,
+        ok: true,
+        text: async () => JSON.stringify({ success: true, data: mockData }),
+      } as any);
+
+      await getAdminUsers(undefined, 0, 10, undefined, "ADMIN_DEFAULT");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("planType=ADMIN_DEFAULT"),
+        expect.any(Object),
+      );
+    });
+
     it("should fetch the global user summary", async () => {
       const summary = { totalUsers: 108, activeUsers: 100, learnerUsers: 104, adminUsers: 4 };
       vi.mocked(global.fetch).mockResolvedValueOnce({
