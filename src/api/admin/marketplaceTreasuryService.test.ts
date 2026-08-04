@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { requestJson } from "../core/apiClient";
 import {
+  getPlatformTreasuryEntries,
   getPlatformTreasuryMonthlySummaries,
   getPlatformTreasurySubscriptionPurchaseSummary,
 } from "./marketplaceTreasuryService";
@@ -41,6 +42,19 @@ describe("marketplaceTreasuryService", () => {
 
     expect(requestJson).toHaveBeenCalledWith(
       "/api/admin/marketplace/treasury/subscription-purchases/summary?from=2026-08-01T00%3A00%3A00%2B07%3A00&to=2026-09-01T00%3A00%3A00%2B07%3A00&planId=plan-1",
+    );
+  });
+
+  it("passes the selected plan to the treasury entries query", async () => {
+    vi.mocked(requestJson).mockResolvedValueOnce({ data: { items: [] } } as never);
+
+    await getPlatformTreasuryEntries({
+      entryType: "SUBSCRIPTION_PAYMENT_RECEIVED",
+      planId: "plan-1",
+    });
+
+    expect(requestJson).toHaveBeenCalledWith(
+      "/api/admin/marketplace/treasury/entries?entryType=SUBSCRIPTION_PAYMENT_RECEIVED&planId=plan-1&page=0&size=20",
     );
   });
 });

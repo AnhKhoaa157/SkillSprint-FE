@@ -68,6 +68,7 @@ export interface TreasuryPage {
 export interface TreasuryEntriesQuery {
   asset?: PlatformTreasuryAsset;
   entryType?: PlatformTreasuryEntryType;
+  planId?: string;
   from?: string;
   to?: string;
   page?: number;
@@ -105,6 +106,7 @@ export function getPlatformTreasuryEntries(query: TreasuryEntriesQuery = {}): Pr
   const params = new URLSearchParams();
   if (query.asset) params.set("asset", query.asset);
   if (query.entryType) params.set("entryType", query.entryType);
+  if (query.planId) params.set("planId", query.planId);
   if (query.from) params.set("from", query.from);
   if (query.to) params.set("to", query.to);
   params.set("page", String(query.page ?? 0));

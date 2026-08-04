@@ -27,6 +27,7 @@ type PlatformTreasurySectionProps = {
 };
 
 const PAGE_SIZE = 20;
+const SUBSCRIPTION_PAYMENT_ENTRY_TYPE: PlatformTreasuryEntryType = "SUBSCRIPTION_PAYMENT_RECEIVED";
 const vnd = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 });
 const coin = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 });
 
@@ -68,32 +69,39 @@ export function PlatformTreasurySection({ dateRange, periodLabel }: PlatformTrea
   const [type, setType] = useState<PlatformTreasuryEntryType | "ALL">("ALL");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const isSubscriptionPayment = type === SUBSCRIPTION_PAYMENT_ENTRY_TYPE;
 
   const query = useMemo(() => ({
     asset: asset === "ALL" ? undefined : asset,
     entryType: type === "ALL" ? undefined : type,
+    planId: isSubscriptionPayment && planId ? planId : undefined,
     from: startOfVietnamDay(dateRange.from),
     to: startOfNextDay(dateRange.to),
     size: PAGE_SIZE,
-  }), [asset, dateRange.from, dateRange.to, type]);
+  }), [asset, dateRange.from, dateRange.to, isSubscriptionPayment, planId, type]);
 
   const loadFirstPage = useCallback(async () => {
     setLoading(true);
     try {
+      const subscriptionPurchaseSummaryRequest = isSubscriptionPayment
+        ? getPlatformTreasurySubscriptionPurchaseSummary({
+            from: query.from ?? "",
+            to: query.to ?? "",
+            ...(planId ? { planId } : {}),
+          })
+        : Promise.resolve(null);
       const [nextSummary, nextMonthlySummaries, nextPlans, nextSubscriptionPurchaseSummary, nextPage] = await Promise.all([
         getPlatformTreasurySummary(),
         getPlatformTreasuryMonthlySummaries(monthlyPeriodCount),
         getSubscriptionPlans(),
-        getPlatformTreasurySubscriptionPurchaseSummary({
-          from: query.from ?? "",
-          to: query.to ?? "",
-          ...(planId ? { planId } : {}),
-        }),
+        subscriptionPurchaseSummaryRequest,
         getPlatformTreasuryEntries({ ...query, page: 0 }),
       ]);
       setSummary(nextSummary);
       setMonthlySummaries(nextMonthlySummaries);
-      setPlans(nextPlans.filter((plan) => plan.monthlyPrice > 0));
+      setPlans(nextPlans.filter((plan) => plan.active && (
+        plan.planType === "SKILL_BUILDER" || plan.planType === "PREMIUM"
+      )));
       setSubscriptionPurchaseSummary(nextSubscriptionPurchaseSummary);
       setEntries(nextPage.items);
       setPageInfo(nextPage);
@@ -102,7 +110,7 @@ export function PlatformTreasurySection({ dateRange, periodLabel }: PlatformTrea
     } finally {
       setLoading(false);
     }
-  }, [monthlyPeriodCount, planId, query]);
+  }, [isSubscriptionPayment, monthlyPeriodCount, planId, query]);
 
   useEffect(() => {
     void loadFirstPage();
@@ -167,8 +175,8 @@ export function PlatformTreasurySection({ dateRange, periodLabel }: PlatformTrea
       </div>
     </section>
 
-    <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-black text-slate-900">Sổ giao dịch quỹ</h3><p className="mt-1 text-xs text-slate-500">Đang xem {periodLabel.toLowerCase()}. Mỗi nghiệp vụ tài chính tạo một entry bất biến.</p></div><div className="flex flex-wrap gap-2"><select aria-label="Lọc gói dịch vụ" value={planId} onChange={(event) => setPlanId(event.target.value)} className="h-10 rounded-xl border border-violet-200 bg-violet-50/50 px-3 text-sm font-semibold text-slate-700"><option value="">Tất cả gói dịch vụ</option>{plans.map((plan) => <option key={plan.planId} value={plan.planId}>{plan.planName}</option>)}</select><select value={asset} onChange={(event) => setAsset(event.target.value as PlatformTreasuryAsset | "ALL")} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"><option value="ALL">Tất cả tài sản</option><option value="VND">VND</option><option value="COIN">Coin</option></select><select value={type} onChange={(event) => setType(event.target.value as PlatformTreasuryEntryType | "ALL")} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"><option value="ALL">Tất cả nghiệp vụ</option>{Object.entries(ENTRY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div></div>
-    {subscriptionPurchaseSummary && <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-100 bg-violet-50/50 px-4 py-3"><div className="flex items-center gap-2 text-sm font-bold text-violet-900"><UsersRound aria-hidden="true" className="h-4 w-4 text-violet-600" />{planId ? plans.find((plan) => plan.planId === planId)?.planName ?? "Gói dịch vụ đã chọn" : "Tất cả gói dịch vụ"}</div><p className="text-sm font-black text-violet-700">{subscriptionPurchaseSummary.purchaserCount.toLocaleString("vi-VN")} người đã mua trong kỳ</p></div>}
+    <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-black text-slate-900">Sổ giao dịch quỹ</h3><p className="mt-1 text-xs text-slate-500">Đang xem {periodLabel.toLowerCase()}. Mỗi nghiệp vụ tài chính tạo một entry bất biến.</p></div><div className="flex flex-wrap gap-2">{isSubscriptionPayment && <select aria-label="Lọc gói dịch vụ" value={planId} onChange={(event) => setPlanId(event.target.value)} className="h-10 rounded-xl border border-violet-200 bg-violet-50/50 px-3 text-sm font-semibold text-slate-700"><option value="">Tất cả gói dịch vụ</option>{plans.map((plan) => <option key={plan.planId} value={plan.planId}>{plan.planName}</option>)}</select>}<select value={asset} onChange={(event) => setAsset(event.target.value as PlatformTreasuryAsset | "ALL")} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"><option value="ALL">Tất cả tài sản</option><option value="VND">VND</option><option value="COIN">Coin</option></select><select value={type} onChange={(event) => { const nextType = event.target.value as PlatformTreasuryEntryType | "ALL"; setType(nextType); if (nextType !== SUBSCRIPTION_PAYMENT_ENTRY_TYPE) setPlanId(""); }} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"><option value="ALL">Tất cả nghiệp vụ</option>{Object.entries(ENTRY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div></div>
+    {isSubscriptionPayment && subscriptionPurchaseSummary && <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-100 bg-violet-50/50 px-4 py-3"><div className="flex items-center gap-2 text-sm font-bold text-violet-900"><UsersRound aria-hidden="true" className="h-4 w-4 text-violet-600" />{planId ? plans.find((plan) => plan.planId === planId)?.planName ?? "Gói dịch vụ đã chọn" : "Tất cả gói dịch vụ"}</div><p className="text-sm font-black text-violet-700">{subscriptionPurchaseSummary.purchaserCount.toLocaleString("vi-VN")} người đã mua trong kỳ</p></div>}
     <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-100"><table className="min-w-full divide-y divide-slate-100 text-left"><thead className="bg-slate-50 text-[11px] font-black uppercase tracking-wide text-slate-400"><tr><th className="px-4 py-3">Thời điểm</th><th className="px-4 py-3">Nghiệp vụ</th><th className="px-4 py-3">Đối tác / xử lý</th><th className="px-4 py-3 text-right">Giá trị</th></tr></thead><tbody className="divide-y divide-slate-100 bg-white">{loading ? <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-slate-400">Đang tải sổ quỹ…</td></tr> : entries.length === 0 ? <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-slate-400">Chưa có giao dịch phù hợp trong {periodLabel.toLowerCase()}.</td></tr> : entries.map((entry) => <tr key={entry.entryId} className="hover:bg-orange-50/30"><td className="whitespace-nowrap px-4 py-3 text-xs text-slate-500">{formatOccurredAt(entry.occurredAt)}</td><td className="px-4 py-3"><p className="text-sm font-bold text-slate-800">{ENTRY_LABELS[entry.entryType]}</p><p className="mt-0.5 text-xs text-slate-400">{entry.asset} · {entry.referenceType}</p></td><td className="px-4 py-3 text-sm text-slate-600"><p>{entry.counterpartyName ?? "Hệ thống"}</p>{entry.actorName && entry.actorName !== "SYSTEM" && <p className="mt-0.5 text-xs text-slate-400">Xử lý: {entry.actorName}</p>}</td><td className={`whitespace-nowrap px-4 py-3 text-right text-sm font-black ${entry.direction === "CREDIT" ? "text-emerald-700" : "text-rose-700"}`}>{entry.direction === "CREDIT" ? "+" : "−"}{entry.asset === "VND" ? vnd.format(entry.amount) : `${coin.format(entry.amount)} Coin`}</td></tr>)}</tbody></table></div>
     {!loading && pageInfo && <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs font-medium text-slate-500">Đã hiển thị {entries.length.toLocaleString("vi-VN")} / {pageInfo.totalItems.toLocaleString("vi-VN")} giao dịch</p>{pageInfo.last ? <p className="text-xs font-bold text-slate-400">Đã tải toàn bộ giao dịch trong kỳ</p> : <button type="button" disabled={loadingMore} onClick={() => void loadMore()} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-bold text-[#FF6B00] hover:bg-orange-50 disabled:opacity-50">{loadingMore ? "Đang tải…" : <>Tải thêm giao dịch <ChevronDown aria-hidden="true" className="h-4 w-4" /></>}</button>}</div>}
   </section>;

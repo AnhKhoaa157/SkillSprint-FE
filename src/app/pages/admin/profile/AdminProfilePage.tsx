@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { clearAuthTokens } from "../../../../api/auth/authService";
@@ -16,6 +16,7 @@ function toApiError(err: unknown): ApiError {
 
 export default function AdminProfile() {
   const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
   const [profile, setProfile] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -169,68 +170,73 @@ export default function AdminProfile() {
   }
 
   const initials = (profile?.fullName || profile?.email || "A").charAt(0).toUpperCase();
-  const roles = profile?.roles?.join(", ") || "ADMIN";
   const isActive = (profile?.status || "ACTIVE").toUpperCase() === "ACTIVE";
   const hasChanges = fullName !== (profile?.fullName || "") || !!avatarFile;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] bg-[radial-gradient(at_top_left,_rgba(255,107,0,0.08)_0%,_transparent_36%),_radial-gradient(at_bottom_right,_rgba(139,92,246,0.06)_0%,_transparent_42%)] p-4 sm:p-6 md:p-10">
+    <div className="h-[100dvh] overflow-y-auto overflow-x-hidden overscroll-none bg-[radial-gradient(circle_at_10%_0%,rgba(255,107,0,0.12),transparent_25%),radial-gradient(circle_at_94%_100%,rgba(124,58,237,0.1),transparent_30%),#f8fafc] p-4 sm:p-6 lg:overflow-hidden">
       <AvatarCropDialog
         imageUrl={avatarCropSource}
         fileName={avatarCropFileName}
         onCancel={closeAvatarCropper}
         onCropped={handleCroppedAvatar}
       />
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
+      <div className="mx-auto flex min-h-full max-w-6xl flex-col lg:h-full lg:min-h-0">
+        <header className="flex shrink-0 flex-col gap-4 rounded-[1.75rem] border border-white/80 bg-white/75 px-4 py-4 shadow-[0_12px_35px_rgba(15,23,42,0.05)] backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="min-w-0">
             <button
               type="button"
               onClick={() => navigate("/admin")}
-              className="mb-3 inline-flex min-h-11 items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 transition hover:text-[#FF6B00] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-bold uppercase tracking-wider text-slate-400 transition hover:bg-orange-50 hover:text-[#ea580c] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"
             >
               <ArrowLeft size={16} />
               Quay lại Dashboard
             </button>
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-600">Tài khoản</p>
-            <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950">Hồ sơ quản trị</h1>
-            <p className="mt-1 text-sm text-slate-500">Quản lý danh tính và thông tin tài khoản của bạn.</p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-600">Tài khoản quản trị</p>
+              <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:block" />
+              <p className="text-xs font-medium text-slate-400">Danh tính &amp; quyền truy cập</p>
+            </div>
+            <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950">Hồ sơ của tôi</h1>
           </div>
-          <div className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black ${isActive ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-100 text-slate-600"}`}>
-            <span className={`h-2 w-2 rounded-full ${isActive ? "bg-emerald-500" : "bg-slate-400"}`} />
-            {isActive ? "Tài khoản hoạt động" : "Tài khoản không hoạt động"}
+          <div className={`inline-flex min-h-11 w-fit items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-black ${isActive ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-100 text-slate-600"}`}>
+            <span className={`h-2.5 w-2.5 rounded-full ${isActive ? "bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" : "bg-slate-400"}`} />
+            {isActive ? "Đang hoạt động" : "Không hoạt động"}
           </div>
         </header>
 
-        <div className="grid items-start gap-5 lg:grid-cols-[20rem_minmax(0,1fr)]">
+        <div className="mt-5 grid min-h-0 flex-1 gap-5 lg:grid-cols-[20rem_minmax(0,1fr)]">
           <motion.aside
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.35 }}
-            className="relative overflow-hidden rounded-3xl bg-slate-950 p-6 text-white shadow-[0_18px_45px_rgba(15,23,42,0.22)]"
+            transition={{ duration: prefersReducedMotion ? 0 : 0.35 }}
+            className="relative flex min-h-[32rem] flex-col overflow-hidden rounded-[2rem] bg-slate-950 p-6 text-white shadow-[0_24px_55px_rgba(15,23,42,0.24)] lg:min-h-0"
           >
-            <div className="pointer-events-none absolute -right-20 -top-16 h-52 w-52 rounded-full bg-orange-500/30 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-20 -left-16 h-48 w-48 rounded-full bg-violet-500/25 blur-3xl" />
-            <div className="relative">
+            <div className="pointer-events-none absolute -right-16 -top-14 h-48 w-48 rounded-full bg-orange-500/30 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-16 -left-16 h-44 w-44 rounded-full bg-violet-500/25 blur-3xl" />
+            <div className="relative flex h-full flex-col">
+              <div className="flex items-start justify-between gap-4">
+                <p className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-orange-200">Quản trị viên</p>
+                <Shield size={18} className="text-orange-300" aria-hidden="true" />
+              </div>
               <button
                 type="button"
                 aria-label="Đổi ảnh đại diện"
                 onClick={() => fileInputRef.current?.click()}
-                className="group relative h-24 w-24 rounded-3xl bg-gradient-to-br from-orange-400 to-violet-500 p-1 shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300"
+                className="group relative mt-6 h-24 w-24 rounded-[1.65rem] bg-gradient-to-br from-orange-400 via-orange-400 to-violet-500 p-1 shadow-lg transition-transform duration-200 hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300 motion-reduce:transition-none"
               >
                 <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[1.35rem] bg-slate-900 text-2xl font-black text-orange-300">
                   {avatarPreview || profile?.avatarUrl
                     ? <img src={avatarPreview || profile?.avatarUrl} alt={profile?.fullName || "Avatar"} className="h-full w-full object-cover" />
                     : <span>{initials}</span>}
-                  <span className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/70 text-[10px] font-black uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
-                    {saving && avatarFile ? <LoaderCircle size={18} className="animate-spin" /> : <><Camera size={16} className="mb-1" />Đổi ảnh</>}
+                  <span className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-xl bg-white text-slate-950 shadow-lg transition-transform group-hover:scale-110">
+                    {saving && avatarFile ? <LoaderCircle size={14} className="animate-spin" /> : <Camera size={14} />}
                   </span>
                 </div>
               </button>
               <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
 
-              <p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-orange-300">Quản trị viên</p>
-              <h2 className="mt-1 truncate text-2xl font-black tracking-tight">{profile?.fullName || "Admin"}</h2>
+              <h2 className="mt-5 truncate text-2xl font-black tracking-tight">{profile?.fullName || "Admin"}</h2>
               <p className="mt-1 truncate text-sm text-slate-300">{profile?.email}</p>
 
               <div className="mt-5 flex flex-wrap gap-2">
@@ -239,21 +245,19 @@ export default function AdminProfile() {
                 ))}
               </div>
 
-              <div className="my-6 h-px bg-white/10" />
-              <div className="space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-200"><Shield size={15} className="text-orange-300" />Quyền truy cập</div>
-                  <p className="mt-1.5 text-xs leading-5 text-slate-400">Tài khoản có quyền vận hành các khu vực quản trị hệ thống.</p>
+              <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-100"><Shield size={15} className="text-orange-300" />Quyền truy cập</div>
+                <p className="mt-1.5 text-xs leading-5 text-slate-400">Tài khoản được cấp quyền vận hành các khu vực quản trị của hệ thống.</p>
+              </div>
+
+              <div className="mt-auto border-t border-white/10 pt-5">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">User ID</p>
+                  <button type="button" onClick={handleCopyId} aria-label="Sao chép User ID" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300">
+                    {copied ? <CheckCircle size={16} className="text-emerald-300" /> : <Copy size={16} />}
+                  </button>
                 </div>
-                <div>
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">User ID</p>
-                    <button type="button" onClick={handleCopyId} aria-label="Sao chép User ID" className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300">
-                      {copied ? <CheckCircle size={15} className="text-emerald-300" /> : <Copy size={15} />}
-                    </button>
-                  </div>
-                  <p className="break-all font-mono text-[11px] leading-5 text-slate-400">{profile?.userId}</p>
-                </div>
+                <p className="break-all font-mono text-[11px] leading-5 text-slate-400">{profile?.userId}</p>
               </div>
             </div>
           </motion.aside>
@@ -261,53 +265,58 @@ export default function AdminProfile() {
           <motion.section
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.08 }}
-            className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] sm:p-7"
+            transition={{ duration: prefersReducedMotion ? 0 : 0.35, delay: prefersReducedMotion ? 0 : 0.08 }}
+            className="flex min-h-0 flex-col rounded-[2rem] border border-white/90 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.07)] sm:p-7"
           >
-            <div className="flex items-start gap-3 border-b border-slate-100 pb-6">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-600"><User size={19} /></span>
+            <div className="flex items-start gap-3 border-b border-slate-100 pb-5">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 text-orange-600"><User size={19} /></span>
               <div>
                 <h2 className="text-xl font-black tracking-tight text-slate-950">Thông tin cá nhân</h2>
-                <p className="mt-1 text-sm leading-5 text-slate-500">Cập nhật tên hiển thị và ảnh đại diện của tài khoản.</p>
+                <p className="mt-1 text-sm leading-5 text-slate-500">Cập nhật danh tính hiển thị và ảnh đại diện của bạn.</p>
               </div>
             </div>
 
-            <div className="mt-7 space-y-6">
-              <div>
-                <label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-400">Email đăng nhập</label>
-                <div className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-500">
-                  <Mail size={16} className="shrink-0 text-slate-400" />
-                  <span className="truncate font-medium">{profile?.email}</span>
-                  <span className="ml-auto hidden rounded-full bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-500 sm:inline">Không thể thay đổi</span>
+            <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_15rem]">
+              <div className="space-y-5">
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-400">Email đăng nhập</label>
+                  <div className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-500">
+                    <Mail size={16} className="shrink-0 text-slate-400" />
+                    <span className="truncate font-medium">{profile?.email}</span>
+                    <span className="ml-auto hidden rounded-full bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-500 sm:inline">Không thể thay đổi</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="admin-full-name" className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-400">Tên hiển thị</label>
+                  <input
+                    type="text"
+                    id="admin-full-name"
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                    placeholder="Nhập họ và tên của admin..."
+                    className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm outline-none transition focus-visible:border-orange-400 focus-visible:ring-4 focus-visible:ring-orange-100"
+                  />
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="admin-full-name" className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-400">Tên hiển thị</label>
-                <input
-                  type="text"
-                  id="admin-full-name"
-                  value={fullName}
-                  onChange={e => setFullName(e.target.value)}
-                  placeholder="Nhập họ và tên của admin..."
-                  className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm outline-none transition focus-visible:border-orange-400 focus-visible:ring-4 focus-visible:ring-orange-100"
-                />
-              </div>
-
-              <div className="rounded-2xl border border-orange-100 bg-orange-50/60 p-4">
-                <p className="text-sm font-bold text-slate-800">Ảnh đại diện</p>
-                <p className="mt-1 text-xs leading-5 text-slate-500">Chọn ảnh ở panel bên trái. Ảnh JPG, PNG hoặc WEBP, tối đa 5 MB.</p>
-                {avatarFile && <p className="mt-2 text-xs font-bold text-orange-700">Ảnh mới đã sẵn sàng để lưu.</p>}
+              <div className="rounded-2xl border border-orange-100 bg-[linear-gradient(145deg,#fffaf5,#fff7ed)] p-4">
+                <p className="text-sm font-black text-slate-900">Ảnh đại diện</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">JPG, PNG hoặc WEBP. Dung lượng tối đa 5 MB.</p>
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-3 text-xs font-bold text-orange-700 transition hover:border-orange-300 hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100">
+                  <Camera size={15} />Đổi ảnh
+                </button>
+                {avatarFile && <p className="mt-3 text-xs font-bold text-orange-700">Ảnh mới sẵn sàng để lưu.</p>}
               </div>
             </div>
 
-            <div className="mt-8 flex flex-col gap-4 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className={`text-xs ${hasChanges ? "font-bold text-orange-600" : "text-slate-400"}`}>{hasChanges ? "Bạn có thay đổi chưa được lưu." : "Chưa có thay đổi nào cần lưu."}</p>
+            <div className="mt-auto flex flex-col gap-4 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p aria-live="polite" className={`text-xs ${hasChanges ? "font-bold text-orange-600" : "text-slate-400"}`}>{hasChanges ? "Bạn có thay đổi chưa được lưu." : "Mọi thông tin đã được đồng bộ."}</p>
               <button
                 type="button"
                 onClick={handleSave}
                 disabled={saving || !hasChanges}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white shadow-lg shadow-slate-900/15 transition hover:bg-[#FF6B00] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white shadow-lg shadow-slate-900/15 transition hover:bg-[#ea580c] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {saving ? <><LoaderCircle size={16} className="animate-spin" />Đang lưu...</> : <><Save size={16} />Lưu thay đổi</>}
               </button>
