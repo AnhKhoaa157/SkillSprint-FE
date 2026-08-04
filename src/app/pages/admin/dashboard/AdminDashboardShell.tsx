@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3, Store, WalletCards, HandCoins, Scale, ChevronDown, LogOut, UserRound } from "lucide-react";
+import { TrendingUp, DollarSign, MessageSquare, Command, Download, ShieldCheck, ShieldAlert, X, Layers, ServerCog, Megaphone, BarChart3, Store, WalletCards, HandCoins, Scale, ChevronDown, LogOut, UserRound, LoaderCircle } from "lucide-react";
 import { Link, useLocation, useMatch, useNavigate } from "react-router";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminHealth from "../sections/health";
@@ -81,6 +81,7 @@ export default function AdminDashboard() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [showHealthPanel, setShowHealthPanel] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (requestedSection) setActiveNav(requestedSection);
@@ -217,8 +218,25 @@ export default function AdminDashboard() {
     return () => { mounted = false; };
   }, []);
 
-  const handleExport = () => {
-    setActionMessage("Xuất dữ liệu đang được phát triển.");
+  const handleExport = async () => {
+    if (isExporting) return;
+
+    setIsExporting(true);
+    setActionMessage("Đang tổng hợp toàn bộ dữ liệu admin và tạo file Excel...");
+    try {
+      const { exportAllAdminDataToExcel } = await import("../export/adminExcelExport");
+      const result = await exportAllAdminDataToExcel();
+      const warning = result.errorCount > 0
+        ? ` Có ${result.errorCount} hạng mục không tải đủ; xem sheet Thông tin xuất để biết chi tiết.`
+        : "";
+      setActionMessage(
+        `Đã xuất ${result.fileName} gồm ${result.sheetCount} sheet và ${result.recordCount.toLocaleString("vi-VN")} bản ghi.${warning}`,
+      );
+    } catch (error) {
+      setActionMessage(error instanceof Error ? `Xuất dữ liệu thất bại: ${error.message}` : "Xuất dữ liệu thất bại. Vui lòng thử lại.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleSync = () => {
@@ -237,7 +255,7 @@ export default function AdminDashboard() {
     { id: "goto-marketplace-reports", label: "Đi tới Báo cáo Marketplace", keywords: "marketplace report báo cáo nội dung vi phạm", action: () => setActiveNav("marketplaceReports") },
     { id: "goto-marketplace-ops", label: "Đi tới Vận hành Marketplace", keywords: "marketplace dispute refund hoàn tiền tranh chấp chỉ số metrics", action: () => setActiveNav("marketplaceOps") },
     { id: "goto-payouts", label: "Đi tới Yêu cầu rút tiền", keywords: "payout creator withdrawal rút tiền chuyển khoản", action: () => setActiveNav("payouts") },
-    { id: "export", label: "Xuất dữ liệu màn hình hiện tại", keywords: "export csv download", action: handleExport },
+    { id: "export", label: "Xuất toàn bộ dữ liệu Excel", keywords: "export excel xlsx download nhiều sheet", action: () => void handleExport() },
     { id: "sync", label: "Đồng bộ dữ liệu admin", keywords: "sync refresh", action: handleSync },
   ];
 
@@ -434,9 +452,16 @@ export default function AdminDashboard() {
               <div className="sr-only" aria-live="polite">{healthStatus === 'up' ? 'Hệ thống ổn định' : healthStatus === 'down' ? 'Sự cố hệ thống' : 'Đang kiểm tra'}</div>
             </button>
 
-            <button disabled title="Tính năng đang phát triển" className="hidden md:flex cursor-not-allowed items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold opacity-55"
-              style={{ background: "#F8FAFC", color: "#64748B", border: "1px solid #E2E8F0" }}>
-              <Download size={12} /> Xuất dữ liệu <span className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-slate-500">Đang phát triển</span>
+            <button
+              type="button"
+              onClick={() => void handleExport()}
+              disabled={isExporting}
+              aria-busy={isExporting}
+              title="Xuất toàn bộ dữ liệu admin thành một file Excel nhiều sheet"
+              className="hidden min-h-9 items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 py-1.5 text-xs font-semibold text-[#EA580C] shadow-sm transition hover:bg-orange-50 disabled:cursor-wait disabled:opacity-60 md:inline-flex"
+            >
+              {isExporting ? <LoaderCircle size={13} className="animate-spin" /> : <Download size={13} />}
+              {isExporting ? "Đang xuất..." : "Xuất Excel"}
             </button>
 
             <button
@@ -493,7 +518,7 @@ export default function AdminDashboard() {
         {/* ── SCROLLABLE CONTENT ── */}
         <div className={`flex-1 overflow-y-auto [scrollbar-gutter:stable_both-edges] ${isUserDetailRoute ? "" : "p-7"}`}>
           {actionMessage && (
-            <div className="mb-4 px-4 py-2 rounded-xl text-sm" style={{ background: "rgba(255,107,0,0.06)", border: "1px solid rgba(255,107,0,0.18)", color: "#C2410C" }}>
+            <div role="status" aria-live="polite" className="mb-4 px-4 py-2 rounded-xl text-sm" style={{ background: "rgba(255,107,0,0.06)", border: "1px solid rgba(255,107,0,0.18)", color: "#C2410C" }}>
               {actionMessage}
             </div>
           )}
