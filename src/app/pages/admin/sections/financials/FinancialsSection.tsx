@@ -462,10 +462,6 @@ export function FinancialsView() {
 
   return (
     <motion.div animate={{ opacity: 1 }} className="space-y-5" initial={{ opacity: 0 }}>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-900">
-        <span className="font-bold">Dữ liệu mô phỏng phục vụ demo · {reviewPeriod}</span>
-        <span className="text-sky-700">Biểu đồ dùng cùng khoảng thời gian; KPI lũy kế được ghi chú riêng.</span>
-      </div>
       <section aria-label="Tổng quan tài chính" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((kpi, index) => {
           const Icon = kpi.icon;
