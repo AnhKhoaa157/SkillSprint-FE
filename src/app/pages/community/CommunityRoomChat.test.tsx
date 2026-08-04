@@ -109,7 +109,9 @@ describe("CommunityRoomChat", () => {
     await user.click(await screen.findByRole("button", { name: "Chuyển sang riêng tư" }));
     const dialog = screen.getByRole("dialog");
     const input = within(dialog).getByPlaceholderText("private");
+    expect(within(dialog).getByRole("button", { name: "Chuyển sang riêng tư" })).toBeDisabled();
     await user.type(input, "private");
+    expect(within(dialog).getByRole("button", { name: "Chuyển sang riêng tư" })).toBeEnabled();
     await user.click(within(dialog).getByRole("button", { name: "Chuyển sang riêng tư" }));
 
     await waitFor(() => {

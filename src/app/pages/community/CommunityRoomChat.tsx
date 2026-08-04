@@ -1287,7 +1287,7 @@ export default function CommunityRoomChat() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-955/60 p-4 backdrop-blur-xs"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
             onMouseDown={closeActionDialog}
           >
             <motion.form
@@ -1299,26 +1299,37 @@ export default function CommunityRoomChat() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="community-action-dialog-title"
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 border border-slate-100 relative"
+              className="w-full max-w-md overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0_16px_48px_rgba(31,35,40,0.22)]"
             >
-              <div className={`absolute top-0 left-0 right-0 h-1 ${actionDialog.destructive ? "bg-rose-500" : "bg-[#FF6B00]"}`} />
-              <div className="flex items-start justify-between gap-4 mb-3">
-                <div>
-                  <h3 id="community-action-dialog-title" className="text-base font-bold text-slate-900">{actionDialog.title}</h3>
-                  {actionDialog.description && (
-                    <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">
-                      {actionDialog.description}
-                    </p>
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
+                <div className="flex min-w-0 items-start gap-3">
+                  {actionDialog.type === "prompt" && actionDialog.confirmationWord && (
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber-200 bg-amber-50 text-amber-700">
+                      <ShieldAlert className="h-4 w-4" />
+                    </div>
                   )}
+                  <div>
+                    <h3 id="community-action-dialog-title" className="text-sm font-semibold text-slate-900">{actionDialog.title}</h3>
+                    {actionDialog.description && (
+                      <p className="mt-1 text-sm leading-5 text-slate-600">
+                        {actionDialog.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <button type="button" onClick={closeActionDialog} className="text-slate-400 hover:text-slate-655 transition">
-                  <X className="w-4 h-4" />
+                <button type="button" onClick={closeActionDialog} aria-label="Đóng" className="-mr-1 -mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 
               {actionDialog.type === "prompt" && (
-                <div className="mt-4">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-405 mb-1">
+                <div className="space-y-3 px-5 py-5 sm:px-6">
+                  {actionDialog.confirmationWord && (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm leading-5 text-amber-950">
+                      Thay đổi này có hiệu lực ngay. Chỉ tiếp tục khi bạn chắc chắn muốn đổi chế độ hiển thị của phòng.
+                    </div>
+                  )}
+                  <label className="block text-sm font-medium text-slate-800">
                     {actionDialog.label}
                   </label>
                   {actionDialog.multiline ? (
@@ -1328,7 +1339,7 @@ export default function CommunityRoomChat() {
                       onChange={(e) => setActionDialogValue(e.target.value)}
                       placeholder={actionDialog.placeholder}
                       rows={4}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-850 outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   ) : (
                     <Input
@@ -1337,22 +1348,29 @@ export default function CommunityRoomChat() {
                       onChange={(e) => setActionDialogValue(e.target.value)}
                       placeholder={actionDialog.placeholder}
                       inputMode={actionDialog.inputMode}
-                      className="h-10 rounded-xl border-slate-200 focus-visible:ring-1 focus-visible:ring-[#FF6B00]"
+                      className={`h-10 rounded-md border-slate-300 font-mono text-sm text-slate-900 shadow-inner focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-100 ${
+                        actionDialog.confirmationWord && actionDialogValue === actionDialog.confirmationWord
+                          ? "border-emerald-500 bg-emerald-50/40"
+                          : "bg-white"
+                      }`}
                     />
                   )}
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 mt-6">
-                <Button type="button" variant="ghost" onClick={closeActionDialog} className="rounded-xl text-slate-500 hover:bg-slate-50 font-semibold text-xs h-9">
+              <div className="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+                <Button type="button" variant="outline" onClick={closeActionDialog} className="h-9 rounded-md border-slate-300 bg-white text-xs font-medium text-slate-700 hover:bg-slate-100">
                   Hủy
                 </Button>
                 <Button
                   type="submit"
-                  className={`rounded-xl font-semibold text-white text-xs h-9 px-5 ${
+                  disabled={actionDialog.type === "prompt" && Boolean(actionDialog.confirmationWord) && actionDialogValue !== actionDialog.confirmationWord}
+                  className={`h-9 rounded-md px-4 text-xs font-medium text-white ${
                     actionDialog.destructive
                       ? "bg-rose-600 hover:bg-rose-700"
-                      : "bg-[#FF6B00] hover:bg-[#e85f00]"
+                      : actionDialog.type === "prompt" && actionDialog.confirmationWord
+                        ? "bg-slate-900 hover:bg-slate-800"
+                        : "bg-[#FF6B00] hover:bg-[#e85f00]"
                   }`}
                 >
                   {actionDialog.confirmLabel || "Xác nhận"}
