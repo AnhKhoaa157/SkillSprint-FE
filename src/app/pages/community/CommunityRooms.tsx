@@ -2,9 +2,19 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   Search, Plus, Users, Hash, Shield, MessageSquare, Lock, ArrowLeft,
-  Sparkles, Calendar, MailCheck, X,
+  Sparkles, Calendar, MailCheck, Pencil, Trash2, X,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../../components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -162,9 +172,20 @@ function ModeBadge({ mode }: { mode: CommunityRoomMode }) {
 }
 
 /* ── Room Card ── */
-function RoomCard({ room, onJoin }: { room: CommunityRoomResponse; onJoin: (id: string) => void }) {
+function RoomCard({
+  room,
+  onJoin,
+  onRename,
+  onDelete,
+}: {
+  room: CommunityRoomResponse;
+  onJoin: (id: string) => void;
+  onRename: (room: CommunityRoomResponse) => void;
+  onDelete: (room: CommunityRoomResponse) => void;
+}) {
   const initials = room.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
   const memberPct = Math.min(100, (room.memberCount / room.maxMembers) * 100);
+  const isOwner = room.myRole === "OWNER";
 
   return (
     <motion.article layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
@@ -172,7 +193,31 @@ function RoomCard({ room, onJoin }: { room: CommunityRoomResponse; onJoin: (id: 
       <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-orange-100/65 blur-3xl transition duration-500 group-hover:scale-125" />
       <div className="relative flex items-start justify-between gap-3">
         <div className="grid h-12 w-12 place-items-center rounded-2xl border border-[#F5C5AF] bg-[#FFF0E8] text-sm font-black text-[#C84E20] shadow-[0_9px_22px_rgba(216,94,42,0.12)]">{initials || "SS"}</div>
-        <ModeBadge mode={room.mode} />
+        <div className="flex items-center gap-1.5">
+          {isOwner && (
+            <div className="flex items-center rounded-xl border border-slate-200 bg-white/90 p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => onRename(room)}
+                aria-label="Đổi tên phòng"
+                title="Đổi tên phòng"
+                className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 transition hover:bg-orange-50 hover:text-[#FF6B00]"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDelete(room)}
+                aria-label="Xóa phòng"
+                title="Xóa phòng"
+                className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+          <ModeBadge mode={room.mode} />
+        </div>
       </div>
 
       <div className="relative mt-5 flex flex-1 flex-col">
@@ -230,6 +275,10 @@ export default function CommunityRooms() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<CommunityRoomResponse | null>(null);
+  const [renamedRoomName, setRenamedRoomName] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<CommunityRoomResponse | null>(null);
+  const [isRoomActionLoading, setIsRoomActionLoading] = useState(false);
   const didMountSearchEffect = useRef(false);
   const { planId, loading: subscriptionLoading } = useSubscription();
   const isFreePlan = planId === "FREE";
@@ -336,6 +385,47 @@ export default function CommunityRooms() {
       showCommunityRoomsError(err, "Không thể từ chối lời mời");
     } finally {
       setInviteActionId(null);
+    }
+  };
+
+  const openRenameRoom = (room: CommunityRoomResponse) => {
+    setRenameTarget(room);
+    setRenamedRoomName(room.name);
+  };
+
+  const handleRenameRoom = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!renameTarget) return;
+
+    const name = renamedRoomName.trim();
+    if (!name) return;
+
+    try {
+      setIsRoomActionLoading(true);
+      const updatedRoom = await communityRoomService.updateRoom(renameTarget.roomId, { name });
+      setRooms((previous) => previous.map((room) => room.roomId === updatedRoom.roomId ? updatedRoom : room));
+      setRenameTarget(null);
+      toast.success("Đã đổi tên phòng");
+    } catch (error: unknown) {
+      showCommunityRoomsError(error, "Không thể đổi tên phòng");
+    } finally {
+      setIsRoomActionLoading(false);
+    }
+  };
+
+  const handleDeleteRoom = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      setIsRoomActionLoading(true);
+      await communityRoomService.deleteRoom(deleteTarget.roomId);
+      setRooms((previous) => previous.filter((room) => room.roomId !== deleteTarget.roomId));
+      setDeleteTarget(null);
+      toast.success("Đã xóa phòng cộng đồng");
+    } catch (error: unknown) {
+      showCommunityRoomsError(error, "Không thể xóa phòng");
+    } finally {
+      setIsRoomActionLoading(false);
     }
   };
 
@@ -535,7 +625,13 @@ export default function CommunityRooms() {
         <>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {rooms.map((room) => (
-              <RoomCard key={room.roomId} room={room} onJoin={handleJoinRoom} />
+              <RoomCard
+                key={room.roomId}
+                room={room}
+                onJoin={handleJoinRoom}
+                onRename={openRenameRoom}
+                onDelete={setDeleteTarget}
+              />
             ))}
           </div>
           
@@ -557,6 +653,82 @@ export default function CommunityRooms() {
           fetchRooms();
         }} 
       />
+
+      <Dialog
+        open={Boolean(renameTarget)}
+        onOpenChange={(open) => !open && !isRoomActionLoading && setRenameTarget(null)}
+      >
+        <DialogContent className="rounded-2xl border-slate-200 p-5 text-slate-900 shadow-[0_24px_64px_rgba(15,23,42,0.2)] sm:max-w-md">
+          <DialogHeader className="pr-8 text-left">
+            <DialogTitle className="text-lg font-black tracking-tight">Đổi tên phòng</DialogTitle>
+            <DialogDescription className="leading-6 text-slate-500">
+              Tên mới sẽ hiển thị ngay cho các thành viên trong phòng.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRenameRoom} className="space-y-4">
+            <label className="block text-sm font-bold text-slate-700" htmlFor="community-room-rename">
+              Tên phòng mới
+            </label>
+            <Input
+              id="community-room-rename"
+              autoFocus
+              required
+              maxLength={150}
+              value={renamedRoomName}
+              onChange={(event) => setRenamedRoomName(event.target.value)}
+              disabled={isRoomActionLoading}
+              className="h-11 rounded-xl border-slate-200 bg-slate-50 font-semibold focus-visible:border-[#FF6B00] focus-visible:ring-orange-100"
+            />
+            <DialogFooter className="gap-2 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => setRenameTarget(null)}
+                disabled={isRoomActionLoading}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={!renamedRoomName.trim() || isRoomActionLoading}
+                className="rounded-xl bg-[#FF6B00] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#E85F00] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isRoomActionLoading ? "Đang lưu..." : "Lưu tên mới"}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && !isRoomActionLoading && setDeleteTarget(null)}
+      >
+        <AlertDialogContent className="rounded-2xl border-slate-200 bg-white p-5 text-slate-900 shadow-[0_24px_64px_rgba(15,23,42,0.2)] sm:max-w-md">
+          <AlertDialogHeader className="text-left">
+            <AlertDialogTitle className="text-lg font-black tracking-tight">Xóa phòng cộng đồng?</AlertDialogTitle>
+            <AlertDialogDescription className="leading-6 text-slate-500">
+              Phòng “{deleteTarget?.name}” sẽ bị xóa và không còn hiển thị cho thành viên.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel
+              disabled={isRoomActionLoading}
+              className="rounded-xl border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
+            >
+              Hủy
+            </AlertDialogCancel>
+            <button
+              type="button"
+              onClick={() => void handleDeleteRoom()}
+              disabled={isRoomActionLoading}
+              className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isRoomActionLoading ? "Đang xóa..." : "Xóa phòng"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
