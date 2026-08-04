@@ -4,6 +4,15 @@ import {
   Pencil, Share2, Trash, X, ThumbsUp,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../../../components/ui/alert-dialog";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -34,6 +43,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   const [editHashtags, setEditHashtags] = useState(normalizeHashtagList(post.hashtags).join(" "));
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [isReporting, setIsReporting] = useState(false);
@@ -106,14 +116,15 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Bạn có chắc muốn xóa bài viết này?")) return;
     setIsDeleting(true);
     try {
       await communityService.deletePost(post.postId);
       onPostDeleted?.(post.postId);
       toast.success("Đã xóa bài viết");
+      setIsDeleteConfirmOpen(false);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Không thể xóa bài viết"));
+    } finally {
       setIsDeleting(false);
     }
   };
@@ -171,7 +182,7 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
                   <DropdownMenuItem onClick={startEditing} className="cursor-pointer text-[13px] font-semibold text-slate-700 focus:bg-slate-50">
                     <Pencil className="mr-2 h-4 w-4 text-slate-500" /> Chỉnh sửa
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDelete} className="cursor-pointer text-[13px] font-semibold text-red-600 focus:bg-red-50">
+                  <DropdownMenuItem onClick={() => setIsDeleteConfirmOpen(true)} className="cursor-pointer text-[13px] font-semibold text-red-600 focus:bg-red-50">
                     <Trash className="mr-2 h-4 w-4 text-red-500" /> Xóa bài viết
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -320,6 +331,33 @@ export function PostCard({ post, onPostUpdated, onPostDeleted }: PostCardProps) 
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={(open) => !isDeleting && setIsDeleteConfirmOpen(open)}>
+        <AlertDialogContent className="rounded-2xl border-slate-200 bg-white p-5 text-slate-900 shadow-[0_24px_64px_rgba(15,23,42,0.2)] sm:max-w-md">
+          <AlertDialogHeader className="text-left">
+            <AlertDialogTitle className="text-lg font-black tracking-tight">Xóa bài viết?</AlertDialogTitle>
+            <AlertDialogDescription className="leading-6 text-slate-500">
+              Bài viết sẽ bị xóa khỏi cộng đồng. Thao tác này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel
+              disabled={isDeleting}
+              className="rounded-xl border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
+            >
+              Hủy
+            </AlertDialogCancel>
+            <button
+              type="button"
+              onClick={() => void handleDelete()}
+              disabled={isDeleting}
+              className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isDeleting ? "Đang xóa..." : "Xóa bài viết"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </article>
   );
 }

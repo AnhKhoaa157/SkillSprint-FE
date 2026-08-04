@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Flag, MoreHorizontal, Pencil, Send, Trash, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
+import { Textarea } from "../../../components/ui/textarea";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -33,6 +35,8 @@ export function CommentSection({ postId, initialCommentCount, onCommentAdded, on
   const [editValue, setEditValue] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [reportingId, setReportingId] = useState<string | null>(null);
+  const [reportTargetId, setReportTargetId] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState("");
 
   const currentUser = getStoredUserProfile();
   const currentUserId = getStoredUserId();
@@ -127,15 +131,24 @@ export function CommentSection({ postId, initialCommentCount, onCommentAdded, on
     }
   };
 
-  const handleReport = async (commentId: string) => {
-    const reason = window.prompt("Nhập lý do báo cáo bình luận này:");
-    const trimmedReason = reason?.trim();
+  const closeReportDialog = () => {
+    if (reportingId) return;
+    setReportTargetId(null);
+    setReportReason("");
+  };
+
+  const handleReport = async () => {
+    if (!reportTargetId) return;
+
+    const trimmedReason = reportReason.trim();
     if (!trimmedReason) return;
 
-    setReportingId(commentId);
+    setReportingId(reportTargetId);
     try {
-      await communityService.reportComment(commentId, { reason: trimmedReason });
+      await communityService.reportComment(reportTargetId, { reason: trimmedReason });
       toast.success("Đã gửi báo cáo bình luận");
+      setReportTargetId(null);
+      setReportReason("");
     } catch (err: any) {
       toast.error(err.message || "Không thể báo cáo bình luận");
     } finally {
@@ -222,7 +235,7 @@ export function CommentSection({ postId, initialCommentCount, onCommentAdded, on
                     <button
                       type="button"
                       disabled={reportingId === comment.commentId}
-                      onClick={() => handleReport(comment.commentId)}
+                      onClick={() => setReportTargetId(comment.commentId)}
                       className="mt-1.5 flex h-7 w-7 items-center justify-center rounded-full text-slate-400 opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 disabled:opacity-40"
                       title="Báo cáo bình luận"
                     >
@@ -279,6 +292,44 @@ export function CommentSection({ postId, initialCommentCount, onCommentAdded, on
           </button>
         )}
       </div>
+
+      <Dialog open={Boolean(reportTargetId)} onOpenChange={(open) => !open && closeReportDialog()}>
+        <DialogContent className="rounded-2xl border-slate-200 p-5 text-slate-900 shadow-[0_24px_64px_rgba(15,23,42,0.2)] sm:max-w-md">
+          <DialogHeader className="pr-8 text-left">
+            <DialogTitle className="text-lg font-black tracking-tight">Báo cáo bình luận</DialogTitle>
+            <DialogDescription className="leading-6 text-slate-500">
+              Hãy cho biết lý do để đội ngũ kiểm duyệt xem xét bình luận này.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(event) => { event.preventDefault(); void handleReport(); }} className="space-y-4">
+            <Textarea
+              autoFocus
+              value={reportReason}
+              onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setReportReason(event.target.value)}
+              placeholder="Ví dụ: Nội dung công kích, spam hoặc không phù hợp."
+              disabled={Boolean(reportingId)}
+              className="min-h-28 rounded-xl border-slate-200 bg-slate-50 text-sm leading-6 focus-visible:border-[#FF6B00] focus-visible:ring-orange-100"
+            />
+            <DialogFooter className="gap-2 sm:gap-2">
+              <button
+                type="button"
+                onClick={closeReportDialog}
+                disabled={Boolean(reportingId)}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={!reportReason.trim() || Boolean(reportingId)}
+                className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {reportingId ? "Đang gửi..." : "Gửi báo cáo"}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

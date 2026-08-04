@@ -49,17 +49,14 @@ const basePost = {
 
 // ── Setup ─────────────────────────────────────────────────────────────────
 const originalScrollTo = window.scrollTo;
-const originalConfirm = window.confirm;
 
 beforeEach(() => {
   window.scrollTo = vi.fn();
-  window.confirm = vi.fn(() => true);
   vi.clearAllMocks();
 });
 
 afterAll(() => {
   window.scrollTo = originalScrollTo;
-  window.confirm = originalConfirm;
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────
@@ -284,7 +281,7 @@ describe("PostCard", () => {
       });
     });
 
-    it("should call deletePost API and onPostDeleted after confirm", async () => {
+    it("should call deletePost API and onPostDeleted after confirming in the app dialog", async () => {
       vi.mocked(communityService.deletePost).mockResolvedValueOnce(undefined);
 
       render(<PostCard post={authorPost} onPostUpdated={onPostUpdated} onPostDeleted={onPostDeleted} />);
@@ -292,6 +289,8 @@ describe("PostCard", () => {
       const menuTrigger = document.querySelector("button[aria-haspopup='menu']") as HTMLElement;
       await userEvent.click(menuTrigger);
       await userEvent.click(screen.getByText("Xóa bài viết"));
+      expect(screen.getByText("Xóa bài viết?")).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Xóa bài viết" }));
 
       await waitFor(() => {
         expect(communityService.deletePost).toHaveBeenCalledWith("post-1");
