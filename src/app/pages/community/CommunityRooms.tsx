@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   Search, Plus, Users, Hash, Shield, MessageSquare, Lock, ArrowLeft,
-  Sparkles, Calendar, MailCheck, Pencil, Trash2, X,
+  Sparkles, Calendar, MailCheck, Pencil, Repeat2, Trash2, X,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import {
@@ -176,11 +176,13 @@ function RoomCard({
   room,
   onJoin,
   onRename,
+  onChangeMode,
   onDelete,
 }: {
   room: CommunityRoomResponse;
   onJoin: (id: string) => void;
   onRename: (room: CommunityRoomResponse) => void;
+  onChangeMode: (room: CommunityRoomResponse) => void;
   onDelete: (room: CommunityRoomResponse) => void;
 }) {
   const initials = room.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
@@ -205,6 +207,17 @@ function RoomCard({
               >
                 <Pencil className="h-3.5 w-3.5" />
               </button>
+              {(room.mode === "PUBLIC" || room.mode === "PRIVATE") && (
+                <button
+                  type="button"
+                  onClick={() => onChangeMode(room)}
+                  aria-label={room.mode === "PUBLIC" ? "Chuyển phòng sang riêng tư" : "Chuyển phòng sang công khai"}
+                  title={room.mode === "PUBLIC" ? "Chuyển sang riêng tư" : "Chuyển sang công khai"}
+                  className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 transition hover:bg-sky-50 hover:text-sky-600"
+                >
+                  <Repeat2 className="h-3.5 w-3.5" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => onDelete(room)}
@@ -277,6 +290,8 @@ export default function CommunityRooms() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<CommunityRoomResponse | null>(null);
   const [renamedRoomName, setRenamedRoomName] = useState("");
+  const [modeChangeTarget, setModeChangeTarget] = useState<CommunityRoomResponse | null>(null);
+  const [modeChangeConfirmation, setModeChangeConfirmation] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<CommunityRoomResponse | null>(null);
   const [isRoomActionLoading, setIsRoomActionLoading] = useState(false);
   const didMountSearchEffect = useRef(false);
@@ -391,6 +406,33 @@ export default function CommunityRooms() {
   const openRenameRoom = (room: CommunityRoomResponse) => {
     setRenameTarget(room);
     setRenamedRoomName(room.name);
+  };
+
+  const openRoomModeChange = (room: CommunityRoomResponse) => {
+    if (room.mode !== "PUBLIC" && room.mode !== "PRIVATE") return;
+    setModeChangeTarget(room);
+    setModeChangeConfirmation("");
+  };
+
+  const nextRoomMode = modeChangeTarget?.mode === "PUBLIC" ? "PRIVATE" : "PUBLIC";
+  const modeChangeWord = nextRoomMode.toLowerCase();
+  const nextRoomModeLabel = nextRoomMode === "PRIVATE" ? "riêng tư" : "công khai";
+
+  const handleRoomModeChange = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!modeChangeTarget || modeChangeConfirmation !== modeChangeWord) return;
+
+    try {
+      setIsRoomActionLoading(true);
+      const updatedRoom = await communityRoomService.updateRoom(modeChangeTarget.roomId, { mode: nextRoomMode });
+      setRooms((previous) => previous.map((room) => room.roomId === updatedRoom.roomId ? updatedRoom : room));
+      setModeChangeTarget(null);
+      toast.success(`Đã chuyển phòng sang ${nextRoomModeLabel}`);
+    } catch (error: unknown) {
+      showCommunityRoomsError(error, "Không thể đổi chế độ phòng");
+    } finally {
+      setIsRoomActionLoading(false);
+    }
   };
 
   const handleRenameRoom = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -630,6 +672,7 @@ export default function CommunityRooms() {
                 room={room}
                 onJoin={handleJoinRoom}
                 onRename={openRenameRoom}
+                onChangeMode={openRoomModeChange}
                 onDelete={setDeleteTarget}
               />
             ))}
@@ -694,6 +737,51 @@ export default function CommunityRooms() {
                 className="rounded-xl bg-[#FF6B00] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#E85F00] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isRoomActionLoading ? "Đang lưu..." : "Lưu tên mới"}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(modeChangeTarget)}
+        onOpenChange={(open) => !open && !isRoomActionLoading && setModeChangeTarget(null)}
+      >
+        <DialogContent className="rounded-2xl border-slate-200 p-5 text-slate-900 shadow-[0_24px_64px_rgba(15,23,42,0.2)] sm:max-w-md">
+          <DialogHeader className="pr-8 text-left">
+            <DialogTitle className="text-lg font-black tracking-tight">Chuyển phòng sang {nextRoomModeLabel}?</DialogTitle>
+            <DialogDescription className="leading-6 text-slate-500">
+              Để xác nhận, hãy nhập chính xác <strong className="font-bold text-slate-700">{modeChangeWord}</strong> vào ô bên dưới.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRoomModeChange} className="space-y-4">
+            <label className="block text-sm font-bold text-slate-700" htmlFor="community-room-mode-confirmation">
+              Nhập {modeChangeWord} để xác nhận
+            </label>
+            <Input
+              id="community-room-mode-confirmation"
+              autoFocus
+              required
+              value={modeChangeConfirmation}
+              onChange={(event) => setModeChangeConfirmation(event.target.value)}
+              disabled={isRoomActionLoading}
+              className="h-11 rounded-xl border-slate-200 bg-slate-50 font-semibold lowercase focus-visible:border-[#FF6B00] focus-visible:ring-orange-100"
+            />
+            <DialogFooter className="gap-2 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => setModeChangeTarget(null)}
+                disabled={isRoomActionLoading}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={modeChangeConfirmation !== modeChangeWord || isRoomActionLoading}
+                className="rounded-xl bg-[#FF6B00] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#E85F00] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isRoomActionLoading ? "Đang chuyển..." : `Chuyển sang ${nextRoomModeLabel}`}
               </button>
             </DialogFooter>
           </form>

@@ -108,6 +108,32 @@ describe("CommunityRooms", () => {
     });
   });
 
+  it("requires the target mode word before an owner makes a room private", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useSubscription).mockReturnValue({
+      planId: "PREMIUM", planName: "Premium", rawPlanId: "premium", rawPlanType: "PREMIUM",
+      planMeta: { label: "Premium", badge: "PREMIUM", upgradeLabel: "Upgrade", upgradeSubtext: "" },
+      loading: false, refresh: vi.fn(),
+    });
+    vi.mocked(communityRoomService.getMyRooms).mockResolvedValueOnce({
+      items: [ownerRoom], page: 0, size: 20, totalItems: 1, totalPages: 1, first: true, last: true,
+    });
+    vi.mocked(communityRoomService.updateRoom).mockResolvedValueOnce({ ...ownerRoom, mode: "PRIVATE" });
+
+    render(<MemoryRouter><CommunityRooms /></MemoryRouter>);
+
+    await user.click(await screen.findByRole("button", { name: "Chuyển phòng sang riêng tư" }));
+    expect(screen.getByLabelText("Nhập private để xác nhận")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Chuyển sang riêng tư" })).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Nhập private để xác nhận"), "private");
+    await user.click(screen.getByRole("button", { name: "Chuyển sang riêng tư" }));
+
+    await waitFor(() => {
+      expect(communityRoomService.updateRoom).toHaveBeenCalledWith("room-1", { mode: "PRIVATE" });
+    });
+  });
+
   it("lets the room owner delete a room after app confirmation", async () => {
     const user = userEvent.setup();
     vi.mocked(useSubscription).mockReturnValue({
