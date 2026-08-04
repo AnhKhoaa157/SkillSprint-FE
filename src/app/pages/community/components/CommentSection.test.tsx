@@ -13,6 +13,7 @@ vi.mock("../../../../api/community/communityService", () => ({
     createComment: vi.fn(),
     updateComment: vi.fn(),
     deleteComment: vi.fn(),
+    reportComment: vi.fn(),
   }
 }));
 
@@ -157,5 +158,26 @@ describe("CommentSection", () => {
 
     const buttons = document.querySelectorAll("button");
     expect(buttons.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("reports another user's comment through the app dialog", async () => {
+    const user = userEvent.setup();
+    vi.mocked(communityService.reportComment).mockResolvedValueOnce();
+
+    render(<CommentSection postId="p1" initialCommentCount={2} />);
+
+    await user.click(await screen.findByTitle("Báo cáo bình luận"));
+    await user.type(
+      screen.getByPlaceholderText("Ví dụ: Nội dung công kích, spam hoặc không phù hợp."),
+      "Nội dung không phù hợp",
+    );
+    await user.click(screen.getByRole("button", { name: "Gửi báo cáo" }));
+
+    await waitFor(() => {
+      expect(communityService.reportComment).toHaveBeenCalledWith("c2", { reason: "Nội dung không phù hợp" });
+      expect(toast.success).toHaveBeenCalledWith("Đã gửi báo cáo bình luận");
+    });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
